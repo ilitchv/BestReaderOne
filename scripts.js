@@ -1,0 +1,263 @@
+$(document).ready(function() {const GOOGLE_SCRIPT_URL = 'https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycby1YzaX9l9viMP8oahjB-IIio3_2AihMaRh7KPQMWT3qrXB7HO3tgS2RD3Zhdbphr3W/exec' ; // Reemplaza con tu URL real
+
+     
+
+    // Inicializar Flatpickr con selección de fecha y hora
+    flatpickr("#fecha", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        defaultDate: new Date(),
+        wrap: false
+    });
+
+    let jugadaCount = 0;
+    let selectedTracks = 0;
+
+    // Función para calcular el número de combinaciones posibles
+    function calcularCombinaciones(numero) {
+        const counts = {};
+        for (let char of numero) {
+            counts[char] = (counts[char] || 0) + 1;
+        }
+        let factorial = (n) => n <= 1 ? 1 : n * factorial(n - 1);
+        let totalDigits = numero.length;
+        let denominator = 1;
+        for (let digit in counts) {
+            denominator *= factorial(counts[digit]);
+        }
+        return factorial(totalDigits) / denominator;
+    }
+
+    // Función para agregar una nueva jugada
+    function agregarJugada() {
+        if (jugadaCount >= 100) {
+            alert("Has alcanzado el máximo de 100 jugadas.");
+            return;
+        }
+        jugadaCount++;
+        const fila = `
+            <tr>
+                <td>${jugadaCount}</td>
+                <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
+                <td class="tipoJuego">-</td>
+                <td><input type="number" class="form-control straight" min="0" max="25.00" step="0.10" placeholder="Ej: 5.00"></td>
+                <td><input type="number" class="form-control box" min="0" max="25.00" step="0.10" placeholder="Ej: 2.50"></td>
+                <td><input type="number" class="form-control combo" min="0" max="25.00" step="0.10" placeholder="Ej: 3.00"></td>
+                <td class="total">0.00</td>
+            </tr>
+        `;
+        $("#tablaJugadas").append(fila);
+    }
+
+    // Agregar una jugada inicial
+    agregarJugada();
+
+    // Evento para agregar más jugadas
+    $("#agregarJugada").click(function() {
+        agregarJugada();
+    });
+
+    // Contador de tracks seleccionados
+    $("input[type=checkbox]").change(function() {
+        selectedTracks = $("input[type=checkbox]:checked").length;
+        calcularTotal();
+    });
+
+    // Evento para detectar cambios en el número apostado
+    $("#tablaJugadas").on("input", ".numeroApostado", function() {
+        const num = $(this).val();
+        const tipo = num.length === 3 ? "Peak 3" : num.length === 4 ? "Win 4" : "-";
+        $(this).closest("tr").find(".tipoJuego").text(tipo);
+        calcularTotalJugada($(this).closest("tr"));
+        calcularTotal();
+    });
+
+    // Evento para detectar cambios en las apuestas
+    $("#tablaJugadas").on("input", ".straight, .box, .combo", function() {
+        calcularTotalJugada($(this).closest("tr"));
+        calcularTotal();
+    });
+
+    // Función para calcular el total de una jugada
+    function calcularTotalJugada(fila) {
+        const numero = fila.find(".numeroApostado").val();
+        if (!numero || numero.length < 3 || numero.length > 4) {
+            fila.find(".total").text("0.00");
+            return;
+        }
+
+        const combinaciones = calcularCombinaciones(numero);
+        const straight = parseFloat(fila.find(".straight").val()) || 0;
+        const box = parseFloat(fila.find(".box").val()) || 0;
+        const combo = parseFloat(fila.find(".combo").val()) || 0;
+
+        // Calcular total: straight + box + (combo * combinaciones)
+        const total = straight + box + (combo * combinaciones);
+        fila.find(".total").text(total.toFixed(2));
+    }
+
+    // Función para calcular el total de todas las jugadas
+    function calcularTotal() {
+        let total = 0;
+        $(".total").each(function() {
+            total += parseFloat($(this).text()) || 0;
+        });
+        // Multiplicar por el número de tracks seleccionados
+        if (selectedTracks > 1) {
+            total = (total * selectedTracks).toFixed(2);
+        } else {
+            total = total.toFixed(2);
+        }
+        $("#totalJugadas").text(total);
+    }
+
+    // Inicializar Bootstrap Modal
+    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
+
+    // Evento para generar el ticket
+    $("#generarTicket").click(function() {
+        // Validar formulario
+        const fecha = $("#fecha").val();
+        if (!fecha) {
+            alert("Por favor, selecciona una fecha y hora.");
+            return;
+        }
+        const tracks = [];
+        $("input[type=checkbox]:checked").each(function() {
+            tracks.push($(this).val());
+        });
+        if (tracks.length === 0) {
+            alert("Por favor, selecciona al menos un track.");
+            return;
+        }
+        // Validar jugadas
+        let jugadasValidas = true;
+        $("#tablaJugadas tr").each(function() {
+            const numero = $(this).find(".numeroApostado").val();
+            if (!numero || (numero.length !== 3 && numero.length !== 4)) {
+                jugadasValidas = false;
+                return false;
+            }
+            const straight = parseFloat($(this).find(".straight").val());
+            const box = parseFloat($(this).find(".box").val());
+            const combo = parseFloat($(this).find(".combo").val());
+            if (isNaN(straight) || straight < 0 ||
+                isNaN(box) || box < 0 ||
+                isNaN(combo) || combo < 0) {
+                jugadasValidas = false;
+                return false;
+            }
+        });
+        if (!jugadasValidas) {
+            alert("Por favor, revisa las jugadas. Asegúrate de que todos los números sean válidos y las apuestas sean números positivos.");
+            return;
+        }
+        // Preparar datos para el ticket
+        $("#ticketFecha").text(fecha);
+        $("#ticketTracks").text(tracks.join(", "));
+        $("#ticketJugadas").empty();
+        $("#tablaJugadas tr").each(function() {
+            const num = $(this).find(".numeroApostado").val();
+            const tipo = $(this).find(".tipoJuego").text();
+            const straight = parseFloat($(this).find(".straight").val()) || 0;
+            const box = parseFloat($(this).find(".box").val()) || 0;
+            const combo = parseFloat($(this).find(".combo").val()) || 0;
+            const total = parseFloat($(this).find(".total").text()) || 0;
+            const fila = `
+                <tr>
+                    <td>${$(this).find("td").first().text()}</td>
+                    <td>${num}</td>
+                    <td>${tipo}</td>
+                    <td>${straight.toFixed(2)}</td>
+                    <td>${box.toFixed(2)}</td>
+                    <td>${combo.toFixed(2)}</td>
+                    <td>${total.toFixed(2)}</td>
+                </tr>
+            `;
+            $("#ticketJugadas").append(fila);
+        });
+        $("#ticketTotal").text($("#totalJugadas").text());
+        // Generar número de ticket único de 8 dígitos
+        const numeroTicket = generarNumeroUnico();
+        $("#numeroTicket").text(numeroTicket);
+        // Generar código de barras
+        JsBarcode("#barcode", numeroTicket, {
+            format: "CODE128",
+            width: 2,
+            height: 50,
+            displayValue: false
+        });
+        // Mostrar el modal usando Bootstrap 5
+        ticketModal.show();
+    });
+
+    // Función para generar número de ticket único de 8 dígitos
+    function generarNumeroUnico() {
+        return Math.floor(10000000 + Math.random() * 90000000).toString();
+    }
+
+   // Evento para confirmar e imprimir el ticket
+$("#confirmarTicket").click(function() {
+    // Guardar información en LocalStorage
+    const ticketData = {
+        numeroTicket: $("#numeroTicket").text(),
+        fecha: $("#ticketFecha").text(),
+        tracks: $("#ticketTracks").text(),
+        jugadas: [],
+        total: $("#ticketTotal").text(),
+        timestamp: new Date()
+    };
+    $("#ticketJugadas tr").each(function() {
+        const jugada = {
+            numero: $(this).find("td").eq(1).text(),
+            tipo: $(this).find("td").eq(2).text(),
+            straight: parseFloat($(this).find("td").eq(3).text()),
+            box: parseFloat($(this).find("td").eq(4).text()),
+            combo: parseFloat($(this).find("td").eq(5).text()),
+            total: parseFloat($(this).find("td").eq(6).text())
+        };
+        ticketData.jugadas.push(jugada);
+    });
+    // Obtener tickets existentes
+    let tickets = JSON.parse(localStorage.getItem("tickets")) || [];
+    tickets.push(ticketData);
+    localStorage.setItem("tickets", JSON.stringify(tickets));
+    
+    // Enviar datos a Google Sheets
+    $.ajax({
+        url: GOOGLE_SCRIPT_URL, // Usar la variable definida
+        method: "POST",
+        dataType: "json",
+        data: JSON.stringify(ticketData),
+        success: function(response) {
+            if(response.estado === "éxito") {
+                // Imprimir el ticket
+                window.print();
+                // Cerrar el modal
+                ticketModal.hide();
+                // Reiniciar el formulario
+                resetForm();
+                alert("Ticket guardado e enviado exitosamente.");
+            } else {
+                alert("Error al guardar el ticket: " + response.mensaje);
+            }
+        },
+        error: function(err) {
+            console.error("Error al enviar datos a Google Sheets:", err);
+            alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.");
+        }
+    });
+});
+
+
+    // Función para reiniciar el formulario
+    function resetForm() {
+        $("#lotteryForm")[0].reset();
+        $("#tablaJugadas").empty();
+        jugadaCount = 0;
+        selectedTracks = 0;
+        agregarJugada();
+        $("#totalJugadas").text("0.00");
+    }
+});

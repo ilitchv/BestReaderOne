@@ -1,0 +1,148 @@
+/* General */
+body {
+    background: linear-gradient(135deg, #1f1c2c, #928dab);
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Contenedor Principal */
+.container {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Títulos */
+h2 {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    color: #00d2ff;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Botones Personalizados */
+.btn-primary {
+    background-color: #00c6ff;
+    border: none;
+    transition: background-color 0.3s ease, transform 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #0072ff;
+    transform: scale(1.05);
+}
+
+.btn-success {
+    background-color: #00ff6a;
+    border: none;
+    transition: background-color 0.3s ease, transform 0.2s;
+}
+
+.btn-success:hover {
+    background-color: #00e65a;
+    transform: scale(1.05);
+}
+
+.btn-secondary {
+    background-color: #ff4e50;
+    border: none;
+    transition: background-color 0.3s ease, transform 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #e0433f;
+    transform: scale(1.05);
+}
+
+.btn-custom {
+    background-color: #6a11cb;
+    background-image: linear-gradient(315deg, #6a11cb 0%, #2575fc 74%);
+    border: none;
+    transition: background-image 0.5s ease, transform 0.2s;
+}
+
+.btn-custom:hover {
+    background-image: linear-gradient(315deg, #2575fc 0%, #6a11cb 74%);
+    transform: scale(1.05);
+}
+
+/* Tabla de Jugadas */
+.table-dark th {
+    background-color: #343a40;
+    color: #00d2ff;
+}
+
+.table-dark tbody tr:nth-child(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.table-dark tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.table-responsive {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Total de Jugadas */
+.total-section {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #ffdd57;
+}
+
+/* Modal del Ticket */
+.modal-content {
+    border-radius: 15px;
+}
+
+#preTicket {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+#preTicket h4 {
+    color: #ffdd57;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.ticket-number {
+    font-size: 1.5rem;
+    color: #00d2ff;
+}
+
+/* Botones en Modal */
+.modal-footer .btn-primary {
+    background-color: #00ff6a;
+}
+
+.modal-footer .btn-primary:hover {
+    background-color: #00e65a;
+    transform: scale(1.05);
+}
+
+/* Scrollbar Personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00d2ff;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #00b0e8;
+}
+
+/* Ajustar ancho del campo de fecha */
+#fecha {
+    max-width: 300px;
+}
