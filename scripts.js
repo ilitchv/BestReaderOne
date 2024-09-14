@@ -1,7 +1,8 @@
-$(document).ready(function() {const GOOGLE_SCRIPT_URL = 'https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycby1YzaX9l9viMP8oahjB-IIio3_2AihMaRh7KPQMWT3qrXB7HO3tgS2RD3Zhdbphr3W/exec' ; // Reemplaza con tu URL real
-
-     
-
+$(document).ready(function() {
+    
+    // Define la URL de tu API de SheetDB
+    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
+    
     // Inicializar Flatpickr con selección de fecha y hora
     flatpickr("#fecha", {
         enableTime: true,
@@ -197,41 +198,43 @@ $(document).ready(function() {const GOOGLE_SCRIPT_URL = 'https://cors-anywhere.h
         return Math.floor(10000000 + Math.random() * 90000000).toString();
     }
 
-   // Evento para confirmar e imprimir el ticket
-$("#confirmarTicket").click(function() {
-    // Guardar información en LocalStorage
-    const ticketData = {
-        numeroTicket: $("#numeroTicket").text(),
-        fecha: $("#ticketFecha").text(),
-        tracks: $("#ticketTracks").text(),
-        jugadas: [],
-        total: $("#ticketTotal").text(),
-        timestamp: new Date()
-    };
-    $("#ticketJugadas tr").each(function() {
-        const jugada = {
-            numero: $(this).find("td").eq(1).text(),
-            tipo: $(this).find("td").eq(2).text(),
-            straight: parseFloat($(this).find("td").eq(3).text()),
-            box: parseFloat($(this).find("td").eq(4).text()),
-            combo: parseFloat($(this).find("td").eq(5).text()),
-            total: parseFloat($(this).find("td").eq(6).text())
+    // Evento para confirmar e imprimir el ticket
+    $("#confirmarTicket").click(function() {
+        // Preparar datos para SheetDB
+        const ticketData = {
+            "Ticket Number": $("#numeroTicket").text(),
+            "Bet Date": $("#ticketFecha").text(),
+            "Tracks": $("#ticketTracks").text(),
+            "Bet Numbers": [],
+            "Game Mode": [],
+            "Straight ($)": [],
+            "Box ($)": [],
+            "Combo ($)": [],
+            "Total ($)": $("#ticketTotal").text(),
+            "Timestamp": new Date().toISOString()
         };
-        ticketData.jugadas.push(jugada);
-    });
-    // Obtener tickets existentes
-    let tickets = JSON.parse(localStorage.getItem("tickets")) || [];
-    tickets.push(ticketData);
-    localStorage.setItem("tickets", JSON.stringify(tickets));
-    
-    // Enviar datos a Google Sheets
-    $.ajax({
-        url: GOOGLE_SCRIPT_URL, // Usar la variable definida
-        method: "POST",
-        dataType: "json",
-        data: JSON.stringify(ticketData),
-        success: function(response) {
-            if(response.estado === "éxito") {
+        $("#ticketJugadas tr").each(function() {
+            ticketData["Bet Numbers"].push($(this).find("td").eq(1).text());
+            ticketData["Game Mode"].push($(this).find("td").eq(2).text());
+            ticketData["Straight ($)"].push($(this).find("td").eq(3).text());
+            ticketData["Box ($)"].push($(this).find("td").eq(4).text());
+            ticketData["Combo ($)"].push($(this).find("td").eq(5).text());
+        });
+        // Convertir arrays a cadenas separadas por comas
+        ticketData["Bet Numbers"] = ticketData["Bet Numbers"].join(", ");
+        ticketData["Game Mode"] = ticketData["Game Mode"].join(", ");
+        ticketData["Straight ($)"] = ticketData["Straight ($)"].join(", ");
+        ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
+        ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
+        
+        // Enviar datos a SheetDB
+        $.ajax({
+            url: SHEETDB_API_URL, // Usar la variable de SheetDB
+            method: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            data: JSON.stringify(ticketData),
+            success: function(response) {
                 // Imprimir el ticket
                 window.print();
                 // Cerrar el modal
@@ -239,17 +242,14 @@ $("#confirmarTicket").click(function() {
                 // Reiniciar el formulario
                 resetForm();
                 alert("Ticket guardado e enviado exitosamente.");
-            } else {
-                alert("Error al guardar el ticket: " + response.mensaje);
+            },
+            error: function(err) {
+                console.error("Error al enviar datos a SheetDB:", err);
+                // Mostrar mensaje de error más detallado
+                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
             }
-        },
-        error: function(err) {
-            console.error("Error al enviar datos a Google Sheets:", err);
-            alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.");
-        }
+        });
     });
-});
-
 
     // Función para reiniciar el formulario
     function resetForm() {
