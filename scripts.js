@@ -138,6 +138,7 @@ $(document).ready(function() {
             const numero = $(this).find(".numeroApostado").val();
             if (!numero || (numero.length !== 3 && numero.length !== 4)) {
                 jugadasValidas = false;
+                alert("Por favor, ingresa números apostados válidos (3 o 4 dígitos).");
                 return false;
             }
             const straight = parseFloat($(this).find(".straight").val()) || 0;
