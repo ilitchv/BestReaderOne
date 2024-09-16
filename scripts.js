@@ -59,6 +59,22 @@ $(document).ready(function() {
         agregarJugada();
     });
 
+    // Evento para eliminar la última jugada
+    $("#eliminarJugada").click(function() {
+        if (jugadaCount === 0) {
+            alert("No hay jugadas para eliminar.");
+            return;
+        }
+        // Remover la última fila
+        $("#tablaJugadas tr:last").remove();
+        jugadaCount--;
+        // Actualizar el número de jugadas
+        $("#tablaJugadas tr").each(function(index) {
+            $(this).find("td:first").text(index + 1);
+        });
+        calcularTotal();
+    });
+
     // Contador de tracks seleccionados
     $("input[type=checkbox]").change(function() {
         selectedTracks = $("input[type=checkbox]:checked").length;
