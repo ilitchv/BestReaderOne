@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -89,15 +89,21 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Botones para Agregar y Eliminar Jugada -->
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <button type="button" class="btn btn-primary" id="agregarJugada">
-                    <i class="bi bi-plus-circle"></i> Agregar Jugada
-                </button>
+                <div>
+                    <button type="button" class="btn btn-primary me-2" id="agregarJugada">
+                        <i class="bi bi-plus-circle"></i> Agregar Jugada
+                    </button>
+                    <button type="button" class="btn btn-danger" id="eliminarJugada">
+                        <i class="bi bi-dash-circle"></i> Eliminar Jugada
+                    </button>
+                </div>
                 <div class="total-section">
                     Total de Jugadas: $<span id="totalJugadas">0.00</span>
                 </div>
             </div>
-            <!-- Botones para Generar Ticket -->
+            <!-- Botón para Generar Ticket -->
             <div class="d-grid gap-2">
                 <button type="button" class="btn btn-success btn-lg" id="generarTicket">
                     <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
@@ -164,5 +170,3 @@
     <script src="scripts.js"></script>
 </body>
 </html>
-
-
