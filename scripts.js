@@ -140,18 +140,23 @@ $(document).ready(function() {
                 jugadasValidas = false;
                 return false;
             }
-            const straight = parseFloat($(this).find(".straight").val());
-            const box = parseFloat($(this).find(".box").val());
-            const combo = parseFloat($(this).find(".combo").val());
-            if (isNaN(straight) || straight < 0 ||
-                isNaN(box) || box < 0 ||
-                isNaN(combo) || combo < 0) {
+            const straight = parseFloat($(this).find(".straight").val()) || 0;
+            const box = parseFloat($(this).find(".box").val()) || 0;
+            const combo = parseFloat($(this).find(".combo").val()) || 0;
+            // Validar que al menos uno de los campos de apuesta sea mayor a 0
+            if (straight <= 0 && box <= 0 && combo <= 0) {
                 jugadasValidas = false;
+                alert("Por favor, ingresa al menos una apuesta en Straight, Box o Combo.");
+                return false;
+            }
+            // Verificar que las apuestas sean positivas
+            if (straight < 0 || box < 0 || combo < 0) {
+                jugadasValidas = false;
+                alert("Las apuestas deben ser valores positivos.");
                 return false;
             }
         });
         if (!jugadasValidas) {
-            alert("Por favor, revisa las jugadas. Asegúrate de que todos los números sean válidos y las apuestas sean números positivos.");
             return;
         }
         // Preparar datos para el ticket
