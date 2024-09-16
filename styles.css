@@ -1,148 +1,120 @@
-/* General */
+/* Estilos Básicos */
 body {
-    background: linear-gradient(135deg, #1f1c2c, #928dab);
+    background-color: #0d0d0d;
     color: #ffffff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Contenedor Principal */
-.container {
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-}
-
-/* Títulos */
-h2 {
     font-family: 'Roboto', sans-serif;
-    font-weight: 700;
-    color: #00d2ff;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin: 0;
+    padding: 20px;
 }
 
-/* Botones Personalizados */
-.btn-primary {
-    background-color: #00c6ff;
-    border: none;
-    transition: background-color 0.3s ease, transform 0.2s;
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
 }
 
-.btn-primary:hover {
-    background-color: #0072ff;
-    transform: scale(1.05);
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
 }
 
-.btn-success {
-    background-color: #00ff6a;
-    border: none;
-    transition: background-color 0.3s ease, transform 0.2s;
+/* Selección de Fecha */
+.fecha-selector {
+    margin-bottom: 20px;
 }
 
-.btn-success:hover {
-    background-color: #00e65a;
-    transform: scale(1.05);
+.fecha-selector label {
+    margin-right: 10px;
 }
 
-.btn-secondary {
-    background-color: #ff4e50;
-    border: none;
-    transition: background-color 0.3s ease, transform 0.2s;
+/* Selección de Tracks */
+.tracks-selector {
+    margin-bottom: 20px;
 }
 
-.btn-secondary:hover {
-    background-color: #e0433f;
-    transform: scale(1.05);
+.tracks-selector label {
+    display: block;
+    margin-bottom: 5px;
 }
 
-.btn-custom {
-    background-color: #6a11cb;
-    background-image: linear-gradient(315deg, #6a11cb 0%, #2575fc 74%);
-    border: none;
-    transition: background-image 0.5s ease, transform 0.2s;
+.tracks-list fieldset {
+    border: 1px solid #333;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
-.btn-custom:hover {
-    background-image: linear-gradient(315deg, #2575fc 0%, #6a11cb 74%);
-    transform: scale(1.05);
+.tracks-list legend {
+    padding: 0 5px;
+    font-weight: bold;
 }
 
 /* Tabla de Jugadas */
-.table-dark th {
-    background-color: #343a40;
-    color: #00d2ff;
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
 }
 
-.table-dark tbody tr:nth-child(odd) {
-    background-color: rgba(255, 255, 255, 0.05);
+thead {
+    background-color: #1e1e1e;
 }
 
-.table-dark tbody tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.1);
+th, td {
+    padding: 10px;
+    border: 1px solid #333;
+    text-align: center;
 }
 
-.table-responsive {
-    max-height: 400px;
-    overflow-y: auto;
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"] {
+    width: 90%;
+    padding: 5px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #1e1e1e;
+    color: #fff;
 }
 
-/* Total de Jugadas */
-.total-section {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #ffdd57;
+input[type="checkbox"] {
+    margin-right: 5px;
 }
 
-/* Modal del Ticket */
+/* Botones */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    background-color: #00ffff;
+    color: #000;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #00cccc;
+}
+
+/* Modal */
 .modal-content {
-    border-radius: 15px;
+    background-color: #0d0d0d;
+    color: #ffffff;
 }
 
-#preTicket {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-
-#preTicket h4 {
-    color: #ffdd57;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-}
-
-.ticket-number {
-    font-size: 1.5rem;
-    color: #00d2ff;
-}
-
-/* Botones en Modal */
-.modal-footer .btn-primary {
-    background-color: #00ff6a;
-}
-
-.modal-footer .btn-primary:hover {
-    background-color: #00e65a;
-    transform: scale(1.05);
-}
-
-/* Scrollbar Personalizada */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #00d2ff;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #00b0e8;
-}
-
-/* Ajustar ancho del campo de fecha */
-#fecha {
-    max-width: 300px;
+/* Responsividad */
+@media (max-width: 768px) {
+    .tracks-list fieldset {
+        padding: 5px;
+    }
+    
+    th, td {
+        padding: 5px;
+    }
+    
+    .btn {
+        padding: 10px;
+        font-size: 16px;
+    }
 }
