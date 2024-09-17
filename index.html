@@ -92,12 +92,12 @@
                 </table>
             </div>
             <!-- Botones para Agregar y Eliminar Jugada -->
-            <div class="d-flex justify-content-between align-items-center mb-4 button-group">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-primary glow-button" id="agregarJugada">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="button-group">
+                    <button type="button" class="btn btn-primary" id="agregarJugada">
                         <i class="bi bi-plus-circle"></i> Agregar Jugada
                     </button>
-                    <button type="button" class="btn btn-danger glow-button" id="eliminarJugada">
+                    <button type="button" class="btn btn-danger" id="eliminarJugada">
                         <i class="bi bi-dash-circle"></i> Eliminar Jugada
                     </button>
                 </div>
@@ -107,7 +107,7 @@
             </div>
             <!-- Botón para Generar Ticket -->
             <div class="d-grid gap-2">
-                <button type="button" class="btn btn-success btn-lg btn-neon" id="generarTicket">
+                <button type="button" class="btn btn-success btn-lg" id="generarTicket">
                     <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
                 </button>
             </div>
@@ -148,7 +148,7 @@
                                 Número de Ticket: <span id="numeroTicket"></span>
                             </div>
                             <div class="barcode text-center">
-                                <svg id="barcode"></svg>
+                                <div id="qrcode"></div>
                             </div>
                         </div>
                     </div>
@@ -160,14 +160,16 @@
             </div>
         </div>
     </div>
-    <!-- Bootstrap JS y dependencias -->
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <!-- JsBarcode -->
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Custom JS -->
     <script src="scripts.js"></script>
 </body>
