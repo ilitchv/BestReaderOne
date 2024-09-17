@@ -46,7 +46,6 @@ $(document).ready(function() {
             "Ganamas": "14:25",
             "Suerte Tarde": "17:50",
             "Lotedom": "17:50",
-            "Loteka": "19:50",
             "Primera Noche": "19:50",
             "Quiniela Pale": "20:50", // Lunes-Sábado
             "Nacional": "20:50", // Lunes-Sábado
@@ -258,7 +257,7 @@ $(document).ready(function() {
         } else {
             // Modalidad no reconocida
             fila.find(".straight").attr("placeholder", "Ej: 5.00");
-            fila.find(".box").attr("placeholder", "Ej: 2.50");
+            fila.find(".box").attr("placeholder", "1 o 2");
             fila.find(".combo").attr("placeholder", "Ej: 3.00");
         }
     }
