@@ -38,13 +38,13 @@ $(document).ready(function() {
         }
         jugadaCount++;
         const fila = `
-            <tr>
+            <tr class="jugada">
                 <td>${jugadaCount}</td>
-                <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
+                <td><input type="number" class="form-control numeroApostado glow-input" min="0" max="9999" required></td>
                 <td class="tipoJuego">-</td>
-                <td><input type="number" class="form-control straight" min="0" max="25.00" step="0.10" placeholder="Ej: 5.00"></td>
-                <td><input type="number" class="form-control box" min="0" max="25.00" step="0.10" placeholder="Ej: 2.50"></td>
-                <td><input type="number" class="form-control combo" min="0" max="25.00" step="0.10" placeholder="Ej: 3.00"></td>
+                <td><input type="number" class="form-control straight glow-input" min="0" max="25.00" step="0.10" placeholder="Ej: 5.00"></td>
+                <td><input type="number" class="form-control box glow-input" min="0" max="25.00" step="0.10" placeholder="Ej: 2.50"></td>
+                <td><input type="number" class="form-control combo glow-input" min="0" max="25.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
         `;
@@ -204,20 +204,32 @@ $(document).ready(function() {
         // Generar número de ticket único de 8 dígitos
         const numeroTicket = generarNumeroUnico();
         $("#numeroTicket").text(numeroTicket);
-        // Generar código de barras
-        JsBarcode("#barcode", numeroTicket, {
-            format: "CODE128",
-            width: 2,
-            height: 50,
-            displayValue: false
-        });
+        // Generar código QR en lugar de código de barras
+        generateQRCode(numeroTicket);
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
     });
 
-    // Función para generar número de ticket único de 8 dígitos
+    // Función para generar número único de ticket de 8 dígitos
     function generarNumeroUnico() {
         return Math.floor(10000000 + Math.random() * 90000000).toString();
+    }
+
+    // Función para generar código QR
+    function generateQRCode(numeroTicket) {
+        // Limpiar el SVG existente
+        $("#barcode").empty();
+        // Generar el código QR utilizando una librería como QRCode.js
+        // Aquí usaremos QRCode.js en lugar de JsBarcode
+        // Asegúrate de incluir QRCode.js en tu HTML
+        new QRCode(document.getElementById("barcode"), {
+            text: `Ticket Number: ${numeroTicket}`,
+            width: 128,
+            height: 128,
+            colorDark : "#ffffff",
+            colorLight : "transparent",
+            correctLevel : QRCode.CorrectLevel.H
+        });
     }
 
     // Evento para confirmar e imprimir el ticket
@@ -283,3 +295,4 @@ $(document).ready(function() {
         $("#totalJugadas").text("0.00");
     }
 });
+
