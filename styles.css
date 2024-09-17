@@ -33,6 +33,11 @@ h2 {
     text-shadow: 0 0 10px var(--color-neon-cian);
 }
 
+h5 {
+    color: var(--color-neon-cian);
+    margin-bottom: 10px;
+}
+
 /* Selección de Fecha */
 .glow-input {
     box-shadow: 0 0 10px var(--color-neon-cian);
@@ -50,20 +55,9 @@ h2 {
     color: var(--color-texto);
 }
 
-#tracksSelect {
-    height: auto;
-    min-height: 150px;
-    background-color: #1e1e1e;
-    color: var(--color-texto);
-    border: 2px solid var(--color-neon-cian);
-    border-radius: 5px;
-    padding: 10px;
-    box-shadow: 0 0 10px var(--color-neon-cian);
-}
-
-#tracksSelect:focus {
-    border-color: var(--color-neon-morado);
-    box-shadow: 0 0 15px var(--color-neon-morado);
+.form-check-input {
+    margin-top: 0.3rem;
+    margin-right: 0.5rem;
 }
 
 /* Tabla de Jugadas */
@@ -189,5 +183,9 @@ h2 {
 
     .table-responsive {
         overflow-x: auto;
+    }
+
+    h5 {
+        font-size: 1.2em;
     }
 }
