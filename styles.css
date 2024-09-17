@@ -5,6 +5,7 @@
     --color-neon-morado: #ff00ff;
     --color-neon-verde: #39ff14;
     --color-texto: #ffffff;
+    --color-placeholder: #cccccc; /* Color tenue para placeholders */
 }
 
 body {
@@ -68,10 +69,10 @@ h2 {
     border: 1px solid var(--color-neon-cian);
 }
 
-/* Hora límite de Tracks */
-.track-time {
+/* Indicador de Hora Límite */
+.cutoff-time {
     font-size: 0.9em;
-    color: #a0a0a0; /* Color tenue */
+    color: #aaaaaa; /* Color tenue */
 }
 
 /* Tabla de Jugadas */
@@ -114,7 +115,7 @@ h2 {
     background-color: #ff0044;
     color: #fff;
     box-shadow: 0 0 10px #ff0044;
-    width: 150px; /* Aumentar ancho para evitar superposición */
+    min-width: 120px; /* Incremento de ancho */
 }
 
 .btn-danger:hover {
@@ -181,6 +182,20 @@ h2 {
     margin: 0 auto;
 }
 
+/* Placeholder con límite de apuesta */
+input::placeholder {
+    color: var(--color-placeholder);
+    opacity: 1; /* Firefox */
+}
+
+input:-ms-input-placeholder { /* Internet Explorer 10-11 */
+    color: var(--color-placeholder);
+}
+
+input::-ms-input-placeholder { /* Microsoft Edge */
+    color: var(--color-placeholder);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
@@ -202,9 +217,5 @@ h2 {
 
     .accordion-button {
         font-size: 1em;
-    }
-
-    .btn-danger {
-        width: 100%; /* Full width on small screens */
     }
 }
