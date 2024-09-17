@@ -22,53 +22,49 @@
             <div class="row mb-3">
                 <div class="col-md-4 col-sm-6">
                     <label for="fecha" class="form-label">Fecha de Apuesta:</label>
-                    <input type="text" id="fecha" class="form-control glow-input" placeholder="Selecciona fecha y hora" required>
+                    <input type="text" id="fecha" class="form-control glow-input" placeholder="Selecciona fecha" required>
                 </div>
             </div>
             <!-- Selección de Tracks -->
             <div class="mb-4">
                 <label class="form-label">Selecciona los Tracks:</label>
                 <div class="row">
-                    <!-- Organizar los checkboxes en columnas -->
-                    <div class="col-md-3 col-sm-6">
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="New York Mid Day" id="track1">
-                            <label class="form-check-label" for="track1">New York Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="New York Evening" id="track2">
-                            <label class="form-check-label" for="track2">New York Evening</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="Georgia Mid Day" id="track3">
-                            <label class="form-check-label" for="track3">Georgia Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="Georgia Evening" id="track4">
-                            <label class="form-check-label" for="track4">Georgia Evening</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="Florida Mid Day" id="track5">
-                            <label class="form-check-label" for="track5">Florida Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="Florida Evening" id="track6">
-                            <label class="form-check-label" for="track6">Florida Evening</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="Connecticut Mid Day" id="track7">
-                            <label class="form-check-label" for="track7">Connecticut Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input glow-input" type="checkbox" value="Connecticut Evening" id="track8">
-                            <label class="form-check-label" for="track8">Connecticut Evening</label>
-                        </div>
+                    <!-- Menú Desplegable por País -->
+                    <div class="col-md-6 col-sm-12">
+                        <select id="tracksSelect" class="form-select glow-input" multiple required>
+                            <optgroup label="USA">
+                                <option value="New York Mid Day">New York Mid Day</option>
+                                <option value="New York Evening">New York Evening</option>
+                                <option value="Georgia Mid Day">Georgia Mid Day</option>
+                                <option value="Georgia Evening">Georgia Evening</option>
+                                <option value="New Jersey Mid Day">New Jersey Mid Day</option>
+                                <option value="New Jersey Evening">New Jersey Evening</option>
+                                <option value="Florida Mid Day">Florida Mid Day</option>
+                                <option value="Florida Evening">Florida Evening</option>
+                                <option value="Connecticut Mid Day">Connecticut Mid Day</option>
+                                <option value="Connecticut Evening">Connecticut Evening</option>
+                                <option value="Pensilvania AM">Pensilvania AM</option>
+                                <option value="Pensilvania PM">Pensilvania PM</option>
+                                <option value="Venezuela">Venezuela</option>
+                            </optgroup>
+                            <optgroup label="Santo Domingo">
+                                <option value="Real">Real</option>
+                                <option value="Gana mas">Gana mas</option>
+                                <option value="Loteka">Loteka</option>
+                                <option value="Nacional">Nacional</option>
+                                <option value="Quiniela pale">Quiniela pale</option>
+                                <option value="Primera Día">Primera Día</option>
+                                <option value="Suerte Día">Suerte Día</option>
+                                <option value="Lotería Real">Lotería Real</option>
+                                <option value="Ganamas">Ganamas</option>
+                                <option value="Suerte Tarde">Suerte Tarde</option>
+                                <option value="Lotedom">Lotedom</option>
+                                <option value="Primera Noche">Primera Noche</option>
+                                <option value="Quiniela Pale">Quiniela Pale</option>
+                                <option value="Nacional">Nacional</option>
+                                <option value="Panama">Panama</option>
+                            </optgroup>
+                        </select>
                     </div>
                 </div>
             </div>
