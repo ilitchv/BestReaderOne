@@ -50,6 +50,23 @@ h2 {
     color: var(--color-texto);
 }
 
+#tracksSelect {
+    height: auto;
+    min-height: 150px;
+    background-color: #1e1e1e;
+    color: var(--color-texto);
+    border: 2px solid var(--color-neon-cian);
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 0 10px var(--color-neon-cian);
+}
+
+#tracksSelect:focus {
+    border-color: var(--color-neon-morado);
+    box-shadow: 0 0 15px var(--color-neon-morado);
+}
+
+/* Tabla de Jugadas */
 .table-dark {
     box-shadow: 0 0 10px var(--color-neon-cian);
 }
