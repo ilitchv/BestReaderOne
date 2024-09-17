@@ -70,7 +70,6 @@ $(document).ready(function() {
 
     // Modalidades de juego
     function determinarModalidad(tracks, numero, fila) {
-        const diasSeleccionados = selectedDays;
         let modalidad = "-";
 
         const esUSA = tracks.some(track => Object.keys(horariosCierre["USA"]).includes(track));
@@ -382,4 +381,62 @@ $(document).ready(function() {
         // Preparar datos para SheetDB
         const ticketData = {
             "Ticket Number": $("#numeroTicket").text(),
-            "Bet
+            "Bet Date": $("#ticketFecha").text(),
+            "Tracks": $("#ticketTracks").text(),
+            "Bet Numbers": [],
+            "Game Mode": [],
+            "Straight ($)": [],
+            "Box ($)": [],
+            "Combo ($)": [],
+            "Total ($)": $("#ticketTotal").text(),
+            "Timestamp": new Date().toISOString()
+        };
+        $("#ticketJugadas tr").each(function() {
+            ticketData["Bet Numbers"].push($(this).find("td").eq(1).text());
+            ticketData["Game Mode"].push($(this).find("td").eq(2).text());
+            ticketData["Straight ($)"].push($(this).find("td").eq(3).text());
+            ticketData["Box ($)"].push($(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "");
+            ticketData["Combo ($)"].push($(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "");
+        });
+        // Convertir arrays a cadenas separadas por comas
+        ticketData["Bet Numbers"] = ticketData["Bet Numbers"].join(", ");
+        ticketData["Game Mode"] = ticketData["Game Mode"].join(", ");
+        ticketData["Straight ($)"] = ticketData["Straight ($)"].join(", ");
+        ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
+        ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
+        
+        // Enviar datos a SheetDB
+        $.ajax({
+            url: SHEETDB_API_URL, // Usar la variable de SheetDB
+            method: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            data: JSON.stringify(ticketData),
+            success: function(response) {
+                // Imprimir el ticket
+                window.print();
+                // Cerrar el modal
+                ticketModal.hide();
+                // Reiniciar el formulario
+                resetForm();
+                alert("Ticket guardado e enviado exitosamente.");
+            },
+            error: function(err) {
+                console.error("Error al enviar datos a SheetDB:", err);
+                // Mostrar mensaje de error más detallado
+                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
+            }
+        });
+    });
+
+    // Función para reiniciar el formulario
+    function resetForm() {
+        $("#lotteryForm")[0].reset();
+        $("#tablaJugadas").empty();
+        jugadaCount = 0;
+        selectedTracks = 0;
+        selectedDays = 1;
+        agregarJugada();
+        $("#totalJugadas").text("0.00");
+    }
+});
