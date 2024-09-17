@@ -28,113 +28,129 @@
             <!-- Selección de Tracks -->
             <div class="mb-4">
                 <label class="form-label">Selecciona los Tracks:</label>
-                <div class="row">
+                <div class="accordion" id="tracksAccordion">
                     <!-- USA Tracks -->
-                    <div class="col-md-6 col-sm-12 mb-3">
-                        <h5>USA</h5>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYAM">
-                            <label class="form-check-label" for="trackNYAM">New York Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="New York Evening" id="trackNYPM">
-                            <label class="form-check-label" for="trackNYPM">New York Evening</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Mid Day" id="trackGeorgiaAM">
-                            <label class="form-check-label" for="trackGeorgiaAM">Georgia Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Evening" id="trackGeorgiaPM">
-                            <label class="form-check-label" for="trackGeorgiaPM">Georgia Evening</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="New Jersey Mid Day" id="trackNJAM">
-                            <label class="form-check-label" for="trackNJAM">New Jersey Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="New Jersey Evening" id="trackNJPM">
-                            <label class="form-check-label" for="trackNJPM">New Jersey Evening</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Florida Mid Day" id="trackFloridaAM">
-                            <label class="form-check-label" for="trackFloridaAM">Florida Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Florida Evening" id="trackFloridaPM">
-                            <label class="form-check-label" for="trackFloridaPM">Florida Evening</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Mid Day" id="trackCTAM">
-                            <label class="form-check-label" for="trackCTAM">Connecticut Mid Day</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Evening" id="trackCTPM">
-                            <label class="form-check-label" for="trackCTPM">Connecticut Evening</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania AM" id="trackPAAM">
-                            <label class="form-check-label" for="trackPAAM">Pensilvania AM</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania PM" id="trackPAPM">
-                            <label class="form-check-label" for="trackPAPM">Pensilvania PM</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Venezuela" id="trackVenezuela">
-                            <label class="form-check-label" for="trackVenezuela">Venezuela</label>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingUSA">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUSA" aria-expanded="false" aria-controls="collapseUSA">
+                                USA
+                            </button>
+                        </h2>
+                        <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
+                            <div class="accordion-body">
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYAM">
+                                    <label class="form-check-label" for="trackNYAM">New York Mid Day</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="New York Evening" id="trackNYPM">
+                                    <label class="form-check-label" for="trackNYPM">New York Evening</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Mid Day" id="trackGeorgiaAM">
+                                    <label class="form-check-label" for="trackGeorgiaAM">Georgia Mid Day</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Evening" id="trackGeorgiaPM">
+                                    <label class="form-check-label" for="trackGeorgiaPM">Georgia Evening</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="New Jersey Mid Day" id="trackNJAM">
+                                    <label class="form-check-label" for="trackNJAM">New Jersey Mid Day</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="New Jersey Evening" id="trackNJPM">
+                                    <label class="form-check-label" for="trackNJPM">New Jersey Evening</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Florida Mid Day" id="trackFloridaAM">
+                                    <label class="form-check-label" for="trackFloridaAM">Florida Mid Day</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Florida Evening" id="trackFloridaPM">
+                                    <label class="form-check-label" for="trackFloridaPM">Florida Evening</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Mid Day" id="trackCTAM">
+                                    <label class="form-check-label" for="trackCTAM">Connecticut Mid Day</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Evening" id="trackCTPM">
+                                    <label class="form-check-label" for="trackCTPM">Connecticut Evening</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania AM" id="trackPAAM">
+                                    <label class="form-check-label" for="trackPAAM">Pensilvania AM</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania PM" id="trackPAPM">
+                                    <label class="form-check-label" for="trackPAPM">Pensilvania PM</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Venezuela" id="trackVenezuela">
+                                    <label class="form-check-label" for="trackVenezuela">Venezuela</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Santo Domingo Tracks -->
-                    <div class="col-md-6 col-sm-12 mb-3">
-                        <h5>Santo Domingo</h5>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
-                            <label class="form-check-label" for="trackReal">Real</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Gana mas" id="trackGanamas">
-                            <label class="form-check-label" for="trackGanamas">Gana mas</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Loteka" id="trackLoteka">
-                            <label class="form-check-label" for="trackLoteka">Loteka</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Nacional" id="trackNacional">
-                            <label class="form-check-label" for="trackNacional">Nacional</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela pale" id="trackQuinielaPale">
-                            <label class="form-check-label" for="trackQuinielaPale">Quiniela pale</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Primera Día" id="trackPrimeraDia">
-                            <label class="form-check-label" for="trackPrimeraDia">Primera Día</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Día" id="trackSuerteDia">
-                            <label class="form-check-label" for="trackSuerteDia">Suerte Día</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Lotería Real" id="trackLoteriaReal">
-                            <label class="form-check-label" for="trackLoteriaReal">Lotería Real</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Tarde" id="trackSuerteTarde">
-                            <label class="form-check-label" for="trackSuerteTarde">Suerte Tarde</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Lotedom" id="trackLotedom">
-                            <label class="form-check-label" for="trackLotedom">Lotedom</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Primera Noche" id="trackPrimeraNoche">
-                            <label class="form-check-label" for="trackPrimeraNoche">Primera Noche</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input track-checkbox" type="checkbox" value="Panama" id="trackPanama">
-                            <label class="form-check-label" for="trackPanama">Panama</label>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingSD">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSD" aria-expanded="false" aria-controls="collapseSD">
+                                Santo Domingo
+                            </button>
+                        </h2>
+                        <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
+                            <div class="accordion-body">
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
+                                    <label class="form-check-label" for="trackReal">Real</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Gana mas" id="trackGanamas">
+                                    <label class="form-check-label" for="trackGanamas">Gana mas</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Loteka" id="trackLoteka">
+                                    <label class="form-check-label" for="trackLoteka">Loteka</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Nacional" id="trackNacional">
+                                    <label class="form-check-label" for="trackNacional">Nacional</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela pale" id="trackQuinielaPale">
+                                    <label class="form-check-label" for="trackQuinielaPale">Quiniela pale</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Primera Día" id="trackPrimeraDia">
+                                    <label class="form-check-label" for="trackPrimeraDia">Primera Día</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Día" id="trackSuerteDia">
+                                    <label class="form-check-label" for="trackSuerteDia">Suerte Día</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Lotería Real" id="trackLoteriaReal">
+                                    <label class="form-check-label" for="trackLoteriaReal">Lotería Real</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Tarde" id="trackSuerteTarde">
+                                    <label class="form-check-label" for="trackSuerteTarde">Suerte Tarde</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Lotedom" id="trackLotedom">
+                                    <label class="form-check-label" for="trackLotedom">Lotedom</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Primera Noche" id="trackPrimeraNoche">
+                                    <label class="form-check-label" for="trackPrimeraNoche">Primera Noche</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input track-checkbox" type="checkbox" value="Panama" id="trackPanama">
+                                    <label class="form-check-label" for="trackPanama">Panama</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
