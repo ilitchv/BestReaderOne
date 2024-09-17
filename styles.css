@@ -1,36 +1,21 @@
-/* Paleta de colores */
+/* Estilos Básicos */
 :root {
     --color-fondo: #0a0a0a; /* Fondo oscuro */
     --color-neon-cian: #00ffff;
     --color-neon-morado: #ff00ff;
     --color-neon-verde: #39ff14;
     --color-texto: #ffffff;
-    --color-borde-luminoso: #00ffff;
 }
 
-/* Fondo Dinámico */
 body {
-    background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
-    background-size: 400% 400%;
-    animation: gradientBackground 15s ease infinite;
+    background-color: var(--color-fondo);
     color: var(--color-texto);
     font-family: 'Montserrat', 'Poppins', sans-serif;
     margin: 0;
     padding: 20px;
 }
 
-@keyframes gradientBackground {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
+/* Contenedor Principal */
 .container {
     max-width: 1000px;
     margin: 0 auto;
@@ -48,15 +33,10 @@ h2 {
     text-shadow: 0 0 10px var(--color-neon-cian);
 }
 
-/* Campos de Entrada */
+/* Selección de Fecha */
 .glow-input {
-    background-color: #1e1e1e;
-    border: 2px solid var(--color-borde-luminoso);
-    color: var(--color-texto);
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px var(--color-borde-luminoso);
-    transition: border-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 0 10px var(--color-neon-cian);
+    transition: box-shadow 0.3s, border-color 0.3s;
 }
 
 .glow-input:focus {
@@ -65,45 +45,38 @@ h2 {
     outline: none;
 }
 
-/* Tabla de Jugadas */
-.table-dark {
-    background-color: #1a1a1a;
-}
-
-.glow-table th, .glow-table td {
-    border-color: #333;
-    text-align: center;
+/* Selección de Tracks */
+.form-check-label {
     color: var(--color-texto);
 }
 
-.glow-table th {
-    background-color: #2c2c2c;
+.table-dark {
+    box-shadow: 0 0 10px var(--color-neon-cian);
+}
+
+.table-bordered th, .table-bordered td {
+    border: 1px solid var(--color-neon-cian);
+}
+
+.table-dark th {
+    background-color: #1e1e1e;
     color: var(--color-neon-cian);
     text-shadow: 0 0 5px var(--color-neon-cian);
 }
 
-.glow-table tr:nth-child(even) {
-    background-color: #1e1e1e;
-}
-
-.glow-table tr:hover {
-    background-color: #2a2a2a;
-    box-shadow: 0 0 10px var(--color-neon-morado);
-}
-
 /* Botones */
 .btn {
+    padding: 10px 20px;
     border: none;
     border-radius: 5px;
-    padding: 10px 20px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 0 10px var(--color-borde-luminoso);
 }
 
 .btn-primary {
     background-color: var(--color-neon-cian);
     color: #000;
+    box-shadow: 0 0 10px var(--color-neon-cian);
 }
 
 .btn-primary:hover {
@@ -113,13 +86,14 @@ h2 {
 }
 
 .btn-danger {
-    background-color: #ff004f;
+    background-color: #ff0044;
     color: #fff;
+    box-shadow: 0 0 10px #ff0044;
 }
 
 .btn-danger:hover {
-    background-color: #ff3366;
-    box-shadow: 0 0 20px #ff3366;
+    background-color: #cc0033;
+    box-shadow: 0 0 20px #ff0044;
     transform: scale(1.05);
 }
 
@@ -131,8 +105,7 @@ h2 {
 }
 
 .btn-success:hover {
-    background-color: #33ff66;
-    box-shadow: 0 0 20px var(--color-neon-verde), 0 0 30px var(--color-neon-verde);
+    transform: scale(1.02);
 }
 
 @keyframes pulse {
@@ -147,84 +120,57 @@ h2 {
     }
 }
 
-/* Botones con Glow */
-.glow-button {
-    box-shadow: 0 0 10px var(--color-borde-luminoso);
+/* Botones Alineados */
+.button-group {
+    display: flex;
+    gap: 10px;
 }
 
-.glow-button:hover {
-    box-shadow: 0 0 20px var(--color-borde-luminoso);
-    transform: scale(1.05);
+.button-group .btn {
+    flex: 1;
 }
 
 /* Modal */
 .modal-content {
-    background-color: #0d0d0d;
-    color: #ffffff;
-    border: 2px solid var(--color-neon-cian);
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
     box-shadow: 0 0 20px var(--color-neon-cian);
 }
 
 .modal-header, .modal-footer {
-    border-bottom: none;
-    border-top: none;
+    border-bottom: 1px solid var(--color-neon-cian);
+    border-top: 1px solid var(--color-neon-cian);
 }
 
 .modal-title {
     color: var(--color-neon-cian);
-    text-shadow: 0 0 5px var(--color-neon-cian);
 }
 
-.modal-body {
-    background-color: #1e1e1e;
-    border-radius: 10px;
-    padding: 20px;
+.btn-close-white {
+    filter: brightness(0) invert(1);
 }
 
-.modal-footer .btn-secondary {
-    background-color: #555;
-    color: #fff;
-}
-
-.modal-footer .btn-secondary:hover {
-    background-color: #777;
-    box-shadow: 0 0 10px #777;
-}
-
-.modal-footer .btn-primary {
-    background-color: var(--color-neon-morado);
-    color: #fff;
-}
-
-.modal-footer .btn-primary:hover {
-    background-color: #cc00ff;
-    box-shadow: 0 0 20px var(--color-neon-morado);
-    transform: scale(1.05);
-}
-
-/* Código de Barras y QR */
-#barcode {
+/* QR Code */
+#qrcode {
     margin: 0 auto;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .button-group {
-        flex-direction: column;
-        align-items: stretch;
+    .container {
+        padding: 10px;
     }
 
-    .button-group .btn {
-        width: 100%;
+    h2 {
+        font-size: 1.5em;
     }
 
-    .total-section {
-        text-align: center;
-        margin-top: 10px;
+    .btn {
+        padding: 8px 16px;
+        font-size: 16px;
     }
 
-    .modal-dialog {
-        max-width: 90%;
+    .table-responsive {
+        overflow-x: auto;
     }
 }
-
