@@ -9,6 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <!-- Bootstrap Icons (Opcional) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="styles.css" rel="stylesheet">
 </head>
@@ -20,7 +22,7 @@
             <div class="row mb-3">
                 <div class="col-md-4 col-sm-6">
                     <label for="fecha" class="form-label">Fecha de Apuesta:</label>
-                    <input type="text" id="fecha" class="form-control" placeholder="Selecciona fecha y hora" required>
+                    <input type="text" id="fecha" class="form-control glow-input" placeholder="Selecciona fecha y hora" required>
                 </div>
             </div>
             <!-- Selección de Tracks -->
@@ -30,41 +32,41 @@
                     <!-- Organizar los checkboxes en columnas -->
                     <div class="col-md-3 col-sm-6">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="New York Mid Day" id="track1">
+                            <input class="form-check-input glow-input" type="checkbox" value="New York Mid Day" id="track1">
                             <label class="form-check-label" for="track1">New York Mid Day</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="New York Evening" id="track2">
+                            <input class="form-check-input glow-input" type="checkbox" value="New York Evening" id="track2">
                             <label class="form-check-label" for="track2">New York Evening</label>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="Georgia Mid Day" id="track3">
+                            <input class="form-check-input glow-input" type="checkbox" value="Georgia Mid Day" id="track3">
                             <label class="form-check-label" for="track3">Georgia Mid Day</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="Georgia Evening" id="track4">
+                            <input class="form-check-input glow-input" type="checkbox" value="Georgia Evening" id="track4">
                             <label class="form-check-label" for="track4">Georgia Evening</label>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="Florida Mid Day" id="track5">
+                            <input class="form-check-input glow-input" type="checkbox" value="Florida Mid Day" id="track5">
                             <label class="form-check-label" for="track5">Florida Mid Day</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="Florida Evening" id="track6">
+                            <input class="form-check-input glow-input" type="checkbox" value="Florida Evening" id="track6">
                             <label class="form-check-label" for="track6">Florida Evening</label>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="Connecticut Mid Day" id="track7">
+                            <input class="form-check-input glow-input" type="checkbox" value="Connecticut Mid Day" id="track7">
                             <label class="form-check-label" for="track7">Connecticut Mid Day</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="Connecticut Evening" id="track8">
+                            <input class="form-check-input glow-input" type="checkbox" value="Connecticut Evening" id="track8">
                             <label class="form-check-label" for="track8">Connecticut Evening</label>
                         </div>
                     </div>
@@ -72,7 +74,7 @@
             </div>
             <!-- Tabla de Jugadas -->
             <div class="table-responsive mb-4">
-                <table class="table table-dark table-bordered" id="jugadasTable">
+                <table class="table table-dark table-bordered glow-table" id="jugadasTable">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -90,12 +92,12 @@
                 </table>
             </div>
             <!-- Botones para Agregar y Eliminar Jugada -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <button type="button" class="btn btn-primary me-2" id="agregarJugada">
+            <div class="d-flex justify-content-between align-items-center mb-4 button-group">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary glow-button" id="agregarJugada">
                         <i class="bi bi-plus-circle"></i> Agregar Jugada
                     </button>
-                    <button type="button" class="btn btn-danger" id="eliminarJugada">
+                    <button type="button" class="btn btn-danger glow-button" id="eliminarJugada">
                         <i class="bi bi-dash-circle"></i> Eliminar Jugada
                     </button>
                 </div>
@@ -105,7 +107,7 @@
             </div>
             <!-- Botón para Generar Ticket -->
             <div class="d-grid gap-2">
-                <button type="button" class="btn btn-success btn-lg" id="generarTicket">
+                <button type="button" class="btn btn-success btn-lg btn-neon" id="generarTicket">
                     <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
                 </button>
             </div>
