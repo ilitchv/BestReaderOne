@@ -73,22 +73,20 @@ $(document).ready(function() {
         const incluyeVenezuela = tracks.includes("Venezuela");
 
         const longitud = numero.length;
+        const boxValue = parseInt(fila.find(".box").val()) || 0;
 
-        if (esUSA && !incluyeVenezuela && !esSD) {
+        if (esUSA && !esSD) {
             if (longitud === 4) {
                 modalidad = "Win 4";
             } else if (longitud === 3) {
                 modalidad = "Peak 3";
             } else if (longitud === 2) {
-                const boxValue = parseInt(fila.find(".box").val()) || 0;
-                if (boxValue === 1 || boxValue === 2) {
+                if (incluyeVenezuela) {
+                    modalidad = "Venezuela";
+                } else if ([1, 2, 3].includes(boxValue)) {
                     modalidad = "Pulito";
                 }
             }
-        }
-
-        if (esUSA && incluyeVenezuela && longitud === 2) {
-            modalidad = "Venezuela";
         }
 
         if (esSD && !esUSA) {
@@ -100,21 +98,6 @@ $(document).ready(function() {
         }
 
         return modalidad;
-    }
-
-    // Función para calcular el número de combinaciones posibles
-    function calcularCombinaciones(numero) {
-        const counts = {};
-        for (let char of numero) {
-            counts[char] = (counts[char] || 0) + 1;
-        }
-        let factorial = (n) => n <= 1 ? 1 : n * factorial(n - 1);
-        let totalDigits = numero.length;
-        let denominator = 1;
-        for (let digit in counts) {
-            denominator *= factorial(counts[digit]);
-        }
-        return factorial(totalDigits) / denominator;
     }
 
     // Función para agregar una nueva jugada
@@ -129,8 +112,8 @@ $(document).ready(function() {
                 <td>${jugadaCount}</td>
                 <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
                 <td class="tipoJuego">-</td>
-                <td><input type="number" class="form-control straight" min="0" max="100.00" step="0.10" placeholder="Ej: 5.00"></td>
-                <td><input type="number" class="form-control box" min="0" max="50.00" step="1" placeholder="Ej: 2.50"></td>
+                <td><input type="number" class="form-control straight" min="0" max="100.00" step="1" placeholder="Ej: 5"></td>
+                <td><input type="number" class="form-control box" min="1" max="3" step="1" placeholder="1, 2 o 3"></td>
                 <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
@@ -164,7 +147,10 @@ $(document).ready(function() {
 
     // Contador de tracks seleccionados y días
     $(".track-checkbox").change(function() {
-        selectedTracks = $(".track-checkbox:checked").length;
+        const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
+        // Excluir "Venezuela" del conteo de tracks para el cálculo del total
+        selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
+
         const fechas = $("#fecha").val();
         if (fechas) {
             const fechasArray = fechas.split(" to ");
@@ -194,20 +180,8 @@ $(document).ready(function() {
         return Math.floor(diferencia / (1000 * 60 * 60 * 24));
     }
 
-    // Evento para detectar cambios en el número apostado
-    $("#tablaJugadas").on("input", ".numeroApostado", function() {
-        const num = $(this).val();
-        const fila = $(this).closest("tr");
-        const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        const modalidad = determinarModalidad(tracks, num, fila);
-        fila.find(".tipoJuego").text(modalidad);
-        actualizarPlaceholders(modalidad, fila);
-        calcularTotalJugada(fila);
-        calcularTotal();
-    });
-
-    // Evento para detectar cambios en las apuestas
-    $("#tablaJugadas").on("input", ".straight, .box, .combo", function() {
+    // Evento para detectar cambios en los campos de entrada
+    $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box", function() {
         const fila = $(this).closest("tr");
         const num = fila.find(".numeroApostado").val();
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
@@ -220,21 +194,29 @@ $(document).ready(function() {
 
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
-        if (modalidad === "Venezuela" || modalidad === "Pulito" || modalidad.startsWith("RD-")) {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`);
+        if (modalidad === "Pulito") {
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+            fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
+            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        } else if (modalidad === "Venezuela") {
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        } else if (modalidad.startsWith("RD-")) {
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
         } else if (modalidad === "Win 4") {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`);
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
             fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
             fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
         } else if (modalidad === "Peak 3") {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`);
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
             fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
             fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
         } else {
             // Modalidad no reconocida
-            fila.find(".straight").attr("placeholder", "Ej: 5.00");
+            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
             fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
         }
@@ -251,13 +233,13 @@ $(document).ready(function() {
 
         const combinaciones = calcularCombinaciones(numero);
         let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let box = parseFloat(fila.find(".box").val()) || 0;
+        let box = parseInt(fila.find(".box").val()) || 0;
         let combo = parseFloat(fila.find(".combo").val()) || 0;
 
         // Aplicar límites según modalidad
         if (limitesApuesta[modalidad]) {
             straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-            if (limitesApuesta[modalidad].box !== undefined) {
+            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
                 box = Math.min(box, limitesApuesta[modalidad].box || box);
             }
             if (limitesApuesta[modalidad].combo !== undefined) {
@@ -267,10 +249,10 @@ $(document).ready(function() {
 
         // Calcular total según modalidad
         let total = 0;
-        if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad === "RD-Quiniela" || modalidad === "RD-Pale") {
-            total = straight;
-        } else if (modalidad === "Pulito") {
+        if (modalidad === "Pulito") {
             total = straight; // No sumar box
+        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+            total = straight;
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
             total = straight + box + (combo * combinaciones);
         } else {
@@ -279,6 +261,21 @@ $(document).ready(function() {
         }
 
         fila.find(".total").text(total.toFixed(2));
+    }
+
+    // Función para calcular el número de combinaciones posibles
+    function calcularCombinaciones(numero) {
+        const counts = {};
+        for (let char of numero) {
+            counts[char] = (counts[char] || 0) + 1;
+        }
+        let factorial = (n) => n <= 1 ? 1 : n * factorial(n - 1);
+        let totalDigits = numero.length;
+        let denominator = 1;
+        for (let digit in counts) {
+            denominator *= factorial(counts[digit]);
+        }
+        return factorial(totalDigits) / denominator;
     }
 
     // Función para calcular el total de todas las jugadas
@@ -331,6 +328,14 @@ $(document).ready(function() {
                     alert("Por favor, ingresa al menos una apuesta en Straight.");
                     return false;
                 }
+                if (modalidad === "Pulito") {
+                    const box = parseInt($(this).find(".box").val());
+                    if (![1, 2, 3].includes(box)) {
+                        jugadasValidas = false;
+                        alert("En la modalidad Pulito, el campo 'Box' debe ser 1, 2 o 3.");
+                        return false;
+                    }
+                }
             } else if (["Win 4", "Peak 3"].includes(modalidad)) {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
                 const box = parseFloat($(this).find(".box").val()) || 0;
@@ -348,7 +353,7 @@ $(document).ready(function() {
                     alert(`El monto en Straight excede el límite para ${modalidad}.`);
                     return false;
                 }
-                if (limitesApuesta[modalidad].box !== undefined && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
+                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
                     jugadasValidas = false;
                     alert(`El monto en Box excede el límite para ${modalidad}.`);
                     return false;
@@ -373,7 +378,7 @@ $(document).ready(function() {
             const modalidad = $(this).find(".tipoJuego").text();
             const straight = parseFloat($(this).find(".straight").val()) || 0;
             const boxVal = $(this).find(".box").val();
-            const box = boxVal !== "" ? parseFloat(boxVal) : "-";
+            const box = boxVal !== "" ? boxVal : "-";
             const comboVal = $(this).find(".combo").val();
             const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
             const total = parseFloat($(this).find(".total").text()) || 0;
@@ -383,7 +388,7 @@ $(document).ready(function() {
                     <td>${num}</td>
                     <td>${modalidad}</td>
                     <td>${straight.toFixed(2)}</td>
-                    <td>${box !== "-" ? box.toFixed(2) : "-"}</td>
+                    <td>${box !== "-" ? box : "-"}</td>
                     <td>${combo !== "-" ? combo.toFixed(2) : "-"}</td>
                     <td>${total.toFixed(2)}</td>
                 </tr>
@@ -506,3 +511,4 @@ $(document).ready(function() {
     mostrarHorasLimite();
 
 });
+
