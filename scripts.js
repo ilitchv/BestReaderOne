@@ -285,6 +285,16 @@ $(document).ready(function() {
     // Inicializar Bootstrap Modal
     var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
+    // Función para obtener la hora límite de un track
+    function obtenerHoraLimite(track) {
+        for (let region in horariosCierre) {
+            if (horariosCierre[region][track]) {
+                return horariosCierre[region][track];
+            }
+        }
+        return null;
+    }
+
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
         // Validar formulario
@@ -304,6 +314,27 @@ $(document).ready(function() {
         if (tracks.includes("Venezuela") && tracksUSASeleccionados.length === 0) {
             alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
             return;
+        }
+
+        // Validar que los tracks seleccionados no hayan pasado su hora límite
+        const fechasArray = fecha.split(" to ");
+        const fechaInicio = fechasArray[0];
+        const fechaActual = new Date().toISOString().split('T')[0];
+        let fechaSeleccionada = fechaInicio; // Usamos la fecha de inicio para la validación
+        if (fechaSeleccionada === fechaActual) {
+            const horaActual = new Date();
+            for (let track of tracks) {
+                const horaLimiteStr = obtenerHoraLimite(track);
+                if (horaLimiteStr) {
+                    const horaLimite = new Date();
+                    const [horas, minutos] = horaLimiteStr.split(":");
+                    horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
+                    if (horaActual > horaLimite) {
+                        alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
+                        return;
+                    }
+                }
+            }
         }
 
         // Validar jugadas
@@ -437,13 +468,15 @@ $(document).ready(function() {
             ticketData["Bet Numbers"].push($(this).find("td").eq(1).text());
             ticketData["Game Mode"].push($(this).find("td").eq(2).text());
             ticketData["Straight ($)"].push($(this).find("td").eq(3).text());
-            ticketData["Box ($)"] = ""; // Como no aplican para estas modalidades, se deja vacío
-            ticketData["Combo ($)"] = "";
+            ticketData["Box ($)"].push($(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "");
+            ticketData["Combo ($)"].push($(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "");
         });
         // Convertir arrays a cadenas separadas por comas
         ticketData["Bet Numbers"] = ticketData["Bet Numbers"].join(", ");
         ticketData["Game Mode"] = ticketData["Game Mode"].join(", ");
         ticketData["Straight ($)"] = ticketData["Straight ($)"].join(", ");
+        ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
+        ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
         
         // Enviar datos a SheetDB
         $.ajax({
