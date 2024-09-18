@@ -32,7 +32,7 @@ $(document).ready(function() {
             "Georgia Night": "23:20",
             "Pensilvania AM": "12:55",
             "Pensilvania PM": "18:20"
-            // Nota: "Venezuela" se excluye aquí para facilitar la lógica
+            // Nota: "Venezuela" se excluye aquí
         },
         "Santo Domingo": {
             "Real": "12:45",
@@ -305,9 +305,15 @@ $(document).ready(function() {
             return;
         }
 
+        // Validar que si se seleccionó el track "Venezuela", se haya seleccionado al menos un track de USA
+        const tracksUSASeleccionados = tracks.filter(track => Object.keys(horariosCierre["USA"]).includes(track));
+        if (tracks.includes("Venezuela") && tracksUSASeleccionados.length === 0) {
+            alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
+            return;
+        }
+
         // Validar jugadas
         let jugadasValidas = true;
-        let modalidadVenezuelaPresente = false;
         $("#tablaJugadas tr").each(function() {
             const numero = $(this).find(".numeroApostado").val();
             const modalidad = $(this).find(".tipoJuego").text();
@@ -320,9 +326,6 @@ $(document).ready(function() {
                 jugadasValidas = false;
                 alert("Por favor, selecciona una modalidad de juego válida.");
                 return false;
-            }
-            if (modalidad === "Venezuela") {
-                modalidadVenezuelaPresente = true;
             }
             if (["Venezuela", "Venezuela-Pale", "Pulito", "RD-Quiniela", "RD-Pale"].includes(modalidad)) {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
@@ -369,13 +372,6 @@ $(document).ready(function() {
             }
         });
         if (!jugadasValidas) {
-            return;
-        }
-
-        // Validar que si hay modalidad Venezuela, se haya seleccionado al menos un track de USA
-        const tracksUSASeleccionados = tracks.filter(track => Object.keys(horariosCierre["USA"]).includes(track));
-        if (modalidadVenezuelaPresente && tracksUSASeleccionados.length === 0) {
-            alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
             return;
         }
 
