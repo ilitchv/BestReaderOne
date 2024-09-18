@@ -115,7 +115,7 @@ h2 {
     background-color: #ff0044;
     color: #fff;
     box-shadow: 0 0 10px #ff0044;
-    min-width: 120px; /* Incremento de ancho */
+    min-width: 150px; /* Incremento de ancho */
 }
 
 .btn-danger:hover {
