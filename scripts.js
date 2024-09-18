@@ -63,8 +63,8 @@ $(document).ready(function() {
         "Venezuela": { "straight": 100 },
         "Venezuela-Pale": { "straight": 100 },
         "Pulito": { "straight": 100 },
-        "RD-Quiniela": { "straight": 20 },
-        "RD-Pale": { "straight": 20 }
+        "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
+        "RD-Pale": { "straight": 20 } // Se mantiene en $20
     };
 
     // Modalidades de juego
@@ -193,29 +193,23 @@ $(document).ready(function() {
 
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
-        if (modalidad === "Pulito") {
+        if (limitesApuesta[modalidad]) {
             fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+        } else {
+            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
+        }
+
+        if (modalidad === "Pulito") {
             fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela") {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad.startsWith("RD-")) {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Win 4") {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else if (modalidad === "Peak 3") {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
             fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
             fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
         } else {
             // Modalidad no reconocida
-            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
             fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
         }
@@ -443,15 +437,13 @@ $(document).ready(function() {
             ticketData["Bet Numbers"].push($(this).find("td").eq(1).text());
             ticketData["Game Mode"].push($(this).find("td").eq(2).text());
             ticketData["Straight ($)"].push($(this).find("td").eq(3).text());
-            ticketData["Box ($)"].push($(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "");
-            ticketData["Combo ($)"].push($(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "");
+            ticketData["Box ($)"] = ""; // Como no aplican para estas modalidades, se deja vacío
+            ticketData["Combo ($)"] = "";
         });
         // Convertir arrays a cadenas separadas por comas
         ticketData["Bet Numbers"] = ticketData["Bet Numbers"].join(", ");
         ticketData["Game Mode"] = ticketData["Game Mode"].join(", ");
         ticketData["Straight ($)"] = ticketData["Straight ($)"].join(", ");
-        ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
-        ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
         
         // Enviar datos a SheetDB
         $.ajax({
