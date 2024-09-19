@@ -58,15 +58,15 @@ $(document).ready(function() {
 
     // Límites de apuestas por modalidad
     const limitesApuesta = {
-        "Win 4": { "straight": 6, "box": 30, "combo": 50 },
-        "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
-        "Venezuela": { "straight": 100 },
-        "Venezuela-Pale": { "straight": 100 },
-        "Pulito": { "straight": 100 },
-        "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
-        "RD-Pale": { "straight": 20 } // Se mantiene en $20
-    };
-
+    "Win 4": { "straight": 6, "box": 30, "combo": 50 },
+    "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
+    "Venezuela": { "straight": 100 },
+    "Venezuela-Pale": { "straight": 100 },
+    "Pulito": { "straight": 100 },
+    "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
+    "RD-Pale": { "straight": 20 }, // Se mantiene en $20
+    "Combo": { "combo": 50 } // Añadido
+};
     // Modalidades de juego
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
@@ -193,69 +193,73 @@ $(document).ready(function() {
 
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
-        if (limitesApuesta[modalidad]) {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-        } else {
-            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
-        }
-
-        if (modalidad === "Pulito") {
-            fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else {
-            // Modalidad no reconocida
-            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
-        }
+    if (limitesApuesta[modalidad]) {
+        fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+    } else {
+        fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
     }
 
+    if (modalidad === "Pulito") {
+        fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
+        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+        fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
+    } else if (modalidad === "Combo") { // Añadido
+        fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta["Combo"].combo}`).prop('disabled', false);
+    } else {
+        // Modalidad no reconocida
+        fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
+        fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
+    }
+}
     // Función para calcular el total de una jugada
     function calcularTotalJugada(fila) {
-        const modalidad = fila.find(".tipoJuego").text();
-        const numero = fila.find(".numeroApostado").val();
-        if (!numero || numero.length < 2 || numero.length > 4) {
-            fila.find(".total").text("0.00");
-            return;
-        }
-
-        const combinaciones = calcularCombinaciones(numero);
-        let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let box = parseInt(fila.find(".box").val()) || 0;
-        let combo = parseFloat(fila.find(".combo").val()) || 0;
-
-        // Aplicar límites según modalidad
-        if (limitesApuesta[modalidad]) {
-            straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
-                box = Math.min(box, limitesApuesta[modalidad].box || box);
-            }
-            if (limitesApuesta[modalidad].combo !== undefined) {
-                combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
-            }
-        }
-
-        // Calcular total según modalidad
-        let total = 0;
-        if (modalidad === "Pulito") {
-            total = straight; // No sumar box
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            total = straight;
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + box + (combo * combinaciones);
-        } else {
-            // Modalidad no reconocida
-            total = straight + box + combo;
-        }
-
-        fila.find(".total").text(total.toFixed(2));
+    const modalidad = fila.find(".tipoJuego").text();
+    const numero = fila.find(".numeroApostado").val();
+    if (!numero || numero.length < 2 || numero.length > 4) {
+        fila.find(".total").text("0.00");
+        return;
     }
 
+    const combinaciones = calcularCombinaciones(numero);
+    let straight = parseFloat(fila.find(".straight").val()) || 0;
+    let box = parseFloat(fila.find(".box").val()) || 0;
+    let combo = parseFloat(fila.find(".combo").val()) || 0;
+
+    // Aplicar límites según modalidad
+    if (limitesApuesta[modalidad]) {
+        straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
+        if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
+            box = Math.min(box, limitesApuesta[modalidad].box || box);
+        }
+        if (limitesApuesta[modalidad].combo !== undefined) {
+            combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
+        }
+    }
+
+    // Calcular total según modalidad
+    let total = 0;
+    if (modalidad === "Pulito") {
+        total = straight; // No sumar box
+    } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+        total = straight;
+    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+        total = straight + box + (combo * combinaciones);
+    } else if (modalidad === "Combo") { // Añadido
+        total = combo; // Solo sumar combo
+    } else {
+        // Modalidad no reconocida
+        total = straight + box + combo;
+    }
+
+    fila.find(".total").text(total.toFixed(2));
+}
     // Función para calcular el número de combinaciones posibles
     function calcularCombinaciones(numero) {
         const counts = {};
