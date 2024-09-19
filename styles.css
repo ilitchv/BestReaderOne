@@ -5,6 +5,7 @@
     --color-neon-morado: #ff00ff;
     --color-neon-verde: #39ff14;
     --color-texto: #ffffff;
+    --color-placeholder: #cccccc; /* Color tenue para placeholders */
 }
 
 body {
@@ -68,6 +69,12 @@ h2 {
     border: 1px solid var(--color-neon-cian);
 }
 
+/* Indicador de Hora Límite */
+.cutoff-time {
+    font-size: 0.9em;
+    color: #aaaaaa; /* Color tenue */
+}
+
 /* Tabla de Jugadas */
 .table-dark {
     box-shadow: 0 0 10px var(--color-neon-cian);
@@ -108,6 +115,7 @@ h2 {
     background-color: #ff0044;
     color: #fff;
     box-shadow: 0 0 10px #ff0044;
+    min-width: 150px; /* Incremento de ancho */
 }
 
 .btn-danger:hover {
@@ -172,6 +180,20 @@ h2 {
 /* QR Code */
 #qrcode {
     margin: 0 auto;
+}
+
+/* Placeholder con límite de apuesta */
+input::placeholder {
+    color: var(--color-placeholder);
+    opacity: 1; /* Firefox */
+}
+
+input:-ms-input-placeholder { /* Internet Explorer 10-11 */
+    color: var(--color-placeholder);
+}
+
+input::-ms-input-placeholder { /* Microsoft Edge */
+    color: var(--color-placeholder);
 }
 
 /* Responsive Design */
