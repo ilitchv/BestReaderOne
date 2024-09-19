@@ -32,27 +32,23 @@ $(document).ready(function() {
             "Georgia Night": "23:20",
             "Pensilvania AM": "12:55",
             "Pensilvania PM": "18:20"
-            // Nota: "Venezuela" se excluye aquí
         },
         "Santo Domingo": {
             "Real": "12:45",
             "Gana mas": "14:25",
             "Loteka": "19:30",
-            "Nacional": "20:30", // Domingos a las 17:50
-            "Quiniela Pale": "20:30", // Domingos a las 15:30
+            "Nacional": "20:30",
+            "Quiniela Pale": "20:30",
             "Primera Día": "11:50",
             "Suerte Día": "12:20",
             "Lotería Real": "12:50",
             "Suerte Tarde": "17:50",
             "Lotedom": "17:50",
             "Primera Noche": "19:50",
-            "Panama": "16:00",
-            // Horarios especiales para domingos
-            "Quiniela Pale Domingo": "15:30",
-            "Nacional Domingo": "17:50"
+            "Panama": "16:00"
         },
         "Venezuela": {
-            "Venezuela": "19:00" // Asumiendo un horario de cierre para Venezuela
+            "Venezuela": "19:00"
         }
     };
 
@@ -63,8 +59,8 @@ $(document).ready(function() {
         "Venezuela": { "straight": 100 },
         "Venezuela-Pale": { "straight": 100 },
         "Pulito": { "straight": 100 },
-        "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
-        "RD-Pale": { "straight": 20 } // Se mantiene en $20
+        "RD-Quiniela": { "straight": 100 },
+        "RD-Pale": { "straight": 20 }
     };
 
     // Modalidades de juego
@@ -449,7 +445,12 @@ $(document).ready(function() {
         return Math.floor(10000000 + Math.random() * 90000000).toString();
     }
 
-    // Evento para confirmar e imprimir el ticket
+    // Función para detectar si el dispositivo es móvil
+    function esDispositivoMovil() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Evento para confirmar y guardar el ticket
     $("#confirmarTicket").click(function() {
         // Preparar datos para SheetDB
         const ticketData = {
@@ -486,21 +487,61 @@ $(document).ready(function() {
             contentType: "application/json",
             data: JSON.stringify(ticketData),
             success: function(response) {
-                // Imprimir el ticket
-                window.print();
                 // Cerrar el modal
                 ticketModal.hide();
                 // Reiniciar el formulario
                 resetForm();
                 alert("Ticket guardado y enviado exitosamente.");
+
+                if (esDispositivoMovil()) {
+                    // En dispositivos móviles
+                    html2canvas(document.querySelector("#ticketModalContent")).then(canvas => {
+                        // Convertir el canvas a imagen
+                        canvas.toBlob(function(blob) {
+                            const url = URL.createObjectURL(blob);
+
+                            // Mostrar opciones de descarga y compartir
+                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'ticket.png', { type: blob.type })] })) {
+                                // Si la API de Web Share está disponible y soporta archivos
+                                navigator.share({
+                                    title: 'Ticket de Apuesta',
+                                    text: 'Aquí está mi ticket de apuesta.',
+                                    files: [new File([blob], 'ticket.png', { type: blob.type })],
+                                }).then(() => {
+                                    console.log('Ticket compartido exitosamente');
+                                }).catch((error) => {
+                                    console.error('Error al compartir:', error);
+                                    // Si el usuario cancela o hay un error, ofrecer opción de descarga
+                                    descargarImagen(url);
+                                });
+                            } else {
+                                // Si no está disponible, ofrecer opción de descarga
+                                descargarImagen(url);
+                            }
+                        });
+                    });
+                } else {
+                    // En computadoras de escritorio
+                    window.print();
+                }
             },
             error: function(err) {
                 console.error("Error al enviar datos a SheetDB:", err);
-                // Mostrar mensaje de error más detallado
                 alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
             }
         });
     });
+
+    // Función para descargar la imagen del ticket
+    function descargarImagen(url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ticket.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        alert("El ticket ha sido descargado en tu dispositivo.");
+    }
 
     // Función para reiniciar el formulario
     function resetForm() {
