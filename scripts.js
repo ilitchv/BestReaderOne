@@ -180,7 +180,7 @@ $(document).ready(function() {
     }
 
     // Evento para detectar cambios en los campos de entrada
-    $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box", function() {
+    $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box, .combo", function() {
         const fila = $(this).closest("tr");
         const num = fila.find(".numeroApostado").val();
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
