@@ -67,6 +67,53 @@ $(document).ready(function() {
     "RD-Pale": { "straight": 20 }, // Se mantiene en $20
     "Combo": { "combo": 50 } // Añadido
 };
+
+    // Función para obtener el país de un track
+function obtenerPais(track) {
+    const tracksUSA = [
+        "New York Mid Day",
+        "New York Evening",
+        "Georgia Mid Day",
+        "Georgia Evening",
+        "New Jersey Mid Day",
+        "New Jersey Evening",
+        "Florida Mid Day",
+        "Florida Evening",
+        "Connecticut Mid Day",
+        "Connecticut Evening",
+        "Georgia Night",
+        "Pensilvania AM",
+        "Pensilvania PM"
+        // Añade todos los tracks de USA que tengas en tu aplicación
+    ];
+
+    const tracksSD = [
+        "Real",
+        "Gana mas",
+        "Loteka",
+        "Nacional",
+        "Quiniela Pale",
+        "Primera Día",
+        "Suerte Día",
+        "Lotería Real",
+        "Suerte Tarde",
+        "Lotedom",
+        "Primera Noche",
+        "Panama"
+        // Añade todos los tracks de Santo Domingo que tengas en tu aplicación
+    ];
+
+    if (tracksUSA.includes(track)) {
+        return "USA";
+    } else if (tracksSD.includes(track)) {
+        return "Santo Domingo";
+    } else if (track === "Venezuela") {
+        return "Venezuela";
+    } else {
+        return null; // Si el track no está en ninguna lista
+    }
+}
+
     // Modalidades de juego
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
@@ -308,6 +355,21 @@ $(document).ready(function() {
             return;
         }
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
+        // Obtener los países de los tracks seleccionados
+const paisesSeleccionados = tracks.map(track => obtenerPais(track));
+const paisesUnicos = [...new Set(paisesSeleccionados)];
+
+// Validación de jugadas mixtas inconsistentes
+if (paisesUnicos.length > 1) {
+    if (paisesUnicos.includes("Venezuela") && paisesUnicos.includes("USA")) {
+        // Si se selecciona "Venezuela" junto con tracks de USA, se permite
+        // Puedes ajustar esta regla según tus necesidades específicas
+    } else {
+        alert("No es posible generar un ticket con tracks de múltiples países sin cumplir las condiciones requeridas.");
+        return;
+    }
+}
+
         if (!tracks || tracks.length === 0) {
             alert("Por favor, selecciona al menos un track.");
             return;
