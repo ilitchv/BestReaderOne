@@ -1,30 +1,63 @@
+/* styles.css */
+
 /* Estilos Básicos */
 :root {
-    --color-fondo: #0a0a0a; /* Fondo oscuro */
+    /* Colores para Light Mode */
+    --color-fondo: #ffffff;
+    --color-texto: #000000;
     --color-neon-cian: #00ffff;
     --color-neon-morado: #ff00ff;
     --color-neon-verde: #39ff14;
-    --color-texto: #ffffff;
-    --color-placeholder: #cccccc; /* Color tenue para placeholders */
+    --color-placeholder: #cccccc;
+
+    /* Colores para Dark Mode */
+    --color-fondo-dark: #121212;
+    --color-texto-dark: #ffffff;
+    --color-neon-cian-dark: #00ffff;
+    --color-neon-morado-dark: #ff00ff;
+    --color-neon-verde-dark: #39ff14;
+    --color-placeholder-dark: #cccccc;
 }
 
+
+/* Modo Claro (Light Mode) - Predeterminado */
 body {
     background-color: var(--color-fondo);
+    background-image: url('images/fondo-claro.jpg'); /* Reemplaza con la ruta de tu imagen para modo claro */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
     color: var(--color-texto);
     font-family: 'Montserrat', 'Poppins', sans-serif;
     margin: 0;
     padding: 20px;
+    transition: background-color 0.3s, color 0.3s, background-image 0.3s;
 }
+
+/* Modo Oscuro (Dark Mode) */
+body.dark-mode {
+    background-color: var(--color-fondo-dark);
+    background-image: url('images/fondo-oscuro.jpg'); /* Reemplaza con la ruta de tu imagen para modo oscuro */
+    color: var(--color-texto-dark);
+}
+
 
 /* Contenedor Principal */
 .container {
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
-    background: rgba(10, 10, 10, 0.95);
+    background: rgba(255, 255, 255, 0.95); /* Fondo claro */
     border-radius: 15px;
-    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.2); /* Sombra suave */
 }
+
+/* Modo Oscuro */
+body.dark-mode .container {
+    background: rgba(18, 18, 18, 0.95); /* Fondo oscuro */
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); /* Sombra actual */
+}
+
 
 /* Títulos */
 h2 {
