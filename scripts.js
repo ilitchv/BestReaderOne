@@ -58,15 +58,16 @@ $(document).ready(function() {
 
     // Límites de apuestas por modalidad
     const limitesApuesta = {
-    "Win 4": { "straight": 6, "box": 30, "combo": 50 },
-    "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
-    "Venezuela": { "straight": 100 },
-    "Venezuela-Pale": { "straight": 100 },
-    "Pulito": { "straight": 100 },
-    "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
-    "RD-Pale": { "straight": 20 }, // Se mantiene en $20
-    "Combo": { "combo": 50 } // Añadido
-};
+        "Win 4": { "straight": 6, "box": 30, "combo": 50 },
+        "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
+        "Venezuela": { "straight": 100 },
+        "Venezuela-Pale": { "straight": 100 },
+        "Pulito": { "straight": 100 },
+        "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
+        "RD-Pale": { "straight": 20 }, // Se mantiene en $20
+        "Combo": { "combo": 50 } // Añadido
+    };
+
     // Modalidades de juego
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
@@ -193,73 +194,75 @@ $(document).ready(function() {
 
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
-    if (limitesApuesta[modalidad]) {
-        fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-    } else {
-        fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
+        if (limitesApuesta[modalidad]) {
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+        } else {
+            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
+        }
+
+        if (modalidad === "Pulito") {
+            fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
+            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
+        } else if (modalidad === "Combo") { // Añadido
+            fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta["Combo"].combo}`).prop('disabled', false);
+        } else {
+            // Modalidad no reconocida
+            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
+            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
+        }
     }
 
-    if (modalidad === "Pulito") {
-        fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
-        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-    } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-        fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-    } else if (modalidad === "Combo") { // Añadido
-        fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta["Combo"].combo}`).prop('disabled', false);
-    } else {
-        // Modalidad no reconocida
-        fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-        fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
-    }
-}
     // Función para calcular el total de una jugada
     function calcularTotalJugada(fila) {
-    const modalidad = fila.find(".tipoJuego").text();
-    const numero = fila.find(".numeroApostado").val();
-    if (!numero || numero.length < 2 || numero.length > 4) {
-        fila.find(".total").text("0.00");
-        return;
-    }
-
-    const combinaciones = calcularCombinaciones(numero);
-    let straight = parseFloat(fila.find(".straight").val()) || 0;
-    let box = parseFloat(fila.find(".box").val()) || 0;
-    let combo = parseFloat(fila.find(".combo").val()) || 0;
-
-    // Aplicar límites según modalidad
-    if (limitesApuesta[modalidad]) {
-        straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-        if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
-            box = Math.min(box, limitesApuesta[modalidad].box || box);
+        const modalidad = fila.find(".tipoJuego").text();
+        const numero = fila.find(".numeroApostado").val();
+        if (!numero || numero.length < 2 || numero.length > 4) {
+            fila.find(".total").text("0.00");
+            return;
         }
-        if (limitesApuesta[modalidad].combo !== undefined) {
-            combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
+
+        const combinaciones = calcularCombinaciones(numero);
+        let straight = parseFloat(fila.find(".straight").val()) || 0;
+        let box = parseFloat(fila.find(".box").val()) || 0;
+        let combo = parseFloat(fila.find(".combo").val()) || 0;
+
+        // Aplicar límites según modalidad
+        if (limitesApuesta[modalidad]) {
+            straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
+            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
+                box = Math.min(box, limitesApuesta[modalidad].box || box);
+            }
+            if (limitesApuesta[modalidad].combo !== undefined) {
+                combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
+            }
         }
+
+        // Calcular total según modalidad
+        let total = 0;
+        if (modalidad === "Pulito") {
+            total = straight; // No sumar box
+        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+            total = straight;
+        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+            total = straight + box + (combo * combinaciones);
+        } else if (modalidad === "Combo") { // Añadido
+            total = combo; // Solo sumar combo
+        } else {
+            // Modalidad no reconocida
+            total = straight + box + combo;
+        }
+
+        fila.find(".total").text(total.toFixed(2));
     }
 
-    // Calcular total según modalidad
-    let total = 0;
-    if (modalidad === "Pulito") {
-        total = straight; // No sumar box
-    } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-        total = straight;
-    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-        total = straight + box + (combo * combinaciones);
-    } else if (modalidad === "Combo") { // Añadido
-        total = combo; // Solo sumar combo
-    } else {
-        // Modalidad no reconocida
-        total = straight + box + combo;
-    }
-
-    fila.find(".total").text(total.toFixed(2));
-}
     // Función para calcular el número de combinaciones posibles
     function calcularCombinaciones(numero) {
         const counts = {};
@@ -292,11 +295,21 @@ $(document).ready(function() {
     // Función para obtener la hora límite de un track
     function obtenerHoraLimite(track) {
         for (let region in horariosCierre) {
-            if (horariosCierre[region][track]) {
+            if (horariosCierre[region].hasOwnProperty(track)) {
                 return horariosCierre[region][track];
             }
         }
         return null;
+    }
+
+    // Función para obtener el país de un track
+    function obtenerPais(track) {
+        for (let region in horariosCierre) {
+            if (horariosCierre[region].hasOwnProperty(track)) {
+                return region;
+            }
+        }
+        return null; // Retorna null si el track no pertenece a ninguna región definida
     }
 
     // Evento para generar el ticket
@@ -313,11 +326,25 @@ $(document).ready(function() {
             return;
         }
 
-        // Validar que si se seleccionó el track "Venezuela", se haya seleccionado al menos un track de USA
-        const tracksUSASeleccionados = tracks.filter(track => Object.keys(horariosCierre["USA"]).includes(track));
-        if (tracks.includes("Venezuela") && tracksUSASeleccionados.length === 0) {
-            alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
-            return;
+        // Identificar los países de los tracks seleccionados
+        const paisesSeleccionados = tracks.map(track => obtenerPais(track)).filter(pais => pais !== null);
+        const paisesUnicos = [...new Set(paisesSeleccionados)]; // Obtener países únicos
+
+        // Validación: Evitar tickets con jugadas de múltiples países sin las condiciones necesarias
+        if (paisesUnicos.length > 1) {
+            // Si se seleccionan múltiples países, aplicar reglas específicas
+            if (paisesUnicos.includes("Venezuela")) {
+                // Regla especial para "Venezuela": debe haber al menos un track de USA además de "Venezuela"
+                const tracksUSA = tracks.filter(track => obtenerPais(track) === "USA");
+                if (tracksUSA.length === 0) {
+                    alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
+                    return;
+                }
+            } else {
+                // Si se seleccionan múltiples países sin incluir "Venezuela", simplemente evitar jugadas mixtas
+                alert("Por favor, selecciona tracks de un solo país para evitar jugadas mixtas.");
+                return;
+            }
         }
 
         // Validar que los tracks seleccionados no hayan pasado su hora límite
@@ -325,16 +352,21 @@ $(document).ready(function() {
         const fechaInicio = fechasArray[0];
         const fechaActual = new Date().toISOString().split('T')[0];
         let fechaSeleccionada = fechaInicio; // Usamos la fecha de inicio para la validación
+
         if (fechaSeleccionada === fechaActual) {
-            const horaActual = new Date();
+            const ahora = new Date();
             for (let track of tracks) {
                 const horaLimiteStr = obtenerHoraLimite(track);
                 if (horaLimiteStr) {
-                    const horaLimite = new Date();
-                    const [horas, minutos] = horaLimiteStr.split(":");
-                    horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
-                    if (horaActual > horaLimite) {
-                        alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
+                    // Crear una fecha para hoy con la hora límite
+                    const [horas, minutos] = horaLimiteStr.split(":").map(num => parseInt(num, 10));
+                    let horaLimite = new Date();
+                    horaLimite.setHours(horas, minutos, 0, 0); // Establecer hora y minutos
+                    horaLimite = new Date(horaLimite.getTime() - 5 * 60000); // Restar 5 minutos
+
+                    // Comparar la hora actual con la hora límite
+                    if (ahora > horaLimite) {
+                        alert(`El track "${track}" ya ha cerrado para hoy a las ${horaLimiteStr}. Por favor, selecciona otro track o fecha.`);
                         return;
                     }
                 }
@@ -519,6 +551,14 @@ $(document).ready(function() {
         $("#tablaJugadas tr").each(function() {
             actualizarPlaceholders("-", $(this));
         });
+        // Resetear el Dark Mode si estaba activado
+        if(localStorage.getItem('darkMode') === 'enabled') {
+            $('body').addClass('dark-mode');
+            $('#darkModeToggle').prop('checked', true);
+        } else {
+            $('body').removeClass('dark-mode');
+            $('#darkModeToggle').prop('checked', false);
+        }
     }
 
     // Calcular y mostrar las horas límite junto a cada track
@@ -535,7 +575,7 @@ $(document).ready(function() {
             }
             if (cierreStr) {
                 const cierre = new Date(`1970-01-01T${cierreStr}:00`);
-                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
+                cierre.setMinutes(cierre.getMinutes() - 5); // Restamos 5 minutos
                 const horas = cierre.getHours().toString().padStart(2, '0');
                 const minutos = cierre.getMinutes().toString().padStart(2, '0');
                 const horaLimite = `${horas}:${minutos}`;
@@ -546,5 +586,36 @@ $(document).ready(function() {
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
+
+    // Funcionalidad para el Toggle de Dark Mode
+    $('#darkModeToggle').change(function() {
+        if($(this).is(':checked')) {
+            $('body').addClass('dark-mode');
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            $('body').removeClass('dark-mode');
+            localStorage.setItem('darkMode', 'disabled');
+        }
+    });
+
+    // Al cargar la página, verificar el modo seleccionado previamente
+    if(localStorage.getItem('darkMode') === 'enabled') {
+        $('#darkModeToggle').prop('checked', true);
+        $('body').addClass('dark-mode');
+    }
+
+    // Evento para descargar el ticket como imagen
+    $("#downloadTicketImage").click(function() {
+        html2canvas(document.querySelector("#preTicket")).then(canvas => {
+            // Crear un enlace para descargar la imagen
+            const enlace = document.createElement('a');
+            enlace.download = `ticket_${$("#numeroTicket").text()}.png`;
+            enlace.href = canvas.toDataURL("image/png");
+            enlace.click();
+        }).catch(err => {
+            console.error("Error al generar la imagen del ticket:", err);
+            alert("Hubo un problema al generar la imagen del ticket. Por favor, inténtalo de nuevo.");
+        });
+    });
 
 });
