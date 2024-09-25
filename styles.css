@@ -44,21 +44,20 @@ body.dark-mode {
 
 /* Contenedor Principal */
 .container {
-    max-w/* Contenedor Principal */
-.container {
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.85); /* Fondo semitransparente en modo claro */
+    background-color: #e0f7fa; /* Color verde azulado claro */
     border-radius: 15px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Sombra suave */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Modo Oscuro */
 body.dark-mode .container {
-    background: rgba(18, 18, 18, 0.85); /* Fondo semitransparente en modo oscuro */
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); /* Sombra brillante */
+    background-color: #1e1e1e; /* Fondo oscuro para modo oscuro */
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
 }
+
 
     
 * Títulos */
@@ -117,30 +116,35 @@ body.dark-mode h2 {
 }
 
 /* Tabla de Jugadas */
-.table-dark {
-    background-color: rgba(255, 255, 255, 0.9); /* Fondo claro */
+.table {
+    background-color: #ffffff; /* Fondo blanco en modo claro */
     color: var(--color-texto);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: none; /* Remover sombras si es necesario */
 }
 
-.table-dark th {
-    background-color: var(--color-neon-cian);
-    color: #fff;
-    text-shadow: 0 0 5px var(--color-neon-cian);
+.table th, .table td {
+    background-color: #fafafa; /* Fondo ligeramente gris para celdas */
+    color: var(--color-texto);
 }
 
 /* Modo Oscuro */
-body.dark-mode .table-dark {
-    background-color: rgba(18, 18, 18, 0.9); /* Fondo oscuro */
+body.dark-mode .table {
+    background-color: #1e1e1e; /* Fondo oscuro en modo oscuro */
     color: var(--color-texto-dark);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+/* Campos de Entrada */
+input.form-control {
+    background-color: #ffffff; /* Fondo blanco en modo claro */
+    color: var(--color-texto);
+    border: 1px solid #cccccc; /* Borde gris claro */
 }
 
-body.dark-mode .table-dark th {
-    background-color: var(--color-neon-cian-dark);
-    color: #000;
-    text-shadow: 0 0 5px var(--color-neon-cian-dark);
+body.dark-mode .table th, 
+body.dark-mode .table td {
+    background-color: #2e2e2e; /* Fondo más oscuro para celdas */
+    color: var(--color-texto-dark);
 }
+
 
 /* Botones */
 .btn {
