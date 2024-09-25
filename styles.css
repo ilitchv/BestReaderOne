@@ -91,22 +91,40 @@ body.dark-mode h2 {
     color: var(--color-texto);
 }
 
-/* Estilos del Accordion */
+/* Estilos para el Acordeón en Modo Claro */
 .accordion-button {
-    background-color: #1e1e1e;
-    color: var(--color-neon-cian);
+    background-color: #e0f7fa; /* Color claro */
+    color: var(--color-texto); /* Texto oscuro */
     border: 2px solid var(--color-neon-cian);
 }
 
 .accordion-button:not(.collapsed) {
     background-color: var(--color-neon-cian);
-    color: #000;
+    color: #fff;
 }
 
 .accordion-body {
-    background-color: #1e1e1e;
+    background-color: #ffffff; /* Fondo blanco */
     color: var(--color-texto);
     border: 1px solid var(--color-neon-cian);
+}
+
+/* Estilos para el Acordeón en Modo Oscuro */
+body.dark-mode .accordion-button {
+    background-color: #1e1e1e; /* Color oscuro */
+    color: var(--color-neon-cian-dark);
+    border: 2px solid var(--color-neon-cian-dark);
+}
+
+body.dark-mode .accordion-button:not(.collapsed) {
+    background-color: var(--color-neon-cian-dark);
+    color: #000;
+}
+
+body.dark-mode .accordion-body {
+    background-color: #2e2e2e; /* Fondo oscuro */
+    color: var(--color-texto-dark);
+    border: 1px solid var(--color-neon-cian-dark);
 }
 
 /* Indicador de Hora Límite */
@@ -115,16 +133,25 @@ body.dark-mode h2 {
     color: #aaaaaa; /* Color tenue */
 }
 
-/* Tabla de Jugadas */
-.table {
-    background-color: #ffffff; /* Fondo blanco en modo claro */
+/* Estilos para las Filas de la Tabla en Modo Claro */
+.table tbody tr {
+    background-color: #fafafa; /* Fondo claro */
     color: var(--color-texto);
-    box-shadow: none; /* Remover sombras si es necesario */
 }
 
-.table th, .table td {
-    background-color: #fafafa; /* Fondo ligeramente gris para celdas */
-    color: var(--color-texto);
+/* Estilos para las Filas Alternadas (opcional) */
+.table tbody tr:nth-child(even) {
+    background-color: #f0f0f0;
+}
+
+/* Modo Oscuro */
+body.dark-mode .table tbody tr {
+    background-color: #2e2e2e; /* Fondo oscuro */
+    color: var(--color-texto-dark);
+}
+
+body.dark-mode .table tbody tr:nth-child(even) {
+    background-color: #3a3a3a;
 }
 
 /* Modo Oscuro */
