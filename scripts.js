@@ -1,3 +1,5 @@
+// scripts.js
+
 $(document).ready(function() {
 
     // Define la URL de tu API de SheetDB  
@@ -21,51 +23,22 @@ $(document).ready(function() {
         "USA": {
             "New York Mid Day": "14:25",
             "New York Evening": "22:25",
-            "Georgia Mid Day": "12:20",
-            "Georgia Evening": "18:45",
-            "New Jersey Mid Day": "12:54",
-            "New Jersey Evening": "22:50",
-            "Florida Mid Day": "13:25",
-            "Florida Evening": "21:30",
-            "Connecticut Mid Day": "13:35",
-            "Connecticut Evening": "22:20",
-            "Georgia Night": "23:20",
-            "Pensilvania AM": "12:55",
-            "Pensilvania PM": "18:20"
-            // Nota: "Venezuela" se excluye aquí
+            "Georgia Mid Day": "12:20"
+            // Agrega más tracks de USA según sea necesario
         },
         "Santo Domingo": {
             "Real": "12:45",
             "Gana mas": "14:25",
-            "Loteka": "19:30",
-            "Nacional": "20:30", // Domingos a las 17:50
-            "Quiniela Pale": "20:30", // Domingos a las 15:30
-            "Primera Día": "11:50",
-            "Suerte Día": "12:20",
-            "Lotería Real": "12:50",
-            "Suerte Tarde": "17:50",
-            "Lotedom": "17:50",
-            "Primera Noche": "19:50",
-            "Panama": "16:00",
-            // Horarios especiales para domingos
-            "Quiniela Pale Domingo": "15:30",
-            "Nacional Domingo": "17:50"
+            "Loteka": "19:30"
+            // Agrega más tracks de Santo Domingo según sea necesario
         },
-        "Venezuela": {
-            "Venezuela": "19:00" // Asumiendo un horario de cierre para Venezuela
-        }
+        // "Venezuela" se omite en esta etapa ya que estamos enfocándonos en USA y Santo Domingo
     };
 
     // Límites de apuestas por modalidad
     const limitesApuesta = {
-        "Win 4": { "straight": 6, "box": 30, "combo": 50 },
-        "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
-        "Venezuela": { "straight": 100 },
-        "Venezuela-Pale": { "straight": 100 },
-        "Pulito": { "straight": 100 },
-        "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
-        "RD-Pale": { "straight": 20 }, // Se mantiene en $20
-        "Combo": { "combo": 50 } // Añadido
+        // Define aquí los límites de apuesta según las modalidades
+        // Por ahora, no es necesario para esta primera mejora
     };
 
     // Modalidades de juego
@@ -74,14 +47,11 @@ $(document).ready(function() {
 
         const esUSA = tracks.some(track => Object.keys(horariosCierre["USA"]).includes(track));
         const esSD = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
-        const incluyeVenezuela = tracks.includes("Venezuela");
 
         const longitud = numero.length;
         const boxValue = parseInt(fila.find(".box").val()) || 0;
 
-        if (incluyeVenezuela && esUSA && longitud === 2) {
-            modalidad = "Venezuela";
-        } else if (esUSA && !esSD) {
+        if (esUSA && !esSD) {
             if (longitud === 4) {
                 modalidad = "Win 4";
             } else if (longitud === 3) {
@@ -148,8 +118,7 @@ $(document).ready(function() {
     // Contador de tracks seleccionados y días
     $(".track-checkbox").change(function() {
         const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        // Excluir "Venezuela" del conteo de tracks para el cálculo del total
-        selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
+        selectedTracks = tracksSeleccionados.length || 1;
 
         const fechas = $("#fecha").val();
         if (fechas) {
@@ -333,16 +302,22 @@ $(document).ready(function() {
         // Validación: Evitar tickets con jugadas de múltiples países sin las condiciones necesarias
         if (paisesUnicos.length > 1) {
             // Si se seleccionan múltiples países, aplicar reglas específicas
-            if (paisesUnicos.includes("Venezuela")) {
-                // Regla especial para "Venezuela": debe haber al menos un track de USA además de "Venezuela"
+            // En esta etapa, solo manejamos USA y Santo Domingo
+            const hasUSA = paisesUnicos.includes("USA");
+            const hasSD = paisesUnicos.includes("Santo Domingo");
+
+            if (hasUSA && hasSD) {
+                // Verificar que al menos un track de USA y uno de Santo Domingo estén seleccionados
                 const tracksUSA = tracks.filter(track => obtenerPais(track) === "USA");
-                if (tracksUSA.length === 0) {
-                    alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
+                const tracksSD = tracks.filter(track => obtenerPais(track) === "Santo Domingo");
+
+                if (tracksUSA.length < 1 || tracksSD.length < 1) {
+                    alert("Por favor, selecciona al menos un track de USA y uno de Santo Domingo para generar un ticket mixto.");
                     return;
                 }
             } else {
-                // Si se seleccionan múltiples países sin incluir "Venezuela", simplemente evitar jugadas mixtas
-                alert("Por favor, selecciona tracks de un solo país para evitar jugadas mixtas.");
+                // Si hay más de un país pero no USA y Santo Domingo juntos
+                alert("Por favor, selecciona tracks de un solo país o al menos un track de cada país seleccionado.");
                 return;
             }
         }
@@ -547,21 +522,9 @@ $(document).ready(function() {
         selectedDays = 1;
         agregarJugada();
         $("#totalJugadas").text("0.00");
-        // Resetear los placeholders
-        $("#tablaJugadas tr").each(function() {
-            actualizarPlaceholders("-", $(this));
-        });
-        // Resetear el Dark Mode si estaba activado
-        if(localStorage.getItem('darkMode') === 'enabled') {
-            $('body').addClass('dark-mode');
-            $('#darkModeToggle').prop('checked', true);
-        } else {
-            $('body').removeClass('dark-mode');
-            $('#darkModeToggle').prop('checked', false);
-        }
     }
 
-    // Calcular y mostrar las horas límite junto a cada track
+    // Función para calcular y mostrar las horas límite junto a cada track
     function mostrarHorasLimite() {
         $(".cutoff-time").each(function() {
             const track = $(this).data("track");
@@ -570,52 +533,14 @@ $(document).ready(function() {
                 cierreStr = horariosCierre["USA"][track];
             } else if (horariosCierre["Santo Domingo"][track]) {
                 cierreStr = horariosCierre["Santo Domingo"][track];
-            } else if (horariosCierre["Venezuela"][track]) {
-                cierreStr = horariosCierre["Venezuela"][track];
             }
             if (cierreStr) {
-                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
-                cierre.setMinutes(cierre.getMinutes() - 5); // Restamos 5 minutos
-                const horas = cierre.getHours().toString().padStart(2, '0');
-                const minutos = cierre.getMinutes().toString().padStart(2, '0');
-                const horaLimite = `${horas}:${minutos}`;
-                $(this).text(`Hora límite: ${horaLimite}`);
+                $(this).text(`Hora límite: ${cierreStr}`);
             }
         });
     }
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
-
-    // Funcionalidad para el Toggle de Dark Mode
-    $('#darkModeToggle').change(function() {
-        if($(this).is(':checked')) {
-            $('body').addClass('dark-mode');
-            localStorage.setItem('darkMode', 'enabled');
-        } else {
-            $('body').removeClass('dark-mode');
-            localStorage.setItem('darkMode', 'disabled');
-        }
-    });
-
-    // Al cargar la página, verificar el modo seleccionado previamente
-    if(localStorage.getItem('darkMode') === 'enabled') {
-        $('#darkModeToggle').prop('checked', true);
-        $('body').addClass('dark-mode');
-    }
-
-    // Evento para descargar el ticket como imagen
-    $("#downloadTicketImage").click(function() {
-        html2canvas(document.querySelector("#preTicket")).then(canvas => {
-            // Crear un enlace para descargar la imagen
-            const enlace = document.createElement('a');
-            enlace.download = `ticket_${$("#numeroTicket").text()}.png`;
-            enlace.href = canvas.toDataURL("image/png");
-            enlace.click();
-        }).catch(err => {
-            console.error("Error al generar la imagen del ticket:", err);
-            alert("Hubo un problema al generar la imagen del ticket. Por favor, inténtalo de nuevo.");
-        });
-    });
 
 });
