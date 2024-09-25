@@ -1,17 +1,13 @@
-/* styles.css */
-
 /* Estilos Básicos */
 :root {
-    /* Colores para Light Mode */
-    --color-fondo: #ffffff;
+    --color-fondo: #0a0a0a; /* Fondo oscuro */
     --color-neon-cian: #00ffff;
     --color-neon-morado: #ff00ff;
     --color-neon-verde: #39ff14;
-    --color-texto: #000000;
+    --color-texto: #ffffff;
     --color-placeholder: #cccccc; /* Color tenue para placeholders */
 }
 
-/* Modo Claro (Light Mode) - Predeterminado */
 body {
     background-color: var(--color-fondo);
     color: var(--color-texto);
@@ -25,7 +21,7 @@ body {
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(10, 10, 10, 0.95);
     border-radius: 15px;
     box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
 }
@@ -161,14 +157,6 @@ h2 {
     flex: 1;
 }
 
-/* Total de Jugadas */
-.total-section {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: var(--color-neon-cian);
-    text-shadow: 0 0 5px var(--color-neon-cian);
-}
-
 /* Modal */
 .modal-content {
     background-color: var(--color-fondo);
@@ -228,10 +216,6 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     }
 
     .accordion-button {
-        font-size: 1em;
-    }
-
-    .total-section {
         font-size: 1em;
     }
 }
