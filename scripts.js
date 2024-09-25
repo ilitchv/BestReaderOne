@@ -606,6 +606,26 @@ if (paisesUnicos.length > 1) {
         });
     }
 
+    // Funcionalidad para el Toggle de Dark Mode
+$('#darkModeToggle').change(function() {
+    if($(this).is(':checked')) {
+        $('body').addClass('dark-mode');
+        localStorage.setItem('darkMode', 'enabled');
+    } else {
+        $('body').removeClass('dark-mode');
+        localStorage.setItem('darkMode', 'disabled');
+    }
+});
+
+// Al cargar la página, verificar el modo seleccionado previamente
+if(localStorage.getItem('darkMode') === 'enabled') {
+    $('#darkModeToggle').prop('checked', true);
+    $('body').addClass('dark-mode');
+} else {
+    $('#darkModeToggle').prop('checked', false);
+    $('body').removeClass('dark-mode');
+}
+
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
