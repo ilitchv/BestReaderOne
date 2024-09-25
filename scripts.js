@@ -1,5 +1,3 @@
-// scripts.js
-
 $(document).ready(function() {
 
     // Define la URL de tu API de SheetDB  
@@ -23,35 +21,66 @@ $(document).ready(function() {
         "USA": {
             "New York Mid Day": "14:25",
             "New York Evening": "22:25",
-            "Georgia Mid Day": "12:20"
-            // Agrega más tracks de USA según sea necesario
+            "Georgia Mid Day": "12:20",
+            "Georgia Evening": "18:45",
+            "New Jersey Mid Day": "12:54",
+            "New Jersey Evening": "22:50",
+            "Florida Mid Day": "13:25",
+            "Florida Evening": "21:30",
+            "Connecticut Mid Day": "13:35",
+            "Connecticut Evening": "22:20",
+            "Georgia Night": "23:20",
+            "Pensilvania AM": "12:55",
+            "Pensilvania PM": "18:20"
+            // Nota: "Venezuela" se excluye aquí
         },
         "Santo Domingo": {
             "Real": "12:45",
             "Gana mas": "14:25",
-            "Loteka": "19:30"
-            // Agrega más tracks de Santo Domingo según sea necesario
+            "Loteka": "19:30",
+            "Nacional": "20:30", // Domingos a las 17:50
+            "Quiniela Pale": "20:30", // Domingos a las 15:30
+            "Primera Día": "11:50",
+            "Suerte Día": "12:20",
+            "Lotería Real": "12:50",
+            "Suerte Tarde": "17:50",
+            "Lotedom": "17:50",
+            "Primera Noche": "19:50",
+            "Panama": "16:00",
+            // Horarios especiales para domingos
+            "Quiniela Pale Domingo": "15:30",
+            "Nacional Domingo": "17:50"
         },
-        // "Venezuela" se omite en esta etapa ya que estamos enfocándonos en USA y Santo Domingo
+        "Venezuela": {
+            "Venezuela": "19:00" // Asumiendo un horario de cierre para Venezuela
+        }
     };
 
     // Límites de apuestas por modalidad
     const limitesApuesta = {
-        // Define aquí los límites de apuesta según las modalidades
-        // Por ahora, no es necesario para esta primera mejora
-    };
-
+    "Win 4": { "straight": 6, "box": 30, "combo": 50 },
+    "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
+    "Venezuela": { "straight": 100 },
+    "Venezuela-Pale": { "straight": 100 },
+    "Pulito": { "straight": 100 },
+    "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
+    "RD-Pale": { "straight": 20 }, // Se mantiene en $20
+    "Combo": { "combo": 50 } // Añadido
+};
     // Modalidades de juego
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
 
         const esUSA = tracks.some(track => Object.keys(horariosCierre["USA"]).includes(track));
         const esSD = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
+        const incluyeVenezuela = tracks.includes("Venezuela");
 
         const longitud = numero.length;
         const boxValue = parseInt(fila.find(".box").val()) || 0;
 
-        if (esUSA && !esSD) {
+        if (incluyeVenezuela && esUSA && longitud === 2) {
+            modalidad = "Venezuela";
+        } else if (esUSA && !esSD) {
             if (longitud === 4) {
                 modalidad = "Win 4";
             } else if (longitud === 3) {
@@ -118,7 +147,8 @@ $(document).ready(function() {
     // Contador de tracks seleccionados y días
     $(".track-checkbox").change(function() {
         const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        selectedTracks = tracksSeleccionados.length || 1;
+        // Excluir "Venezuela" del conteo de tracks para el cálculo del total
+        selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
 
         const fechas = $("#fecha").val();
         if (fechas) {
@@ -163,75 +193,73 @@ $(document).ready(function() {
 
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
-        if (limitesApuesta[modalidad]) {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-        } else {
-            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
-        }
-
-        if (modalidad === "Pulito") {
-            fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else if (modalidad === "Combo") { // Añadido
-            fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta["Combo"].combo}`).prop('disabled', false);
-        } else {
-            // Modalidad no reconocida
-            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
-        }
+    if (limitesApuesta[modalidad]) {
+        fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
+    } else {
+        fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
     }
 
+    if (modalidad === "Pulito") {
+        fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
+        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+        fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
+    } else if (modalidad === "Combo") { // Añadido
+        fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta["Combo"].combo}`).prop('disabled', false);
+    } else {
+        // Modalidad no reconocida
+        fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
+        fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
+    }
+}
     // Función para calcular el total de una jugada
     function calcularTotalJugada(fila) {
-        const modalidad = fila.find(".tipoJuego").text();
-        const numero = fila.find(".numeroApostado").val();
-        if (!numero || numero.length < 2 || numero.length > 4) {
-            fila.find(".total").text("0.00");
-            return;
-        }
-
-        const combinaciones = calcularCombinaciones(numero);
-        let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let box = parseFloat(fila.find(".box").val()) || 0;
-        let combo = parseFloat(fila.find(".combo").val()) || 0;
-
-        // Aplicar límites según modalidad
-        if (limitesApuesta[modalidad]) {
-            straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
-                box = Math.min(box, limitesApuesta[modalidad].box || box);
-            }
-            if (limitesApuesta[modalidad].combo !== undefined) {
-                combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
-            }
-        }
-
-        // Calcular total según modalidad
-        let total = 0;
-        if (modalidad === "Pulito") {
-            total = straight; // No sumar box
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            total = straight;
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + box + (combo * combinaciones);
-        } else if (modalidad === "Combo") { // Añadido
-            total = combo; // Solo sumar combo
-        } else {
-            // Modalidad no reconocida
-            total = straight + box + combo;
-        }
-
-        fila.find(".total").text(total.toFixed(2));
+    const modalidad = fila.find(".tipoJuego").text();
+    const numero = fila.find(".numeroApostado").val();
+    if (!numero || numero.length < 2 || numero.length > 4) {
+        fila.find(".total").text("0.00");
+        return;
     }
 
+    const combinaciones = calcularCombinaciones(numero);
+    let straight = parseFloat(fila.find(".straight").val()) || 0;
+    let box = parseFloat(fila.find(".box").val()) || 0;
+    let combo = parseFloat(fila.find(".combo").val()) || 0;
+
+    // Aplicar límites según modalidad
+    if (limitesApuesta[modalidad]) {
+        straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
+        if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
+            box = Math.min(box, limitesApuesta[modalidad].box || box);
+        }
+        if (limitesApuesta[modalidad].combo !== undefined) {
+            combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
+        }
+    }
+
+    // Calcular total según modalidad
+    let total = 0;
+    if (modalidad === "Pulito") {
+        total = straight; // No sumar box
+    } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+        total = straight;
+    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+        total = straight + box + (combo * combinaciones);
+    } else if (modalidad === "Combo") { // Añadido
+        total = combo; // Solo sumar combo
+    } else {
+        // Modalidad no reconocida
+        total = straight + box + combo;
+    }
+
+    fila.find(".total").text(total.toFixed(2));
+}
     // Función para calcular el número de combinaciones posibles
     function calcularCombinaciones(numero) {
         const counts = {};
@@ -264,21 +292,11 @@ $(document).ready(function() {
     // Función para obtener la hora límite de un track
     function obtenerHoraLimite(track) {
         for (let region in horariosCierre) {
-            if (horariosCierre[region].hasOwnProperty(track)) {
+            if (horariosCierre[region][track]) {
                 return horariosCierre[region][track];
             }
         }
         return null;
-    }
-
-    // Función para obtener el país de un track
-    function obtenerPais(track) {
-        for (let region in horariosCierre) {
-            if (horariosCierre[region].hasOwnProperty(track)) {
-                return region;
-            }
-        }
-        return null; // Retorna null si el track no pertenece a ninguna región definida
     }
 
     // Evento para generar el ticket
@@ -295,31 +313,11 @@ $(document).ready(function() {
             return;
         }
 
-        // Identificar los países de los tracks seleccionados
-        const paisesSeleccionados = tracks.map(track => obtenerPais(track)).filter(pais => pais !== null);
-        const paisesUnicos = [...new Set(paisesSeleccionados)]; // Obtener países únicos
-
-        // Validación: Evitar tickets con jugadas de múltiples países sin las condiciones necesarias
-        if (paisesUnicos.length > 1) {
-            // Si se seleccionan múltiples países, aplicar reglas específicas
-            // En esta etapa, solo manejamos USA y Santo Domingo
-            const hasUSA = paisesUnicos.includes("USA");
-            const hasSD = paisesUnicos.includes("Santo Domingo");
-
-            if (hasUSA && hasSD) {
-                // Verificar que al menos un track de USA y uno de Santo Domingo estén seleccionados
-                const tracksUSA = tracks.filter(track => obtenerPais(track) === "USA");
-                const tracksSD = tracks.filter(track => obtenerPais(track) === "Santo Domingo");
-
-                if (tracksUSA.length < 1 || tracksSD.length < 1) {
-                    alert("Por favor, selecciona al menos un track de USA y uno de Santo Domingo para generar un ticket mixto.");
-                    return;
-                }
-            } else {
-                // Si hay más de un país pero no USA y Santo Domingo juntos
-                alert("Por favor, selecciona tracks de un solo país o al menos un track de cada país seleccionado.");
-                return;
-            }
+        // Validar que si se seleccionó el track "Venezuela", se haya seleccionado al menos un track de USA
+        const tracksUSASeleccionados = tracks.filter(track => Object.keys(horariosCierre["USA"]).includes(track));
+        if (tracks.includes("Venezuela") && tracksUSASeleccionados.length === 0) {
+            alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
+            return;
         }
 
         // Validar que los tracks seleccionados no hayan pasado su hora límite
@@ -327,21 +325,16 @@ $(document).ready(function() {
         const fechaInicio = fechasArray[0];
         const fechaActual = new Date().toISOString().split('T')[0];
         let fechaSeleccionada = fechaInicio; // Usamos la fecha de inicio para la validación
-
         if (fechaSeleccionada === fechaActual) {
-            const ahora = new Date();
+            const horaActual = new Date();
             for (let track of tracks) {
                 const horaLimiteStr = obtenerHoraLimite(track);
                 if (horaLimiteStr) {
-                    // Crear una fecha para hoy con la hora límite
-                    const [horas, minutos] = horaLimiteStr.split(":").map(num => parseInt(num, 10));
-                    let horaLimite = new Date();
-                    horaLimite.setHours(horas, minutos, 0, 0); // Establecer hora y minutos
-                    horaLimite = new Date(horaLimite.getTime() - 5 * 60000); // Restar 5 minutos
-
-                    // Comparar la hora actual con la hora límite
-                    if (ahora > horaLimite) {
-                        alert(`El track "${track}" ya ha cerrado para hoy a las ${horaLimiteStr}. Por favor, selecciona otro track o fecha.`);
+                    const horaLimite = new Date();
+                    const [horas, minutos] = horaLimiteStr.split(":");
+                    horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
+                    if (horaActual > horaLimite) {
+                        alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
                         return;
                     }
                 }
@@ -522,9 +515,13 @@ $(document).ready(function() {
         selectedDays = 1;
         agregarJugada();
         $("#totalJugadas").text("0.00");
+        // Resetear los placeholders
+        $("#tablaJugadas tr").each(function() {
+            actualizarPlaceholders("-", $(this));
+        });
     }
 
-    // Función para calcular y mostrar las horas límite junto a cada track
+    // Calcular y mostrar las horas límite junto a cada track
     function mostrarHorasLimite() {
         $(".cutoff-time").each(function() {
             const track = $(this).data("track");
@@ -533,9 +530,16 @@ $(document).ready(function() {
                 cierreStr = horariosCierre["USA"][track];
             } else if (horariosCierre["Santo Domingo"][track]) {
                 cierreStr = horariosCierre["Santo Domingo"][track];
+            } else if (horariosCierre["Venezuela"][track]) {
+                cierreStr = horariosCierre["Venezuela"][track];
             }
             if (cierreStr) {
-                $(this).text(`Hora límite: ${cierreStr}`);
+                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
+                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
+                const horas = cierre.getHours().toString().padStart(2, '0');
+                const minutos = cierre.getMinutes().toString().padStart(2, '0');
+                const horaLimite = `${horas}:${minutos}`;
+                $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
     }
