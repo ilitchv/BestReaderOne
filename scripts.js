@@ -606,6 +606,8 @@ if (paisesUnicos.length > 1) {
         });
     }
 
+    // Llamar a la función para mostrar las horas límite al cargar la página
+    mostrarHorasLimite();
     // Funcionalidad para el Toggle de Dark Mode
 $('#darkModeToggle').change(function() {
     if($(this).is(':checked')) {
@@ -625,8 +627,5 @@ if(localStorage.getItem('darkMode') === 'enabled') {
     $('#darkModeToggle').prop('checked', false);
     $('body').removeClass('dark-mode');
 }
-
-    // Llamar a la función para mostrar las horas límite al cargar la página
-    mostrarHorasLimite();
-
+    
 });
