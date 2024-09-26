@@ -299,84 +299,20 @@ $(document).ready(function() {
         return null;
     }
 
-    // Función para validar si la jugada tiene los tracks necesarios seleccionados
-function validarTracksPorModalidad(modalidad, tracksSeleccionados) {
-    switch(modalidad) {
-        case "Venezuela":
-            // Debe tener al menos un track de USA y el track "Venezuela" seleccionado
-            const tieneTrackUSA = tracksSeleccionados.some(track => Object.keys(horariosCierre["USA"]).includes(track));
-            const tieneVenezuela = tracksSeleccionados.includes("Venezuela");
-            return tieneTrackUSA && tieneVenezuela;
-        case "Win 4":
-        case "Peak 3":
-        case "Pulito":
-            // Debe tener al menos un track de USA seleccionado
-            return tracksSeleccionados.some(track => Object.keys(horariosCierre["USA"]).includes(track));
-        case "RD-Quiniela":
-        case "RD-Pale":
-            // Debe tener al menos un track de Santo Domingo seleccionado
-            return tracksSeleccionados.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
-        default:
-            // Modalidad no reconocida o no requiere validación específica
-            return true;
-    }
-}
-
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
-    // Validar formulario existente
-    const fecha = $("#fecha").val();
-    if (!fecha) {
-        alert("Por favor, selecciona una fecha.");
-        return;
-    }
-    const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-    if (!tracksSeleccionados || tracksSeleccionados.length === 0) {
-        alert("Por favor, selecciona al menos un track.");
-        return;
-    }
-        
-    // Validar jugadas
-    let jugadasValidas = true;
-    $("#tablaJugadas tr").each(function() {
-        const numero = $(this).find(".numeroApostado").val();
-        const modalidad = $(this).find(".tipoJuego").text();
-        if (!numero || (numero.length < 2 || numero.length > 4)) {
-            jugadasValidas = false;
-            alert("Por favor, ingresa números apostados válidos (2, 3 o 4 dígitos).");
-            return false;
+        // Validar formulario
+        const fecha = $("#fecha").val();
+        if (!fecha) {
+            alert("Por favor, selecciona una fecha.");
+            return;
         }
-        if (modalidad === "-") {
-            jugadasValidas = false;
-            alert("Por favor, selecciona una modalidad de juego válida.");
-            return false;
+        const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
+        if (!tracks || tracks.length === 0) {
+            alert("Por favor, selecciona al menos un track.");
+            return;
         }
 
-        // Nueva Validación: Verificar que la jugada tiene al menos un track seleccionado correspondiente a su modalidad
-        let tracksRequeridos = [];
-
-        // Determinar los tracks requeridos según la modalidad
-        if (["Win 4", "Peak 3", "Pulito", "Venezuela"].includes(modalidad)) {
-            // Modalidades que requieren tracks de USA
-            tracksRequeridos = Object.keys(horariosCierre["USA"]);
-        } else if (["RD-Quiniela", "RD-Pale"].includes(modalidad)) {
-            // Modalidades que requieren tracks de Santo Domingo
-            tracksRequeridos = Object.keys(horariosCierre["Santo Domingo"]);
-        } else {
-            // Modalidad no reconocida o no requiere validación específica
-            tracksRequeridos = [];
-        }
-
-        // Verificar si al menos uno de los tracks requeridos está seleccionado
-        const tracksSeleccionadosParaModalidad = tracksSeleccionados.filter(track => tracksRequeridos.includes(track));
-
-        if (tracksRequeridos.length > 0 && tracksSeleccionadosParaModalidad.length === 0) {
-            jugadasValidas = false;
-            alert(`La jugada #${index + 1} con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.`);
-            return false; // Salir del bucle
-        }
-        // ... (Resto de las validaciones existentes para la jugada) ...
-    });
         // Validar que si se seleccionó el track "Venezuela", se haya seleccionado al menos un track de USA
         const tracksUSASeleccionados = tracks.filter(track => Object.keys(horariosCierre["USA"]).includes(track));
         if (tracks.includes("Venezuela") && tracksUSASeleccionados.length === 0) {
