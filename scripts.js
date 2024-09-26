@@ -324,7 +324,7 @@ function validarTracksPorModalidad(modalidad, tracksSeleccionados) {
 
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
-    // Validar formulario
+    // Validar formulario existente
     const fecha = $("#fecha").val();
     if (!fecha) {
         alert("Por favor, selecciona una fecha.");
@@ -335,7 +335,7 @@ function validarTracksPorModalidad(modalidad, tracksSeleccionados) {
         alert("Por favor, selecciona al menos un track.");
         return;
     }
-
+        
     // Validar jugadas
     let jugadasValidas = true;
     $("#tablaJugadas tr").each(function() {
@@ -352,13 +352,29 @@ function validarTracksPorModalidad(modalidad, tracksSeleccionados) {
             return false;
         }
 
-        // Nueva Validación: Verificar que la jugada tiene los tracks necesarios seleccionados
-        if (!validarTracksPorModalidad(modalidad, tracksSeleccionados)) {
-            jugadasValidas = false;
-            alert(`La jugada con modalidad "${modalidad}" requiere que selecciones los tracks correspondientes.`);
-            return false; // Salir del bucle
+        // Nueva Validación: Verificar que la jugada tiene al menos un track seleccionado correspondiente a su modalidad
+        let tracksRequeridos = [];
+
+        // Determinar los tracks requeridos según la modalidad
+        if (["Win 4", "Peak 3", "Pulito", "Venezuela"].includes(modalidad)) {
+            // Modalidades que requieren tracks de USA
+            tracksRequeridos = Object.keys(horariosCierre["USA"]);
+        } else if (["RD-Quiniela", "RD-Pale"].includes(modalidad)) {
+            // Modalidades que requieren tracks de Santo Domingo
+            tracksRequeridos = Object.keys(horariosCierre["Santo Domingo"]);
+        } else {
+            // Modalidad no reconocida o no requiere validación específica
+            tracksRequeridos = [];
         }
 
+        // Verificar si al menos uno de los tracks requeridos está seleccionado
+        const tracksSeleccionadosParaModalidad = tracksSeleccionados.filter(track => tracksRequeridos.includes(track));
+
+        if (tracksRequeridos.length > 0 && tracksSeleccionadosParaModalidad.length === 0) {
+            jugadasValidas = false;
+            alert(`La jugada #${index + 1} con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.`);
+            return false; // Salir del bucle
+        }
         // ... (Resto de las validaciones existentes para la jugada) ...
     });
         // Validar que si se seleccionó el track "Venezuela", se haya seleccionado al menos un track de USA
