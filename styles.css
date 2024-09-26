@@ -300,12 +300,12 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     }
 /* Filas de la Tabla en Modo Claro (Bright Mode) */
 .table tbody tr {
-    background-color: #e0f7fa; /* Verdeazul claro */
+    background-color: #e0f7fa; /* Verdeazulado claro */
     color: var(--color-texto);
 }
 
 .table tbody tr:nth-child(even) {
-    background-color: #b2ebf2; /* Verdeazul aún más claro para filas pares */
+    background-color: #b2ebf2; /* Verdeazulado aún más claro para filas pares */
 }
 
 /* Filas de la Tabla en Modo Oscuro */
@@ -317,6 +317,7 @@ body.dark-mode .table tbody tr {
 body.dark-mode .table tbody tr:nth-child(even) {
     background-color: #3a3a3a; /* Fondo más oscuro para filas pares */
 }
+
 /* Campos de Entrada en la Tabla en Modo Claro */
 .table tbody tr input.form-control {
     background-color: #ffffff; /* Fondo blanco */
@@ -330,6 +331,7 @@ body.dark-mode .table tbody tr input.form-control {
     color: var(--color-texto-dark);
     border: 1px solid #555555; /* Borde gris oscuro */
 }
+
 
 
 }
