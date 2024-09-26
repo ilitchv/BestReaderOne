@@ -299,34 +299,34 @@ input::-ms-input-placeholder { /* Microsoft Edge */
         font-size: 1em;
     }
 /* Filas de la Tabla en Modo Claro (Bright Mode) */
-.table tbody tr {
+table.table tbody tr {
     background-color: #e0f7fa; /* Verdeazulado claro */
     color: var(--color-texto);
 }
 
-.table tbody tr:nth-child(even) {
+table.table tbody tr:nth-child(even) {
     background-color: #b2ebf2; /* Verdeazulado aún más claro para filas pares */
 }
 
 /* Filas de la Tabla en Modo Oscuro */
-body.dark-mode .table tbody tr {
+body.dark-mode table.table tbody tr {
     background-color: #2e2e2e; /* Fondo oscuro */
     color: var(--color-texto-dark);
 }
 
-body.dark-mode .table tbody tr:nth-child(even) {
+body.dark-mode table.table tbody tr:nth-child(even) {
     background-color: #3a3a3a; /* Fondo más oscuro para filas pares */
 }
 
 /* Campos de Entrada en la Tabla en Modo Claro */
-.table tbody tr input.form-control {
+table.table tbody tr input.form-control {
     background-color: #ffffff; /* Fondo blanco */
     color: var(--color-texto);
     border: 1px solid #cccccc; /* Borde gris claro */
 }
 
 /* Campos de Entrada en la Tabla en Modo Oscuro */
-body.dark-mode .table tbody tr input.form-control {
+body.dark-mode table.table tbody tr input.form-control {
     background-color: #3a3a3a; /* Fondo oscuro */
     color: var(--color-texto-dark);
     border: 1px solid #555555; /* Borde gris oscuro */
