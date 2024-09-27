@@ -542,30 +542,79 @@ $("#ticketFecha").text(`${fecha}`);
         ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
         ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
         
-        // Enviar datos a SheetDB
-        $.ajax({
-            url: SHEETDB_API_URL, // Usar la variable de SheetDB
-            method: "POST",
-            dataType: "json",
-            contentType: "application/json",
-            data: JSON.stringify(ticketData),
-            success: function(response) {
-                // Imprimir el ticket
-                window.print();
-                // Cerrar el modal
-                ticketModal.hide();
-                // Reiniciar el formulario
-                resetForm();
-                alert("Ticket guardado y enviado exitosamente.");
-            },
-            error: function(err) {
+       // Enviar datos a SheetDB
+    $.ajax({
+        url: SHEETDB_API_URL, // Usar la variable de SheetDB
+        method: "POST",
+        dataType: "json",
+        contentType: "application/json",
+        data: JSON.stringify(ticketData),
+        success: function(response) {
+            // Capturar y compartir el ticket como imagen
+            shareTicketAsImage();
+        },
+        error: function(err) {
                 console.error("Error al enviar datos a SheetDB:", err);
                 // Mostrar mensaje de error más detallado
                 alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
             }
         });
     });
+// Función para capturar y compartir el ticket como imagen
+function shareTicketAsImage() {
+    // Seleccionar el elemento del ticket que queremos capturar
+    const ticketElement = document.getElementById('preTicket');
 
+    // Usar html2canvas para capturar el elemento
+    html2canvas(ticketElement, {
+        backgroundColor: null, // Para mantener el fondo transparente o como está
+        scale: 2, // Aumentar la resolución de la imagen si es necesario
+    }).then(canvas => {
+        // Convertir el canvas a blob
+        canvas.toBlob(function(blob) {
+            // Crear un objeto File a partir del blob
+            const file = new File([blob], 'ticket.png', { type: 'image/png' });
+
+            // Verificar si el navegador soporta el Web Share API con archivos
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: 'Ticket de Lotería',
+                    text: 'Aquí está tu ticket de lotería.'
+                }).then(() => {
+                    // Compartido exitosamente
+                    // Cerrar el modal y reiniciar el formulario
+                    ticketModal.hide();
+                    resetForm();
+                    alert("Ticket guardado y compartido exitosamente.");
+                }).catch((error) => {
+                    console.error('Error al compartir:', error);
+                    alert('Hubo un error al compartir el ticket. Por favor, inténtalo de nuevo.');
+                });
+            } else {
+                // Si el navegador no soporta compartir archivos, ofrecer opción de descargar
+                alert('Tu navegador no soporta la función de compartir archivos. Se descargará el ticket como imagen.');
+
+                // Crear un enlace de descarga
+                const link = document.createElement('a');
+                link.download = 'ticket.png';
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Cerrar el modal y reiniciar el formulario
+                ticketModal.hide();
+                resetForm();
+                alert("Ticket guardado y descargado exitosamente.");
+            }
+        }, 'image/png');
+    }).catch((error) => {
+        console.error('Error al capturar el ticket:', error);
+        alert('Hubo un error al generar la imagen del ticket. Por favor, inténtalo de nuevo.');
+    });
+}
+    
     // Función para reiniciar el formulario
     function resetForm() {
         $("#lotteryForm")[0].reset();
