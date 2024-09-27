@@ -18,7 +18,7 @@ flatpickr("#fecha", {
 
     let jugadaCount = 0;
     let selectedTracks = 0;
-    let selectedDays = 1;
+    let selectedDays = 0;
 
     // Horarios de cierre por track
     const horariosCierre = {
@@ -149,20 +149,20 @@ flatpickr("#fecha", {
     });
 
     // Contador de tracks seleccionados y días
-    $(".track-checkbox").change(function() {
-        const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        // Excluir "Venezuela" del conteo de tracks para el cálculo del total
-        selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
+$(".track-checkbox").change(function() {
+    const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
+    // Excluir "Venezuela" del conteo de tracks para el cálculo del total
+    selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
 
-        const fechas = $("#fecha").val();
-        if (fechas) {
-            const fechasArray = fechas.split(" to ");
-            selectedDays = fechasArray.length === 2 ? calcularDiferenciaDias(fechasArray[0], fechasArray[1]) + 1 : 1;
-        } else {
-            selectedDays = 1;
-        }
-        calcularTotal();
-    });
+    const fechas = $("#fecha").val();
+    if (fechas) {
+        const fechasArray = fechas.split(", ");
+        selectedDays = fechasArray.length;
+    } else {
+        selectedDays = 0;
+    }
+    calcularTotal();
+});
 
     $("#fecha").change(function() {
     const fechas = $(this).val();
@@ -170,7 +170,7 @@ flatpickr("#fecha", {
         const fechasArray = fechas.split(", ");
         selectedDays = fechasArray.length;
     } else {
-        selectedDays = 1;
+        selectedDays = 0;
     }
     calcularTotal();
 });
@@ -282,14 +282,25 @@ flatpickr("#fecha", {
 
     // Función para calcular el total de todas las jugadas
     function calcularTotal() {
-        let total = 0;
-        $(".total").each(function() {
-            total += parseFloat($(this).text()) || 0;
-        });
+    let total = 0;
+    $(".total").each(function() {
+        total += parseFloat($(this).text()) || 0;
+    });
+    console.log("Total de jugadas antes de multiplicar:", total);
+    console.log("Tracks seleccionados:", selectedTracks);
+    console.log("Días seleccionados:", selectedDays);
+
+    // Si no hay días seleccionados, el total es 0
+    if (selectedDays === 0) {
+        total = 0;
+    } else {
         // Multiplicar por el número de tracks seleccionados y días
         total = (total * selectedTracks * selectedDays).toFixed(2);
-        $("#totalJugadas").text(total);
     }
+    console.log("Total después de multiplicar:", total);
+    $("#totalJugadas").text(total);
+}
+
 
     // Inicializar Bootstrap Modal
     var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
