@@ -506,9 +506,10 @@ $("#ticketFecha").text(`${fecha}`);
     $("#confirmarTicket").click(function() {
         // Preparar datos para SheetDB
         const ticketData = {
-            "Ticket Number": $("#numeroTicket").text(),
-            "Bet Date": $("#ticketFecha").text(),
-            "Tracks": $("#ticketTracks").text(),
+    "Ticket Number": $("#numeroTicket").text(),
+    "Transaction DateTime": fechaTransaccion,
+    "Bet Dates": $("#ticketFecha").text(),
+    "Tracks": $("#ticketTracks").text(),
             "Bet Numbers": [],
             "Game Mode": [],
             "Straight ($)": [],
