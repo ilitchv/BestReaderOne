@@ -324,10 +324,20 @@ flatpickr("#fecha", {
         // Validar que los tracks seleccionados no hayan pasado su hora límite
 const fechasArray = fecha.split(" to ");
 const fechaInicio = fechasArray[0];
-const fechaSeleccionada = new Date(fechaInicio);
-const fechaActual = new Date();
 
-if (fechaSeleccionada.toDateString() === fechaActual.toDateString()) {
+// Extraer los componentes de la fecha seleccionada
+const [yearSel, monthSel, daySel] = fechaInicio.split('-').map(Number);
+const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel); // Mes empieza en 0
+
+// Obtener la fecha actual sin hora
+const fechaActual = new Date();
+const yearActual = fechaActual.getFullYear();
+const monthActual = fechaActual.getMonth();
+const dayActual = fechaActual.getDate();
+const fechaActualSinHora = new Date(yearActual, monthActual, dayActual);
+
+// Comparar las fechas sin considerar la hora
+if (fechaSeleccionada.getTime() === fechaActualSinHora.getTime()) {
     // La fecha seleccionada es hoy, aplicar validación de hora
     const horaActual = new Date();
     for (let track of tracks) {
@@ -344,7 +354,7 @@ if (fechaSeleccionada.toDateString() === fechaActual.toDateString()) {
     }
 }
 // Si la fecha seleccionada es futura, no se aplica la validación de hora
-
+ 
         // Validar jugadas
         let jugadasValidas = true;
         $("#tablaJugadas tr").each(function() {
