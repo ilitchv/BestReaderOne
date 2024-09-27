@@ -562,50 +562,72 @@ $("#ticketFecha").text(`${fecha}`);
     });
 // Función para capturar y compartir el ticket como imagen
 function shareTicketAsImage() {
-    // Seleccionar el elemento del ticket que queremos capturar
     const ticketElement = document.getElementById('preTicket');
 
-    // Usar html2canvas para capturar el elemento
     html2canvas(ticketElement, {
-        backgroundColor: null, // Para mantener el fondo transparente o como está
-        scale: 2, // Aumentar la resolución de la imagen si es necesario
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true
     }).then(canvas => {
-        // Convertir el canvas a blob
-        canvas.toBlob(function(blob) {
-            // Crear un objeto File a partir del blob
-            const file = new File([blob], 'ticket.png', { type: 'image/png' });
+        // Convertir el canvas a Data URL
+        const dataUrl = canvas.toDataURL('image/png');
 
-            // Verificar si el navegador soporta el Web Share API con archivos
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({
-                    files: [file],
-                    title: 'Ticket de Lotería',
-                    text: 'Aquí está tu ticket de lotería.'
-                }).then(() => {
-                    // Compartido exitosamente
-                    // Cerrar el modal y reiniciar el formulario
-                    ticketModal.hide();
-                    resetForm();
-                    alert("Ticket guardado y compartido exitosamente.");
-                }).catch((error) => {
-                    console.error('Error al compartir:', error);
-                    alert('Hubo un error al compartir el ticket. Por favor, inténtalo de nuevo.');
-                });
-            } else {
-                // Si el navegador no soporta compartir archivos, ofrecer opción de descargar
-                alert('Tu navegador no soporta la función de compartir archivos. Se descargará el ticket como imagen.');
+        // Crear un objeto Blob a partir del Data URL
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], {type:mime});
 
-                // Crear un enlace de descarga
-                const link = document.createElement('a');
-                link.download = 'ticket.png';
-                link.href = canvas.toDataURL('image/png');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+        // Crear un objeto File a partir del Blob
+        const file = new File([blob], 'ticket.png', { type: 'image/png' });
 
+        // Verificar si el navegador soporta el Web Share API con archivos
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+                files: [file],
+                title: 'Ticket de Lotería',
+                text: 'Aquí está tu ticket de lotería.'
+            }).then(() => {
+                // Compartido exitosamente
                 // Cerrar el modal y reiniciar el formulario
                 ticketModal.hide();
                 resetForm();
+                alert("Ticket guardado y compartido exitosamente.");
+            }).catch((error) => {
+                console.error('Error al compartir:', error);
+                alert('Hubo un error al compartir el ticket. Por favor, inténtalo de nuevo.');
+
+                // Fallback: Ofrecer descarga de la imagen
+                offerImageDownload(dataUrl);
+            });
+        } else {
+            // Fallback: Ofrecer descarga de la imagen
+            offerImageDownload(dataUrl);
+        }
+    }).catch((error) => {
+        console.error('Error al capturar el ticket:', error);
+        alert('Hubo un error al generar la imagen del ticket. Por favor, inténtalo de nuevo.');
+    });
+}
+
+// Función para ofrecer la descarga de la imagen
+function offerImageDownload(dataUrl) {
+    alert('Tu dispositivo no soporta la función de compartir archivos. La imagen del ticket se abrirá en una nueva pestaña para que puedas guardarla.');
+
+    // Abrir la imagen en una nueva pestaña
+    const newWindow = window.open();
+    newWindow.document.write(`<img src="${dataUrl}" alt="Ticket de Lotería" style="width:100%;">`);
+
+    // Cerrar el modal y reiniciar el formulario
+    ticketModal.hide();
+    resetForm();
+}
+
                 alert("Ticket guardado y descargado exitosamente.");
             }
         }, 'image/png');
