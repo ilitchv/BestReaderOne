@@ -14,6 +14,11 @@ flatpickr("#fecha", {
     maxDate: null,
     defaultDate: null,
     allowInput: true,
+    onChange: function(selectedDates, dateStr, instance) {
+        selectedDays = selectedDates.length;
+        console.log("Días seleccionados:", selectedDays);
+        calcularTotal();
+    },
 });
 
     let jugadaCount = 0;
@@ -154,26 +159,20 @@ $(".track-checkbox").change(function() {
     // Excluir "Venezuela" del conteo de tracks para el cálculo del total
     selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
 
-    const fechas = $("#fecha").val();
-    if (fechas) {
-        const fechasArray = fechas.split(", ");
-        selectedDays = fechasArray.length;
-    } else {
-        selectedDays = 0;
-    }
     calcularTotal();
 });
 
-    $("#fecha").change(function() {
-    const fechas = $(this).val();
-    if (fechas) {
-        const fechasArray = fechas.split(", ");
-        selectedDays = fechasArray.length;
-    } else {
-        selectedDays = 0;
-    }
-    calcularTotal();
-});
+
+ // $("#fecha").change(function() {
+//     const fechas = $(this).val();
+//     if (fechas) {
+//         const fechasArray = fechas.split(", ");
+//         selectedDays = fechasArray.length;
+//     } else {
+//         selectedDays = 0;
+//     }
+//     calcularTotal();
+// });
 
 
     // Función para calcular la diferencia de días entre dos fechas
