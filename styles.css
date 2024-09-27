@@ -218,4 +218,61 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     .accordion-button {
         font-size: 1em;
     }
+
+    /* Estilos para el ticket */
+#preTicket {
+    background-color: white; /* Fondo blanco */
+    color: black; /* Texto negro */
+    padding: 20px;
+    max-width: 600px;
+    margin: auto;
+    border: 1px solid black;
+    overflow: hidden; /* Para evitar desbordamientos */
+}
+
+/* Estilos para títulos y textos */
+#preTicket h4,
+#preTicket p,
+#preTicket .ticket-number,
+#preTicket .transaction-date,
+#preTicket .total-section {
+    color: black;
+}
+
+/* Estilos para la tabla */
+#preTicket table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Para que las columnas tengan un ancho fijo */
+}
+
+#preTicket th,
+#preTicket td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: center;
+    color: black;
+    word-wrap: break-word; /* Permite que el texto se ajuste en varias líneas */
+    font-size: 14px; /* Ajusta el tamaño de fuente si es necesario */
+}
+
+#preTicket th {
+    background-color: #f2f2f2; /* Fondo gris claro para encabezados */
+}
+
+#preTicket td {
+    background-color: white;
+}
+
+/* Estilos para el código QR */
+#preTicket #qrcode {
+    margin: 20px auto;
+}
+
+/* Si hay demasiadas filas, permitir scroll interno */
+#preTicket {
+    max-height: 800px; /* Establece una altura máxima si es necesario */
+    overflow-y: auto; /* Añade scroll vertical si es necesario */
+}
+
 }
