@@ -1,3 +1,5 @@
+let fechaTransaccion = '';
+
 $(document).ready(function() {
 
     // Define la URL de tu API de SheetDB  
@@ -473,18 +475,24 @@ for (let fechaSeleccionadaStr of fechasArray) {
         });
         $("#ticketTotal").text($("#totalJugadas").text());
         // Generar número de ticket único de 8 dígitos
-        const numeroTicket = generarNumeroUnico();
-        $("#numeroTicket").text(numeroTicket);
-        // Generar código QR
-        $("#qrcode").empty(); // Limpiar el contenedor anterior
-        new QRCode(document.getElementById("qrcode"), {
-            text: numeroTicket,
-            width: 128,
-            height: 128,
-        });
-        // Asignar hora actual al generar el ticket
-        const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        $("#ticketFecha").text(`${fecha}`);
+const numeroTicket = generarNumeroUnico();
+$("#numeroTicket").text(numeroTicket);
+
+// Generar la fecha y hora de transacción
+fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
+$("#ticketTransaccion").text(`Fecha y Hora de Transacción: ${fechaTransaccion}`);
+
+// Generar código QR
+$("#qrcode").empty(); // Limpiar el contenedor anterior
+new QRCode(document.getElementById("qrcode"), {
+    text: numeroTicket,
+    width: 128,
+    height: 128,
+});
+
+// Mostrar las fechas de apuesta en el ticket
+$("#ticketFecha").text(`${fecha}`);
+        
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
     });
