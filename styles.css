@@ -218,4 +218,32 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     .accordion-button {
         font-size: 1em;
     }
+
+/* Estilos para impresión */
+@media print {
+  /* Ocultar todo el contenido por defecto */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Mostrar solo el ticket */
+  #ticketPrintArea, #ticketPrintArea * {
+    visibility: visible;
+  }
+
+  /* Posicionar el ticket en la parte superior */
+  #ticketPrintArea {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /* Ocultar elementos no deseados dentro del ticket */
+  #ticketPrintArea .no-print {
+    display: none;
+  }
+}
+
+    
 }
