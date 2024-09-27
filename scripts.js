@@ -4,13 +4,14 @@ $(document).ready(function() {
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
 
     // Inicializar Flatpickr con selección de rango de fechas
-    flatpickr("#fecha", {
-        mode: "range",
-        dateFormat: "Y-m-d",
-        minDate: "today",
-        defaultDate: null,
-        allowInput: true,
-    });
+flatpickr("#fecha", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    minDate: "today",
+    maxDate: null, // Permitir todas las fechas futuras
+    defaultDate: null,
+    allowInput: true,
+});
 
     let jugadaCount = 0;
     let selectedTracks = 0;
@@ -321,25 +322,28 @@ $(document).ready(function() {
         }
 
         // Validar que los tracks seleccionados no hayan pasado su hora límite
-        const fechasArray = fecha.split(" to ");
-        const fechaInicio = fechasArray[0];
-        const fechaActual = new Date().toISOString().split('T')[0];
-        let fechaSeleccionada = fechaInicio; // Usamos la fecha de inicio para la validación
-        if (fechaSeleccionada === fechaActual) {
-            const horaActual = new Date();
-            for (let track of tracks) {
-                const horaLimiteStr = obtenerHoraLimite(track);
-                if (horaLimiteStr) {
-                    const horaLimite = new Date();
-                    const [horas, minutos] = horaLimiteStr.split(":");
-                    horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
-                    if (horaActual > horaLimite) {
-                        alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
-                        return;
-                    }
-                }
+const fechasArray = fecha.split(" to ");
+const fechaInicio = fechasArray[0];
+const fechaSeleccionada = new Date(fechaInicio);
+const fechaActual = new Date();
+
+if (fechaSeleccionada.toDateString() === fechaActual.toDateString()) {
+    // La fecha seleccionada es hoy, aplicar validación de hora
+    const horaActual = new Date();
+    for (let track of tracks) {
+        const horaLimiteStr = obtenerHoraLimite(track);
+        if (horaLimiteStr) {
+            const horaLimite = new Date();
+            const [horas, minutos] = horaLimiteStr.split(":");
+            horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
+            if (horaActual > horaLimite) {
+                alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
+                return;
             }
         }
+    }
+}
+// Si la fecha seleccionada es futura, no se aplica la validación de hora
 
         // Validar jugadas
         let jugadasValidas = true;
