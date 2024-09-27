@@ -221,13 +221,13 @@ input::-ms-input-placeholder { /* Microsoft Edge */
 
     /* Estilos para el ticket */
 #preTicket {
-    background-color: white; /* Fondo blanco */
-    color: black; /* Texto negro */
+    background-color: #000000 !important; /* Fondo negro */
+    color: #ffffff !important; /* Texto blanco */
     padding: 20px;
     max-width: 600px;
     margin: auto;
-    border: 1px solid black;
-    overflow: hidden; /* Para evitar desbordamientos */
+    border: 1px solid #ffffff; /* Borde blanco */
+    overflow: hidden;
 }
 
 /* Estilos para títulos y textos */
@@ -236,32 +236,32 @@ input::-ms-input-placeholder { /* Microsoft Edge */
 #preTicket .ticket-number,
 #preTicket .transaction-date,
 #preTicket .total-section {
-    color: black;
+    color: #ffffff !important; /* Texto blanco */
 }
 
 /* Estilos para la tabla */
 #preTicket table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Para que las columnas tengan un ancho fijo */
+    table-layout: fixed;
 }
 
 #preTicket th,
 #preTicket td {
-    border: 1px solid black;
+    border: 1px solid #ffffff; /* Bordes blancos */
     padding: 8px;
     text-align: center;
-    color: black;
-    word-wrap: break-word; /* Permite que el texto se ajuste en varias líneas */
-    font-size: 14px; /* Ajusta el tamaño de fuente si es necesario */
+    color: #ffffff !important; /* Texto blanco */
+    word-wrap: break-word;
+    font-size: 14px;
 }
 
 #preTicket th {
-    background-color: #f2f2f2; /* Fondo gris claro para encabezados */
+    background-color: #333333 !important; /* Fondo gris oscuro para encabezados */
 }
 
 #preTicket td {
-    background-color: white;
+    background-color: #000000 !important; /* Fondo negro para celdas */
 }
 
 /* Estilos para el código QR */
@@ -269,10 +269,17 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     margin: 20px auto;
 }
 
+/* Ajustes para el código QR */
+#preTicket #qrcode img {
+    background-color: #ffffff; /* Fondo blanco para el QR */
+    padding: 10px;
+}
+
 /* Si hay demasiadas filas, permitir scroll interno */
 #preTicket {
-    max-height: 800px; /* Establece una altura máxima si es necesario */
-    overflow-y: auto; /* Añade scroll vertical si es necesario */
+    max-height: 800px;
+    overflow-y: auto;
 }
+
 
 }
