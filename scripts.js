@@ -573,7 +573,7 @@ $("#ticketFecha").text(`${fecha}`);
         $("#tablaJugadas").empty();
         jugadaCount = 0;
         selectedTracks = 0;
-        selectedDays = 1;
+        selectedDays = 0;
         agregarJugada();
         $("#totalJugadas").text("0.00");
         // Resetear los placeholders
