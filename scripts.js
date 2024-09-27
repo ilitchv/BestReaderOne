@@ -491,7 +491,8 @@ $("#numeroTicket").text(numeroTicket);
 
 // Generar la fecha y hora de transacción
 fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
-$("#ticketTransaccion").text(`Fecha y Hora de Transacción: ${fechaTransaccion}`);
+$("#ticketTransaccion").text(fechaTransaccion);
+
 
 // Generar código QR
 $("#qrcode").empty(); // Limpiar el contenedor anterior
