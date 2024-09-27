@@ -4,11 +4,12 @@ $(document).ready(function() {
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
 
     // Inicializar Flatpickr con selección de rango de fechas
+// Inicializar Flatpickr con selección de rango de fechas
 flatpickr("#fecha", {
-    mode: "range",
-    dateFormat: "Y-m-d",
+    mode: "multiple",
+    dateFormat: "m-d-Y", // Cambiado a MM-DD-YYYY
     minDate: "today",
-    maxDate: null, // Permitir todas las fechas futuras
+    maxDate: null,
     defaultDate: null,
     allowInput: true,
 });
@@ -162,15 +163,16 @@ flatpickr("#fecha", {
     });
 
     $("#fecha").change(function() {
-        const fechas = $(this).val();
-        if (fechas) {
-            const fechasArray = fechas.split(" to ");
-            selectedDays = fechasArray.length === 2 ? calcularDiferenciaDias(fechasArray[0], fechasArray[1]) + 1 : 1;
-        } else {
-            selectedDays = 1;
-        }
-        calcularTotal();
-    });
+    const fechas = $(this).val();
+    if (fechas) {
+        const fechasArray = fechas.split(", ");
+        selectedDays = fechasArray.length;
+    } else {
+        selectedDays = 1;
+    }
+    calcularTotal();
+});
+
 
     // Función para calcular la diferencia de días entre dos fechas
     function calcularDiferenciaDias(fechaInicio, fechaFin) {
@@ -321,38 +323,39 @@ flatpickr("#fecha", {
             return;
         }
 
-        // Validar que los tracks seleccionados no hayan pasado su hora límite
-const fechasArray = fecha.split(" to ");
-const fechaInicio = fechasArray[0];
-
-// Extraer los componentes de la fecha seleccionada
-const [yearSel, monthSel, daySel] = fechaInicio.split('-').map(Number);
-const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel); // Mes empieza en 0
-
-// Obtener la fecha actual sin hora
+        // Obtener las fechas seleccionadas como array
+const fechasArray = fecha.split(", ");
 const fechaActual = new Date();
 const yearActual = fechaActual.getFullYear();
 const monthActual = fechaActual.getMonth();
 const dayActual = fechaActual.getDate();
 const fechaActualSinHora = new Date(yearActual, monthActual, dayActual);
 
-// Comparar las fechas sin considerar la hora
-if (fechaSeleccionada.getTime() === fechaActualSinHora.getTime()) {
-    // La fecha seleccionada es hoy, aplicar validación de hora
-    const horaActual = new Date();
-    for (let track of tracks) {
-        const horaLimiteStr = obtenerHoraLimite(track);
-        if (horaLimiteStr) {
-            const horaLimite = new Date();
-            const [horas, minutos] = horaLimiteStr.split(":");
-            horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
-            if (horaActual > horaLimite) {
-                alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
-                return;
+// Validar cada fecha seleccionada
+for (let fechaSeleccionadaStr of fechasArray) {
+    // Extraer los componentes de la fecha seleccionada
+    const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
+    const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
+
+    if (fechaSeleccionada.getTime() === fechaActualSinHora.getTime()) {
+        // La fecha seleccionada es hoy, aplicar validación de hora
+        const horaActual = new Date();
+        for (let track of tracks) {
+            const horaLimiteStr = obtenerHoraLimite(track);
+            if (horaLimiteStr) {
+                const horaLimite = new Date();
+                const [horas, minutos] = horaLimiteStr.split(":");
+                horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
+                if (horaActual > horaLimite) {
+                    alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
+                    return;
+                }
             }
         }
     }
+    
 }
+
 // Si la fecha seleccionada es futura, no se aplica la validación de hora
  
         // Validar jugadas
@@ -481,7 +484,7 @@ if (fechaSeleccionada.getTime() === fechaActualSinHora.getTime()) {
         });
         // Asignar hora actual al generar el ticket
         const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        $("#ticketFecha").text(`${fecha} ${horaActual}`);
+        $("#ticketFecha").text(`${fecha}`);
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
     });
