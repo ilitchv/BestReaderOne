@@ -311,11 +311,12 @@
             <div class="modal-dialog modal-lg">
                 <div class="modal-content bg-dark text-white">
                     <div class="modal-header">
+                        <div class="modal-header no-print">
                         <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
                     <div class="modal-body">
-                        <div id="preTicket" class="p-3">
+                        <div id="ticketPrintArea" class="p-3">
                             <h4 class="text-center mb-3"> East New York Cricket </h4>
                             <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
                             <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
@@ -350,6 +351,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <div class="modal-footer no-print">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Editar</button>
                         <button type="button" class="btn btn-primary" id="confirmarTicket">Confirmar e Imprimir</button>
                     </div>
