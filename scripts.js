@@ -318,6 +318,7 @@ $(".track-checkbox").change(function() {
     $("#generarTicket").click(function() {
         // Validar formulario
         const fecha = $("#fecha").val();
+        console.log("Valor de fecha:", fecha);
         if (!fecha) {
             alert("Por favor, selecciona una fecha.");
             return;
@@ -502,7 +503,7 @@ new QRCode(document.getElementById("qrcode"), {
 
 // Mostrar las fechas de apuesta en el ticket
 $("#ticketFecha").text(`${fecha}`);
-        
+console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());        
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
     });
