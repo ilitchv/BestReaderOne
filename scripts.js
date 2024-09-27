@@ -542,101 +542,30 @@ $("#ticketFecha").text(`${fecha}`);
         ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
         ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
         
-       // Enviar datos a SheetDB
-    $.ajax({
-        url: SHEETDB_API_URL, // Usar la variable de SheetDB
-        method: "POST",
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(ticketData),
-        success: function(response) {
-            // Capturar y compartir el ticket como imagen
-            shareTicketAsImage();
-        },
-        error: function(err) {
+        // Enviar datos a SheetDB
+        $.ajax({
+            url: SHEETDB_API_URL, // Usar la variable de SheetDB
+            method: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            data: JSON.stringify(ticketData),
+            success: function(response) {
+                // Imprimir el ticket
+                window.print();
+                // Cerrar el modal
+                ticketModal.hide();
+                // Reiniciar el formulario
+                resetForm();
+                alert("Ticket guardado y enviado exitosamente.");
+            },
+            error: function(err) {
                 console.error("Error al enviar datos a SheetDB:", err);
                 // Mostrar mensaje de error más detallado
                 alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
             }
         });
     });
-// Función para capturar y compartir el ticket como imagen
-function shareTicketAsImage() {
-    const ticketElement = document.getElementById('preTicket');
 
-    html2canvas(ticketElement, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true
-    }).then(canvas => {
-        // Convertir el canvas a Data URL
-        const dataUrl = canvas.toDataURL('image/png');
-
-        // Crear un objeto Blob a partir del Data URL
-        const arr = dataUrl.split(',');
-        const mime = arr[0].match(/:(.*?);/)[1];
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], {type:mime});
-
-        // Crear un objeto File a partir del Blob
-        const file = new File([blob], 'ticket.png', { type: 'image/png' });
-
-        // Verificar si el navegador soporta el Web Share API con archivos
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({
-                files: [file],
-                title: 'Ticket de Lotería',
-                text: 'Aquí está tu ticket de lotería.'
-            }).then(() => {
-                // Compartido exitosamente
-                // Cerrar el modal y reiniciar el formulario
-                ticketModal.hide();
-                resetForm();
-                alert("Ticket guardado y compartido exitosamente.");
-            }).catch((error) => {
-                console.error('Error al compartir:', error);
-                alert('Hubo un error al compartir el ticket. Por favor, inténtalo de nuevo.');
-
-                // Fallback: Ofrecer descarga de la imagen
-                offerImageDownload(dataUrl);
-            });
-        } else {
-            // Fallback: Ofrecer descarga de la imagen
-            offerImageDownload(dataUrl);
-        }
-    }).catch((error) => {
-        console.error('Error al capturar el ticket:', error);
-        alert('Hubo un error al generar la imagen del ticket. Por favor, inténtalo de nuevo.');
-    });
-}
-
-// Función para ofrecer la descarga de la imagen
-function offerImageDownload(dataUrl) {
-    alert('Tu dispositivo no soporta la función de compartir archivos. La imagen del ticket se abrirá en una nueva pestaña para que puedas guardarla.');
-
-    // Abrir la imagen en una nueva pestaña
-    const newWindow = window.open();
-    newWindow.document.write(`<img src="${dataUrl}" alt="Ticket de Lotería" style="width:100%;">`);
-
-    // Cerrar el modal y reiniciar el formulario
-    ticketModal.hide();
-    resetForm();
-}
-
-                alert("Ticket guardado y descargado exitosamente.");
-            }
-        }, 'image/png');
-    }).catch((error) => {
-        console.error('Error al capturar el ticket:', error);
-        alert('Hubo un error al generar la imagen del ticket. Por favor, inténtalo de nuevo.');
-    });
-}
-    
     // Función para reiniciar el formulario
     function resetForm() {
         $("#lotteryForm")[0].reset();
