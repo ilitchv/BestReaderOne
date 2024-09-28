@@ -159,8 +159,8 @@ h2 {
 
 /* Modal */
 .modal-content {
-    background-color: var(--color-fondo);
-    color: var(--color-texto);
+    background-color: #0a0a0a; /* Fondo oscuro */
+    color: #ffffff; /* Texto blanco */
     box-shadow: 0 0 20px var(--color-neon-cian);
 }
 
@@ -218,7 +218,7 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     .accordion-button {
         font-size: 1em;
     }
-
+}
     /* Estilos para impresión */
 @media print {
   /* Ocultar todo el contenido por defecto */
@@ -238,6 +238,11 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     left: 0;
     width: 100%;
   }
+
+    #preTicket {
+    background-color: #0a0a0a; /* Fondo oscuro */
+    color: #ffffff; /* Texto blanco */
+}
 
   /* Opcional: Ajustar tamaño de fuente si es necesario */
   #preTicket {
