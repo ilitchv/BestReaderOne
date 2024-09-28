@@ -515,58 +515,66 @@ console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());
     }
 
     // Evento para confirmar e imprimir el ticket
-    $("#confirmarTicket").click(function() {
-        // Preparar datos para SheetDB
-        const ticketData = {
-    "Ticket Number": $("#numeroTicket").text(),
-    "Transaction DateTime": fechaTransaccion,
-    "Bet Dates": $("#ticketFecha").text(),
-    "Tracks": $("#ticketTracks").text(),
-            "Bet Numbers": [],
-            "Game Mode": [],
-            "Straight ($)": [],
-            "Box ($)": [],
-            "Combo ($)": [],
-            "Total ($)": $("#ticketTotal").text(),
-            "Timestamp": new Date().toISOString()
+    // Evento para confirmar e imprimir el ticket
+$("#confirmarTicket").click(function() {
+    // Datos comunes a todas las jugadas
+    const ticketNumber = $("#numeroTicket").text();
+    const transactionDateTime = fechaTransaccion;
+    const betDates = $("#ticketFecha").text();
+    const tracks = $("#ticketTracks").text();
+    const totalTicket = $("#ticketTotal").text();
+    const timestamp = new Date().toISOString();
+
+    // Array para almacenar las jugadas
+    const jugadasData = [];
+
+    // Recorrer cada jugada y preparar los datos
+    $("#ticketJugadas tr").each(function() {
+        // Generar número único de 8 dígitos para la jugada
+        const jugadaNumber = generarNumeroUnico();
+
+        const jugadaData = {
+            "Ticket Number": ticketNumber,
+            "Transaction DateTime": transactionDateTime,
+            "Bet Dates": betDates,
+            "Tracks": tracks,
+            "Bet Number": $(this).find("td").eq(1).text(),
+            "Game Mode": $(this).find("td").eq(2).text(),
+            "Straight ($)": $(this).find("td").eq(3).text(),
+            "Box ($)": $(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "",
+            "Combo ($)": $(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "",
+            "Total ($)": $(this).find("td").eq(6).text(),
+            "Jugada Number": jugadaNumber,
+            "Timestamp": timestamp
         };
-        $("#ticketJugadas tr").each(function() {
-            ticketData["Bet Numbers"].push($(this).find("td").eq(1).text());
-            ticketData["Game Mode"].push($(this).find("td").eq(2).text());
-            ticketData["Straight ($)"].push($(this).find("td").eq(3).text());
-            ticketData["Box ($)"].push($(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "");
-            ticketData["Combo ($)"].push($(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "");
-        });
-        // Convertir arrays a cadenas separadas por comas
-        ticketData["Bet Numbers"] = ticketData["Bet Numbers"].join(", ");
-        ticketData["Game Mode"] = ticketData["Game Mode"].join(", ");
-        ticketData["Straight ($)"] = ticketData["Straight ($)"].join(", ");
-        ticketData["Box ($)"] = ticketData["Box ($)"].join(", ");
-        ticketData["Combo ($)"] = ticketData["Combo ($)"].join(", ");
-        
-        // Enviar datos a SheetDB
-        $.ajax({
-            url: SHEETDB_API_URL, // Usar la variable de SheetDB
-            method: "POST",
-            dataType: "json",
-            contentType: "application/json",
-            data: JSON.stringify(ticketData),
-            success: function(response) {
-                // Imprimir el ticket
-                window.print();
-                // Cerrar el modal
-                ticketModal.hide();
-                // Reiniciar el formulario
-                resetForm();
-                alert("Ticket guardado y enviado exitosamente.");
-            },
-            error: function(err) {
-                console.error("Error al enviar datos a SheetDB:", err);
-                // Mostrar mensaje de error más detallado
-                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
-            }
-        });
+
+        // Añadir la jugada al array
+        jugadasData.push(jugadaData);
     });
+
+    // Enviar datos a SheetDB
+    $.ajax({
+        url: SHEETDB_API_URL, // Usar la variable de SheetDB
+        method: "POST",
+        dataType: "json",
+        contentType: "application/json",
+        data: JSON.stringify(jugadasData),
+        success: function(response) {
+            // Imprimir el ticket
+            window.print();
+            // Cerrar el modal
+            ticketModal.hide();
+            // Reiniciar el formulario
+            resetForm();
+            alert("Ticket guardado y enviado exitosamente.");
+        },
+        error: function(err) {
+            console.error("Error al enviar datos a SheetDB:", err);
+            // Mostrar mensaje de error más detallado
+            alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
+        }
+    });
+});
 
     // Función para reiniciar el formulario
     function resetForm() {
