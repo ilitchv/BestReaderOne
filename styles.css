@@ -218,4 +218,31 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     .accordion-button {
         font-size: 1em;
     }
+
+    /* Estilos para impresión */
+@media print {
+  /* Ocultar todo el contenido por defecto */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Mostrar solo el ticket */
+  #preTicket, #preTicket * {
+    visibility: visible;
+  }
+
+  /* Posicionar el ticket en la parte superior */
+  #preTicket {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /* Opcional: Ajustar tamaño de fuente si es necesario */
+  #preTicket {
+    font-size: 12pt;
+  }
+}
+
 }
