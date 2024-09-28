@@ -562,6 +562,19 @@ $("#confirmarTicket").click(function() {
         success: function(response) {
             // Imprimir el ticket
             window.print();
+
+            // Opcional: Usar html2canvas para capturar solo el ticket
+  html2canvas(document.querySelector("#preTicket")).then(canvas => {
+    // Obtener la imagen en formato data URL
+    const imgData = canvas.toDataURL("image/png");
+    // Crear un enlace para descargar la imagen
+    const link = document.createElement('a');
+    link.href = imgData;
+    link.download = 'ticket.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
             // Cerrar el modal
             ticketModal.hide();
             // Reiniciar el formulario
