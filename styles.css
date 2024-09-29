@@ -273,7 +273,7 @@ input::-ms-input-placeholder { /* Microsoft Edge */
 }
 
 /* Clase para resaltar campos duplicados */
-.duplicado {
+.duplicado 
     background-color: #ffff99; /* Fondo amarillo claro */
     border: 2px solid #ffeb3b; /* Borde amarillo más oscuro */
 }
