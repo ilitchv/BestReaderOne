@@ -1,4 +1,3 @@
-
 let fechaTransaccion = '';
 
 $(document).ready(function() {
