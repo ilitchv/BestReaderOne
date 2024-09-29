@@ -250,4 +250,27 @@ input::-ms-input-placeholder { /* Microsoft Edge */
   }
 }
 
+#preTicket {
+    background-color: #0a0a0a; /* Fondo oscuro */
+    color: #ffffff; /* Texto blanco */
+    padding: 20px;
+    border-radius: 10px;
+    /* Otros estilos necesarios */
+}
+
+#preTicket h4 {
+    color: #00ffff; /* Color de título */
+    text-shadow: 0 0 5px #00ffff;
+}
+
+#preTicket table {
+    background-color: #1e1e1e;
+}
+
+#preTicket th, #preTicket td {
+    border: 1px solid #00ffff;
+    color: #ffffff;
+}
+
+
 }
