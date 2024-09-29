@@ -354,6 +354,8 @@ for (let fechaSeleccionadaStr of fechasArray) {
         // La fecha seleccionada es hoy, aplicar validación de hora
         const horaActual = new Date();
         for (let track of tracks) {
+            if (track === 'Venezuela') continue; // Excluir "Venezuela" de la validación de hora
+            
             const horaLimiteStr = obtenerHoraLimite(track);
             if (horaLimiteStr) {
                 const horaLimite = new Date();
