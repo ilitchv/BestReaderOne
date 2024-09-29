@@ -627,8 +627,60 @@ $("#confirmarTicket").click(function() {
                 $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
+       }
+
+// Función para resaltar números duplicados
+function resaltarDuplicados() {
+    // Obtener todos los campos de número apostado
+    const camposNumeros = document.querySelectorAll('.numeroApostado');
+    const valores = {};
+    const duplicados = new Set();
+
+    // Recopilar valores y detectar duplicados
+    camposNumeros.forEach(campo => {
+        const valor = campo.value.trim();
+        if (valor) {
+            if (valores[valor]) {
+                duplicados.add(valor);
+            } else {
+                valores[valor] = true;
+            }
+        }
+    });
+
+    // Aplicar o remover la clase .duplicado
+    camposNumeros.forEach(campo => {
+        if (duplicados.has(campo.value.trim())) {
+            campo.classList.add('duplicado');
+        } else {
+            campo.classList.remove('duplicado');
+        }
+    });
+}
+
+// Añadir event listeners a los campos de número apostado
+document.addEventListener('DOMContentLoaded', () => {
+    // Función para agregar event listeners a los campos existentes y futuros
+    function agregarListeners() {
+        const camposNumeros = document.querySelectorAll('.numeroApostado');
+        camposNumeros.forEach(campo => {
+            campo.removeEventListener('input', resaltarDuplicados); // Evitar múltiples listeners
+            campo.addEventListener('input', resaltarDuplicados);
+        });
     }
 
+    // Llamar a agregarListeners al cargar la página
+    agregarListeners();
+
+    // Llamar a agregarListeners cada vez que se agrega una nueva jugada
+    document.getElementById('agregarJugada').addEventListener('click', () => {
+        setTimeout(agregarListeners, 100); // Esperar a que se agregue el nuevo campo
+    });
+
+    // Inicializar la función de resaltar duplicados
+    resaltarDuplicados();
+});
+    
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
