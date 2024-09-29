@@ -627,36 +627,36 @@ $("#confirmarTicket").click(function() {
                 $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
-       
+       }
 
 // Función para resaltar números duplicados
 function resaltarDuplicados() {
     // Obtener todos los campos de número apostado
-    const camposNumeros = document.querySelectorAll('.numeroApostado');
+    const camposNumeros = $('.numeroApostado'); // Usamos jQuery
     const valores = {};
     const duplicados = new Set();
 
     // Recopilar valores y detectar duplicados
     camposNumeros.each(function() {
-            const valor = $(this).val().trim();
-            if (valor) {
-                if (valores[valor]) {
-                    duplicados.add(valor);
-                } else {
-                    valores[valor] = true;
-                }
-            }
-        });
-    
-    // Aplicar o remover la clase .duplicado
-        camposNumeros.each(function() {
-            if (duplicados.has($(this).val().trim())) {
-                $(this).addClass('duplicado');
+        const valor = $(this).val().trim();
+        if (valor) {
+            if (valores[valor]) {
+                duplicados.add(valor);
             } else {
-                $(this).removeClass('duplicado');
+                valores[valor] = true;
             }
-        });
-    }
+        }
+    });
+
+    // Aplicar o remover la clase .duplicado
+    camposNumeros.each(function() {
+        if (duplicados.has($(this).val().trim())) {
+            $(this).addClass('duplicado');
+        } else {
+            $(this).removeClass('duplicado');
+        }
+    });
+}
 
 // Función para agregar listeners a los campos de número apostado
     function agregarListenersNumeroApostado() {
@@ -683,4 +683,4 @@ function resaltarDuplicados() {
 
 });
 
-}
+
