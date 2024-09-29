@@ -1,3 +1,6 @@
+
+let fechaTransaccion = '';
+
 $(document).ready(function() {
 
     // Define la URL de tu API de SheetDB  
