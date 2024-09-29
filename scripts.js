@@ -627,7 +627,7 @@ $("#confirmarTicket").click(function() {
                 $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
-       }
+       
 
 // Función para resaltar números duplicados
 function resaltarDuplicados() {
@@ -637,52 +637,50 @@ function resaltarDuplicados() {
     const duplicados = new Set();
 
     // Recopilar valores y detectar duplicados
-    camposNumeros.forEach(campo => {
-        const valor = campo.value.trim();
-        if (valor) {
-            if (valores[valor]) {
-                duplicados.add(valor);
-            } else {
-                valores[valor] = true;
+    camposNumeros.each(function() {
+            const valor = $(this).val().trim();
+            if (valor) {
+                if (valores[valor]) {
+                    duplicados.add(valor);
+                } else {
+                    valores[valor] = true;
+                }
             }
-        }
-    });
-
+        });
+    
     // Aplicar o remover la clase .duplicado
-    camposNumeros.forEach(campo => {
-        if (duplicados.has(campo.value.trim())) {
-            campo.classList.add('duplicado');
-        } else {
-            campo.classList.remove('duplicado');
-        }
-    });
-}
+        camposNumeros.each(function() {
+            if (duplicados.has($(this).val().trim())) {
+                $(this).addClass('duplicado');
+            } else {
+                $(this).removeClass('duplicado');
+            }
+        });
+    }
 
 // Función para agregar listeners a los campos de número apostado
-function agregarListenersNumeroApostado() {
-    const camposNumeros = document.querySelectorAll('.numeroApostado');
-    camposNumeros.forEach(campo => {
-        campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
-        campo.addEventListener('input', resaltarDuplicados);
-    });
-}
+    function agregarListenersNumeroApostado() {
+        const camposNumeros = $('.numeroApostado');
+        camposNumeros.off('input', resaltarDuplicados); // Evitar duplicar listeners
+        camposNumeros.on('input', resaltarDuplicados);
+    }
 
-// Agregar listeners al cargar la página
-document.addEventListener('DOMContentLoaded', () => {
+    // Agregar listeners al cargar la página
     agregarListenersNumeroApostado();
     resaltarDuplicados(); // Resaltar duplicados al cargar, si los hay
 
     // Agregar listener al botón de agregar jugada
-    const btnAgregarJugada = document.getElementById('agregarJugada');
-    btnAgregarJugada.addEventListener('click', () => {
-        setTimeout(() => {
+    $('#agregarJugada').click(function() {
+        setTimeout(function() {
             agregarListenersNumeroApostado();
             resaltarDuplicados();
         }, 100); // Esperar a que se agregue la nueva jugada
     });
-});    
-    // Llamar a la función para mostrar las horas límite al cargar la página
+});
+
+// Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
 });
 
+}
