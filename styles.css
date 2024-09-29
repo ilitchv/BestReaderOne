@@ -278,5 +278,16 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     border: 2px solid #ffeb3b; /* Borde amarillo más oscuro */
 }
 
+/* Fondo de pantalla */
+body {
+    background-image: url('assets/images/fondo.jpg'); /* Ruta relativa a tu CSS */
+    background-size: cover; /* Ajusta el tamaño de la imagen para cubrir toda la pantalla */
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+    background-position: center center; /* Centra la imagen */
+    background-attachment: fixed; /* Hace que el fondo permanezca fijo al hacer scroll */
+    /* Opcional: Añadir un color de respaldo */
+    background-color: #0a0a0a; /* Color de fondo oscuro como respaldo */
+}
+
 
 }
