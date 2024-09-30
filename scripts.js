@@ -1,3 +1,5 @@
+Codigo JS:
+
 let fechaTransaccion = '';
 
 $(document).ready(function() {
