@@ -1,6 +1,4 @@
-Codigo JS:
-
-let fechaTransaccion = '';
+ let fechaTransaccion = '';
 
 $(document).ready(function() {
 
