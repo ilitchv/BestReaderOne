@@ -80,7 +80,7 @@ flatpickr("#fecha", {
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
 
-        const esUSA = tracks.some(track => Object.keys(horariosCierre["USA"]).includes(track));
+        const esUSA = tracks.some(track => Object.keys(horariosCierre.USA).includes(track));
         const esSD = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
         const incluyeVenezuela = tracks.includes("Venezuela");
 
@@ -613,13 +613,15 @@ $("#confirmarTicket").click(function() {
         $(".cutoff-time").each(function() {
             const track = $(this).data("track");
             let cierreStr = "";
-            if (horariosCierre["USA"][track]) {
-                cierreStr = horariosCierre["USA"][track];
-            } else if (horariosCierre["Santo Domingo"][track]) {
+            if (horariosCierre.USA[track]) {
+    cierreStr = horariosCierre.USA[track];
+}
+            else if (horariosCierre["Santo Domingo"][track]) {
                 cierreStr = horariosCierre["Santo Domingo"][track];
-            } else if (horariosCierre["Venezuela"][track]) {
-                cierreStr = horariosCierre["Venezuela"][track];
-            }
+            } 
+            else if (horariosCierre.Venezuela[track]) {
+    cierreStr = horariosCierre.Venezuela[track];
+}
             if (cierreStr) {
                 const cierre = new Date(`1970-01-01T${cierreStr}:00`);
                 cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
