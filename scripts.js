@@ -210,13 +210,13 @@ $(".track-checkbox").change(function() {
         fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
         fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
     } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-        fila.find(".box").attr("placeholder", Máximo $${limitesApuesta[modalidad].box}).prop('disabled', false);
-        fila.find(".combo").attr("placeholder", Máximo $${limitesApuesta[modalidad].combo}).prop('disabled', false);
-    } else if (modalidad === "Combo") { // Añadido
-        fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".combo").attr("placeholder", Máximo $${limitesApuesta["Combo"].combo}).prop('disabled', false);
-    } else {
+    fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+    fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
+} else if (modalidad === "Combo") { // Añadido
+    fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta["Combo"].combo}`).prop('disabled', false);
+} else {
         // Modalidad no reconocida
         fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
         fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
@@ -445,15 +445,15 @@ for (let fechaSeleccionadaStr of fechasArray) {
                     return false;
                 }
                 if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
-                    jugadasValidas = false;
-                    alert(El monto en Box excede el límite para ${modalidad}.);
-                    return false;
-                }
-                if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
-                    jugadasValidas = false;
-                    alert(El monto en Combo excede el límite para ${modalidad}.);
-                    return false;
-                }
+    jugadasValidas = false;
+    alert(`El monto en Box excede el límite para ${modalidad}.`);
+    return false;
+}
+if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
+    jugadasValidas = false;
+    alert(`El monto en Combo excede el límite para ${modalidad}.`);
+    return false;
+}
             }
         });
         if (!jugadasValidas) {
