@@ -115,7 +115,7 @@ flatpickr("#fecha", {
             return;
         }
         jugadaCount++;
-        const fila = 
+        const fila = `
             <tr>
                 <td>${jugadaCount}</td>
                 <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
@@ -125,7 +125,7 @@ flatpickr("#fecha", {
                 <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
-        ;
+        `;
         $("#tablaJugadas").append(fila);
     }
 
@@ -473,7 +473,7 @@ for (let fechaSeleccionadaStr of fechasArray) {
             const comboVal = $(this).find(".combo").val();
             const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
             const total = parseFloat($(this).find(".total").text()) || 0;
-            const fila = 
+            const fila = ` 
                 <tr>
                     <td>${$(this).find("td").first().text()}</td>
                     <td>${num}</td>
@@ -483,7 +483,7 @@ for (let fechaSeleccionadaStr of fechasArray) {
                     <td>${combo !== "-" ? combo.toFixed(2) : "-"}</td>
                     <td>${total.toFixed(2)}</td>
                 </tr>
-            ;
+            `;
             $("#ticketJugadas").append(fila);
         });
         $("#ticketTotal").text($("#totalJugadas").text());
