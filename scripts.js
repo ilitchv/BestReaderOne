@@ -408,7 +408,7 @@ for (let fechaSeleccionadaStr of fechasArray) {
 
     if (tracksRequeridos.length > 0 && tracksSeleccionadosParaModalidad.length === 0) {
         jugadasValidas = false;
-        alert(La jugada con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.);
+        alert(`La jugada con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.`);
         return false; // Salir del bucle
     }
 
@@ -433,7 +433,7 @@ for (let fechaSeleccionadaStr of fechasArray) {
                 const combo = parseFloat($(this).find(".combo").val()) || 0;
                 if (straight <= 0 && box <= 0 && combo <= 0) {
                     jugadasValidas = false;
-                    alert(Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.);
+                    alert(`Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.`);
                     return false;
                 }
             }           
@@ -441,7 +441,7 @@ for (let fechaSeleccionadaStr of fechasArray) {
             if (limitesApuesta[modalidad]) {
                 if (parseFloat($(this).find(".straight").val()) > (limitesApuesta[modalidad].straight || Infinity)) {
                     jugadasValidas = false;
-                    alert(El monto en Straight excede el límite para ${modalidad}.);
+                    alert(`El monto en Straight excede el límite para ${modalidad}.`);
                     return false;
                 }
                 if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
@@ -623,7 +623,7 @@ $("#confirmarTicket").click(function() {
                 cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
                 const horas = cierre.getHours().toString().padStart(2, '0');
                 const minutos = cierre.getMinutes().toString().padStart(2, '0');
-                const horaLimite = ${horas}:${minutos};
+                const horaLimite = `${horas}:${minutos}`;
                 $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
