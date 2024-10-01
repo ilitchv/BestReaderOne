@@ -498,12 +498,12 @@ $("#ticketTransaccion").text(fechaTransaccion);
 
 // Generar código QR
 $("#qrcode").empty(); // Limpiar el contenedor anterior
-new QRCode(document.getElementById("qrcode"), {
+const qr = new QRCode(document.getElementById("qrcode"), {
     text: numeroTicket,
     width: 128,
     height: 128,
 });
-
+        
 // Mostrar las fechas de apuesta en el ticket
 $("#ticketFecha").text(fecha);
 console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());        
