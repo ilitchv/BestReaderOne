@@ -682,4 +682,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });    
     // Llamar a la función para mostrar las horas límite al cargar la página
-    mostrarHorasLimite(); }
+    mostrarHorasLimite();  
