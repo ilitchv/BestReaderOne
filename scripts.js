@@ -274,8 +274,10 @@ $(".track-checkbox").change(function() {
         let totalDigits = numero.length;
         let denominator = 1;
         for (let digit in counts) {
-            denominator *= factorial(counts[digit]);
-        }
+    if (counts.hasOwnProperty(digit)) {
+        denominator *= factorial(counts[digit]);
+    }
+}
         return factorial(totalDigits) / denominator;
     }
 
