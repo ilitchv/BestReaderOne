@@ -673,13 +673,13 @@ document.addEventListener('DOMContentLoaded', () => {
     resaltarDuplicados(); // Resaltar duplicados al cargar, si los hay
 
     // Agregar listener al botón de agregar jugada
-    const btnAgregarJugada = document.getElementById('agregarJugada');
-    btnAgregarJugada.addEventListener('click', () => {
-        setTimeout(() => {
-            agregarListenersNumeroApostado();
-            resaltarDuplicados();
-        }, 100); // Esperar a que se agregue la nueva jugada
-    });
-});    
-    // Llamar a la función para mostrar las horas límite al cargar la página
-    mostrarHorasLimite();  
+const btnAgregarJugada = document.getElementById('agregarJugada');
+btnAgregarJugada.addEventListener('click', () => {
+    setTimeout(() => {
+        agregarListenersNumeroApostado();
+        resaltarDuplicados();
+    }, 100); // Esperar a que se agregue la nueva jugada
+});
+// Llamar a la función para mostrar las horas límite al cargar la página
+mostrarHorasLimite();
+
