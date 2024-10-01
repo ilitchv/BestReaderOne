@@ -198,7 +198,7 @@ $(".track-checkbox").change(function() {
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
     if (limitesApuesta[modalidad]) {
-        fila.find(".straight").attr("placeholder", Máximo $${limitesApuesta[modalidad].straight}).prop('disabled', false);
+        fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
     } else {
         fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
     }
@@ -362,7 +362,7 @@ for (let fechaSeleccionadaStr of fechasArray) {
                 const [horas, minutos] = horaLimiteStr.split(":");
                 horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
                 if (horaActual > horaLimite) {
-                    alert(El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.);
+                    alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
                     return;
                 }
             }
@@ -505,7 +505,7 @@ new QRCode(document.getElementById("qrcode"), {
 });
 
 // Mostrar las fechas de apuesta en el ticket
-$("#ticketFecha").text(${fecha});
+$("#ticketFecha").text(fecha);
 console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());        
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
@@ -619,12 +619,12 @@ $("#confirmarTicket").click(function() {
                 cierreStr = horariosCierre["Venezuela"][track];
             }
             if (cierreStr) {
-                const cierre = new Date(1970-01-01T${cierreStr}:00);
+                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
                 cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
                 const horas = cierre.getHours().toString().padStart(2, '0');
                 const minutos = cierre.getMinutes().toString().padStart(2, '0');
                 const horaLimite = ${horas}:${minutos};
-                $(this).text(Hora límite: ${horaLimite});
+                $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
        }
