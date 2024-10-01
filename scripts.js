@@ -6,21 +6,19 @@ $(document).ready(function() {
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
 
     // Inicializar Flatpickr con selección de rango de fechas
-// Inicializar Flatpickr con selección de rango de fechas
+ 
 flatpickr("#fecha", {
-    mode: "multiple",
-    dateFormat: "m-d-Y", // Cambiado a MM-DD-YYYY
-    minDate: "today",
-    maxDate: null,
-    defaultDate: null,
-    allowInput: true,
-    onChange: function(selectedDates, dateStr, instance) {
-        selectedDays = selectedDates.length;
-        console.log("Días seleccionados:", selectedDays);
-        calcularTotal();
-    },
-});
-
+        mode: "multiple",
+        dateFormat: "m-d-Y",
+        minDate: "today",
+        allowInput: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            selectedDays = selectedDates.length;
+            console.log("Días seleccionados:", selectedDays);
+            calcularTotal();
+        },
+    });
+    
     let jugadaCount = 0;
     let selectedTracks = 0;
     let selectedDays = 0;
@@ -135,6 +133,8 @@ flatpickr("#fecha", {
     // Evento para agregar más jugadas
     $("#agregarJugada").click(function() {
         agregarJugada();
+        agregarListenersNumeroApostado();
+        resaltarDuplicados();
     });
 
     // Evento para eliminar la última jugada
