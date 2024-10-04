@@ -4,7 +4,7 @@ $(document).ready(function() {
 
     // Inicializar Supabase
     const SUPABASE_URL = 'https://rrycqjcwdwvhliqbgeoh.supabase.co';
-    const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY_AQUÍ';
+    const SUPABASE_ANON_KEY = 'TeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyeWNxamN3ZHd2aGxpcWJnZW9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY4MjA4OTQsImV4cCI6MjA0MjM5Njg5NH0.4eyQBOj5lelLl4Q0Q8rVE3gXK3t-dFkqXGuDFO7_0I4';
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
