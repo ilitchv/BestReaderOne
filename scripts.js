@@ -566,7 +566,7 @@ $(document).ready(function() {
             // Insertar el ticket en Supabase
             let { data: ticket, error: ticketError } = await supabaseClient
                 .from('tickets')
-                .insert([ticketData]);
+                .insert([ticketData])
                 .select(); // Agrega .select() aquí 
 
             if (ticketError) {
