@@ -544,7 +544,7 @@ $(document).ready(function() {
         // Preparar los datos del ticket
         const ticketData = {
             ticket_number: ticketNumber,
-            user_id: user_id, 
+            user_id: null, 
             transaction_datetime: transactionDateTime,
             total_amount: totalTicket,
             created_at: timestamp           
@@ -560,7 +560,7 @@ $(document).ready(function() {
         const user_id = null;
 
         // Agregar el user_id al ticketData
-        ticketData.user_id = user_id;
+        ticketData.user_id = null;
 
             // Insertar el ticket en Supabase
             let { data: ticket, error: ticketError } = await supabaseClient
@@ -591,7 +591,7 @@ $(document).ready(function() {
                     combo_amount: parseFloat(jugada["Combo ($)"]) || 0,
                     total_amount: parseFloat(jugada["Total ($)"]) || 0,
                     created_at: jugada["Timestamp"],
-                    user_id: user_id,
+                    user_id: null,
                     tracks: jugada["Tracks"],
                     bet_dates: jugada["Bet Dates"], // Nuevo campo agregado
                     // Agrega otros campos necesarios si los hay
