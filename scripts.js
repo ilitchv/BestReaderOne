@@ -547,7 +547,7 @@ $(document).ready(function() {
             ticket_number: ticketNumber,
             transaction_datetime: transactionDateTime,
             total_amount: totalTicket,
-            created_at: timestamp
+            created_at: timestamp,
             user_id: null // Asignar null directamente
         };
 
