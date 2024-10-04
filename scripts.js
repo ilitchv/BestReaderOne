@@ -1,12 +1,15 @@
+// scripts.js
+
 let fechaTransaccion = '';
 
 $(document).ready(function() {
 
     // Inicializar Supabase
     const SUPABASE_URL = 'https://rrycqjcwdwvhliqbgeoh.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyeWNxamN3ZHd2aGxpcWJnZW9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY4MjA4OTQsImV4cCI6MjA0MjM5Njg5NH0.4eyQBOj5lelLl4Q0Q8rVE3gXK3t-dFkqXGuDFO7_0I4';
+    const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY_AQUÍ';
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Correcta inicialización de Supabase
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Inicializar Flatpickr con selección de rango de fechas
     flatpickr("#fecha", {
@@ -555,7 +558,7 @@ $(document).ready(function() {
     async function guardarJugadasEnSupabase(ticketData, jugadasData) {
         try {
             // Obtener el ID del usuario actual (si tienes autenticación implementada)
-            const user = supabase.auth.user();
+            const user = supabaseClient.auth.user();
             const user_id = user ? user.id : null;
 
             // Si no tienes autenticación implementada, puedes asignar un user_id genérico o null
@@ -565,7 +568,7 @@ $(document).ready(function() {
             ticketData.user_id = user_id;
 
             // Insertar el ticket en Supabase
-            let { data: ticket, error: ticketError } = await supabase
+            let { data: ticket, error: ticketError } = await supabaseClient
                 .from('tickets')
                 .insert([ticketData]);
 
@@ -603,13 +606,13 @@ $(document).ready(function() {
 
                 if (!esValida) {
                     // Si la jugada no es válida, detenemos el proceso y eliminamos el ticket creado
-                    await supabase.from('tickets').delete().eq('id', ticket_id);
+                    await supabaseClient.from('tickets').delete().eq('id', ticket_id);
                     alert('Una de tus jugadas excede el límite permitido. El ticket ha sido cancelado.');
                     return;
                 }
 
                 // Insertar la jugada en Supabase
-                let { error: jugadaError } = await supabase.from('jugadas').insert([jugadaData]);
+                let { error: jugadaError } = await supabaseClient.from('jugadas').insert([jugadaData]);
 
                 if (jugadaError) {
                     console.error('Error al guardar la jugada:', jugadaError);
@@ -652,7 +655,7 @@ $(document).ready(function() {
         const bet_date = new Date().toISOString().split('T')[0]; // Fecha actual en formato 'YYYY-MM-DD'
 
         // Obtener el límite aplicable
-        let { data: limiteData, error: limiteError } = await supabase
+        let { data: limiteData, error: limiteError } = await supabaseClient
             .from('bet_limits')
             .select('max_bet')
             .eq('game_mode', jugada.game_mode)
@@ -672,7 +675,7 @@ $(document).ready(function() {
         const monto_jugada = jugada.straight_amount + jugada.box_amount + jugada.combo_amount;
 
         // Obtener el monto disponible sin revelar el total apostado
-        let { data: disponibleData, error: disponibleError } = await supabase
+        let { data: disponibleData, error: disponibleError } = await supabaseClient
             .rpc('obtener_monto_disponible', {
                 bet_date_input: bet_date,
                 number_played_input: jugada.number_played,
@@ -697,7 +700,7 @@ $(document).ready(function() {
         // Actualizar o insertar en daily_bets
         const nuevo_total = max_bet - (monto_disponible - monto_jugada);
 
-        const { error: upsertError } = await supabase
+        const { error: upsertError } = await supabaseClient
             .from('daily_bets')
             .upsert({
                 bet_date: bet_date,
