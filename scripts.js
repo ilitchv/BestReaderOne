@@ -5,6 +5,13 @@ $(document).ready(function() {
     // Define la URL de tu API de SheetDB  
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
 
+    // Inicializar Supabase
+const SUPABASE_URL = 'https://rrycqjcwdwvhliqbgeoh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyeWNxamN3ZHd2aGxpcWJnZW9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY4MjA4OTQsImV4cCI6MjA0MjM5Njg5NH0.4eyQBOj5lelLl4Q0Q8rVE3gXK3t-dFkqXGuDFO7_0I4';
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    
     // Inicializar Flatpickr con selección de rango de fechas
     flatpickr("#fecha", {
         mode: "multiple",
