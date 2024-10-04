@@ -534,7 +534,8 @@ $(document).ready(function() {
                 "Combo ($)": $(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "",
                 "Total ($)": $(this).find("td").eq(6).text(),
                 "Jugada Number": jugadaNumber,
-                "Timestamp": timestamp
+                "Timestamp": timestamp,
+                "user_id": null // Asignar null directamente
             };
 
             // Añadir la jugada al array
@@ -544,10 +545,10 @@ $(document).ready(function() {
         // Preparar los datos del ticket
         const ticketData = {
             ticket_number: ticketNumber,
-            user_id: null, 
             transaction_datetime: transactionDateTime,
             total_amount: totalTicket,
-            created_at: timestamp           
+            created_at: timestamp
+            user_id: null // Asignar null directamente
         };
 
         // Llamar a la función para guardar en Supabase
