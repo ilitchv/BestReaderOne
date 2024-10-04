@@ -567,6 +567,7 @@ $(document).ready(function() {
             let { data: ticket, error: ticketError } = await supabaseClient
                 .from('tickets')
                 .insert([ticketData]);
+                .select(); // Agrega .select() aquí 
 
             if (ticketError) {
                 console.error('Error al guardar el ticket:', ticketError);
@@ -574,6 +575,13 @@ $(document).ready(function() {
                 return;
             }
 
+        // Verificar que se haya retornado el ticket
+        if (!ticket || ticket.length === 0) {
+            console.error('No se retornó ningún ticket después de la inserción.');
+            alert('Hubo un error al guardar el ticket. Por favor, inténtalo de nuevo.');
+            return;
+        }
+        
             // Obtener el ID del ticket recién creado
             const ticket_id = ticket[0].id;
 
@@ -641,9 +649,9 @@ $(document).ready(function() {
             // Reiniciar el formulario
             resetForm();
 
-            alert('¡Ticket y jugadas guardados exitosamente en Supabase!');
+            alert('¡Ticket y jugadas guardados exitosamente!');
         } catch (error) {
-            console.error('Error al guardar las jugadas en Supabase:', error);
+            console.error('Error al guardar las jugadas:', error);
             alert('Hubo un error al guardar las jugadas. Por favor, inténtalo de nuevo.');
         }
     }
