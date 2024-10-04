@@ -129,16 +129,16 @@
                                 <!-- Pensilvania AM -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania AM" id="trackPennsylvaniaAM">
-                                        <label class="form-check-label" for="trackPennsylvaniaAM">Pensilvania AM</label>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania AM" id="trackPensilvaniaAM">
+                                        <label class="form-check-label" for="trackPensilvaniaAM">Pensilvania AM</label>
                                     </div>
                                     <span class="cutoff-time" data-track="Pensilvania AM"></span>
                                 </div>
                                 <!-- Pensilvania PM -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania PM" id="trackPennsylvaniaPM">
-                                        <label class="form-check-label" for="trackPennsylvaniaPM">Pensilvania PM</label>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania PM" id="trackPensilvaniaPM">
+                                        <label class="form-check-label" for="trackPensilvaniaPM">Pensilvania PM</label>
                                     </div>
                                     <span class="cutoff-time" data-track="Pensilvania PM"></span>
                                 </div>
@@ -250,7 +250,7 @@
                                     </div>
                                     <span class="cutoff-time" data-track="Primera Noche"></span>
                                 </div>
-                                <!-- Panamá -->
+                                <!-- Panama -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Panama" id="trackPanama">
@@ -258,7 +258,22 @@
                                     </div>
                                     <span class="cutoff-time" data-track="Panama"></span>
                                 </div>
-                                <!-- Agrega otros tracks si es necesario -->
+                                <!-- Quiniela Pale Domingo -->
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2" style="display: none;">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela Pale Domingo" id="trackQuinielaPaleDomingo">
+                                        <label class="form-check-label" for="trackQuinielaPaleDomingo">Quiniela Pale Domingo</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Quiniela Pale Domingo"></span>
+                                </div>
+                                <!-- Nacional Domingo -->
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2" style="display: none;">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Nacional Domingo" id="trackNacionalDomingo">
+                                        <label class="form-check-label" for="trackNacionalDomingo">Nacional Domingo</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Nacional Domingo"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -355,6 +370,7 @@
             </div>
         </div>
     </div>
+    <!-- Librerías JavaScript -->
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Popper.js -->
@@ -377,7 +393,9 @@
     </script>
     <!-- html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Custom JS -->
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <!-- Tu archivo JavaScript principal -->
     <script src="scripts.js"></script>
 </body>
 </html>
