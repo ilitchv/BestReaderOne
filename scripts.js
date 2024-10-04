@@ -556,16 +556,12 @@ $(document).ready(function() {
     });
 
     async function guardarJugadasEnSupabase(ticketData, jugadasData) {
-        try {
-            // Obtener el ID del usuario actual (si tienes autenticación implementada)
-            const user = supabaseClient.auth.user();
-            const user_id = user ? user.id : null;
+    try {
+        // Asignar user_id como null ya que no hay autenticación implementada
+        const user_id = null;
 
-            // Si no tienes autenticación implementada, puedes asignar un user_id genérico o null
-            // const user_id = null;
-
-            // Agregar el user_id al ticketData
-            ticketData.user_id = user_id;
+        // Agregar el user_id al ticketData
+        ticketData.user_id = user_id;
 
             // Insertar el ticket en Supabase
             let { data: ticket, error: ticketError } = await supabaseClient
