@@ -649,7 +649,10 @@ $(document).ready(function() {
 
     async function validarLimites(jugada) {
         const bet_date = new Date().toISOString().split('T')[0]; // Fecha actual en formato 'YYYY-MM-DD'
-
+        
+        // Obtener `user_id` desde `jugada`
+        const user_id = jugada.user_id;
+        
         // Obtener el límite aplicable
         let { data: limiteData, error: limiteError } = await supabaseClient
             .from('bet_limits')
@@ -704,8 +707,9 @@ $(document).ready(function() {
                 game_mode: jugada.game_mode,
                 track: jugada.tracks,
                 bet_type: 'straight', // Ajusta según corresponda
-                total_amount: nuevo_total
-            }, { onConflict: 'bet_date,number_played,game_mode,track,bet_type' });
+                total_amount: nuevo_total,
+                user_id: user_id // Incluimos `user_id` aquí
+            }, { onConflict: 'bet_date,number_played,game_mode,track,bet_type,user_id'});
 
         if (upsertError) {
             console.error('Error al actualizar daily_bets:', upsertError);
