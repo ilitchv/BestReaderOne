@@ -544,11 +544,10 @@ $(document).ready(function() {
         // Preparar los datos del ticket
         const ticketData = {
             ticket_number: ticketNumber,
+            user_id: user_id, 
             transaction_datetime: transactionDateTime,
-            bet_dates: betDates,
-            tracks: tracks,
             total_amount: totalTicket,
-            created_at: timestamp
+            created_at: timestamp           
         };
 
         // Llamar a la función para guardar en Supabase
@@ -594,6 +593,7 @@ $(document).ready(function() {
                     created_at: jugada["Timestamp"],
                     user_id: user_id,
                     tracks: jugada["Tracks"],
+                    bet_dates: jugada["Bet Dates"], // Nuevo campo agregado
                     // Agrega otros campos necesarios si los hay
                 };
 
