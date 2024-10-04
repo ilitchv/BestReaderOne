@@ -650,7 +650,8 @@ $(document).ready(function() {
             resetForm();
 
             alert('¡Ticket y jugadas guardados exitosamente!');
-        } catch (error) {
+    } 
+        catch (error) {
             console.error('Error al guardar las jugadas:', error);
             alert('Hubo un error al guardar las jugadas. Por favor, inténtalo de nuevo.');
         }
