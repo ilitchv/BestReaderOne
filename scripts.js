@@ -662,26 +662,29 @@ $(document).ready(function() {
         
         // Obtener `user_id` desde `jugada`
         const user_id = jugada.user_id;
+
+        // Dividir los tracks en un array
+        const tracksArray = jugada.tracks.split(', ').map(track => track.trim());
         
-        // Obtener el límite aplicable
-        let { data: limiteData, error: limiteError } = await supabaseClient
-            .from('bet_limits')
-            .select('max_bet')
-            .eq('game_mode', jugada.game_mode)
-            .eq('track', jugada.tracks)
-            .or(`bet_type.eq.straight,bet_type.eq.all`)
-            .single();
+         // Obtener el límite aplicable para cada track
+    let { data: limiteData, error: limiteError } = await supabaseClient
+        .from('bet_limits')
+        .select('max_bet')
+        .eq('game_mode', jugada.game_mode)
+        .in('track', tracksArray)
+        .or(`bet_type.eq.straight,bet_type.eq.all`);
 
-        if (limiteError || !limiteData) {
-            console.error('Error al obtener el límite:', limiteError);
-            alert('No se pudo obtener el límite de apuesta para la jugada. Por favor, intenta de nuevo.');
-            return false;
-        }
+        if (limiteError || !limiteData || limiteData.length === 0) {
+        console.error('Error al obtener el límite:', limiteError);
+        alert('No se pudo obtener el límite de apuesta para la jugada. Por favor, intenta de nuevo.');
+        return false;
+    }
 
-        const max_bet = parseFloat(limiteData.max_bet);
-
-        // Calcular el monto total de la jugada
-        const monto_jugada = jugada.straight_amount + jugada.box_amount + jugada.combo_amount;
+        // Sumar todos los max_bet de los tracks obtenidos
+    const totalMaxBet = limiteData.reduce((acc, curr) => acc + parseFloat(curr.max_bet), 0);
+    
+    // Calcular el monto total de la jugada
+    const monto_jugada = jugada.straight_amount + jugada.box_amount + jugada.combo_amount;
 
         // Obtener el monto disponible sin revelar el total apostado
         let { data: disponibleData, error: disponibleError } = await supabaseClient
@@ -707,7 +710,7 @@ $(document).ready(function() {
         }
 
         // Actualizar o insertar en daily_bets
-        const nuevo_total = max_bet - (monto_disponible - monto_jugada);
+    const nuevo_total = totalMaxBet - (monto_disponible - monto_jugada);
 
         const { error: upsertError } = await supabaseClient
             .from('daily_bets')
