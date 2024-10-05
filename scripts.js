@@ -69,7 +69,7 @@ $(document).ready(function() {
         "Win 4": { "straight": 6, "box": 30, "combo": 50 },
         "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
         "Venezuela": { "straight": 100 },
-        "Venezuela-Pale": { "straight": 100 },
+        "Venezuela-Pale": { "straight": 20 },
         "Pulito": { "straight": 100 },
         "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
         "RD-Pale": { "straight": 20 }, // Se mantiene en $20
