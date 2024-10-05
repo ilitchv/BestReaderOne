@@ -1,4 +1,4 @@
-// scripts.js
+ // scripts.js
 
 let fechaTransaccion = '';
 
@@ -662,57 +662,52 @@ $(document).ready(function() {
         
         // Obtener `user_id` desde `jugada`
         const user_id = jugada.user_id;
-
-        // Dividir los tracks en un array
-        const tracksArray = jugada.tracks.split(', ').map(track => track.trim());
         
-         // Iterar sobre cada track para validar individualmente
-    for (let track of tracksArray) {
-        // Obtener el límite aplicable para este game_mode, track y bet_type
+        // Obtener el límite aplicable
         let { data: limiteData, error: limiteError } = await supabaseClient
             .from('bet_limits')
             .select('max_bet')
             .eq('game_mode', jugada.game_mode)
-            .eq('track', track)
-            .eq('bet_type', 'straight') // Ajusta según corresponda
-            .single(); // Asume que hay un único registro por combinación
-        
+            .eq('track', jugada.tracks)
+            .or(`bet_type.eq.straight,bet_type.eq.all`)
+            .single();
+
         if (limiteError || !limiteData) {
-            console.error(`Error al obtener el límite para el track "${track}":`, limiteError);
-            alert(`No se pudo obtener el límite de apuesta para el track "${track}". Por favor, intenta de nuevo.`);
+            console.error('Error al obtener el límite:', limiteError);
+            alert('No se pudo obtener el límite de apuesta para la jugada. Por favor, intenta de nuevo.');
             return false;
         }
 
         const max_bet = parseFloat(limiteData.max_bet);
-    
+
         // Calcular el monto total de la jugada
         const monto_jugada = jugada.straight_amount + jugada.box_amount + jugada.combo_amount;
-             
-          // Obtener el monto disponible sin revelar el total apostado
+
+        // Obtener el monto disponible sin revelar el total apostado
         let { data: disponibleData, error: disponibleError } = await supabaseClient
             .rpc('obtener_monto_disponible', {
                 bet_date_input: bet_date,
                 number_played_input: jugada.number_played,
                 game_mode_input: jugada.game_mode,
-                track_input: track, // Usar track individual
+                track_input: jugada.tracks,
                 bet_type_input: 'straight' // Ajusta según corresponda
             });
 
         if (disponibleError || !disponibleData || disponibleData.length === 0) {
-            console.error(`Error al obtener el monto disponible para el track "${track}":`, disponibleError);
-            alert(`No se pudo validar el monto disponible para el track "${track}". Por favor, intenta de nuevo.`);
+            console.error('Error al obtener el monto disponible:', disponibleError);
+            alert('No se pudo validar el monto disponible para la jugada. Por favor, intenta de nuevo.');
             return false;
         }
-        
+
         const monto_disponible = parseFloat(disponibleData[0].monto_disponible);
 
         if (monto_disponible < monto_jugada) {
-            alert(`El monto máximo disponible para esta jugada en el track "${track}" es $${monto_disponible.toFixed(2)}. Por favor, ajusta tu apuesta.`);
+            alert(`El monto máximo disponible para esta jugada es $${monto_disponible.toFixed(2)}. Por favor, ajusta tu apuesta.`);
             return false;
         }
 
         // Actualizar o insertar en daily_bets
-    const nuevo_total = totalMaxBet - (monto_disponible - monto_jugada);
+        const nuevo_total = max_bet - (monto_disponible - monto_jugada);
 
         const { error: upsertError } = await supabaseClient
             .from('daily_bets')
@@ -720,18 +715,18 @@ $(document).ready(function() {
                 bet_date: bet_date,
                 number_played: jugada.number_played,
                 game_mode: jugada.game_mode,
-                track: track, // Usar track individual
+                track: jugada.tracks,
                 bet_type: 'straight', // Ajusta según corresponda
                 total_amount: nuevo_total,
-                user_id: user_id  
+                user_id: user_id // Incluimos `user_id` aquí
             }, { onConflict: 'bet_date,number_played,game_mode,track,bet_type,user_id'});
 
         if (upsertError) {
-            console.error(`Error al actualizar daily_bets para el track "${track}":`, upsertError);
-            alert(`No se pudo actualizar el total apostado para el track "${track}". Por favor, intenta de nuevo.`);
+            console.error('Error al actualizar daily_bets:', upsertError);
+            alert('No se pudo actualizar el total apostado para la jugada. Por favor, intenta de nuevo.');
             return false;
         }
-        
+
         return true;
     }
 
