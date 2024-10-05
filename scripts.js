@@ -87,8 +87,13 @@ $(document).ready(function() {
         const longitud = numero.length;
         const boxValue = parseInt(fila.find(".box").val()) || 0;
 
-        if (incluyeVenezuela && esUSA && longitud === 2) {
+        if (incluyeVenezuela && esUSA) {
+            if (longitud === 2) {
             modalidad = "Venezuela";
+        } else if (longitud === 4) {
+            modalidad = "Venezuela-Pale";
+        }
+            
         } else if (esUSA && !esSD) {
             if (longitud === 4) {
                 modalidad = "Win 4";
@@ -187,24 +192,24 @@ $(document).ready(function() {
         }
 
         if (modalidad === "Pulito") {
-            fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else if (modalidad === "Combo") { // Añadido
-            fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
-        } else {
-            // Modalidad no reconocida
-            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
-        }
+        fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
+        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) { // Agregado "Venezuela-Pale"
+        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+        fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
+    } else if (modalidad === "Combo") { // Añadido
+        fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
+    } else {
+        // Modalidad no reconocida
+        fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
+        fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
     }
+}
 
     // Función para calcular el total de una jugada
     function calcularTotalJugada(fila) {
