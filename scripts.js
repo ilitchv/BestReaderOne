@@ -2,11 +2,8 @@ let fechaTransaccion = '';
 
 $(document).ready(function() {
 
-    // Inicializar Supabase
-    const SUPABASE_URL = 'https://rrycqjcwdwvhliqbgeoh.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyeWNxamN3ZHd2aGxpcWJnZW9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY4MjA4OTQsImV4cCI6MjA0MjM5Njg5NH0.4eyQBOj5lelLl4Q0Q8rVE3gXK3t-dFkqXGuDFO7_0I4';
-
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Define la URL de tu API de SheetDB  
+    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
 
     // Inicializar Flatpickr con selección de rango de fechas
     flatpickr("#fecha", {
@@ -43,6 +40,7 @@ $(document).ready(function() {
             "Georgia Night": "23:20",
             "Pensilvania AM": "12:55",
             "Pensilvania PM": "18:20"
+            // Nota: "Venezuela" se excluye aquí
         },
         "Santo Domingo": {
             "Real": "12:45",
@@ -502,7 +500,7 @@ $(document).ready(function() {
     }
 
     // Evento para confirmar e imprimir el ticket
-    $("#confirmarTicket").click(async function() {
+    $("#confirmarTicket").click(function() {
         // Datos comunes a todas las jugadas
         const ticketNumber = $("#numeroTicket").text();
         const transactionDateTime = fechaTransaccion;
@@ -515,7 +513,7 @@ $(document).ready(function() {
         const jugadasData = [];
 
         // Recorrer cada jugada y preparar los datos
-        $("#ticketJugadas tr").each(function() {    
+        $("#ticketJugadas tr").each(function() {
             // Generar número único de 8 dígitos para la jugada
             const jugadaNumber = generarNumeroUnico();
 
@@ -538,184 +536,42 @@ $(document).ready(function() {
             jugadasData.push(jugadaData);
         });
 
-        // Preparar los datos del ticket
-        const ticketData = {
-            ticket_number: ticketNumber,
-            transaction_datetime: transactionDateTime,
-            bet_dates: betDates,
-            tracks: tracks,
-            total_amount: totalTicket,
-            created_at: timestamp
-        };
+        // Enviar datos a SheetDB
+        $.ajax({
+            url: SHEETDB_API_URL, // Usar la variable de SheetDB
+            method: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            data: JSON.stringify(jugadasData),
+            success: function(response) {
+                // Imprimir el ticket
+                window.print();
 
-        // Llamar a la función para guardar en Supabase
-        await guardarJugadasEnSupabase(ticketData, jugadasData);
+                // Opcional: Usar html2canvas para capturar solo el ticket
+                html2canvas(document.querySelector("#preTicket")).then(canvas => {
+                    // Obtener la imagen en formato data URL
+                    const imgData = canvas.toDataURL("image/png");
+                    // Crear un enlace para descargar la imagen
+                    const link = document.createElement('a');
+                    link.href = imgData;
+                    link.download = 'ticket.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+                // Cerrar el modal
+                ticketModal.hide();
+                // Reiniciar el formulario
+                resetForm();
+                alert("Ticket guardado y enviado exitosamente.");
+            },
+            error: function(err) {
+                console.error("Error al enviar datos a SheetDB:", err);
+                // Mostrar mensaje de error más detallado
+                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
+            }
+        });
     });
-
-    async function guardarJugadasEnSupabase(ticketData, jugadasData) {
-        try {
-            // Obtener el ID del usuario actual (si tienes autenticación implementada)
-            const user = supabase.auth.user();
-            const user_id = user ? user.id : null;
-
-            // Si no tienes autenticación implementada, puedes asignar un user_id genérico o null
-            // const user_id = null;
-
-            // Agregar el user_id al ticketData
-            ticketData.user_id = user_id;
-
-            // Insertar el ticket en Supabase
-            let { data: ticket, error: ticketError } = await supabase
-                .from('tickets')
-                .insert([ticketData]);
-
-            if (ticketError) {
-                console.error('Error al guardar el ticket:', ticketError);
-                alert('Hubo un error al guardar el ticket. Por favor, inténtalo de nuevo.');
-                return;
-            }
-
-            // Obtener el ID del ticket recién creado
-            const ticket_id = ticket[0].id;
-
-            // Ahora, procesar cada jugada individualmente
-            for (let i = 0; i < jugadasData.length; i++) {
-                const jugada = jugadasData[i];
-
-                // Convertir los campos de jugada al formato esperado por Supabase
-                const jugadaData = {
-                    ticket_id: ticket_id,
-                    jugada_number: jugada["Jugada Number"],
-                    number_played: jugada["Bet Number"],
-                    game_mode: jugada["Game Mode"],
-                    straight_amount: parseFloat(jugada["Straight ($)"]) || 0,
-                    box_amount: parseFloat(jugada["Box ($)"]) || 0,
-                    combo_amount: parseFloat(jugada["Combo ($)"]) || 0,
-                    total_amount: parseFloat(jugada["Total ($)"]) || 0,
-                    created_at: jugada["Timestamp"],
-                    user_id: user_id,
-                    tracks: jugada["Tracks"],
-                    // Agrega otros campos necesarios si los hay
-                };
-
-                // Validar los límites antes de guardar la jugada
-                const esValida = await validarLimites(jugadaData);
-
-                if (!esValida) {
-                    // Si la jugada no es válida, detenemos el proceso y eliminamos el ticket creado
-                    await supabase.from('tickets').delete().eq('id', ticket_id);
-                    alert('Una de tus jugadas excede el límite permitido. El ticket ha sido cancelado.');
-                    return;
-                }
-
-                // Insertar la jugada en Supabase
-                let { error: jugadaError } = await supabase.from('jugadas').insert([jugadaData]);
-
-                if (jugadaError) {
-                    console.error('Error al guardar la jugada:', jugadaError);
-                    alert('Hubo un error al guardar una de las jugadas. Por favor, intenta de nuevo.');
-                    // Opcionalmente, puedes eliminar el ticket y las jugadas ya insertadas
-                    return;
-                }
-            }
-
-            // Opcional: Usar html2canvas para capturar solo el ticket
-            html2canvas(document.querySelector("#preTicket")).then(canvas => {
-                // Obtener la imagen en formato data URL
-                const imgData = canvas.toDataURL("image/png");
-                // Crear un enlace para descargar la imagen
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = 'ticket.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-
-            // Imprimir el ticket
-            window.print();
-
-            // Cerrar el modal
-            ticketModal.hide();
-
-            // Reiniciar el formulario
-            resetForm();
-
-            alert('¡Ticket y jugadas guardados exitosamente en Supabase!');
-        } catch (error) {
-            console.error('Error al guardar las jugadas en Supabase:', error);
-            alert('Hubo un error al guardar las jugadas. Por favor, inténtalo de nuevo.');
-        }
-    }
-
-    async function validarLimites(jugada) {
-        const bet_date = new Date().toISOString().split('T')[0]; // Fecha actual en formato 'YYYY-MM-DD'
-
-        // Obtener el límite aplicable
-        let { data: limiteData, error: limiteError } = await supabase
-            .from('bet_limits')
-            .select('max_bet')
-            .eq('game_mode', jugada.game_mode)
-            .eq('track', jugada.tracks)
-            .or(`bet_type.eq.straight,bet_type.eq.all`)
-            .single();
-
-        if (limiteError || !limiteData) {
-            console.error('Error al obtener el límite:', limiteError);
-            alert('No se pudo obtener el límite de apuesta para la jugada. Por favor, intenta de nuevo.');
-            return false;
-        }
-
-        const max_bet = parseFloat(limiteData.max_bet);
-
-        // Calcular el monto total de la jugada
-        const monto_jugada = jugada.straight_amount + jugada.box_amount + jugada.combo_amount;
-
-        // Obtener el monto disponible sin revelar el total apostado
-        let { data: disponibleData, error: disponibleError } = await supabase
-            .rpc('obtener_monto_disponible', {
-                bet_date_input: bet_date,
-                number_played_input: jugada.number_played,
-                game_mode_input: jugada.game_mode,
-                track_input: jugada.tracks,
-                bet_type_input: 'straight' // Ajusta según corresponda
-            });
-
-        if (disponibleError || !disponibleData || disponibleData.length === 0) {
-            console.error('Error al obtener el monto disponible:', disponibleError);
-            alert('No se pudo validar el monto disponible para la jugada. Por favor, intenta de nuevo.');
-            return false;
-        }
-
-        const monto_disponible = parseFloat(disponibleData[0].monto_disponible);
-
-        if (monto_disponible < monto_jugada) {
-            alert(`El monto máximo disponible para esta jugada es $${monto_disponible.toFixed(2)}. Por favor, ajusta tu apuesta.`);
-            return false;
-        }
-
-        // Actualizar o insertar en daily_bets
-        const nuevo_total = max_bet - (monto_disponible - monto_jugada);
-
-        const { error: upsertError } = await supabase
-            .from('daily_bets')
-            .upsert({
-                bet_date: bet_date,
-                number_played: jugada.number_played,
-                game_mode: jugada.game_mode,
-                track: jugada.tracks,
-                bet_type: 'straight', // Ajusta según corresponda
-                total_amount: nuevo_total
-            }, { onConflict: 'bet_date,number_played,game_mode,track,bet_type' });
-
-        if (upsertError) {
-            console.error('Error al actualizar daily_bets:', upsertError);
-            alert('No se pudo actualizar el total apostado para la jugada. Por favor, intenta de nuevo.');
-            return false;
-        }
-
-        return true;
-    }
 
     // Función para reiniciar el formulario
     function resetForm() {
@@ -739,16 +595,16 @@ $(document).ready(function() {
             const track = $(this).data("track");
 
             if (track === 'Venezuela') {
-                $(this).hide(); // Oculta el elemento del DOM
-                return;
-            }
+               $(this).hide(); // Oculta el elemento del DOM
+               return;
+            }             
             let cierreStr = "";
             if (horariosCierre.USA[track]) {
                 cierreStr = horariosCierre.USA[track];
             }
             else if (horariosCierre["Santo Domingo"][track]) {
                 cierreStr = horariosCierre["Santo Domingo"][track];
-            }
+            } 
             else if (horariosCierre.Venezuela[track]) {
                 cierreStr = horariosCierre.Venezuela[track];
             }
