@@ -1,5 +1,3 @@
- // scripts.js
-
 let fechaTransaccion = '';
 
 $(document).ready(function() {
