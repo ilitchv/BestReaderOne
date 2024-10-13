@@ -121,6 +121,18 @@ h2 {
     transition: all 0.3s ease;
 }
 
+/* Estilos para campos de entrada específicos */
+input.straight,
+input.box {
+    max-width: 80px; /* Ajusta este valor según sea necesario */
+}
+
+/* Ajustar el tamaño del botón "Eliminar Jugada" */
+#eliminarJugada {
+    min-width: 150px; /* Ajusta este valor para que el texto quepa en una sola línea */
+}
+
+/* Estilos adicionales para botones */
 .btn-primary {
     background-color: var(--color-neon-cian);
     color: #000;
@@ -137,7 +149,7 @@ h2 {
     background-color: #ff0044;
     color: #fff;
     box-shadow: 0 0 10px #ff0044;
-    min-width: 150px; /* Incremento de ancho */
+    /* El min-width ya está ajustado arriba */
 }
 
 .btn-danger:hover {
@@ -299,8 +311,8 @@ input::-ms-input-placeholder { /* Microsoft Edge */
 .duplicado {
     background-color: #ffff99; /* Fondo amarillo claro */
     border: 2px solid #ffeb3b; /* Borde amarillo más oscuro */
-
 }
+
 /* Ocultar la hora límite para el track "Venezuela" cambiando el color del texto */
 .cutoff-time[data-track='Venezuela'] {
     color: var(--color-fondo);
