@@ -85,21 +85,21 @@ $(document).ready(function() {
         const incluyeVenezuela = tracks.includes("Venezuela");
 
         const longitud = numero.length;
-        const boxValue = parseInt(fila.find(".box").val()) || 0;
+        const boxValue = fila.find(".box").val().trim();
+        const acceptableBoxValues = ["1", "2", "3", "1,2", "2,3", "1,3", "1,2,3"];
 
         if (incluyeVenezuela && esUSA) {
             if (longitud === 2) {
-            modalidad = "Venezuela";
-        } else if (longitud === 4) {
-            modalidad = "Venezuela-Pale";
-        }
-            
+                modalidad = "Venezuela";
+            } else if (longitud === 4) {
+                modalidad = "Venezuela-Pale";
+            }
         } else if (esUSA && !esSD) {
             if (longitud === 4) {
                 modalidad = "Win 4";
             } else if (longitud === 3) {
                 modalidad = "Peak 3";
-            } else if (longitud === 2 && [1, 2, 3].includes(boxValue)) {
+            } else if (longitud === 2 && acceptableBoxValues.includes(boxValue)) {
                 modalidad = "Pulito";
             }
         } else if (esSD && !esUSA) {
@@ -126,7 +126,7 @@ $(document).ready(function() {
                 <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
                 <td class="tipoJuego">-</td>
                 <td><input type="number" class="form-control straight" min="0" max="100.00" step="1" placeholder="Ej: 5"></td>
-                <td><input type="number" class="form-control box" min="1" max="3" step="1" placeholder="1, 2 o 3"></td>
+                <td><input type="text" class="form-control box" placeholder="1, 2, 3, 1,2, 1,3, 2,3, 1,2,3"></td>
                 <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
@@ -136,6 +136,9 @@ $(document).ready(function() {
         // Agregar listeners a los nuevos campos
         agregarListenersNumeroApostado();
         resaltarDuplicados();
+
+        // Enfocar el cursor en el campo "Número Apostado" de la nueva jugada
+        $("#tablaJugadas tr:last .numeroApostado").focus();
     }
 
     // Agregar una jugada inicial
@@ -192,24 +195,24 @@ $(document).ready(function() {
         }
 
         if (modalidad === "Pulito") {
-        fila.find(".box").attr("placeholder", "1, 2 o 3").prop('disabled', false);
-        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-    } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) { // Agregado "Venezuela-Pale"
-        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-    } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-        fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-    } else if (modalidad === "Combo") { // Añadido
-        fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
-    } else {
-        // Modalidad no reconocida
-        fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-        fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
+            fila.find(".box").attr("placeholder", "1, 2, 3, 1,2, 1,3, 2,3, 1,2,3").prop('disabled', false);
+            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) { // Agregado "Venezuela-Pale"
+            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
+        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
+        } else if (modalidad === "Combo") { // Añadido
+            fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
+            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
+        } else {
+            // Modalidad no reconocida
+            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
+            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
+        }
     }
-}
 
     // Función para calcular el total de una jugada
     function calcularTotalJugada(fila) {
@@ -222,14 +225,14 @@ $(document).ready(function() {
 
         const combinaciones = calcularCombinaciones(numero);
         let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let box = parseFloat(fila.find(".box").val()) || 0;
+        let box = fila.find(".box").val().trim();
         let combo = parseFloat(fila.find(".combo").val()) || 0;
 
         // Aplicar límites según modalidad
         if (limitesApuesta[modalidad]) {
             straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
             if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
-                box = Math.min(box, limitesApuesta[modalidad].box || box);
+                box = Math.min(parseFloat(box), limitesApuesta[modalidad].box || box);
             }
             if (limitesApuesta[modalidad].combo !== undefined) {
                 combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
@@ -239,16 +242,22 @@ $(document).ready(function() {
         // Calcular total según modalidad
         let total = 0;
         if (modalidad === "Pulito") {
-            total = straight; // No sumar box
+            const boxValues = box.split(",").filter(value => value !== "");
+            const countBoxValues = boxValues.length;
+            if (countBoxValues > 1) {
+                total = straight * countBoxValues;
+            } else {
+                total = straight;
+            }
         } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
             total = straight;
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + box + (combo * combinaciones);
+            total = straight + parseFloat(box) + (combo * combinaciones);
         } else if (modalidad === "Combo") { // Añadido
             total = combo; // Solo sumar combo
         } else {
             // Modalidad no reconocida
-            total = straight + box + combo;
+            total = straight + parseFloat(box) + combo;
         }
 
         fila.find(".total").text(total.toFixed(2));
@@ -408,10 +417,11 @@ $(document).ready(function() {
                     return false;
                 }
                 if (modalidad === "Pulito") {
-                    const box = parseInt($(this).find(".box").val());
-                    if (![1, 2, 3].includes(box)) {
+                    const box = $(this).find(".box").val().trim();
+                    const acceptableBoxValues = ["1", "2", "3", "1,2", "2,3", "1,3", "1,2,3"];
+                    if (!acceptableBoxValues.includes(box)) {
                         jugadasValidas = false;
-                        alert("En la modalidad Pulito, el campo 'Box' debe ser 1, 2 o 3.");
+                        alert("En la modalidad Pulito, el campo 'Box' debe ser 1, 2, 3, 1,2, 1,3, 2,3 o 1,2,3.");
                         return false;
                     }
                 }
@@ -600,16 +610,16 @@ $(document).ready(function() {
             const track = $(this).data("track");
 
             if (track === 'Venezuela') {
-               $(this).hide(); // Oculta el elemento del DOM
-               return;
-            }             
+                $(this).hide(); // Oculta el elemento del DOM
+                return;
+            }
             let cierreStr = "";
             if (horariosCierre.USA[track]) {
                 cierreStr = horariosCierre.USA[track];
             }
             else if (horariosCierre["Santo Domingo"][track]) {
                 cierreStr = horariosCierre["Santo Domingo"][track];
-            } 
+            }
             else if (horariosCierre.Venezuela[track]) {
                 cierreStr = horariosCierre.Venezuela[track];
             }
