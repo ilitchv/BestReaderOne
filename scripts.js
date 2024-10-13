@@ -71,6 +71,7 @@ $(document).ready(function() {
         "Venezuela": { "straight": 100 },
         "Venezuela-Pale": { "straight": 20 },
         "Pulito": { "straight": 100 },
+        "Pulito-Combinado": { "straight": 100 },
         "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
         "RD-Pale": { "straight": 20 }, // Se mantiene en $20
         "Combo": { "combo": 50 } // Añadido
@@ -86,7 +87,8 @@ $(document).ready(function() {
 
         const longitud = numero.length;
         const boxValue = fila.find(".box").val().trim();
-        const acceptableBoxValues = ["1", "2", "3", "1,2", "2,3", "1,3", "1,2,3"];
+        const acceptableBoxValues = ["1", "2", "3"];
+        const acceptableBoxCombinations = ["1,2", "2,3", "1,3", "1,2,3"];
 
         if (incluyeVenezuela && esUSA) {
             if (longitud === 2) {
@@ -99,8 +101,12 @@ $(document).ready(function() {
                 modalidad = "Win 4";
             } else if (longitud === 3) {
                 modalidad = "Peak 3";
-            } else if (longitud === 2 && acceptableBoxValues.includes(boxValue)) {
-                modalidad = "Pulito";
+            } else if (longitud === 2) {
+                if (acceptableBoxValues.includes(boxValue)) {
+                    modalidad = "Pulito";
+                } else if (acceptableBoxCombinations.includes(boxValue)) {
+                    modalidad = "Pulito-Combinado";
+                }
             }
         } else if (esSD && !esUSA) {
             if (longitud === 2) {
@@ -126,11 +132,13 @@ $(document).ready(function() {
                 <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
                 <td class="tipoJuego">-</td>
                 <td><input type="number" class="form-control straight" min="0" max="100.00" step="1" placeholder="Ej: 5"></td>
-                <td><input type="text" class="form-control box" placeholder="1, 2, 3, 1,2, 1,3, 2,3, 1,2,3"></td>
+                <td><input type="text" class="form-control box" placeholder="1, 2, 3, 1,2, 2,3, 1,3, 1,2,3"></td>
                 <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
         `;
+
+        // Agregar la jugada al DOM
         $("#tablaJugadas").append(fila);
 
         // Agregar listeners a los nuevos campos
@@ -194,21 +202,20 @@ $(document).ready(function() {
             fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
         }
 
-        if (modalidad === "Pulito") {
-            fila.find(".box").attr("placeholder", "1, 2, 3, 1,2, 1,3, 2,3, 1,2,3").prop('disabled', false);
+        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
+            fila.find(".box").attr("placeholder", "1, 2, 3, 1,2, 2,3, 1,3, 1,2,3").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) { // Agregado "Venezuela-Pale"
+        } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) {
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
             fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
             fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else if (modalidad === "Combo") { // Añadido
+        } else if (modalidad === "Combo") {
             fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
         } else {
-            // Modalidad no reconocida
             fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
         }
@@ -231,7 +238,7 @@ $(document).ready(function() {
         // Aplicar límites según modalidad
         if (limitesApuesta[modalidad]) {
             straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito") {
+            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
                 box = Math.min(parseFloat(box), limitesApuesta[modalidad].box || box);
             }
             if (limitesApuesta[modalidad].combo !== undefined) {
@@ -241,22 +248,17 @@ $(document).ready(function() {
 
         // Calcular total según modalidad
         let total = 0;
-        if (modalidad === "Pulito") {
+        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
             const boxValues = box.split(",").filter(value => value !== "");
             const countBoxValues = boxValues.length;
-            if (countBoxValues > 1) {
-                total = straight * countBoxValues;
-            } else {
-                total = straight;
-            }
+            total = straight * countBoxValues;
         } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
             total = straight;
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
             total = straight + parseFloat(box) + (combo * combinaciones);
-        } else if (modalidad === "Combo") { // Añadido
-            total = combo; // Solo sumar combo
+        } else if (modalidad === "Combo") {
+            total = combo;
         } else {
-            // Modalidad no reconocida
             total = straight + parseFloat(box) + combo;
         }
 
@@ -389,7 +391,7 @@ $(document).ready(function() {
             // Nueva Validación: Verificar que la jugada tiene al menos un track seleccionado correspondiente a su modalidad
             let tracksRequeridos = [];
 
-            if (["Win 4", "Peak 3", "Pulito", "Venezuela"].includes(modalidad)) {
+            if (["Win 4", "Peak 3", "Pulito", "Pulito-Combinado", "Venezuela"].includes(modalidad)) {
                 // Modalidades que requieren tracks de USA
                 tracksRequeridos = Object.keys(horariosCierre.USA);
             } else if (["RD-Quiniela", "RD-Pale"].includes(modalidad)) {
@@ -409,19 +411,21 @@ $(document).ready(function() {
                 return false; // Salir del bucle
             }
 
-            if (["Venezuela", "Venezuela-Pale", "Pulito", "RD-Quiniela", "RD-Pale"].includes(modalidad)) {
+            if (["Venezuela", "Venezuela-Pale", "Pulito", "Pulito-Combinado", "RD-Quiniela", "RD-Pale"].includes(modalidad)) {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
                 if (straight <= 0) {
                     jugadasValidas = false;
                     alert("Por favor, ingresa al menos una apuesta en Straight.");
                     return false;
                 }
-                if (modalidad === "Pulito") {
+                if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
                     const box = $(this).find(".box").val().trim();
-                    const acceptableBoxValues = ["1", "2", "3", "1,2", "2,3", "1,3", "1,2,3"];
-                    if (!acceptableBoxValues.includes(box)) {
+                    const acceptableBoxValues = ["1", "2", "3"];
+                    const acceptableBoxCombinations = ["1,2", "2,3", "1,3", "1,2,3"];
+                    const allAcceptableValues = acceptableBoxValues.concat(acceptableBoxCombinations);
+                    if (!allAcceptableValues.includes(box)) {
                         jugadasValidas = false;
-                        alert("En la modalidad Pulito, el campo 'Box' debe ser 1, 2, 3, 1,2, 1,3, 2,3 o 1,2,3.");
+                        alert("En la modalidad Pulito o Pulito-Combinado, el campo 'Box' debe ser 1, 2, 3, 1,2, 2,3, 1,3 o 1,2,3.");
                         return false;
                     }
                 }
@@ -442,7 +446,7 @@ $(document).ready(function() {
                     alert(`El monto en Straight excede el límite para ${modalidad}.`);
                     return false;
                 }
-                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
+                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
                     jugadasValidas = false;
                     alert(`El monto en Box excede el límite para ${modalidad}.`);
                     return false;
