@@ -132,7 +132,7 @@ $(document).ready(function() {
                 <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
                 <td class="tipoJuego">-</td>
                 <td><input type="number" class="form-control straight" min="0" max="100.00" step="1" placeholder="Ej: 5"></td>
-                <td><input type="text" class="form-control box" placeholder="1, 2, 3, 1,2, 2,3, 1,3, 1,2,3"></td>
+                <td><input type="text" class="form-control box" placeholder="1,2,3"></td>
                 <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
@@ -203,7 +203,7 @@ $(document).ready(function() {
         }
 
         if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-            fila.find(".box").attr("placeholder", "1, 2, 3, 1,2, 2,3, 1,3, 1,2,3").prop('disabled', false);
+            fila.find(".box").attr("placeholder", "1,2,3").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
         } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) {
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
@@ -232,14 +232,15 @@ $(document).ready(function() {
 
         const combinaciones = calcularCombinaciones(numero);
         let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let box = fila.find(".box").val().trim();
+        let boxVal = fila.find(".box").val().trim();
+        let box = parseFloat(boxVal) || 0;
         let combo = parseFloat(fila.find(".combo").val()) || 0;
 
         // Aplicar límites según modalidad
         if (limitesApuesta[modalidad]) {
             straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
             if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
-                box = Math.min(parseFloat(box), limitesApuesta[modalidad].box || box);
+                box = Math.min(box, limitesApuesta[modalidad].box || box);
             }
             if (limitesApuesta[modalidad].combo !== undefined) {
                 combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
@@ -249,17 +250,17 @@ $(document).ready(function() {
         // Calcular total según modalidad
         let total = 0;
         if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-            const boxValues = box.split(",").filter(value => value !== "");
+            const boxValues = boxVal.split(",").filter(value => value !== "");
             const countBoxValues = boxValues.length;
             total = straight * countBoxValues;
         } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
             total = straight;
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + parseFloat(box) + (combo * combinaciones);
+            total = straight + box + (combo * combinaciones);
         } else if (modalidad === "Combo") {
             total = combo;
         } else {
-            total = straight + parseFloat(box) + combo;
+            total = straight + box + combo;
         }
 
         fila.find(".total").text(total.toFixed(2));
@@ -431,7 +432,8 @@ $(document).ready(function() {
                 }
             } else if (["Win 4", "Peak 3"].includes(modalidad)) {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
-                const box = parseFloat($(this).find(".box").val()) || 0;
+                const boxVal = $(this).find(".box").val();
+                const box = boxVal !== "" ? parseFloat(boxVal) : 0;
                 const combo = parseFloat($(this).find(".combo").val()) || 0;
                 if (straight <= 0 && box <= 0 && combo <= 0) {
                     jugadasValidas = false;
