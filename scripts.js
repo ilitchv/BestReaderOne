@@ -2,11 +2,9 @@ let fechaTransaccion = '';
 
 $(document).ready(function() {
 
-    // Define la URL de tu API de SheetDB  
-    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
-
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Reemplaza con la URL real de tu backend
-
+    // Define las URLs de tus APIs
+    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Tu URL del backend en Render
 
     // Inicializar Flatpickr con selección de rango de fechas
     flatpickr("#fecha", {
@@ -43,7 +41,6 @@ $(document).ready(function() {
             "Georgia Night": "23:20",
             "Pensilvania AM": "12:55",
             "Pensilvania PM": "18:20"
-            // Nota: "Venezuela" se excluye aquí
         },
         "Santo Domingo": {
             "Real": "12:45",
@@ -560,14 +557,37 @@ $(document).ready(function() {
             jugadasData.push(jugadaData);
         });
 
-        // Enviar datos a SheetDB
-        $.ajax({
-            url: SHEETDB_API_URL, // Usar la variable de SheetDB
-            method: "POST",
-            dataType: "json",
-            contentType: "application/json",
-            data: JSON.stringify(jugadasData),
-            success: function(response) {
+        // Enviar datos a ambos destinos
+        enviarFormulario(jugadasData);
+
+        // Función para enviar datos a SheetDB y al Backend
+        function enviarFormulario(datos) {
+            // Enviar a SheetDB
+            const sheetDBRequest = $.ajax({
+                url: SHEETDB_API_URL,
+                method: "POST",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify(datos)
+            });
+
+            // Enviar al Backend
+            const backendRequest = $.ajax({
+                url: BACKEND_API_URL,
+                method: "POST",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify(datos)
+            });
+
+            // Esperar a que ambas solicitudes se completen
+            $.when(sheetDBRequest, backendRequest).done(function(sheetDBResponse, backendResponse) {
+                console.log("Datos enviados a ambos destinos:");
+                console.log("SheetDB:", sheetDBResponse);
+                console.log("Backend:", backendResponse);
+
+                // Después de que ambas solicitudes se hayan completado con éxito
+
                 // Imprimir el ticket
                 window.print();
 
@@ -588,13 +608,11 @@ $(document).ready(function() {
                 // Reiniciar el formulario
                 resetForm();
                 alert("Ticket guardado y enviado exitosamente.");
-            },
-            error: function(err) {
-                console.error("Error al enviar datos a SheetDB:", err);
-                // Mostrar mensaje de error más detallado
-                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.\nDetalles del error: " + JSON.stringify(err));
-            }
-        });
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error("Error al enviar datos:", textStatus, errorThrown);
+                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.");
+            });
+        }
     });
 
     // Función para reiniciar el formulario
