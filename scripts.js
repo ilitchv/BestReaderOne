@@ -5,6 +5,9 @@ $(document).ready(function() {
     // Define la URL de tu API de SheetDB  
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Reemplaza con tu URL real
 
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Reemplaza con la URL real de tu backend
+
+
     // Inicializar Flatpickr con selección de rango de fechas
     flatpickr("#fecha", {
         mode: "multiple",
