@@ -1,4 +1,4 @@
-// login.js
+ // login.js
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
@@ -24,10 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Guardar el token en el almacenamiento local
         localStorage.setItem('token', data.token);
         alert('Inicio de sesión exitoso. ¡Bienvenido!');
-        // Redirigir a la página principal o dashboard
-        window.location.href = 'dashboard.html'; // Reemplaza con la página que corresponda
+        // Redirigir a la página dashboard.html
+        window.location.href = 'dashboard.html'; // Asegúrate de que dashboard.html está en la misma carpeta
       } else {
-        alert('Error: ' + (data.msg || 'Credenciales inválidas.'));
+        // Manejo de errores
+        const errorMsg = data.msg || 'Credenciales inválidas.';
+        alert('Error: ' + errorMsg);
       }
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
