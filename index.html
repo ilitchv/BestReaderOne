@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -13,6 +13,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="styles.css" rel="stylesheet">
+
+    <!-- Verificación de Autenticación -->
+    <script>
+        // Ocultar el contenido hasta que se verifique la autenticación
+        document.documentElement.style.display = 'none';
+
+        // Verificar si el usuario está autenticado
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert('Debes iniciar sesión para acceder a esta página.');
+                window.location.href = 'login.html';
+            } else {
+                // Mostrar el contenido una vez verificado
+                document.documentElement.style.display = '';
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="container my-5">
