@@ -18,6 +18,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: #121212; /* Fondo oscuro completo */
         }
 
         /* Estilos adicionales para el formulario */
@@ -50,11 +51,28 @@
             text-align: center;
             text-shadow: 0 0 10px var(--color-neon-cian);
             font-size: 2rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
         }
 
         .form-label {
             color: var(--color-texto);
             font-size: 1.1rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            background-color: #0a0a0a;
+            color: var(--color-texto);
+            border: 1px solid var(--color-neon-cian);
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400;
+        }
+
+        .form-control::placeholder {
+            color: var(--color-placeholder);
         }
 
         .btn-login {
@@ -63,6 +81,8 @@
             box-shadow: 0 0 10px var(--color-neon-verde), 0 0 20px var(--color-neon-verde);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             font-size: 1.1rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
         }
 
         .btn-login:hover {
@@ -76,6 +96,8 @@
             text-align: center;
             display: none;
             font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
         }
 
         /* Estilos para el enlace de recuperación de contraseña */
@@ -88,10 +110,27 @@
             color: var(--color-neon-cian);
             text-decoration: none;
             font-size: 0.95rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
         }
 
         .forgot-password a:hover {
             text-decoration: underline;
+        }
+
+        /* Contenedor para el campo de contraseña con el ícono de mostrar/ocultar */
+        .password-container {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--color-neon-cian);
+            font-size: 1.2rem;
         }
 
         /* Ajustes para dispositivos móviles */
@@ -143,7 +182,10 @@
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" class="form-control glow-input" id="password" placeholder="Ingresa tu contraseña" required>
+                    <div class="password-container">
+                        <input type="password" class="form-control glow-input" id="password" placeholder="Ingresa tu contraseña" required>
+                        <i class="bi bi-eye toggle-password" id="togglePassword"></i>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-login w-100">
                     <i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión
@@ -168,8 +210,19 @@
     <!-- Custom JavaScript -->
     <script src="login.js"></script>
     <script>
-        // login.js (Asegúrate de que este script esté correctamente enlazado y contiene el siguiente código)
+        // Funcionalidad para mostrar/ocultar contraseña
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const passwordInput = document.getElementById('password');
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
 
+            // Cambiar el ícono
+            this.classList.toggle('bi-eye');
+            this.classList.toggle('bi-eye-slash');
+        });
+
+        // Manejo de errores desde login.js
+        // Modificar login.js para manejar los errores sin alert() y mostrar el mensaje en la página
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('loginForm');
             const errorMessage = document.getElementById('errorMessage');
