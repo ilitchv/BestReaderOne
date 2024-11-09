@@ -1,4 +1,4 @@
-// recover_password.js
+ // recover_password.js
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('recoverForm');
@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok) {
+                successMessage.innerText = 'Si el correo está registrado, se enviarán las instrucciones.';
                 successMessage.style.display = 'block';
-                // Limpiar el formulario
                 form.reset();
             } else {
                 const errorMsg = data.msg || 'Ocurrió un error al enviar las instrucciones.';
