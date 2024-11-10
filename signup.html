@@ -1,4 +1,4 @@
-<!-- signup.html -->
+ <!-- signup.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -36,7 +36,7 @@
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
             padding: 30px;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             transition: transform 0.3s ease;
         }
 
@@ -155,6 +155,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Puedes agregar lógica aquí si tienes sesiones o tokens para verificar si el usuario ya está autenticado
             document.body.style.display = 'block';
+
+            // Verificar si hay un código de referido en la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const referralCode = urlParams.get('referralCode');
+
+            if (referralCode) {
+                const referralInput = document.getElementById('referralCode');
+                referralInput.value = referralCode;
+                referralInput.readOnly = true; // Opcional: evitar que el usuario cambie el código de referido
+            }
         });
     </script>
 </head>
@@ -163,6 +173,18 @@
         <div class="signup-card" id="signupCard">
             <h2 class="signup-title">Registro</h2>
             <form id="signupForm">
+                <div class="mb-3">
+                    <label for="firstName" class="form-label">Nombre</label>
+                    <input type="text" class="form-control glow-input" id="firstName" placeholder="Ingresa tu nombre" required>
+                </div>
+                <div class="mb-3">
+                    <label for="lastName" class="form-label">Apellido</label>
+                    <input type="text" class="form-control glow-input" id="lastName" placeholder="Ingresa tu apellido" required>
+                </div>
+                <div class="mb-3">
+                    <label for="phoneNumber" class="form-label">Número de Teléfono</label>
+                    <input type="tel" class="form-control glow-input" id="phoneNumber" placeholder="Ingresa tu número de teléfono" required>
+                </div>
                 <div class="mb-3">
                     <label for="username" class="form-label">Nombre de Usuario</label>
                     <input type="text" class="form-control glow-input" id="username" placeholder="Ingresa tu nombre de usuario" required>
@@ -188,6 +210,10 @@
                             <i class="bi bi-eye-slash" id="toggleConfirmPasswordIcon"></i>
                         </button>
                     </div>
+                </div>
+                <div class="mb-3">
+                    <label for="referralCode" class="form-label">Código de Referido</label>
+                    <input type="text" class="form-control glow-input" id="referralCode" placeholder="Ingresa tu código de referido" required>
                 </div>
                 <button type="submit" class="btn btn-signup">
                     <i class="bi bi-person-plus-fill me-2"></i> Registrarse
@@ -225,10 +251,14 @@
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
+                const firstName = document.getElementById('firstName').value.trim();
+                const lastName = document.getElementById('lastName').value.trim();
+                const phoneNumber = document.getElementById('phoneNumber').value.trim();
                 const username = document.getElementById('username').value.trim();
                 const email = document.getElementById('email').value.trim();
                 const password = document.getElementById('password').value.trim();
                 const confirmPassword = document.getElementById('confirmPassword').value.trim();
+                const referralCode = document.getElementById('referralCode').value.trim();
 
                 // Validar que las contraseñas coincidan
                 if (password !== confirmPassword) {
@@ -246,7 +276,7 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ username, email, password })
+                        body: JSON.stringify({ firstName, lastName, phoneNumber, username, email, password, referralCode })
                     });
 
                     const data = await response.json();
