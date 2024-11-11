@@ -116,51 +116,28 @@
         <div class="content flex-grow-1 p-4">
             <!-- Sección Winning Numbers -->
             <section id="winningNumbers" class="section-content active">
-                <h2 class="section-title">Winning Numbers</h2>
-                <div class="card mb-4">
-                    <!-- Contenido de Winning Numbers -->
-                    <!-- ... tu contenido existente aquí ... -->
-                </div>
+                <!-- ... tu contenido existente aquí ... -->
             </section>
 
             <!-- Sección Games -->
             <section id="games" class="section-content">
-                <h2 class="section-title">Games</h2>
-                <div class="card mb-4">
-                    <!-- Contenido de Games -->
-                    <!-- ... tu contenido existente aquí ... -->
-                </div>
+                <!-- ... tu contenido existente aquí ... -->
             </section>
 
             <!-- Sección Prizes -->
             <section id="prizes" class="section-content">
-                <h2 class="section-title">Prizes</h2>
-                <div class="card mb-4">
-                    <!-- Contenido de Prizes -->
-                    <!-- ... tu contenido existente aquí ... -->
-                </div>
+                <!-- ... tu contenido existente aquí ... -->
             </section>
 
             <!-- Sección Help -->
             <section id="help" class="section-content">
-                <h2 class="section-title">Help</h2>
-                <div class="card mb-4">
-                    <!-- Contenido de Help -->
-                    <!-- ... tu contenido existente aquí ... -->
-                </div>
+                <!-- ... tu contenido existente aquí ... -->
             </section>
 
             <!-- Sección Lucky Numbers -->
             <section id="luckyNumbers" class="section-content">
-                <h2 class="section-title">Lucky Numbers</h2>
-                <div class="card mb-4">
-                    <!-- Contenido de Lucky Numbers -->
-                    <!-- ... tu contenido existente aquí ... -->
-                </div>
+                <!-- ... tu contenido existente aquí ... -->
             </section>
-
-            <!-- Sección Personal Profile (opcional) -->
-            <!-- Puedes eliminar esta sección si ya no es necesaria en el dashboard -->
         </div>
     </div>
 
@@ -207,15 +184,15 @@
         const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
         sidebarLinks.forEach(link => {
             link.addEventListener('click', function(e) {
-                const targetSection = this.getAttribute('data-section');
-                
+                const targetSection = this.dataset.section;
+
                 if (targetSection) {
                     // Es un enlace interno, manejar la navegación de secciones
                     e.preventDefault();
 
                     // Remover clase activa de todos los enlaces con data-section
                     sidebarLinks.forEach(l => {
-                        if (l.getAttribute('data-section')) {
+                        if (l.dataset.section) {
                             l.classList.remove('active');
                         }
                     });
@@ -230,21 +207,18 @@
                     });
 
                     // Mostrar la sección seleccionada
-                    if (targetSection) {
-                        document.getElementById(targetSection).classList.add('active');
-                    }
+                    document.getElementById(targetSection).classList.add('active');
                 } else {
-                    // Es un enlace externo, permitir la acción por defecto
-                    // No hacemos nada aquí
+                    // Es un enlace externo, no hacemos nada
                 }
             });
         });
 
-        // Inicializar con la primera sección visible
+        // Inicializar con la sección activa al cargar la página
         document.addEventListener('DOMContentLoaded', () => {
             const activeLink = document.querySelector('.sidebar .nav-link.active[data-section]');
             if (activeLink) {
-                const activeSection = activeLink.getAttribute('data-section');
+                const activeSection = activeLink.dataset.section;
                 document.getElementById(activeSection).classList.add('active');
             }
         });
