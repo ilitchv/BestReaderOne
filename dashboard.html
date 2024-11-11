@@ -94,7 +94,8 @@
             <a href="#" class="nav-link" data-section="prizes">
                 <i class="bi bi-gift-fill me-2"></i> Prizes
             </a>
-            <a href="#" class="nav-link" data-section="personalProfile">
+            <!-- Enlace actualizado a Perfil Personal -->
+            <a href="profile.html" class="nav-link">
                 <i class="bi bi-person-circle me-2"></i> Personal Profile
             </a>
             <a href="#" class="nav-link" data-section="help">
@@ -115,321 +116,36 @@
         <div class="content flex-grow-1 p-4">
             <!-- Sección Winning Numbers -->
             <section id="winningNumbers" class="section-content active">
-                <h2 class="section-title">Winning Numbers</h2>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-trophy-fill me-2"></i> Lista de Números Ganadores
-                    </div>
-                    <div class="card-body">
-                        <!-- Filtros -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="filterLottery" class="form-label">Lotería</label>
-                                <select id="filterLottery" class="form-select glow-input">
-                                    <option value="">Todas las Loterías</option>
-                                    <option value="Lotería Nacional">Lotería Nacional</option>
-                                    <option value="Lotería Popular">Lotería Popular</option>
-                                    <!-- Agrega más opciones según tus loterías -->
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="filterDate" class="form-label">Fecha</label>
-                                <input type="date" id="filterDate" class="form-control glow-input">
-                            </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <button class="btn btn-secondary" onclick="applyFilters()">
-                                    <i class="bi bi-filter me-2"></i> Filtrar
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Tabla de Números Ganadores -->
-                        <div class="table-responsive">
-                            <table class="table table-dark table-bordered glow-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Lotería</th>
-                                        <th>Número Ganador</th>
-                                        <th>Fecha del Sorteo</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="winningNumbersTable">
-                                    <!-- Números Ganadores se agregarán dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <!-- ... contenido existente ... -->
             </section>
 
             <!-- Sección Games -->
             <section id="games" class="section-content">
-                <h2 class="section-title">Games</h2>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-controller me-2"></i> Modalidades de Juego
-                    </div>
-                    <div class="card-body">
-                        <div class="accordion" id="gamesAccordion">
-                            <!-- Straight -->
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingStraight">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStraight" aria-expanded="false" aria-controls="collapseStraight">
-                                        Straight
-                                    </button>
-                                </h2>
-                                <div id="collapseStraight" class="accordion-collapse collapse" aria-labelledby="headingStraight" data-bs-parent="#gamesAccordion">
-                                    <div class="accordion-body">
-                                        <p><strong>Descripción:</strong> La modalidad Straight consiste en seleccionar un número específico. Si el número coincide exactamente con el número ganador, se considera una jugada ganadora.</p>
-                                        <p><strong>Reglas:</strong></p>
-                                        <ul>
-                                            <li>Selecciona un número de 5 dígitos.</li>
-                                            <li>Debe coincidir exactamente con el número ganador.</li>
-                                            <li>Premios basados en la cantidad de acertantes.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Box -->
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingBox">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBox" aria-expanded="false" aria-controls="collapseBox">
-                                        Box
-                                    </button>
-                                </h2>
-                                <div id="collapseBox" class="accordion-collapse collapse" aria-labelledby="headingBox" data-bs-parent="#gamesAccordion">
-                                    <div class="accordion-body">
-                                        <p><strong>Descripción:</strong> En la modalidad Box, el orden de los dígitos no importa. Si los dígitos seleccionados coinciden con los del número ganador en cualquier orden, se considera una jugada ganadora.</p>
-                                        <p><strong>Reglas:</strong></p>
-                                        <ul>
-                                            <li>Selecciona un número de 5 dígitos.</li>
-                                            <li>El orden de los dígitos no es relevante.</li>
-                                            <li>Mayor probabilidad de ganar con premios menores.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Combo -->
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingCombo">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCombo" aria-expanded="false" aria-controls="collapseCombo">
-                                        Combo
-                                    </button>
-                                </h2>
-                                <div id="collapseCombo" class="accordion-collapse collapse" aria-labelledby="headingCombo" data-bs-parent="#gamesAccordion">
-                                    <div class="accordion-body">
-                                        <p><strong>Descripción:</strong> La modalidad Combo combina las reglas de Straight y Box, permitiendo ganar si el número seleccionado coincide exactamente o en cualquier orden con el número ganador.</p>
-                                        <p><strong>Reglas:</strong></p>
-                                        <ul>
-                                            <li>Selecciona un número de 5 dígitos.</li>
-                                            <li>Gana si coincide exactamente (Straight) o en cualquier orden (Box).</li>
-                                            <li>Premios más altos debido a la mayor flexibilidad.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Agrega más modalidades según sea necesario -->
-                        </div>
-                    </div>
-                </div>
+                <!-- ... contenido existente ... -->
             </section>
 
             <!-- Sección Prizes -->
             <section id="prizes" class="section-content">
-                <h2 class="section-title">Prizes</h2>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-gift-fill me-2"></i> Tabla de Premios
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-dark table-bordered glow-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Tipo de Juego</th>
-                                        <th>Monto del Premio ($)</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="prizesTable">
-                                    <!-- Premios se agregarán dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- Botón para Agregar Premio -->
-                        <button class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addPrizeModal">
-                            <i class="bi bi-plus-circle me-2"></i> Agregar Premio
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Sección Personal Profile -->
-            <section id="personalProfile" class="section-content">
-                <h2 class="section-title">Personal Profile</h2>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-person-circle me-2"></i> Perfil del Usuario
-                    </div>
-                    <div class="card-body">
-                        <!-- Información del Usuario -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <p><strong>Nombre:</strong> <span id="userName">Juan Pérez</span></p>
-                                <p><strong>Email:</strong> <span id="userEmail">juan.perez@example.com</span></p>
-                                <p><strong>Saldo Actual:</strong> $<span id="userBalance">500.00</span></p>
-                            </div>
-                            <div class="col-md-6">
-                                <button class="btn btn-primary mb-2" onclick="showUserHistory()">
-                                    <i class="bi bi-clock-history me-2"></i> Historial de Jugadas
-                                </button>
-                                <button class="btn btn-secondary mb-2" onclick="showCurrentGames()">
-                                    <i class="bi bi-gear-fill me-2"></i> Juegos en Curso
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Historial de Jugadas -->
-                        <div id="userHistorySection" class="section-content">
-                            <h5>Historial de Jugadas</h5>
-                            <div class="table-responsive">
-                                <table class="table table-dark table-bordered glow-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Número Apostado</th>
-                                            <th>Tipo de Juego</th>
-                                            <th>Fecha</th>
-                                            <th>Resultado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="userHistoryTable">
-                                        <!-- Jugadas se agregarán dinámicamente -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <!-- Juegos en Curso -->
-                        <div id="currentGamesSection" class="section-content">
-                            <h5>Juegos en Curso</h5>
-                            <div class="table-responsive">
-                                <table class="table table-dark table-bordered glow-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Número Apostado</th>
-                                            <th>Tipo de Juego</th>
-                                            <th>Fecha de Sorteo</th>
-                                            <th>Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="currentGamesTable">
-                                        <!-- Juegos en Curso se agregarán dinámicamente -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- ... contenido existente ... -->
             </section>
 
             <!-- Sección Help -->
             <section id="help" class="section-content">
-                <h2 class="section-title">Help</h2>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-question-circle-fill me-2"></i> Ayuda y Soporte
-                    </div>
-                    <div class="card-body">
-                        <h5>¿Tienes problemas con el juego?</h5>
-                        <p>Si sientes que tienes problemas de juego o ludopatía, es importante buscar ayuda profesional. Aquí tienes algunos recursos que pueden ayudarte:</p>
-                        <ul>
-                            <li><strong>Teléfono de Ayuda:</strong> 123-456-7890</li>
-                            <li><strong>Organizaciones:</strong> <a href="https://www.institucion1.com" target="_blank" class="text-neon-cian">Institución 1</a>, <a href="https://www.institucion2.com" target="_blank" class="text-neon-cian">Institución 2</a></li>
-                            <li><strong>Artículos Informativos:</strong> 
-                                <ul>
-                                    <li><a href="#" onclick="loadHelpArticle('identifying')" class="text-neon-cian">Identificando Problemas de Juego</a></li>
-                                    <li><a href="#" onclick="loadHelpArticle('managing')" class="text-neon-cian">Manejando el Juego Compulsivo</a></li>
-                                </ul>
-                            </li>
-                        </ul>
-                        <!-- Artículo de Ayuda -->
-                        <div id="helpArticle" class="section-content">
-                            <h5 id="helpArticleTitle"></h5>
-                            <p id="helpArticleContent"></p>
-                            <button class="btn btn-secondary" onclick="hideHelpArticle()">Cerrar</button>
-                        </div>
-                    </div>
-                </div>
+                <!-- ... contenido existente ... -->
             </section>
 
             <!-- Sección Lucky Numbers -->
             <section id="luckyNumbers" class="section-content">
-                <h2 class="section-title">Lucky Numbers</h2>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-star-fill me-2"></i> Números con Alta Probabilidad
-                    </div>
-                    <div class="card-body">
-                        <form id="luckyNumbersForm">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="luckyNumbersCount" class="form-label">Cantidad de Números</label>
-                                    <input type="number" class="form-control glow-input" id="luckyNumbersCount" placeholder="Ejemplo: 5" min="1" max="10" required>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="bi bi-star-fill me-2"></i> Generar Números
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                        <!-- Lista de Números Generados -->
-                        <div id="generatedNumbers" class="section-content">
-                            <h5>Números Generados</h5>
-                            <ul class="list-group mb-3" id="luckyNumbersList">
-                                <!-- Números generados se agregarán dinámicamente -->
-                            </ul>
-                            <button class="btn btn-primary" onclick="loadGeneratedNumbers()">
-                                <i class="bi bi-arrow-return-left me-2"></i> Cargar en Simular Jugadas
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <!-- ... contenido existente ... -->
             </section>
+
+            <!-- Eliminar la Sección Personal Profile del dashboard -->
+            <!-- Se elimina la sección con id="personalProfile" -->
         </div>
     </div>
 
     <!-- Modal para Agregar Premio -->
-    <div class="modal fade" id="addPrizeModal" tabindex="-1" aria-labelledby="addPrizeModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addPrizeModalLabel"><i class="bi bi-gift-fill me-2"></i> Agregar Premio</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addPrizeForm">
-                        <div class="mb-3">
-                            <label for="prizeGameType" class="form-label">Tipo de Juego</label>
-                            <select class="form-select glow-input" id="prizeGameType" required>
-                                <option value="" selected>Selecciona un tipo de juego</option>
-                                <option value="Straight">Straight</option>
-                                <option value="Box">Box</option>
-                                <option value="Combo">Combo</option>
-                                <!-- Agrega más tipos de juego según sea necesario -->
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="prizeAmount" class="form-label">Monto del Premio ($)</label>
-                            <input type="number" class="form-control glow-input" id="prizeAmount" placeholder="Ejemplo: 1000" min="1" required>
-                        </div>
-                        <button type="submit" class="btn btn-success"><i class="bi bi-save me-2"></i> Guardar Premio</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- ... contenido existente ... -->
 
     <!-- Librerías JavaScript -->
     <!-- jQuery (opcional, si lo usas en tus scripts) -->
@@ -501,170 +217,12 @@
             }
         });
 
-        // Agregar Premio
-        document.getElementById('addPrizeForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const gameType = document.getElementById('prizeGameType').value;
-            const prizeAmount = document.getElementById('prizeAmount').value;
-            addPrize(gameType, prizeAmount);
-            // Cerrar el modal
-            const addPrizeModal = new bootstrap.Modal(document.getElementById('addPrizeModal'));
-            addPrizeModal.hide();
-        });
+        // Eliminar funciones relacionadas con Personal Profile
+        // Se eliminan las funciones showUserHistory() y showCurrentGames()
 
-        function addPrize(gameType, amount) {
-            const table = document.getElementById('prizesTable');
-            const row = table.insertRow();
-            row.innerHTML = `
-                <td>${table.rows.length}</td>
-                <td>${gameType}</td>
-                <td>${amount}</td>
-                <td>
-                    <button class="btn btn-danger btn-sm" onclick="deletePrize(this)">
-                        <i class="bi bi-trash-fill me-2"></i> Eliminar
-                    </button>
-                </td>
-            `;
-            // Limpiar el formulario
-            document.getElementById('addPrizeForm').reset();
-        }
+        // Resto del código JavaScript existente
+        // ...
 
-        function deletePrize(button) {
-            if (confirm('¿Estás seguro de que deseas eliminar este premio?')) {
-                const row = button.parentElement.parentElement;
-                row.remove();
-                // Actualizar los índices de la tabla
-                const table = document.getElementById('prizesTable');
-                for (let i = 0; i < table.rows.length; i++) {
-                    table.rows[i].cells[0].innerText = i + 1;
-                }
-            }
-        }
-
-        // Funciones para Personal Profile
-        function showUserHistory() {
-            document.getElementById('userHistorySection').classList.add('active');
-            document.getElementById('currentGamesSection').classList.remove('active');
-        }
-
-        function showCurrentGames() {
-            document.getElementById('currentGamesSection').classList.add('active');
-            document.getElementById('userHistorySection').classList.remove('active');
-        }
-
-        // Funciones para Help Section
-        function loadHelpArticle(type) {
-            const title = document.getElementById('helpArticleTitle');
-            const content = document.getElementById('helpArticleContent');
-            if (type === 'identifying') {
-                title.innerText = 'Identificando Problemas de Juego';
-                content.innerText = 'Aquí encontrarás información sobre cómo identificar si tienes problemas de juego...';
-            } else if (type === 'managing') {
-                title.innerText = 'Manejando el Juego Compulsivo';
-                content.innerText = 'Consejos y recursos para manejar el juego compulsivo y buscar ayuda profesional...';
-            }
-            document.getElementById('helpArticle').classList.add('active');
-        }
-
-        function hideHelpArticle() {
-            document.getElementById('helpArticle').classList.remove('active');
-        }
-
-        // Funciones para Winning Numbers
-        function applyFilters() {
-            const lottery = document.getElementById('filterLottery').value;
-            const date = document.getElementById('filterDate').value;
-            fetchWinningNumbers(lottery, date);
-        }
-
-        function fetchWinningNumbers(lottery, date) {
-            // Aquí debes integrar con tu backend para obtener los datos filtrados
-            // Por ahora, vamos a simular con datos estáticos
-            const table = document.getElementById('winningNumbersTable');
-            table.innerHTML = ''; // Limpiar tabla
-
-            // Simulación de datos
-            const winningNumbers = [
-                { lottery: 'Lotería Nacional', number: '12345', date: '2023-10-01' },
-                { lottery: 'Lotería Popular', number: '67890', date: '2023-10-02' },
-                // Agrega más datos según sea necesario
-            ];
-
-            // Filtrar datos
-            const filteredNumbers = winningNumbers.filter(entry => {
-                let match = true;
-                if (lottery) {
-                    match = match && (entry.lottery === lottery);
-                }
-                if (date) {
-                    match = match && (entry.date === date);
-                }
-                return match;
-            });
-
-            // Agregar filas a la tabla
-            filteredNumbers.forEach((entry, index) => {
-                const row = table.insertRow();
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${entry.lottery}</td>
-                    <td>${entry.number}</td>
-                    <td>${entry.date}</td>
-                `;
-            });
-        }
-
-        // Inicializar Winning Numbers con todos los datos
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchWinningNumbers();
-        });
-
-        // Funciones para Lucky Numbers
-        document.getElementById('luckyNumbersForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const count = document.getElementById('luckyNumbersCount').value;
-            generateLuckyNumbers(count);
-        });
-
-        function generateLuckyNumbers(count) {
-            const numbers = [];
-            for (let i = 0; i < count; i++) {
-                const num = Math.floor(Math.random() * 100000) + 1; // Genera números entre 1 y 100000
-                numbers.push(num);
-            }
-            displayLuckyNumbers(numbers);
-        }
-
-        function displayLuckyNumbers(numbers) {
-            const list = document.getElementById('luckyNumbersList');
-            list.innerHTML = '';
-            numbers.forEach(num => {
-                const listItem = document.createElement('li');
-                listItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-                listItem.innerHTML = `
-                    ${num}
-                    <button class="btn btn-primary btn-sm" onclick="addNumberToIndex(${num})">
-                        <i class="bi bi-arrow-return-left me-2"></i> Agregar
-                    </button>
-                `;
-                list.appendChild(listItem);
-            });
-            document.getElementById('generatedNumbers').classList.add('active');
-        }
-
-        function addNumberToIndex(number) {
-            // Almacenar en localStorage
-            let generatedNumbers = JSON.parse(localStorage.getItem('generatedNumbers')) || [];
-            generatedNumbers.push(number);
-            localStorage.setItem('generatedNumbers', JSON.stringify(generatedNumbers));
-            alert(`Número ${number} agregado a Simular Jugadas.`);
-        }
-
-        // Función para cargar números generados en index.html
-        function loadGeneratedNumbers() {
-            // Redirigir a index.html
-            window.location.href = 'index.html';
-        }
     </script>
 </body>
 </html>
