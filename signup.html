@@ -173,18 +173,8 @@
         <div class="signup-card" id="signupCard">
             <h2 class="signup-title">Registro</h2>
             <form id="signupForm">
-                <div class="mb-3">
-                    <label for="firstName" class="form-label">Nombre</label>
-                    <input type="text" class="form-control glow-input" id="firstName" placeholder="Ingresa tu nombre" required>
-                </div>
-                <div class="mb-3">
-                    <label for="lastName" class="form-label">Apellido</label>
-                    <input type="text" class="form-control glow-input" id="lastName" placeholder="Ingresa tu apellido" required>
-                </div>
-                <div class="mb-3">
-                    <label for="phoneNumber" class="form-label">Número de Teléfono</label>
-                    <input type="tel" class="form-control glow-input" id="phoneNumber" placeholder="Ingresa tu número de teléfono" required>
-                </div>
+                <!-- Eliminados los campos de Nombre, Apellido y Número de Teléfono -->
+                
                 <div class="mb-3">
                     <label for="username" class="form-label">Nombre de Usuario</label>
                     <input type="text" class="form-control glow-input" id="username" placeholder="Ingresa tu nombre de usuario" required>
@@ -251,9 +241,6 @@
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const firstName = document.getElementById('firstName').value.trim();
-                const lastName = document.getElementById('lastName').value.trim();
-                const phoneNumber = document.getElementById('phoneNumber').value.trim();
                 const username = document.getElementById('username').value.trim();
                 const email = document.getElementById('email').value.trim();
                 const password = document.getElementById('password').value.trim();
@@ -276,7 +263,7 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ firstName, lastName, phoneNumber, username, email, password, referralCode })
+                        body: JSON.stringify({ username, email, password, referralCode }) // Eliminados firstName, lastName, phoneNumber
                     });
 
                     const data = await response.json();
@@ -286,8 +273,14 @@
                         successMessage.style.display = 'block';
                         form.reset();
                     } else {
-                        const errorMsg = data.msg || 'Ocurrió un error durante el registro.';
-                        showError(errorMsg);
+                        // Manejar múltiples errores si existen
+                        if (data.errors && Array.isArray(data.errors)) {
+                            const messages = data.errors.map(err => err.msg).join(' ');
+                            showError(messages);
+                        } else {
+                            const errorMsg = data.msg || 'Ocurrió un error durante el registro.';
+                            showError(errorMsg);
+                        }
                     }
                 } catch (error) {
                     console.error('Error durante el registro:', error);
