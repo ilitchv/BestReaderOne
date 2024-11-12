@@ -760,6 +760,16 @@ $(document).ready(function() {
         });
     }
 
+// Función para obtener la hora límite de un track
+function obtenerHoraLimite(track) {
+    for (let region in horariosCierre) {
+        if (horariosCierre[region][track]) {
+            return horariosCierre[region][track];
+        }
+    }
+    return null;
+}
+ 
     // Función para resaltar números duplicados
     function resaltarDuplicados() {
         // Obtener todos los campos de número apostado
