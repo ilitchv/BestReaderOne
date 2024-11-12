@@ -254,7 +254,6 @@
                     const data = await response.json();
 
                     if (response.ok) {
-  const data = await response.json();
   // Guardar el token y el rol del usuario en el almacenamiento local
   localStorage.setItem('token', data.token);
   localStorage.setItem('userRole', data.role); // Usamos 'userRole' y 'data.role' como vienen del backend
