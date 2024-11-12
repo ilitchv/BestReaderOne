@@ -1,0 +1,360 @@
+ <!-- profile.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil Personal - Beast Reader</title>
+    <!-- Meta Tag para Responsividad -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="styles.css" rel="stylesheet">
+    <style>
+        /* Estilos específicos para profile.html */
+        body {
+            background-color: #121212; /* Fondo oscuro completo */
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .profile-container {
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .profile-card {
+            background-color: #1e1e1e;
+            border: 1px solid #00ffff; /* Color neón cian */
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .profile-title {
+            margin-bottom: 20px;
+            color: #00ffff; /* Color neón cian */
+            text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+            font-size: 2rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+        }
+
+        .profile-info {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .referral-section {
+            margin-top: 30px;
+        }
+
+        .referral-section h4 {
+            color: #00ffff;
+            margin-bottom: 15px;
+        }
+
+        .referral-link {
+            display: flex;
+            align-items: center;
+        }
+
+        .referral-link input {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .btn-copy {
+            background-color: #00ffff;
+            color: #000000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-copy:hover {
+            background-color: #00cccc;
+        }
+
+        /* Mensajes de éxito y error */
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .error-message {
+            color: #ff0044;
+            display: none;
+        }
+
+        .success-message {
+            color: #00ff00;
+            display: none;
+        }
+
+        /* Estilos para el formulario de invitación */
+        .invite-section {
+            margin-top: 30px;
+        }
+
+        .invite-section h4 {
+            color: #00ffff;
+            margin-bottom: 15px;
+        }
+
+        .invite-form .btn {
+            background-color: #00ffff;
+            color: #000000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .invite-form .btn:hover {
+            background-color: #00cccc;
+        }
+
+        /* Responsividad */
+        @media (max-width: 576px) {
+            .profile-card {
+                padding: 20px;
+            }
+
+            .profile-title {
+                font-size: 1.5rem;
+            }
+
+            .profile-info {
+                font-size: 1rem;
+            }
+
+            .referral-section h4,
+            .invite-section h4 {
+                font-size: 1.2rem;
+            }
+
+            .btn-copy,
+            .invite-form .btn {
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-card">
+            <h2 class="profile-title">Perfil Personal</h2>
+            <div class="profile-info">
+                <strong>Nombre:</strong> <span id="displayName">Cargando...</span>
+            </div>
+            <div class="profile-info">
+                <strong>Correo Electrónico:</strong> <span id="displayEmail">Cargando...</span>
+            </div>
+            <div class="profile-info">
+                <strong>Número de Teléfono:</strong> <span id="displayPhone">Cargando...</span>
+            </div>
+            <div class="profile-info">
+                <strong>Saldo Actual:</strong> $<span id="displayBalance">Cargando...</span>
+            </div>
+
+            <div class="referral-section">
+                <h4>Tu Enlace de Referido</h4>
+                <div class="referral-link">
+                    <input type="text" class="form-control" id="referralLink" readonly>
+                    <button class="btn-copy" id="copyReferralLink">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
+                </div>
+            </div>
+
+            <div class="invite-section">
+                <h4>Enviar Invitación por Correo Electrónico</h4>
+                <form id="inviteForm" class="invite-form">
+                    <div class="input-group mb-3">
+                        <input type="email" class="form-control glow-input" id="inviteEmail" placeholder="Ingresa el correo electrónico" required>
+                        <button class="btn" type="submit">
+                            <i class="bi bi-envelope-fill"></i> Enviar Invitación
+                        </button>
+                    </div>
+                </form>
+                <div class="message error-message" id="inviteErrorMessage">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Ocurrió un error al enviar la invitación.
+                </div>
+                <div class="message success-message" id="inviteSuccessMessage">
+                    <i class="bi bi-check-circle-fill me-2"></i> Invitación enviada exitosamente.
+                </div>
+            </div>
+
+            <div class="referral-section mt-4">
+                <h4>Tus Referidos</h4>
+                <ul class="list-group" id="referralsList">
+                    <!-- Lista de referidos se llenará dinámicamente -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librerías JavaScript -->
+    <!-- jQuery (opcional, si lo usas en tus scripts) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script>
+        // profile.js
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Obtener el token JWT del almacenamiento local (suponiendo que lo guardaste ahí al iniciar sesión)
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                // Si no hay token, redirigir al login
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                // Obtener la información del usuario desde el backend
+                const response = await fetch('https://loteria-backend-j1r3.onrender.com/api/auth/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('displayName').innerText = `${data.firstName} ${data.lastName}`;
+                    document.getElementById('displayEmail').innerText = data.email;
+                    document.getElementById('displayPhone').innerText = data.phoneNumber;
+                    document.getElementById('displayBalance').innerText = data.balance;
+
+                    // Generar el enlace de referido
+                    const referralLink = `https://ilitchv.github.io/BestReaderOne/signup.html?referralCode=${data.referralCode}`;
+                    document.getElementById('referralLink').value = referralLink;
+                } else {
+                    console.error('Error al obtener el perfil:', data.msg);
+                    // Manejar el error, posiblemente redirigir al login
+                }
+            } catch (error) {
+                console.error('Error al obtener el perfil:', error);
+                // Manejar el error, posiblemente redirigir al login
+            }
+
+            // Funcionalidad para copiar el enlace de referido
+            const copyButton = document.getElementById('copyReferralLink');
+            const referralInput = document.getElementById('referralLink');
+
+            copyButton.addEventListener('click', () => {
+                referralInput.select();
+                referralInput.setSelectionRange(0, 99999); // Para dispositivos móviles
+
+                navigator.clipboard.writeText(referralInput.value)
+                    .then(() => {
+                        alert('Enlace de referido copiado al portapapeles.');
+                    })
+                    .catch(err => {
+                        console.error('Error al copiar el texto: ', err);
+                    });
+            });
+
+            // Funcionalidad para enviar invitaciones por correo electrónico
+            const inviteForm = document.getElementById('inviteForm');
+            const inviteEmailInput = document.getElementById('inviteEmail');
+            const inviteErrorMessage = document.getElementById('inviteErrorMessage');
+            const inviteSuccessMessage = document.getElementById('inviteSuccessMessage');
+
+            inviteForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const inviteEmail = inviteEmailInput.value.trim();
+
+                // Limpiar mensajes anteriores
+                inviteErrorMessage.style.display = 'none';
+                inviteSuccessMessage.style.display = 'none';
+
+                try {
+                    const response = await fetch('https://loteria-backend-j1r3.onrender.com/api/auth/invite', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ email: inviteEmail })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        inviteSuccessMessage.innerText = 'Invitación enviada exitosamente.';
+                        inviteSuccessMessage.style.display = 'block';
+                        inviteForm.reset();
+                    } else {
+                        if (data.errors) {
+                            const messages = data.errors.map(err => err.msg).join(' ');
+                            inviteErrorMessage.innerText = `⚠️ ${messages}`;
+                        } else {
+                            const errorMsg = data.msg || 'Ocurrió un error al enviar la invitación.';
+                            inviteErrorMessage.innerText = `⚠️ ${errorMsg}`;
+                        }
+                        inviteErrorMessage.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error al enviar la invitación:', error);
+                    inviteErrorMessage.innerText = 'Ocurrió un error al enviar la invitación. Intenta nuevamente más tarde.';
+                    inviteErrorMessage.style.display = 'block';
+                }
+            });
+
+            // Obtener y mostrar la lista de referidos
+            try {
+                const referralsResponse = await fetch('https://loteria-backend-j1r3.onrender.com/api/auth/referrals', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const referralsData = await referralsResponse.json();
+
+                if (referralsResponse.ok) {
+                    const referralsList = document.getElementById('referralsList');
+                    if (referralsData.length === 0) {
+                        referralsList.innerHTML = '<li class="list-group-item bg-dark text-white">No tienes referidos aún.</li>';
+                    } else {
+                        referralsData.forEach(referral => {
+                            const listItem = document.createElement('li');
+                            listItem.classList.add('list-group-item', 'bg-dark', 'text-white');
+                            listItem.innerHTML = `<strong>${referral.firstName} ${referral.lastName}</strong> - ${referral.email}`;
+                            referralsList.appendChild(listItem);
+                        });
+                    }
+                } else {
+                    console.error('Error al obtener los referidos:', referralsData.msg);
+                }
+            } catch (error) {
+                console.error('Error al obtener los referidos:', error);
+            }
+        });
+    </script>
+</body>
+</html>

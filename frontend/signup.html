@@ -1,0 +1,326 @@
+ <!-- signup.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro - Beast Reader</title>
+    <!-- Meta Tag para Responsividad -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="styles.css" rel="stylesheet">
+    <style>
+        /* Estilos específicos para signup.html */
+        body {
+            background-color: #121212; /* Fondo oscuro completo */
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .signup-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .signup-card {
+            background-color: #1e1e1e;
+            border: 1px solid #00ffff; /* Color neón cian */
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            transition: transform 0.3s ease;
+        }
+
+        .signup-title {
+            margin-bottom: 20px;
+            color: #00ffff; /* Color neón cian */
+            text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+            font-size: 2rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+        }
+
+        .form-label {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            background-color: #0a0a0a;
+            color: #ffffff;
+            border: 1px solid #00ffff;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .form-control::placeholder {
+            color: #a0a0a0;
+        }
+
+        .btn-signup {
+            background-color: #00ff00; /* Color neón verde */
+            color: #000000;
+            box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            font-size: 1.1rem;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .btn-signup:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00;
+        }
+
+        /* Mensajes de error y éxito */
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .error-message {
+            color: #ff0044;
+            display: none;
+        }
+
+        .success-message {
+            color: #00ff00;
+            display: none;
+        }
+
+        /* Animación de sacudida */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        /* Responsividad */
+        @media (max-width: 576px) {
+            .signup-card {
+                padding: 20px;
+            }
+
+            .signup-title {
+                font-size: 1.5rem;
+            }
+
+            .btn-signup {
+                font-size: 1rem;
+            }
+
+            .form-label {
+                font-size: 1rem;
+            }
+
+            .message {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Estilos para los botones de mostrar/ocultar contraseña */
+        .input-group .btn {
+            background-color: #1e1e1e;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+        }
+
+        .input-group .btn:hover {
+            background-color: #00ffff;
+            color: #1e1e1e;
+        }
+    </style>
+    <!-- Verificación de Autenticación -->
+    <script>
+        // Mostrar el contenido solo si el usuario no está autenticado
+        document.addEventListener('DOMContentLoaded', () => {
+            // Puedes agregar lógica aquí si tienes sesiones o tokens para verificar si el usuario ya está autenticado
+            document.body.style.display = 'block';
+
+            // Verificar si hay un código de referido en la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const referralCode = urlParams.get('referralCode');
+
+            if (referralCode) {
+                const referralInput = document.getElementById('referralCode');
+                referralInput.value = referralCode;
+                referralInput.readOnly = true; // Opcional: evitar que el usuario cambie el código de referido
+            }
+        });
+    </script>
+</head>
+<body style="display: none;">
+    <div class="signup-container">
+        <div class="signup-card" id="signupCard">
+            <h2 class="signup-title">Registro</h2>
+            <form id="signupForm">
+                <!-- Eliminados los campos de Nombre, Apellido y Número de Teléfono -->
+                
+                <div class="mb-3">
+                    <label for="username" class="form-label">Nombre de Usuario</label>
+                    <input type="text" class="form-control glow-input" id="username" placeholder="Ingresa tu nombre de usuario" required>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control glow-input" id="email" placeholder="Ingresa tu correo electrónico" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control glow-input" id="password" placeholder="Ingresa tu contraseña" required>
+                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                            <i class="bi bi-eye-slash" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control glow-input" id="confirmPassword" placeholder="Confirma tu contraseña" required>
+                        <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                            <i class="bi bi-eye-slash" id="toggleConfirmPasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="referralCode" class="form-label">Código de Referido</label>
+                    <input type="text" class="form-control glow-input" id="referralCode" placeholder="Ingresa tu código de referido" required>
+                </div>
+                <button type="submit" class="btn btn-signup">
+                    <i class="bi bi-person-plus-fill me-2"></i> Registrarse
+                </button>
+                <div class="message error-message" id="errorMessage">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Ocurrió un error durante el registro.
+                </div>
+                <div class="message success-message" id="successMessage">
+                    <i class="bi bi-check-circle-fill me-2"></i> ¡Registro exitoso! Puedes <a href="login.html" style="color: #00ffff;">iniciar sesión</a> ahora.
+                </div>
+                <div class="mt-3 text-center">
+                    <a href="login.html" class="text-decoration-none" style="color: #00ffff;">¿Ya tienes una cuenta? Inicia sesión</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Librerías JavaScript -->
+    <!-- jQuery (opcional, si lo usas en tus scripts) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script>
+        // signup.js
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('signupForm');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const signupCard = document.getElementById('signupCard');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const username = document.getElementById('username').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value.trim();
+                const confirmPassword = document.getElementById('confirmPassword').value.trim();
+                const referralCode = document.getElementById('referralCode').value.trim();
+
+                // Validar que las contraseñas coincidan
+                if (password !== confirmPassword) {
+                    showError('Las contraseñas no coinciden.');
+                    return;
+                }
+
+                // Limpiar mensajes anteriores
+                errorMessage.style.display = 'none';
+                successMessage.style.display = 'none';
+
+                try {
+                    const response = await fetch('https://loteria-backend-j1r3.onrender.com/api/auth/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, email, password, referralCode }) // Eliminados firstName, lastName, phoneNumber
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        successMessage.innerHTML = '¡Registro exitoso! Puedes <a href="login.html" style="color: #00ffff;">iniciar sesión</a> ahora.';
+                        successMessage.style.display = 'block';
+                        form.reset();
+                    } else {
+                        // Manejar múltiples errores si existen
+                        if (data.errors && Array.isArray(data.errors)) {
+                            const messages = data.errors.map(err => err.msg).join(' ');
+                            showError(messages);
+                        } else {
+                            const errorMsg = data.msg || 'Ocurrió un error durante el registro.';
+                            showError(errorMsg);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error durante el registro:', error);
+                    showError('Ocurrió un error durante el registro. Intenta nuevamente más tarde.');
+                }
+            });
+
+            function showError(message) {
+                errorMessage.innerText = `⚠️ ${message}`;
+                errorMessage.style.display = 'block';
+                // Agregar efecto de sacudida
+                signupCard.classList.add('shake');
+                setTimeout(() => {
+                    signupCard.classList.remove('shake');
+                }, 500);
+            }
+
+            // Funcionalidad para mostrar/ocultar contraseñas
+            const togglePassword = document.getElementById('togglePassword');
+            const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+            const passwordInput = document.getElementById('password');
+
+            togglePassword.addEventListener('click', () => {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                togglePasswordIcon.classList.toggle('bi-eye');
+                togglePasswordIcon.classList.toggle('bi-eye-slash');
+            });
+
+            const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+            const toggleConfirmPasswordIcon = document.getElementById('toggleConfirmPasswordIcon');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+
+            toggleConfirmPassword.addEventListener('click', () => {
+                const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                confirmPasswordInput.setAttribute('type', type);
+                toggleConfirmPasswordIcon.classList.toggle('bi-eye');
+                toggleConfirmPasswordIcon.classList.toggle('bi-eye-slash');
+            });
+        });
+    </script>
+</body>
+</html>
