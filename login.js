@@ -254,12 +254,13 @@
                     const data = await response.json();
 
                     if (response.ok) {
-                        // Guardar el token en el almacenamiento local
-                        localStorage.setItem('token', data.token);
-                        localStorage.setItem('tipoUsuario', data.tipoUsuario); // Asumiendo que el backend envía el tipo de usuario
-                        // Redirigir a la página dashboard.html
-                        window.location.href = 'dashboard.html';
-                    } else {
+  const data = await response.json();
+  // Guardar el token y el rol del usuario en el almacenamiento local
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('userRole', data.role); // Usamos 'userRole' y 'data.role' como vienen del backend
+  // Redirigir a la página dashboard.html
+  window.location.href = 'dashboard.html';
+} else {
                         // Manejo de errores
                         const errorMsg = data.msg || 'Credenciales inválidas.';
                         showError(errorMsg);
