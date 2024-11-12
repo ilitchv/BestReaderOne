@@ -1,4 +1,4 @@
-let fechaTransaccion = '';
+ let fechaTransaccion = '';
 
 $(document).ready(function() {
 
@@ -307,14 +307,92 @@ $(document).ready(function() {
     // Inicializar Bootstrap Modal
     var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
-    // Función para obtener la hora límite de un track
-    function obtenerHoraLimite(track) {
-        for (let region in horariosCierre) {
-            if (horariosCierre[region][track]) {
-                return horariosCierre[region][track];
-            }
+    // Variables para almacenar el total global y el rol del usuario
+    let totalJugadasGlobal = 0;
+    const userRole = localStorage.getItem('userRole');
+
+    // Función para obtener el Application ID y Location ID desde el backend
+    async function obtenerSquareCredentials() {
+        try {
+            const response = await fetch(`${BACKEND_API_URL}/square-credentials`);
+            const data = await response.json();
+            return {
+                applicationId: data.applicationId,
+                locationId: data.locationId
+            };
+        } catch (error) {
+            console.error('Error al obtener las credenciales de Square:', error);
+            return null;
         }
-        return null;
+    }
+
+    // Función para inicializar Cash App Pay
+    async function initializeCashAppPay(totalAmount) {
+        if (!window.Square) {
+            alert('El SDK de Square no se cargó correctamente.');
+            return;
+        }
+
+        const credentials = await obtenerSquareCredentials();
+        if (!credentials) {
+            alert('No se pudo obtener las credenciales de Square.');
+            return;
+        }
+
+        try {
+            const payments = window.Square.payments(credentials.applicationId, {
+                locationId: credentials.locationId,
+            });
+
+            const paymentRequest = payments.paymentRequest({
+                countryCode: 'US',
+                currencyCode: 'USD',
+                total: {
+                    amount: totalAmount.toFixed(2),
+                    label: 'Total',
+                },
+            });
+
+            const cashAppPay = await payments.cashAppPay(paymentRequest);
+            await cashAppPay.attach('#cash-app-pay');
+
+            cashAppPay.addEventListener('ontokenization', async (event) => {
+                const { tokenResult } = event.detail;
+                if (tokenResult.status === 'OK') {
+                    // Procesar el pago en el backend
+                    const paymentResult = await processPayment(tokenResult.token, totalAmount);
+                    if (paymentResult.success) {
+                        // Generar el ticket y guardar las jugadas
+                        confirmarYGuardarTicket('Cash App');
+                    } else {
+                        alert('Error al procesar el pago: ' + paymentResult.error);
+                    }
+                } else {
+                    alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
+                }
+            });
+        } catch (error) {
+            console.error('Error al inicializar Cash App Pay:', error);
+        }
+    }
+
+    // Función para procesar el pago en el backend
+    async function processPayment(token, amount) {
+        try {
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sourceId: token, amount: amount }),
+            });
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error al procesar el pago:', error);
+            return { success: false, error: error.message };
+        }
     }
 
     // Evento para generar el ticket
@@ -511,6 +589,14 @@ $(document).ready(function() {
         $("#ticketFecha").text(fecha);
         console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());
 
+        // Calcular el total global
+        totalJugadasGlobal = parseFloat($("#totalJugadas").text());
+
+        // Si el usuario es 'user', inicializar Cash App Pay
+        if (userRole === 'user') {
+            initializeCashAppPay(totalJugadasGlobal);
+        }
+
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
     });
@@ -522,6 +608,18 @@ $(document).ready(function() {
 
     // Evento para confirmar e imprimir el ticket
     $("#confirmarTicket").click(function() {
+        if (userRole === 'user') {
+            // Para usuarios regulares, el pago ya se procesó con Cash App Pay
+            // Solo confirmamos y guardamos el ticket
+            confirmarYGuardarTicket('Cash App');
+        } else {
+            // Para otros roles, asumimos pago en efectivo
+            confirmarYGuardarTicket('Efectivo');
+        }
+    });
+
+    // Función para confirmar y guardar el ticket
+    function confirmarYGuardarTicket(metodoPago) {
         // Datos comunes a todas las jugadas
         const ticketNumber = $("#numeroTicket").text();
         const transactionDateTime = fechaTransaccion;
@@ -549,6 +647,7 @@ $(document).ready(function() {
                 "Box ($)": $(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "",
                 "Combo ($)": $(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "",
                 "Total ($)": $(this).find("td").eq(6).text(),
+                "Payment Method": metodoPago, // Añadido el método de pago
                 "Jugada Number": jugadaNumber,
                 "Timestamp": timestamp
             };
@@ -559,61 +658,61 @@ $(document).ready(function() {
 
         // Enviar datos a ambos destinos
         enviarFormulario(jugadasData);
+    }
 
-        // Función para enviar datos a SheetDB y al Backend
-        function enviarFormulario(datos) {
-            // Enviar a SheetDB
-            const sheetDBRequest = $.ajax({
-                url: SHEETDB_API_URL,
-                method: "POST",
-                dataType: "json",
-                contentType: "application/json",
-                data: JSON.stringify(datos)
+    // Función para enviar datos a SheetDB y al Backend
+    function enviarFormulario(datos) {
+        // Enviar a SheetDB
+        const sheetDBRequest = $.ajax({
+            url: SHEETDB_API_URL,
+            method: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            data: JSON.stringify(datos)
+        });
+
+        // Enviar al Backend
+        const backendRequest = $.ajax({
+            url: BACKEND_API_URL,
+            method: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            data: JSON.stringify(datos)
+        });
+
+        // Esperar a que ambas solicitudes se completen
+        $.when(sheetDBRequest, backendRequest).done(function(sheetDBResponse, backendResponse) {
+            console.log("Datos enviados a ambos destinos:");
+            console.log("SheetDB:", sheetDBResponse);
+            console.log("Backend:", backendResponse);
+
+            // Después de que ambas solicitudes se hayan completado con éxito
+
+            // Imprimir el ticket
+            window.print();
+
+            // Opcional: Usar html2canvas para capturar solo el ticket
+            html2canvas(document.querySelector("#preTicket")).then(canvas => {
+                // Obtener la imagen en formato data URL
+                const imgData = canvas.toDataURL("image/png");
+                // Crear un enlace para descargar la imagen
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = 'ticket.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             });
-
-            // Enviar al Backend
-            const backendRequest = $.ajax({
-                url: BACKEND_API_URL,
-                method: "POST",
-                dataType: "json",
-                contentType: "application/json",
-                data: JSON.stringify(datos)
-            });
-
-            // Esperar a que ambas solicitudes se completen
-            $.when(sheetDBRequest, backendRequest).done(function(sheetDBResponse, backendResponse) {
-                console.log("Datos enviados a ambos destinos:");
-                console.log("SheetDB:", sheetDBResponse);
-                console.log("Backend:", backendResponse);
-
-                // Después de que ambas solicitudes se hayan completado con éxito
-
-                // Imprimir el ticket
-                window.print();
-
-                // Opcional: Usar html2canvas para capturar solo el ticket
-                html2canvas(document.querySelector("#preTicket")).then(canvas => {
-                    // Obtener la imagen en formato data URL
-                    const imgData = canvas.toDataURL("image/png");
-                    // Crear un enlace para descargar la imagen
-                    const link = document.createElement('a');
-                    link.href = imgData;
-                    link.download = 'ticket.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                });
-                // Cerrar el modal
-                ticketModal.hide();
-                // Reiniciar el formulario
-                resetForm();
-                alert("Ticket guardado y enviado exitosamente.");
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error("Error al enviar datos:", textStatus, errorThrown);
-                alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.");
-            });
-        }
-    });
+            // Cerrar el modal
+            ticketModal.hide();
+            // Reiniciar el formulario
+            resetForm();
+            alert("Ticket guardado y enviado exitosamente.");
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            console.error("Error al enviar datos:", textStatus, errorThrown);
+            alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.");
+        });
+    }
 
     // Función para reiniciar el formulario
     function resetForm() {
