@@ -346,6 +346,9 @@ $(document).ready(function() {
 
         console.log('Credenciales de Square obtenidas:', credentials);
 
+        // Añadir un log para verificar el formato de locationId
+        console.log('Formato de locationId:', credentials.locationId);
+
         try {
             const payments = window.Square.payments(credentials.applicationId, {
                 locationId: credentials.locationId,
