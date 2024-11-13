@@ -258,7 +258,7 @@
                     if (response.ok) {
                         // Guardar el token en el almacenamiento local
                         localStorage.setItem('token', data.token);
-                        localStorage.setItem('tipoUsuario', data.tipoUsuario); // Asumiendo que el backend envía el tipo de usuario
+                        localStorage.setItem('userRole', data.userRole); // Asumiendo que el backend envía el tipo de usuario
                         // Redirigir a la página dashboard.html
                         window.location.href = 'dashboard.html';
                     } else {
