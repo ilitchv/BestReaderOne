@@ -378,14 +378,30 @@ $(document).ready(function() {
                      console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else {
-                    alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
-                    console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
-                }
-            });
+                    alert('Error al procesar el pago: ' + paymentResult.error);
+                    console.error('Error en el backend al procesar el pago:', paymentResult.error);
+                  }
+              } else {
+                alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
+                console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
+            }
+        });
+     
         } catch (error) {
-            console.error('Error al inicializar Cash App Pay:', error);
-        }
+        console.error('Error al inicializar Cash App Pay:', error);
+        // Agregar un botón de prueba manualmente
+        const testButton = document.createElement('button');
+        testButton.innerText = 'Botón de Prueba Cash App Pay';
+        testButton.classList.add('btn', 'btn-warning');
+        document.getElementById('cash-app-pay').appendChild(testButton);
+
+        testButton.addEventListener('click', () => {
+            alert('Botón de prueba clickeado. El contenedor está funcionando.');
+        });
+
+        console.log('Botón de prueba agregado al contenedor de Cash App Pay.');
     }
+}
 
     // Función para procesar el pago en el backend
     async function processPayment(token, amount) {
