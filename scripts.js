@@ -316,6 +316,7 @@ $(document).ready(function() {
         try {
             const response = await fetch(`${BACKEND_API_URL}/square-credentials`);
             const data = await response.json();
+            console.log('Credenciales recibidas del backend:', data);    
             return {
                 applicationId: data.applicationId,
                 locationId: data.locationId
