@@ -100,23 +100,21 @@
             font-weight: 500;
         }
 
-        /* Estilos para el enlace de recuperación de contraseña y registro */
-        .additional-links {
+        /* Estilos para el enlace de recuperación de contraseña */
+        .forgot-password {
             margin-top: 15px;
             text-align: center;
         }
 
-        .additional-links a {
+        .forgot-password a {
             color: var(--color-neon-cian);
             text-decoration: none;
             font-size: 0.95rem;
             font-family: 'Poppins', sans-serif;
             font-weight: 500;
-            display: block;
-            margin-top: 5px;
         }
 
-        .additional-links a:hover {
+        .forgot-password a:hover {
             text-decoration: underline;
         }
 
@@ -195,9 +193,8 @@
                 <div class="error-message" id="errorMessage">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i> Usuario o contraseña incorrectos.
                 </div>
-                <div class="additional-links">
+                <div class="forgot-password">
                     <a href="recover_password.html">¿Olvidaste tu contraseña?</a>
-                    <a href="signup.html">¿No tienes una cuenta? Regístrate</a>
                 </div>
             </form>
         </div>
@@ -211,6 +208,7 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     <!-- Custom JavaScript -->
+    <script src="login.js"></script>
     <script>
         // Funcionalidad para mostrar/ocultar contraseña
         document.getElementById('togglePassword').addEventListener('click', function () {
@@ -256,9 +254,13 @@
                     const data = await response.json();
 
                     if (response.ok) {
-                        // Guardar el token en el almacenamiento local
+                        // Agregar console.log para verificar los datos recibidos
+                        console.log('Datos recibidos del backend:', data);
+
+                        // Guardar el token y el rol del usuario en el almacenamiento local
                         localStorage.setItem('token', data.token);
-                        localStorage.setItem('userRole', data.userRole); // Asumiendo que el backend envía el tipo de usuario
+                        localStorage.setItem('userRole', data.role); // Usamos 'userRole' y 'data.role' como vienen del backend
+
                         // Redirigir a la página dashboard.html
                         window.location.href = 'dashboard.html';
                     } else {
