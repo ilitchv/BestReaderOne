@@ -310,7 +310,7 @@ $(document).ready(function() {
     // Variables para almacenar el total global y el rol del usuario
     let totalJugadasGlobal = 0;
     const userRole = localStorage.getItem('userRole');
-
+    console.log('User Role:', userRole);
     // Función para obtener el Application ID y Location ID desde el backend
     async function obtenerSquareCredentials() {
         try {
@@ -331,15 +331,19 @@ $(document).ready(function() {
      console.log('Inicializando Cash App Pay con total:', totalAmount);
         if (!window.Square) {
             alert('El SDK de Square no se cargó correctamente.');
+            console.error('Square SDK no está disponible.');
             return;
         }
 
         const credentials = await obtenerSquareCredentials();
         if (!credentials) {
             alert('No se pudo obtener las credenciales de Square.');
+            console.error('Credenciales de Square no obtenidas.');   
             return;
         }
 
+        console.log('Credenciales de Square obtenidas:', credentials);
+     
         try {
             const payments = window.Square.payments(credentials.applicationId, {
                 locationId: credentials.locationId,
@@ -357,19 +361,25 @@ $(document).ready(function() {
             const cashAppPay = await payments.cashAppPay(paymentRequest);
             await cashAppPay.attach('#cash-app-pay');
 
+         console.log('Cash App Pay adjuntado al contenedor.');
+
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
+                    console.log('Tokenización exitosa:', tokenResult.token);
                     // Procesar el pago en el backend
                     const paymentResult = await processPayment(tokenResult.token, totalAmount);
                     if (paymentResult.success) {
+                    console.log('Pago procesado exitosamente.');
                         // Generar el ticket y guardar las jugadas
                         confirmarYGuardarTicket('Cash App');
                     } else {
                         alert('Error al procesar el pago: ' + paymentResult.error);
+                     console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else {
                     alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
+                    console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
                 }
             });
         } catch (error) {
@@ -595,6 +605,7 @@ $(document).ready(function() {
 
         // Si el usuario es 'user', inicializar Cash App Pay
         if (userRole === 'user') {
+            console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
             initializeCashAppPay(totalJugadasGlobal);
         }
 
