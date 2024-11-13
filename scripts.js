@@ -319,8 +319,8 @@ $(document).ready(function() {
             const data = await response.json();
             console.log('Credenciales recibidas del backend:', data);    
             return {
-                applicationId: data.applicationId, // Corregido para acceder a 'applicationId'
-                locationId: data.locationId        // Corregido para acceder a 'locationId'
+                applicationId: data.applicationId, // Mapeo corregido
+                locationId: data.locationId // Mapeo corregido
             };
         } catch (error) {
             console.error('Error al obtener las credenciales de Square:', error);
@@ -346,13 +346,13 @@ $(document).ready(function() {
 
         console.log('Credenciales de Square obtenidas:', credentials);
 
-// Verificar que applicationId y locationId no sean undefined
-    if (!credentials.applicationId || !credentials.locationId) {
-        alert('Las credenciales de Square están incompletas.');
-        console.error('applicationId o locationId están indefinidos.');
-        return;
-    }
-     
+        // Verificar que applicationId y locationId no sean undefined
+        if (!credentials.applicationId || !credentials.locationId) {
+            console.error('applicationId o locationId son undefined.');
+            alert('Error en las credenciales de Square. Por favor, contacta al administrador.');
+            return;
+        }
+
         // Añadir un log para verificar el formato de locationId
         const cleanLocationId = credentials.locationId.trim();
         console.log('Formato de locationId:', cleanLocationId);
@@ -387,8 +387,8 @@ $(document).ready(function() {
                         // Generar el ticket y guardar las jugadas
                         confirmarYGuardarTicket('Cash App');
                     } else {
-                        alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
-                        console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
+                        alert('Error al procesar el pago: ' + paymentResult.error);
+                        console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else {
                     alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
@@ -398,7 +398,8 @@ $(document).ready(function() {
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
-            // Agregar un botón de prueba manualmente
+            // Agregar un botón de prueba manualmente (opcional)
+            /*
             const testButton = document.createElement('button');
             testButton.innerText = 'Botón de Prueba Cash App Pay';
             testButton.classList.add('btn', 'btn-warning');
@@ -409,6 +410,7 @@ $(document).ready(function() {
             });
 
             console.log('Botón de prueba agregado al contenedor de Cash App Pay.');
+            */
         }
     }
 
