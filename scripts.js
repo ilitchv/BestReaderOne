@@ -319,8 +319,8 @@ $(document).ready(function() {
             const data = await response.json();
             console.log('Credenciales recibidas del backend:', data);    
             return {
-                applicationId: data.applicationId,
-                locationId: data.locationId
+                applicationId: data.SQUARE_APPLICATION_ID, // Mapeo corregido
+                locationId: data.SQUARE_LOCATION_ID // Mapeo corregido
             };
         } catch (error) {
             console.error('Error al obtener las credenciales de Square:', error);
@@ -347,11 +347,12 @@ $(document).ready(function() {
         console.log('Credenciales de Square obtenidas:', credentials);
 
         // Añadir un log para verificar el formato de locationId
-        console.log('Formato de locationId:', credentials.locationId);
+        const cleanLocationId = credentials.locationId.trim();
+        console.log('Formato de locationId:', cleanLocationId);
 
         try {
             const payments = window.Square.payments(credentials.applicationId, {
-                locationId: credentials.locationId,
+                locationId: cleanLocationId,
             });
 
             const paymentRequest = payments.paymentRequest({
@@ -789,16 +790,16 @@ $(document).ready(function() {
         });
     }
 
-// Función para obtener la hora límite de un track
-function obtenerHoraLimite(track) {
-    for (let region in horariosCierre) {
-        if (horariosCierre[region][track]) {
-            return horariosCierre[region][track];
+    // Función para obtener la hora límite de un track
+    function obtenerHoraLimite(track) {
+        for (let region in horariosCierre) {
+            if (horariosCierre[region][track]) {
+                return horariosCierre[region][track];
+            }
         }
+        return null;
     }
-    return null;
-}
- 
+     
     // Función para resaltar números duplicados
     function resaltarDuplicados() {
         // Obtener todos los campos de número apostado
