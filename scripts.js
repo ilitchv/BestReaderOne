@@ -328,6 +328,7 @@ $(document).ready(function() {
 
     // Función para inicializar Cash App Pay
     async function initializeCashAppPay(totalAmount) {
+     console.log('Inicializando Cash App Pay con total:', totalAmount);
         if (!window.Square) {
             alert('El SDK de Square no se cargó correctamente.');
             return;
