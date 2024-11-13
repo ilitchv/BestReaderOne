@@ -319,8 +319,8 @@ $(document).ready(function() {
             const data = await response.json();
             console.log('Credenciales recibidas del backend:', data);    
             return {
-                applicationId: data.SQUARE_APPLICATION_ID, // Mapeo corregido
-                locationId: data.SQUARE_LOCATION_ID // Mapeo corregido
+                applicationId: data.applicationId, // Corregido para acceder a 'applicationId'
+                locationId: data.locationId        // Corregido para acceder a 'locationId'
             };
         } catch (error) {
             console.error('Error al obtener las credenciales de Square:', error);
@@ -346,6 +346,13 @@ $(document).ready(function() {
 
         console.log('Credenciales de Square obtenidas:', credentials);
 
+// Verificar que applicationId y locationId no sean undefined
+    if (!credentials.applicationId || !credentials.locationId) {
+        alert('Las credenciales de Square están incompletas.');
+        console.error('applicationId o locationId están indefinidos.');
+        return;
+    }
+     
         // Añadir un log para verificar el formato de locationId
         const cleanLocationId = credentials.locationId.trim();
         console.log('Formato de locationId:', cleanLocationId);
@@ -380,8 +387,8 @@ $(document).ready(function() {
                         // Generar el ticket y guardar las jugadas
                         confirmarYGuardarTicket('Cash App');
                     } else {
-                        alert('Error al procesar el pago: ' + paymentResult.error);
-                        console.error('Error en el backend al procesar el pago:', paymentResult.error);
+                        alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
+                        console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
                     }
                 } else {
                     alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
