@@ -311,6 +311,7 @@ $(document).ready(function() {
     let totalJugadasGlobal = 0;
     const userRole = localStorage.getItem('userRole');
     console.log('User Role:', userRole);
+
     // Función para obtener el Application ID y Location ID desde el backend
     async function obtenerSquareCredentials() {
         try {
@@ -329,7 +330,7 @@ $(document).ready(function() {
 
     // Función para inicializar Cash App Pay
     async function initializeCashAppPay(totalAmount) {
-     console.log('Inicializando Cash App Pay con total:', totalAmount);
+        console.log('Inicializando Cash App Pay con total:', totalAmount);
         if (!window.Square) {
             alert('El SDK de Square no se cargó correctamente.');
             console.error('Square SDK no está disponible.');
@@ -339,12 +340,12 @@ $(document).ready(function() {
         const credentials = await obtenerSquareCredentials();
         if (!credentials) {
             alert('No se pudo obtener las credenciales de Square.');
-            console.error('Credenciales de Square no obtenidas.');   
+            console.error('Credenciales de Square no obtenidas.');
             return;
         }
 
         console.log('Credenciales de Square obtenidas:', credentials);
-     
+
         try {
             const payments = window.Square.payments(credentials.applicationId, {
                 locationId: credentials.locationId,
@@ -362,7 +363,7 @@ $(document).ready(function() {
             const cashAppPay = await payments.cashAppPay(paymentRequest);
             await cashAppPay.attach('#cash-app-pay');
 
-         console.log('Cash App Pay adjuntado al contenedor.');
+            console.log('Cash App Pay adjuntado al contenedor.');
 
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
@@ -371,38 +372,34 @@ $(document).ready(function() {
                     // Procesar el pago en el backend
                     const paymentResult = await processPayment(tokenResult.token, totalAmount);
                     if (paymentResult.success) {
-                    console.log('Pago procesado exitosamente.');
+                        console.log('Pago procesado exitosamente.');
                         // Generar el ticket y guardar las jugadas
                         confirmarYGuardarTicket('Cash App');
                     } else {
                         alert('Error al procesar el pago: ' + paymentResult.error);
-                     console.error('Error en el backend al procesar el pago:', paymentResult.error);
+                        console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else {
-                    alert('Error al procesar el pago: ' + paymentResult.error);
-                    console.error('Error en el backend al procesar el pago:', paymentResult.error);
-                  }
-              } else {
-                alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
-                console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
-            }
-        });
-     
+                    alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
+                    console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
+                }
+            });
+
         } catch (error) {
-        console.error('Error al inicializar Cash App Pay:', error);
-        // Agregar un botón de prueba manualmente
-        const testButton = document.createElement('button');
-        testButton.innerText = 'Botón de Prueba Cash App Pay';
-        testButton.classList.add('btn', 'btn-warning');
-        document.getElementById('cash-app-pay').appendChild(testButton);
+            console.error('Error al inicializar Cash App Pay:', error);
+            // Agregar un botón de prueba manualmente
+            const testButton = document.createElement('button');
+            testButton.innerText = 'Botón de Prueba Cash App Pay';
+            testButton.classList.add('btn', 'btn-warning');
+            document.getElementById('cash-app-pay').appendChild(testButton);
 
-        testButton.addEventListener('click', () => {
-            alert('Botón de prueba clickeado. El contenedor está funcionando.');
-        });
+            testButton.addEventListener('click', () => {
+                alert('Botón de prueba clickeado. El contenedor está funcionando.');
+            });
 
-        console.log('Botón de prueba agregado al contenedor de Cash App Pay.');
+            console.log('Botón de prueba agregado al contenedor de Cash App Pay.');
+        }
     }
-}
 
     // Función para procesar el pago en el backend
     async function processPayment(token, amount) {
@@ -467,8 +464,8 @@ $(document).ready(function() {
 
                     const horaLimiteStr = obtenerHoraLimite(track);
                     if (horaLimiteStr) {
-                        const horaLimite = new Date();
                         const [horas, minutos] = horaLimiteStr.split(":");
+                        const horaLimite = new Date();
                         horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
                         if (horaActual > horaLimite) {
                             alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
