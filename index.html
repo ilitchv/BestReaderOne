@@ -438,6 +438,16 @@
 
     <!-- SDK de Square Web Payments (Sandbox) -->
     <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+     <script>
+    // Verificar si el SDK de Square se ha cargado
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.Square) {
+            console.log('Square SDK cargado correctamente.');
+        } else {
+            console.error('Square SDK no se cargó.');
+        }
+    });
+</script>
 
     <!-- Tu archivo JavaScript principal -->
     <script src="scripts.js"></script>
