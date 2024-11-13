@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -32,10 +32,13 @@
                 document.documentElement.style.display = '';
 
                 // Hacer visible o no el botón de Cash App Pay según el rol
-                if (userRole === 'user') {
-                    document.getElementById('cashAppPayContainer').style.display = 'block';
-                } else {
-                    document.getElementById('cashAppPayContainer').style.display = 'none';
+                const cashAppContainer = document.getElementById('cashAppPayContainer');
+                if (cashAppContainer) {
+                    if (userRole === 'user') {
+                        cashAppContainer.style.display = 'block';
+                    } else {
+                        cashAppContainer.style.display = 'none';
+                    }
                 }
             }
         });
@@ -312,62 +315,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- Tabla de Jugadas -->
-            <div class="table-responsive mb-4">
-                <table class="table table-dark table-bordered glow-table" id="jugadasTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Número Apostado</th>
-                            <th>Tipo de Juego</th>
-                            <th>Straight ($)</th>
-                            <th>Box ($)</th>
-                            <th>Combo ($)</th>
-                            <th>Total ($)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaJugadas">
-                        <!-- Filas de jugadas se agregarán dinámicamente -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Botones para Agregar y Eliminar Jugada -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div class="button-group">
-                    <button type="button" class="btn btn-primary" id="agregarJugada">
-                        <i class="bi bi-plus-circle"></i> Agregar Jugada
-                    </button>
-                    <button type="button" class="btn btn-danger" id="eliminarJugada">
-                        <i class="bi bi-dash-circle"></i> Eliminar Jugada
-                    </button>
-                </div>
-                <div class="total-section">
-                    Total de Jugadas: $<span id="totalJugadas">0.00</span>
-                </div>
-            </div>
-            
-            <!-- Botón para Generar Ticket -->
-            <div class="d-grid gap-2">
-                <button type="button" class="btn btn-success btn-lg" id="generarTicket">
-                    <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
-                </button>
-            </div>
-        </form>
-         <!-- Modal para Previsualizar Ticket -->
-<div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark text-white">
-            <div class="modal-header">
-                <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div id="preTicket" class="p-3">
-                    <h4 class="text-center mb-3">East New York Cricket</h4>
-                    <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
-                    <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
-                    <table class="table table-dark table-bordered">
+                <!-- Tabla de Jugadas -->
+                <div class="table-responsive mb-4">
+                    <table class="table table-dark table-bordered glow-table" id="jugadasTable">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -379,36 +329,88 @@
                                 <th>Total ($)</th>
                             </tr>
                         </thead>
-                        <tbody id="ticketJugadas">
-                            <!-- Jugadas -->
+                        <tbody id="tablaJugadas">
+                            <!-- Filas de jugadas se agregarán dinámicamente -->
                         </tbody>
                     </table>
+                </div>
+                <!-- Botones para Agregar y Eliminar Jugada -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="button-group">
+                        <button type="button" class="btn btn-primary" id="agregarJugada">
+                            <i class="bi bi-plus-circle"></i> Agregar Jugada
+                        </button>
+                        <button type="button" class="btn btn-danger" id="eliminarJugada">
+                            <i class="bi bi-dash-circle"></i> Eliminar Jugada
+                        </button>
+                    </div>
                     <div class="total-section">
-                        Total de Jugadas: $<span id="ticketTotal">0.00</span>
-                    </div>
-                    <div class="ticket-number my-3">
-                        Número de Ticket: <span id="numeroTicket"></span>
-                    </div>
-                    <div class="transaction-date my-3">
-                        Fecha y Hora de Transacción: <span id="ticketTransaccion"></span>
-                    </div>
-                    <div class="barcode text-center">
-                        <div id="qrcode"></div>
+                        Total de Jugadas: $<span id="totalJugadas">0.00</span>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Editar</button>
-                <button type="button" class="btn btn-primary" id="confirmarTicket">Confirmar e Imprimir</button>
-                <!-- Contenedor para el Botón de Cash App Pay -->
-                <div id="cashAppPayContainer" style="display: none; margin-bottom: 20px;">
-                    <!-- Aquí se insertará el botón de Cash App Pay -->
-                    <div id="cash-app-pay"></div>
+                
+                <!-- Botón para Generar Ticket -->
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success btn-lg" id="generarTicket">
+                        <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
+                    </button>
+                </div>
+            </form>
+             <!-- Modal para Previsualizar Ticket -->
+    <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="preTicket" class="p-3">
+                        <h4 class="text-center mb-3">East New York Cricket</h4>
+                        <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
+                        <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
+                        <table class="table table-dark table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Número Apostado</th>
+                                    <th>Tipo de Juego</th>
+                                    <th>Straight ($)</th>
+                                    <th>Box ($)</th>
+                                    <th>Combo ($)</th>
+                                    <th>Total ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketJugadas">
+                                <!-- Jugadas -->
+                            </tbody>
+                        </table>
+                        <div class="total-section">
+                            Total de Jugadas: $<span id="ticketTotal">0.00</span>
+                        </div>
+                        <div class="ticket-number my-3">
+                            Número de Ticket: <span id="numeroTicket"></span>
+                        </div>
+                        <div class="transaction-date my-3">
+                            Fecha y Hora de Transacción: <span id="ticketTransaccion"></span>
+                        </div>
+                        <div class="barcode text-center">
+                            <div id="qrcode"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Editar</button>
+                    <button type="button" class="btn btn-primary" id="confirmarTicket">Confirmar e Imprimir</button>
+                    <!-- Contenedor para el Botón de Cash App Pay -->
+                    <div id="cashAppPayContainer" style="display: none; margin-bottom: 20px;">
+                        <!-- Aquí se insertará el botón de Cash App Pay -->
+                        <div id="cash-app-pay"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
     <!-- Librerías JavaScript -->
     <!-- jQuery -->
@@ -438,16 +440,16 @@
 
     <!-- SDK de Square Web Payments (Sandbox) -->
     <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
-     <script>
-    // Verificar si el SDK de Square se ha cargado
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.Square) {
-            console.log('Square SDK cargado correctamente.');
-        } else {
-            console.error('Square SDK no se cargó.');
-        }
-    });
-</script>
+    <script>
+        // Verificar si el SDK de Square se ha cargado
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.Square) {
+                console.log('Square SDK cargado correctamente.');
+            } else {
+                console.error('Square SDK no se cargó.');
+            }
+        });
+    </script>
 
     <!-- Tu archivo JavaScript principal -->
     <script src="scripts.js"></script>
