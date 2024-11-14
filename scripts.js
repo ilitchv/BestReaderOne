@@ -353,14 +353,13 @@ $(document).ready(function() {
             return;
         }
 
-        // Añadir un log para verificar el formato de locationId
+        // Limpiar el locationId de posibles espacios en blanco
         const cleanLocationId = credentials.locationId.trim();
         console.log('Formato de locationId:', cleanLocationId);
 
         try {
-            const payments = window.Square.payments(credentials.applicationId, {
-                locationId: cleanLocationId,
-            });
+            // Cambiar la inicialización de payments para pasar el locationId como cadena, no como objeto
+            const payments = window.Square.payments(credentials.applicationId, cleanLocationId);
 
             const paymentRequest = payments.paymentRequest({
                 countryCode: 'US',
@@ -398,19 +397,6 @@ $(document).ready(function() {
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
-            // Agregar un botón de prueba manualmente (opcional)
-            /*
-            const testButton = document.createElement('button');
-            testButton.innerText = 'Botón de Prueba Cash App Pay';
-            testButton.classList.add('btn', 'btn-warning');
-            document.getElementById('cash-app-pay').appendChild(testButton);
-
-            testButton.addEventListener('click', () => {
-                alert('Botón de prueba clickeado. El contenedor está funcionando.');
-            });
-
-            console.log('Botón de prueba agregado al contenedor de Cash App Pay.');
-            */
         }
     }
 
