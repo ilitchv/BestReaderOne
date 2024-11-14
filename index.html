@@ -438,9 +438,12 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-    <!-- SDK de Square Web Payments (Sandbox) -->
-    <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
-    <script>
+    <!-- Para el entorno Sandbox -->
+<script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+
+<!-- Para producción, reemplaza con -->
+<!-- <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script> -->
+
         // Verificar si el SDK de Square se ha cargado
         document.addEventListener('DOMContentLoaded', () => {
             if (window.Square) {
