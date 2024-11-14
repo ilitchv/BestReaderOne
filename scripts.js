@@ -312,21 +312,9 @@ $(document).ready(function() {
     const userRole = localStorage.getItem('userRole');
     console.log('User Role:', userRole);
 
-    // Función para obtener el Application ID y Location ID desde el backend
-    async function obtenerSquareCredentials() {
-        try {
-            const response = await fetch(`${BACKEND_API_URL}/square-credentials`);
-            const data = await response.json();
-            console.log('Credenciales recibidas del backend:', data);    
-            return {
-                applicationId: data.applicationId, // Mapeo corregido
-                locationId: data.locationId // Mapeo corregido
-            };
-        } catch (error) {
-            console.error('Error al obtener las credenciales de Square:', error);
-            return null;
-        }
-    }
+    // **Actualización: Definir tus credenciales directamente**
+    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ';
+    const locationId = 'L66P47FWVDFJS'; // Tu Location ID correcto
 
     // Función para inicializar Cash App Pay
     async function initializeCashAppPay(totalAmount) {
@@ -337,29 +325,15 @@ $(document).ready(function() {
             return;
         }
 
-        const credentials = await obtenerSquareCredentials();
-        if (!credentials) {
-            alert('No se pudo obtener las credenciales de Square.');
-            console.error('Credenciales de Square no obtenidas.');
-            return;
-        }
-
-        console.log('Credenciales de Square obtenidas:', credentials);
-
         // Verificar que applicationId y locationId no sean undefined
-        if (!credentials.applicationId || !credentials.locationId) {
+        if (!applicationId || !locationId) {
             console.error('applicationId o locationId son undefined.');
             alert('Error en las credenciales de Square. Por favor, contacta al administrador.');
             return;
         }
 
-        // Limpiar el locationId de posibles espacios en blanco
-        const cleanLocationId = credentials.locationId.trim();
-        console.log('Formato de locationId:', cleanLocationId);
-
         try {
-            // Cambiar la inicialización de payments para pasar el locationId como cadena, no como objeto
-            const payments = window.Square.payments(credentials.applicationId, cleanLocationId);
+            const payments = window.Square.payments(applicationId, locationId);
 
             const paymentRequest = payments.paymentRequest({
                 countryCode: 'US',
@@ -616,14 +590,17 @@ $(document).ready(function() {
         // Calcular el total global
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Si el usuario es 'user', inicializar Cash App Pay
+        // Mostrar el modal usando Bootstrap 5
+        ticketModal.show();
+
+        // **Añadimos el botón de Cash App Pay al modal si el usuario es 'user'**
         if (userRole === 'user') {
             console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
             initializeCashAppPay(totalJugadasGlobal);
+        } else {
+            // Si no es 'user', ocultamos el botón de Cash App Pay
+            $('#cash-app-pay').empty();
         }
-
-        // Mostrar el modal usando Bootstrap 5
-        ticketModal.show();
     });
 
     // Función para generar número único de ticket de 8 dígitos
@@ -794,7 +771,7 @@ $(document).ready(function() {
         }
         return null;
     }
-     
+
     // Función para resaltar números duplicados
     function resaltarDuplicados() {
         // Obtener todos los campos de número apostado
