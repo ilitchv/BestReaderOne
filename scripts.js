@@ -318,7 +318,7 @@ $(document).ready(function() {
     // Asegúrate de que estas credenciales corresponden al entorno correcto
     const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con Production ID si es necesario
     const locationId = 'L66P47FWVDFJS'; // Reemplaza con Production ID si es necesario
-    const cashtag = 'YourCashtag'; // Reemplaza con tu propio Cash App cashtag
+    const cashtag = '$VladichVasquez'; // Reemplaza con tu propio Cash App cashtag
 
     // Función para detectar si el dispositivo es móvil
     function isMobileDevice() {
