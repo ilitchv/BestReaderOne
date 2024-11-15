@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html> 
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -43,6 +43,9 @@
             }
         });
     </script>
+    
+    <!-- SDK de Square Web Payments (Sandbox) -->
+    <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
 </head>
 <body>
     <div class="container my-5">
@@ -438,13 +441,8 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-    <!-- Para el entorno Sandbox -->
-<script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
-
-<!-- Para producción, reemplaza con -->
-<!-- <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script> -->
-
-        // Verificar si el SDK de Square se ha cargado
+    <!-- Verificar si el SDK de Square se ha cargado -->
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (window.Square) {
                 console.log('Square SDK cargado correctamente.');
