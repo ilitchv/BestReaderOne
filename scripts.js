@@ -24,6 +24,7 @@ $(document).ready(function() {
     let jugadaCount = 0;
     let selectedTracks = 0;
     let selectedDays = 0;
+    let cashAppPayInitialized = false; // Bandera para evitar inicializaciones múltiples
 
     // Horarios de cierre por track
     const horariosCierre = {
@@ -312,7 +313,7 @@ $(document).ready(function() {
     const userRole = localStorage.getItem('userRole');
     console.log('User Role:', userRole);
 
-    // **Actualización: Definir tus credenciales directamente**
+    // **Credenciales de Square**
     const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ';
     const locationId = 'L66P47FWVDFJS'; // Tu Location ID correcto
 
@@ -349,6 +350,7 @@ $(document).ready(function() {
 
             console.log('Cash App Pay adjuntado al contenedor.');
 
+            // Añadir listener para tokenización
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
@@ -384,6 +386,11 @@ $(document).ready(function() {
                 },
                 body: JSON.stringify({ sourceId: token, amount: amount }),
             });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Backend respondió con error: ${errorText}`);
+            }
 
             const result = await response.json();
             return result;
@@ -595,11 +602,17 @@ $(document).ready(function() {
 
         // **Añadimos el botón de Cash App Pay al modal si el usuario es 'user'**
         if (userRole === 'user') {
-            console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
-            initializeCashAppPay(totalJugadasGlobal);
+            if (!cashAppPayInitialized) { // Verificar si ya se ha inicializado
+                console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
+                initializeCashAppPay(totalJugadasGlobal);
+                cashAppPayInitialized = true;
+            } else {
+                console.log('Cash App Pay ya está inicializado.');
+            }
         } else {
             // Si no es 'user', ocultamos el botón de Cash App Pay
             $('#cash-app-pay').empty();
+            cashAppPayInitialized = false; // Resetear la bandera
         }
     });
 
@@ -612,8 +625,8 @@ $(document).ready(function() {
     $("#confirmarTicket").click(function() {
         if (userRole === 'user') {
             // Para usuarios regulares, el pago ya se procesó con Cash App Pay
-            // Solo confirmamos y guardamos el ticket
-            confirmarYGuardarTicket('Cash App');
+            // No permitimos confirmar manualmente
+            alert("Tu pago está siendo procesado a través de Cash App Pay.");
         } else {
             // Para otros roles, asumimos pago en efectivo
             confirmarYGuardarTicket('Efectivo');
