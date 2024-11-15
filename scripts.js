@@ -318,6 +318,7 @@ $(document).ready(function() {
     // Asegúrate de que estas credenciales corresponden al entorno correcto
     const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con Production ID si es necesario
     const locationId = 'L66P47FWVDFJS'; // Reemplaza con Production ID si es necesario
+    const cashtag = 'YourCashtag'; // Reemplaza con tu propio Cash App cashtag
 
     // Función para detectar si el dispositivo es móvil
     function isMobileDevice() {
@@ -351,66 +352,81 @@ $(document).ready(function() {
             return;
         }
 
-        try {
-            const payments = window.Square.payments(applicationId, locationId);
+        if (isMobileDevice()) {
+            // Dispositivo móvil: intentar redirigir a la aplicación de Cash App
+            const cashAppURL = `cashapp://send?amount=${totalAmount.toFixed(2)}&$cashtag=${cashtag}`;
+            console.log('Redirigiendo a Cash App con URL:', cashAppURL);
+            
+            // Intentar abrir Cash App
+            window.location.href = cashAppURL;
 
-            const paymentRequest = payments.paymentRequest({
-                countryCode: 'US',
-                currencyCode: 'USD',
-                total: {
-                    amount: totalAmount.toFixed(2),
-                    label: 'Total',
-                },
-            });
+            // Opcional: Si la aplicación no está instalada, mostrar un mensaje
+            setTimeout(function() {
+                showAlert("No se pudo abrir Cash App. Por favor, asegúrate de tener instalada la aplicación.", "warning");
+            }, 2000); // Tiempo antes de mostrar el mensaje (2 segundos)
+        } else {
+            // Dispositivo de escritorio: mostrar QR Code mediante la SDK de Square
+            try {
+                const payments = window.Square.payments(applicationId, locationId);
 
-            const options = {
-                redirectURL: window.location.href,
-                referenceId: 'my-distinct-reference-id-' + Date.now(), // Generar un ID único
-            };
+                const paymentRequest = payments.paymentRequest({
+                    countryCode: 'US',
+                    currencyCode: 'USD',
+                    total: {
+                        amount: totalAmount.toFixed(2),
+                        label: 'Total',
+                    },
+                });
 
-            const cashAppPay = await payments.cashAppPay(paymentRequest, options);
+                const options = {
+                    redirectURL: window.location.href,
+                    referenceId: 'my-distinct-reference-id-' + Date.now(), // Generar un ID único
+                };
 
-            console.log('Cash App Pay creado:', cashAppPay);
+                const cashAppPay = await payments.cashAppPay(paymentRequest, options);
 
-            // Añadir listener para tokenización
-            cashAppPay.addEventListener('ontokenization', async (event) => {
-                const { tokenResult } = event.detail;
-                if (tokenResult.status === 'OK') {
-                    const token = tokenResult.token;
-                    console.log('Tokenización exitosa:', token);
-                    // Procesar el pago en el backend
-                    const paymentResult = await processPayment(token, totalAmount);
-                    if (paymentResult.success) {
-                        console.log('Pago procesado exitosamente.');
-                        paymentCompleted = true; // Marcar como pago completado
-                        showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
-                        // Generar el ticket y guardar las jugadas
-                        confirmarYGuardarTicket('Cash App');
+                console.log('Cash App Pay creado:', cashAppPay);
+
+                // Añadir listener para tokenización
+                cashAppPay.addEventListener('ontokenization', async (event) => {
+                    const { tokenResult } = event.detail;
+                    if (tokenResult.status === 'OK') {
+                        const token = tokenResult.token;
+                        console.log('Tokenización exitosa:', token);
+                        // Procesar el pago en el backend
+                        const paymentResult = await processPayment(token, totalAmount);
+                        if (paymentResult.success) {
+                            console.log('Pago procesado exitosamente.');
+                            paymentCompleted = true; // Marcar como pago completado
+                            showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
+                            // Generar el ticket y guardar las jugadas
+                            confirmarYGuardarTicket('Cash App');
+                        } else {
+                            showAlert('Error al procesar el pago: ' + paymentResult.error, 'danger');
+                            console.error('Error en el backend al procesar el pago:', paymentResult.error);
+                        }
+                    } else if (tokenResult.status === 'CANCEL') {
+                        showAlert('Pago cancelado por el usuario.', 'warning');
                     } else {
-                        showAlert('Error al procesar el pago: ' + paymentResult.error, 'danger');
-                        console.error('Error en el backend al procesar el pago:', paymentResult.error);
+                        showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, 'danger');
+                        console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
                     }
-                } else if (tokenResult.status === 'CANCEL') {
-                    showAlert('Pago cancelado por el usuario.', 'warning');
-                } else {
-                    showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, 'danger');
-                    console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
-                }
-            });
+                });
 
-            // Opcional: Añadir opciones para el botón
-            const buttonOptions = {
-                shape: 'semiround',
-                width: 'full',
-            };
+                // Opcional: Añadir opciones para el botón
+                const buttonOptions = {
+                    shape: 'semiround',
+                    width: 'full',
+                };
 
-            await cashAppPay.attach('#cash-app-pay', buttonOptions);
+                await cashAppPay.attach('#cash-app-pay', buttonOptions);
 
-            console.log('Cash App Pay adjuntado al contenedor.');
+                console.log('Cash App Pay adjuntado al contenedor.');
 
-        } catch (error) {
-            console.error('Error al inicializar Cash App Pay:', error);
-            showAlert('Error al inicializar Cash App Pay: ' + error.message, 'danger');
+            } catch (error) {
+                console.error('Error al inicializar Cash App Pay:', error);
+                showAlert('Error al inicializar Cash App Pay: ' + error.message, 'danger');
+            }
         }
     }
 
