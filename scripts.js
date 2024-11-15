@@ -25,6 +25,7 @@ $(document).ready(function() {
     let selectedTracks = 0;
     let selectedDays = 0;
     let cashAppPayInitialized = false; // Bandera para evitar inicializaciones múltiples
+    let paymentCompleted = false; // Estado de pago
 
     // Horarios de cierre por track
     const horariosCierre = {
@@ -123,7 +124,7 @@ $(document).ready(function() {
     // Función para agregar una nueva jugada
     function agregarJugada() {
         if (jugadaCount >= 100) {
-            alert("Has alcanzado el máximo de 100 jugadas.");
+            showAlert("Has alcanzado el máximo de 100 jugadas.", "danger");
             return;
         }
         jugadaCount++;
@@ -161,7 +162,7 @@ $(document).ready(function() {
     // Evento para eliminar la última jugada
     $("#eliminarJugada").click(function() {
         if (jugadaCount === 0) {
-            alert("No hay jugadas para eliminar.");
+            showAlert("No hay jugadas para eliminar.", "warning");
             return;
         }
         // Remover la última fila
@@ -318,11 +319,27 @@ $(document).ready(function() {
     const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con Production ID si es necesario
     const locationId = 'L66P47FWVDFJS'; // Reemplaza con Production ID si es necesario
 
+    // Función para detectar si el dispositivo es móvil
+    function isMobileDevice() {
+        return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Función para mostrar alertas usando Bootstrap
+    function showAlert(message, type) {
+        const alertHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        `;
+        $("#ticketAlerts").html(alertHTML);
+    }
+
     // Función para inicializar Cash App Pay
     async function initializeCashAppPay(totalAmount) {
         console.log('Inicializando Cash App Pay con total:', totalAmount);
         if (!window.Square) {
-            alert('El SDK de Square no se cargó correctamente.');
+            showAlert('El SDK de Square no se cargó correctamente.', 'danger');
             console.error('Square SDK no está disponible.');
             return;
         }
@@ -330,7 +347,7 @@ $(document).ready(function() {
         // Verificar que applicationId y locationId no sean undefined
         if (!applicationId || !locationId) {
             console.error('applicationId o locationId son undefined.');
-            alert('Error en las credenciales de Square. Por favor, contacta al administrador.');
+            showAlert('Error en las credenciales de Square. Por favor, contacta al administrador.', 'danger');
             return;
         }
 
@@ -348,7 +365,7 @@ $(document).ready(function() {
 
             const options = {
                 redirectURL: window.location.href,
-                referenceId: 'my-distinct-reference-id',
+                referenceId: 'my-distinct-reference-id-' + Date.now(), // Generar un ID único
             };
 
             const cashAppPay = await payments.cashAppPay(paymentRequest, options);
@@ -365,16 +382,18 @@ $(document).ready(function() {
                     const paymentResult = await processPayment(token, totalAmount);
                     if (paymentResult.success) {
                         console.log('Pago procesado exitosamente.');
+                        paymentCompleted = true; // Marcar como pago completado
+                        showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
                         // Generar el ticket y guardar las jugadas
                         confirmarYGuardarTicket('Cash App');
                     } else {
-                        alert('Error al procesar el pago: ' + paymentResult.error);
+                        showAlert('Error al procesar el pago: ' + paymentResult.error, 'danger');
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else if (tokenResult.status === 'CANCEL') {
-                    alert('Pago cancelado por el usuario.');
+                    showAlert('Pago cancelado por el usuario.', 'warning');
                 } else {
-                    alert('Error al tokenizar el pago: ' + tokenResult.errors[0].message);
+                    showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, 'danger');
                     console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
                 }
             });
@@ -391,7 +410,7 @@ $(document).ready(function() {
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
-            alert('Error al inicializar Cash App Pay: ' + error.message);
+            showAlert('Error al inicializar Cash App Pay: ' + error.message, 'danger');
         }
     }
 
@@ -421,23 +440,26 @@ $(document).ready(function() {
 
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
+        // Limpiar alertas anteriores
+        $("#ticketAlerts").empty();
+
         // Validar formulario
         const fecha = $("#fecha").val();
         console.log("Valor de fecha:", fecha);
         if (!fecha) {
-            alert("Por favor, selecciona una fecha.");
+            showAlert("Por favor, selecciona una fecha.", "warning");
             return;
         }
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
         if (!tracks || tracks.length === 0) {
-            alert("Por favor, selecciona al menos un track.");
+            showAlert("Por favor, selecciona al menos un track.", "warning");
             return;
         }
 
         // Validar que si se seleccionó el track "Venezuela", se haya seleccionado al menos un track de USA
         const tracksUSASeleccionados = tracks.filter(track => Object.keys(horariosCierre.USA).includes(track));
         if (tracks.includes("Venezuela") && tracksUSASeleccionados.length === 0) {
-            alert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.");
+            showAlert("Para jugar en la modalidad 'Venezuela', debes seleccionar al menos un track de USA además de 'Venezuela'.", "warning");
             return;
         }
 
@@ -467,7 +489,7 @@ $(document).ready(function() {
                         const horaLimite = new Date();
                         horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0); // Restamos 5 minutos
                         if (horaActual > horaLimite) {
-                            alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`);
+                            showAlert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`, "danger");
                             return;
                         }
                     }
@@ -482,12 +504,12 @@ $(document).ready(function() {
             const modalidad = $(this).find(".tipoJuego").text();
             if (!numero || (numero.length < 2 || numero.length > 4)) {
                 jugadasValidas = false;
-                alert("Por favor, ingresa números apostados válidos (2, 3 o 4 dígitos).");
+                showAlert("Por favor, ingresa números apostados válidos (2, 3 o 4 dígitos).", "danger");
                 return false;
             }
             if (modalidad === "-") {
                 jugadasValidas = false;
-                alert("Por favor, selecciona una modalidad de juego válida.");
+                showAlert("Por favor, selecciona una modalidad de juego válida.", "danger");
                 return false;
             }
 
@@ -510,7 +532,7 @@ $(document).ready(function() {
 
             if (tracksRequeridos.length > 0 && tracksSeleccionadosParaModalidad.length === 0) {
                 jugadasValidas = false;
-                alert(`La jugada con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.`);
+                showAlert(`La jugada con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.`, "danger");
                 return false; // Salir del bucle
             }
 
@@ -518,7 +540,7 @@ $(document).ready(function() {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
                 if (straight <= 0) {
                     jugadasValidas = false;
-                    alert("Por favor, ingresa al menos una apuesta en Straight.");
+                    showAlert("Por favor, ingresa al menos una apuesta en Straight.", "danger");
                     return false;
                 }
                 if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
@@ -528,7 +550,7 @@ $(document).ready(function() {
                     const allAcceptableValues = acceptableBoxValues.concat(acceptableBoxCombinations);
                     if (!allAcceptableValues.includes(box)) {
                         jugadasValidas = false;
-                        alert("En la modalidad Pulito o Pulito-Combinado, el campo 'Box' debe ser 1, 2, 3, 1,2, 2,3, 1,3 o 1,2,3.");
+                        showAlert("En la modalidad Pulito o Pulito-Combinado, el campo 'Box' debe ser 1, 2, 3, 1,2, 2,3, 1,3 o 1,2,3.", "danger");
                         return false;
                     }
                 }
@@ -539,7 +561,7 @@ $(document).ready(function() {
                 const combo = parseFloat($(this).find(".combo").val()) || 0;
                 if (straight <= 0 && box <= 0 && combo <= 0) {
                     jugadasValidas = false;
-                    alert(`Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.`);
+                    showAlert(`Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.`, "danger");
                     return false;
                 }
             }
@@ -547,17 +569,17 @@ $(document).ready(function() {
             if (limitesApuesta[modalidad]) {
                 if (parseFloat($(this).find(".straight").val()) > (limitesApuesta[modalidad].straight || Infinity)) {
                     jugadasValidas = false;
-                    alert(`El monto en Straight excede el límite para ${modalidad}.`);
+                    showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
                 if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
                     jugadasValidas = false;
-                    alert(`El monto en Box excede el límite para ${modalidad}.`);
+                    showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
                 if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
                     jugadasValidas = false;
-                    alert(`El monto en Combo excede el límite para ${modalidad}.`);
+                    showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
             }
@@ -642,10 +664,17 @@ $(document).ready(function() {
 
     // Evento para confirmar e imprimir el ticket
     $("#confirmarTicket").click(function() {
+        // Limpiar alertas anteriores
+        $("#ticketAlerts").empty();
+
         if (userRole === 'user') {
-            // Para usuarios regulares, el pago ya se procesó con Cash App Pay
-            // No permitimos confirmar manualmente
-            alert("Tu pago está siendo procesado a través de Cash App Pay.");
+            if (paymentCompleted) {
+                // Proceder con la confirmación e impresión
+                confirmarYGuardarTicket('Cash App');
+            } else {
+                // Mostrar alerta en el modal
+                showAlert("Por favor, proceda con el pago haciendo clic en el botón Cash App Pay.", "warning");
+            }
         } else {
             // Para otros roles, asumimos pago en efectivo
             confirmarYGuardarTicket('Efectivo');
@@ -654,6 +683,9 @@ $(document).ready(function() {
 
     // Función para confirmar y guardar el ticket
     function confirmarYGuardarTicket(metodoPago) {
+        // Limpiar alertas anteriores
+        $("#ticketAlerts").empty();
+
         // Datos comunes a todas las jugadas
         const ticketNumber = $("#numeroTicket").text();
         const transactionDateTime = fechaTransaccion;
@@ -720,6 +752,9 @@ $(document).ready(function() {
             console.log("SheetDB:", sheetDBResponse);
             console.log("Backend:", backendResponse);
 
+            // Mostrar mensaje de éxito
+            showAlert("Ticket guardado y enviado exitosamente.", "success");
+
             // Después de que ambas solicitudes se hayan completado con éxito
 
             // Imprimir el ticket
@@ -737,14 +772,15 @@ $(document).ready(function() {
                 link.click();
                 document.body.removeChild(link);
             });
+
             // Cerrar el modal
             ticketModal.hide();
+
             // Reiniciar el formulario
             resetForm();
-            alert("Ticket guardado y enviado exitosamente.");
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
-            alert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.");
+            showAlert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
         });
     }
 
@@ -762,6 +798,8 @@ $(document).ready(function() {
             actualizarPlaceholders("-", $(this));
         });
         resaltarDuplicados();
+        // Resetear el estado de pago
+        paymentCompleted = false;
     }
 
     // Calcular y mostrar las horas límite junto a cada track
