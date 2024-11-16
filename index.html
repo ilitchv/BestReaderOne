@@ -360,68 +360,37 @@
                 </div>
             </form>
             <!-- Modal para Previsualizar Ticket -->
-            <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content bg-dark text-white">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                        </div>
-                        <div class="modal-body">
-                            <!-- Sección de Alertas -->
-                            <div id="ticketAlerts"></div>
-                            <div id="preTicket" class="p-3">
-                                <h4 class="text-center mb-3">East New York Cricket</h4>
-                                <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
-                                <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
-                                <table class="table table-dark table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Número Apostado</th>
-                                            <th>Tipo de Juego</th>
-                                            <th>Straight ($)</th>
-                                            <th>Box ($)</th>
-                                            <th>Combo ($)</th>
-                                            <th>Total ($)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="ticketJugadas">
-                                        <!-- Jugadas -->
-                                    </tbody>
-                                </table>
-                                <div class="total-section">
-                                    Total de Jugadas: $<span id="ticketTotal">0.00</span>
-                                </div>
-                                <div class="ticket-number my-3">
-                                    Número de Ticket: <span id="numeroTicket"></span>
-                                </div>
-                                <div class="transaction-date my-3">
-                                    Fecha y Hora de Transacción: <span id="ticketTransaccion"></span>
-                                </div>
-                                <div class="barcode text-center">
-                                    <div id="qrcode"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer flex-column">
-                            <div class="w-100 mb-2">
-                                <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
-                            </div>
-                            <div class="w-100 mb-2">
-                                <button type="button" class="btn btn-primary w-100" id="confirmarTicket">Confirmar e Imprimir</button>
-                            </div>
-                            <!-- Contenedor para el Botón de Cash App Pay -->
-                            <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
-                                <!-- Aquí se insertará el botón de Cash App Pay -->
-                                <div id="cash-app-pay"></div>
-                            </div>
-                        </div>
-                    </div>
+<div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Sección de Alertas -->
+                <div id="ticketAlerts"></div>
+                <div id="preTicket" class="p-3">
+                    <!-- [Contenido del ticket] -->
                 </div>
             </div>
-
+            <div class="modal-footer flex-column">
+                <div class="w-100 mb-2">
+                    <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
+                </div>
+                <div class="w-100 mb-2">
+                    <button type="button" class="btn btn-primary w-100" id="iniciarPago">Pagar con Cash App Pay</button>
+                </div>
+                <!-- Contenedor para el Botón de Cash App Pay (opcional en este flujo) -->
+                <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
+                    <!-- Aquí se insertará el botón de Cash App Pay si es necesario -->
+                    <div id="cash-app-pay"></div>
+                </div>
+            </div>
         </div>
+    </div>
+</div>
+
 
         <!-- Librerías JavaScript -->
         <!-- jQuery -->
