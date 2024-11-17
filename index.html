@@ -24,6 +24,9 @@
             const token = localStorage.getItem('token');
             const userRole = localStorage.getItem('userRole'); // Asegúrate de almacenar el rol del usuario en localStorage
 
+            // Asignar userRole a una variable global para que scripts.js pueda acceder a ella
+            window.userRole = userRole;
+
             if (!token) {
                 alert('Debes iniciar sesión para acceder a esta página.');
                 window.location.href = 'login.html';
