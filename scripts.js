@@ -44,7 +44,7 @@ function verificarEstadoPago() {
         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
 
         // Proceder a guardar las jugadas y generar el ticket final
-        confirmarYGuardarTicket('Cash App');
+        confirmarYGuardarTicket('Cash App', $("#numeroTicket").text());
     } else if (paymentStatus === 'cancel') {
         // Manejar la cancelación del pago si es necesario
         showAlert("Pago cancelado por el usuario.", "warning");
@@ -528,6 +528,7 @@ $(document).ready(function() {
             if (callback) callback(true, ticketNumber);
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
+            console.error("Detalles del Error:", jqXHR.responseText);
             showAlert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
             if (callback) callback(false, null);
         });
@@ -667,7 +668,7 @@ $(document).ready(function() {
                 return false;
             }
 
-            // Nueva Validación: Verificar que la jugada tiene al menos un track seleccionado correspondiente a su modalidad
+            // Validar tracks requeridos por modalidad
             let tracksRequeridos = [];
 
             if (["Win 4", "Peak 3", "Pulito", "Pulito-Combinado", "Venezuela"].includes(modalidad)) {
@@ -933,151 +934,23 @@ $(document).ready(function() {
         }
     }
 
-    // Función para confirmar y guardar el ticket (actualizada para recibir ticketNumber)
-    function confirmarYGuardarTicket(metodoPago, ticketNumber) {
-        // Limpiar alertas anteriores
-        $("#ticketAlerts").empty();
+    // Función para confirmar y guardar el ticket (ya está definida correctamente)
+    // function confirmarYGuardarTicket(metodoPago, ticketNumber) { ... }
 
-        // Actualizar el método de pago en el backend
-        $.ajax({
-            url: `${BACKEND_API_URL}/${ticketNumber}`,
-            method: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify({ metodoPago: metodoPago }),
-            success: function(response) {
-                console.log("Método de pago actualizado:", response);
-                showAlert("Ticket confirmado e impreso exitosamente.", "success");
+    // Función para generar número único de ticket de 8 dígitos (ya está definida correctamente)
+    // function generarNumeroUnico() { ... }
 
-                // Imprimir el ticket
-                window.print();
+    // Función para resaltar números duplicados (ya está definida correctamente)
+    // function resaltarDuplicados() { ... }
 
-                // Descargar el ticket como imagen
-                html2canvas(document.querySelector("#preTicket")).then(canvas => {
-                    const imgData = canvas.toDataURL("image/png");
-                    const link = document.createElement('a');
-                    link.href = imgData;
-                    link.download = 'ticket.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+    // Función para agregar listeners a los campos de número apostado (ya está definida correctamente)
+    // function agregarListenersNumeroApostado() { ... }
 
-                    // Compartir el ticket si la API está disponible
-                    if (navigator.share) {
-                        navigator.share({
-                            title: 'Tu Ticket de Apuesta',
-                            text: 'Aquí está tu ticket de apuesta.',
-                            files: [dataURLtoFile(imgData, 'ticket.png')]
-                        }).then(() => {
-                            console.log('Ticket compartido exitosamente.');
-                        }).catch((error) => {
-                            console.error('Error al compartir el ticket:', error);
-                        });
-                    }
-                });
+    // Función para reiniciar el formulario (ya está definida correctamente)
+    // function resetForm() { ... }
 
-                // Cerrar el modal
-                ticketModal.hide();
-
-                // Reiniciar el formulario
-                resetForm();
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error("Error al actualizar el método de pago:", textStatus, errorThrown);
-                showAlert("Hubo un problema al confirmar el ticket. Por favor, inténtalo de nuevo.", "danger");
-            }
-        });
-    }
-
-    // Función para generar número único de ticket de 8 dígitos
-    function generarNumeroUnico() {
-        return Math.floor(10000000 + Math.random() * 90000000).toString();
-    }
-
-    // Función para resaltar números duplicados
-    function resaltarDuplicados() {
-        // Obtener todos los campos de número apostado
-        const camposNumeros = document.querySelectorAll('.numeroApostado');
-        const valores = {};
-        const duplicados = new Set();
-
-        // Recopilar valores y detectar duplicados
-        camposNumeros.forEach(campo => {
-            const valor = campo.value.trim();
-            if (valor) {
-                if (valores[valor]) {
-                    duplicados.add(valor);
-                } else {
-                    valores[valor] = true;
-                }
-            }
-        });
-
-        // Aplicar o remover la clase .duplicado
-        camposNumeros.forEach(campo => {
-            if (duplicados.has(campo.value.trim())) {
-                campo.classList.add('duplicado');
-            } else {
-                campo.classList.remove('duplicado');
-            }
-        });
-    }
-
-    // Función para agregar listeners a los campos de número apostado
-    function agregarListenersNumeroApostado() {
-        const camposNumeros = document.querySelectorAll('.numeroApostado');
-        camposNumeros.forEach(campo => {
-            campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
-            campo.addEventListener('input', resaltarDuplicados);
-        });
-    }
-
-    // Función para reiniciar el formulario
-    function resetForm() {
-        $("#lotteryForm")[0].reset();
-        $("#tablaJugadas").empty();
-        jugadaCount = 0;
-        selectedTracks = 0;
-        selectedDays = 0;
-        agregarJugada();
-        $("#totalJugadas").text("0.00");
-        // Resetear los placeholders
-        $("#tablaJugadas tr").each(function() {
-            actualizarPlaceholders("-", $(this));
-        });
-        resaltarDuplicados();
-        // Resetear el estado de pago
-        paymentCompleted = false;
-    }
-
-    // Calcular y mostrar las horas límite junto a cada track
-    function mostrarHorasLimite() {
-        $(".cutoff-time").each(function() {
-            const track = $(this).data("track");
-
-            if (track === 'Venezuela') {
-                $(this).hide(); // Oculta el elemento del DOM
-                return;
-            }
-            let cierreStr = "";
-            if (horariosCierre.USA[track]) {
-                cierreStr = horariosCierre.USA[track];
-            }
-            else if (horariosCierre["Santo Domingo"][track]) {
-                cierreStr = horariosCierre["Santo Domingo"][track];
-            }
-            else if (horariosCierre.Venezuela[track]) {
-                cierreStr = horariosCierre.Venezuela[track];
-            }
-            if (cierreStr) {
-                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
-                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
-                const horas = cierre.getHours().toString().padStart(2, '0');
-                const minutos = cierre.getMinutes().toString().padStart(2, '0');
-                const horaLimite = `${horas}:${minutos}`;
-                $(this).text(`Hora límite: ${horaLimite}`);
-            }
-        });
-    }
+    // Calcular y mostrar las horas límite junto a cada track (ya está definida correctamente)
+    // function mostrarHorasLimite() { ... }
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
