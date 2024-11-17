@@ -32,11 +32,11 @@ function verificarEstadoPago() {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
     const paymentReference = urlParams.get('referenceId'); // Opcional: Para validar el pago
-    
+
     if (paymentStatus === 'success') {
         // Eliminar los parámetros de la URL para evitar re-procesamiento
         window.history.replaceState({}, document.title, window.location.pathname);
-        
+
         // Marcar el pago como completado
         paymentCompleted = true;
 
@@ -462,8 +462,7 @@ $(document).ready(function() {
     }
 
     // Función para recopilar datos de las jugadas
-    function recopilarDatosJugadas() {
-        const ticketNumber = generarNumeroUnico();
+    function recopilarDatosJugadas(ticketNumber) {
         const transactionDateTime = dayjs().format('MM-DD-YYYY hh:mm A');
         const betDates = $("#ticketFecha").text();
         const tracks = $("#ticketTracks").text();
@@ -479,11 +478,11 @@ $(document).ready(function() {
                 "Transaction DateTime": transactionDateTime,
                 "Bet Dates": betDates,
                 "Tracks": tracks,
-                "Bet Number": $(this).find("td").eq(1).text(),
+                "Bet Number": $(this).find("td").eq(1).find("input").val(),
                 "Game Mode": $(this).find("td").eq(2).text(),
-                "Straight ($)": $(this).find("td").eq(3).text(),
-                "Box ($)": $(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "",
-                "Combo ($)": $(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "",
+                "Straight ($)": $(this).find("td").eq(3).find("input").val(),
+                "Box ($)": $(this).find("td").eq(4).find("input").val() !== "" ? $(this).find("td").eq(4).find("input").val() : "",
+                "Combo ($)": $(this).find("td").eq(5).find("input").val() !== "" ? $(this).find("td").eq(5).find("input").val() : "",
                 "Total ($)": $(this).find("td").eq(6).text(),
                 "Payment Method": "", // Se actualizará después del pago
                 "Jugada Number": jugadaNumber,
@@ -518,25 +517,26 @@ $(document).ready(function() {
         // Esperar a que ambas solicitudes se completen
         $.when(sheetDBRequest, backendRequest).done(function(sheetDBResponse, backendResponse) {
             console.log("Datos enviados a ambos destinos:");
-            console.log("SheetDB:", sheetDBResponse);
-            console.log("Backend:", backendResponse);
+            console.log("SheetDB:", sheetDBResponse[0]);
+            console.log("Backend:", backendResponse[0]);
 
-            // Llamar al callback con éxito
-            if (callback) callback(true);
+            // Asumimos que el backend devuelve el ticketNumber o ID creado
+            const createdBackendData = backendResponse[0];
+            const ticketNumber = createdBackendData.ticketNumber || generarNumeroUnico(); // Asegúrate de que el backend devuelve 'ticketNumber'
+
+            // Llamar al callback con éxito y ticketNumber
+            if (callback) callback(true, ticketNumber);
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
             showAlert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
-            if (callback) callback(false);
+            if (callback) callback(false, null);
         });
     }
 
     // Función para confirmar y guardar el ticket
-    function confirmarYGuardarTicket(metodoPago) {
+    function confirmarYGuardarTicket(metodoPago, ticketNumber) {
         // Limpiar alertas anteriores
         $("#ticketAlerts").empty();
-
-        // Obtener el número de ticket
-        const ticketNumber = $("#numeroTicket").text();
 
         // Actualizar el método de pago en el backend
         $.ajax({
@@ -793,10 +793,23 @@ $(document).ready(function() {
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
         // Recopilar datos de las jugadas
-        const jugadasData = recopilarDatosJugadas();
+        const jugadasData = recopilarDatosJugadas(numeroTicket);
 
         // Guardar las jugadas en una variable global para referencia posterior
         window.jugadasDataGlobal = jugadasData;
+
+        // Enviar los datos al backend y SheetDB
+        enviarFormulario(jugadasData, function(success, backendTicketNumber) {
+            if (success) {
+                // Asignar el ticketNumber correcto
+                $("#numeroTicket").text(backendTicketNumber);
+                $("#ticketJugadas tr").each(function() {
+                    $(this).find("td").eq(0).text(jugadaCount);
+                });
+            } else {
+                showAlert("Error al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
+            }
+        });
 
         // Mostrar el modal de previsualización del ticket
         ticketModal.show();
@@ -804,14 +817,14 @@ $(document).ready(function() {
 
     // Evento para iniciar el pago desde el modal
     $("#iniciarPago").click(function() {
-        if (userRole !== 'user') {
+        if (window.userRole !== 'user') {
             // Para otros roles, asumimos pago en efectivo
-            confirmarYGuardarTicket('Efectivo');
+            confirmarYGuardarTicket('Efectivo', $("#numeroTicket").text());
             return;
         }
 
         // Obtener el total global
-        const totalAmount = totalJugadasGlobal;
+        const totalAmount = parseFloat($("#totalJugadas").text());
 
         // Inicializar Cash App Pay
         initializeCashAppPay(totalAmount);
@@ -854,7 +867,7 @@ $(document).ready(function() {
 
             console.log('Cash App Pay creado:', cashAppPay);
 
-            // Añadir listener para tokenización (solo para desktop)
+            // Añadir listener para tokenización
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
@@ -867,7 +880,7 @@ $(document).ready(function() {
                         paymentCompleted = true; // Marcar como pago completado
                         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
                         // Proceder a guardar las jugadas y generar el ticket final
-                        confirmarYGuardarTicket('Cash App');
+                        confirmarYGuardarTicket('Cash App', $("#numeroTicket").text());
                     } else {
                         showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
@@ -880,7 +893,7 @@ $(document).ready(function() {
                 }
             });
 
-            // Opcional: Añadir opciones para el botón en desktop
+            // Añadir botón de Cash App Pay solo para desktop
             if (!isMobileDevice()) {
                 const buttonOptions = {
                     shape: 'semiround',
@@ -920,13 +933,10 @@ $(document).ready(function() {
         }
     }
 
-    // Función para confirmar y guardar el ticket
-    function confirmarYGuardarTicket(metodoPago) {
+    // Función para confirmar y guardar el ticket (actualizada para recibir ticketNumber)
+    function confirmarYGuardarTicket(metodoPago, ticketNumber) {
         // Limpiar alertas anteriores
         $("#ticketAlerts").empty();
-
-        // Obtener el número de ticket
-        const ticketNumber = $("#numeroTicket").text();
 
         // Actualizar el método de pago en el backend
         $.ajax({
