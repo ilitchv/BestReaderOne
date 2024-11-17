@@ -1,321 +1,122 @@
- let fechaTransaccion = '';
-let paymentCompleted = false;
-
-// Función para detectar si el dispositivo es móvil
-function isMobileDevice() {
-    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-// Función para mostrar alertas usando Bootstrap
-function showAlert(message, type) {
-    const alertHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-        </div>
-    `;
-    $("#ticketAlerts").html(alertHTML);
-}
-
-// Función para convertir Data URL a File
-function dataURLtoFile(dataurl, filename) {
-    var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, {type:mime});
-}
-
-// Función para verificar el estado del pago en la URL
-function verificarEstadoPago() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment');
-    const paymentReference = urlParams.get('referenceId'); // Opcional: Para validar el pago
-
-    if (paymentStatus === 'success') {
-        // Eliminar los parámetros de la URL para evitar re-procesamiento
-        window.history.replaceState({}, document.title, window.location.pathname);
-
-        // Marcar el pago como completado
-        paymentCompleted = true;
-
-        // Mostrar una alerta de éxito
-        showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
-
-        // Proceder a guardar las jugadas y generar el ticket final
-        confirmarYGuardarTicket('Cash App', $("#numeroTicket").text());
-    } else if (paymentStatus === 'cancel') {
-        // Manejar la cancelación del pago si es necesario
-        showAlert("Pago cancelado por el usuario.", "warning");
-    }
-}
-
-$(document).ready(function() {
-    verificarEstadoPago();
-
-    // Define las URLs de tus APIs
-    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Tu URL del backend en Render
-
-    // Inicializar Flatpickr con selección de rango de fechas
-    flatpickr("#fecha", {
-        mode: "multiple",
-        dateFormat: "m-d-Y", // Cambiado a MM-DD-YYYY
-        minDate: "today",
-        maxDate: null,
-        defaultDate: null,
-        allowInput: true,
-        onChange: function(selectedDates, dateStr, instance) {
-            selectedDays = selectedDates.length;
-            console.log("Días seleccionados:", selectedDays);
-            calcularTotal();
-        },
-    });
-
+ $(document).ready(function() {
+    // Variables globales
     let jugadaCount = 0;
     let selectedTracks = 0;
     let selectedDays = 0;
+    let paymentCompleted = false;
+    let totalJugadasGlobal = 0;
+    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/YOUR_SHEETDB_API_KEY'; // Reemplaza con tu URL de SheetDB
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Asegúrate de que esta es la URL correcta
 
-    // Horarios de cierre por track
+    // Inicializar variables de roles y horarios (asegúrate de definir estas variables según tu lógica)
+    window.userRole = 'user'; // Esto debe ser definido dinámicamente según el usuario
     const horariosCierre = {
-        "USA": {
-            "New York Mid Day": "14:25",
-            "New York Evening": "22:25",
-            "Georgia Mid Day": "12:20",
-            "Georgia Evening": "18:45",
-            "New Jersey Mid Day": "12:54",
-            "New Jersey Evening": "22:50",
-            "Florida Mid Day": "13:25",
-            "Florida Evening": "21:30",
-            "Connecticut Mid Day": "13:35",
-            "Connecticut Evening": "22:20",
-            "Georgia Night": "23:20",
-            "Pensilvania AM": "12:55",
-            "Pensilvania PM": "18:20"
+        USA: {
+            // Define los horarios de cierre para cada track de USA
+            "Track1": "23:55",
+            "Track2": "23:55",
+            // Agrega más tracks según sea necesario
         },
         "Santo Domingo": {
-            "Real": "12:45",
-            "Gana mas": "14:25",
-            "Loteka": "19:30",
-            "Nacional": "20:30", // Domingos a las 17:50
-            "Quiniela Pale": "20:30", // Domingos a las 15:30
-            "Primera Día": "11:50",
-            "Suerte Día": "12:20",
-            "Lotería Real": "12:50",
-            "Suerte Tarde": "17:50",
-            "Lotedom": "17:50",
-            "Primera Noche": "19:50",
-            "Panama": "16:00",
-            // Horarios especiales para domingos
-            "Quiniela Pale Domingo": "15:30",
-            "Nacional Domingo": "17:50"
+            // Define los horarios de cierre para cada track de Santo Domingo
+            "TrackSD1": "23:55",
+            "TrackSD2": "23:55",
+            // Agrega más tracks según sea necesario
         },
-        "Venezuela": {
-            "Venezuela": "19:00" // Asumiendo un horario de cierre para Venezuela
+        Venezuela: {
+            // Define los horarios de cierre para cada track de Venezuela si es necesario
+            "TrackV1": "23:55",
+            // Agrega más tracks según sea necesario
         }
     };
-
-    // Límites de apuestas por modalidad
     const limitesApuesta = {
-        "Win 4": { "straight": 6, "box": 30, "combo": 50 },
-        "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
-        "Venezuela": { "straight": 100 },
-        "Venezuela-Pale": { "straight": 20 },
-        "Pulito": { "straight": 100 },
-        "Pulito-Combinado": { "straight": 100 },
-        "RD-Quiniela": { "straight": 100 }, // Actualizado a $100
-        "RD-Pale": { "straight": 20 }, // Se mantiene en $20
-        "Combo": { "combo": 50 } // Añadido
+        // Define los límites de apuesta para cada modalidad
+        "Pulito": { straight: 1000, box: 500 },
+        "Pulito-Combinado": { straight: 1000, box: 500, combo: 300 },
+        "Venezuela": { straight: 1500 },
+        "Win 4": { straight: 2000, box: 1000, combo: 600 },
+        "Peak 3": { straight: 1800, box: 900, combo: 500 },
+        "Combo": { combo: 700 },
+        "RD-Quiniela": { straight: 1200 },
+        "RD-Pale": { straight: 1200 },
+        // Agrega más modalidades según sea necesario
     };
 
-    // Modalidades de juego
-    function determinarModalidad(tracks, numero, fila) {
-        let modalidad = "-";
+    // Inicializar Bootstrap Modal
+    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
-        const esUSA = tracks.some(track => Object.keys(horariosCierre.USA).includes(track));
-        const esSD = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
-        const incluyeVenezuela = tracks.includes("Venezuela");
+    // **Credenciales de Square**
+    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con Production ID si es necesario
+    const locationId = 'L66P47FWVDFJS'; // Reemplaza con Production ID si es necesario
 
-        const longitud = numero.length;
-        const boxValue = fila.find(".box").val().trim();
-        const acceptableBoxValues = ["1", "2", "3"];
-        const acceptableBoxCombinations = ["1,2", "2,3", "1,3", "1,2,3"];
+    // Función para resaltar números duplicados
+    function resaltarDuplicados() {
+        const camposNumeros = document.querySelectorAll('.numeroApostado');
+        const valores = {};
+        const duplicados = new Set();
 
-        if (incluyeVenezuela && esUSA) {
-            if (longitud === 2) {
-                modalidad = "Venezuela";
-            } else if (longitud === 4) {
-                modalidad = "Venezuela-Pale";
-            }
-        } else if (esUSA && !esSD) {
-            if (longitud === 4) {
-                modalidad = "Win 4";
-            } else if (longitud === 3) {
-                modalidad = "Peak 3";
-            } else if (longitud === 2) {
-                if (acceptableBoxValues.includes(boxValue)) {
-                    modalidad = "Pulito";
-                } else if (acceptableBoxCombinations.includes(boxValue)) {
-                    modalidad = "Pulito-Combinado";
+        camposNumeros.forEach(campo => {
+            const valor = campo.value.trim();
+            if (valor) {
+                if (valores[valor]) {
+                    duplicados.add(valor);
+                } else {
+                    valores[valor] = true;
                 }
             }
-        } else if (esSD && !esUSA) {
-            if (longitud === 2) {
-                modalidad = "RD-Quiniela";
-            } else if (longitud === 4) {
-                modalidad = "RD-Pale";
-            }
-        }
-
-        return modalidad;
-    }
-
-    // Función para agregar una nueva jugada
-    function agregarJugada() {
-        if (jugadaCount >= 100) {
-            showAlert("Has alcanzado el máximo de 100 jugadas.", "danger");
-            return;
-        }
-        jugadaCount++;
-        const fila = `
-            <tr>
-                <td>${jugadaCount}</td>
-                <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
-                <td class="tipoJuego">-</td>
-                <td><input type="number" class="form-control straight" min="0" max="100.00" step="1" placeholder="Ej: 5"></td>
-                <td><input type="text" class="form-control box" placeholder="1,2,3"></td>
-                <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
-                <td class="total">0.00</td>
-            </tr>
-        `;
-
-        // Agregar la jugada al DOM
-        $("#tablaJugadas").append(fila);
-
-        // Agregar listeners a los nuevos campos
-        agregarListenersNumeroApostado();
-        resaltarDuplicados();
-
-        // Enfocar el cursor en el campo "Número Apostado" de la nueva jugada
-        $("#tablaJugadas tr:last .numeroApostado").focus();
-    }
-
-    // Agregar una jugada inicial
-    agregarJugada();
-
-    // Evento para agregar más jugadas
-    $("#agregarJugada").click(function() {
-        agregarJugada();
-    });
-
-    // Evento para eliminar la última jugada
-    $("#eliminarJugada").click(function() {
-        if (jugadaCount === 0) {
-            showAlert("No hay jugadas para eliminar.", "warning");
-            return;
-        }
-        // Remover la última fila
-        $("#tablaJugadas tr:last").remove();
-        jugadaCount--;
-        // Actualizar el número de jugadas
-        $("#tablaJugadas tr").each(function(index) {
-            $(this).find("td:first").text(index + 1);
         });
-        calcularTotal();
-    });
 
-    // Contador de tracks seleccionados y días
-    $(".track-checkbox").change(function() {
-        const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        // Excluir "Venezuela" del conteo de tracks para el cálculo del total
-        selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
-
-        calcularTotal();
-    });
-
-    // Evento para detectar cambios en los campos de entrada
-    $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box, .combo", function() {
-        const fila = $(this).closest("tr");
-        const num = fila.find(".numeroApostado").val();
-        const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        const modalidad = determinarModalidad(tracks, num, fila);
-        fila.find(".tipoJuego").text(modalidad);
-        actualizarPlaceholders(modalidad, fila);
-        calcularTotalJugada(fila);
-        calcularTotal();
-    });
-
-    // Función para actualizar los placeholders según la modalidad
-    function actualizarPlaceholders(modalidad, fila) {
-        if (limitesApuesta[modalidad]) {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-        } else {
-            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
-        }
-
-        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-            fila.find(".box").attr("placeholder", "1,2,3").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) {
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else if (modalidad === "Combo") {
-            fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
-        } else {
-            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
-        }
+        camposNumeros.forEach(campo => {
+            if (duplicados.has(campo.value.trim())) {
+                campo.classList.add('duplicado');
+            } else {
+                campo.classList.remove('duplicado');
+            }
+        });
     }
 
-    // Función para calcular el total de una jugada
-    function calcularTotalJugada(fila) {
-        const modalidad = fila.find(".tipoJuego").text();
-        const numero = fila.find(".numeroApostado").val();
-        if (!numero || numero.length < 2 || numero.length > 4) {
-            fila.find(".total").text("0.00");
-            return;
-        }
+    // Función para agregar listeners a los campos de número apostado
+    function agregarListenersNumeroApostado() {
+        const camposNumeros = document.querySelectorAll('.numeroApostado');
+        camposNumeros.forEach(campo => {
+            campo.removeEventListener('input', resaltarDuplicados);
+            campo.addEventListener('input', resaltarDuplicados);
+        });
+    }
 
-        const combinaciones = calcularCombinaciones(numero);
-        let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let boxVal = fila.find(".box").val().trim();
-        let box = parseFloat(boxVal) || 0;
-        let combo = parseFloat(fila.find(".combo").val()) || 0;
+    // Función para reiniciar el formulario
+    function resetForm() {
+        $("#lotteryForm")[0].reset();
+        $("#tablaJugadas").empty();
+        jugadaCount = 0;
+        selectedTracks = 0;
+        selectedDays = 0;
+        agregarJugada();
+        $("#totalJugadas").text("0.00");
+        $("#tablaJugadas tr").each(function() {
+            actualizarPlaceholders("-", $(this));
+        });
+        resaltarDuplicados();
+        paymentCompleted = false;
+    }
 
-        // Aplicar límites según modalidad
-        if (limitesApuesta[modalidad]) {
-            straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
-                box = Math.min(box, limitesApuesta[modalidad].box || box);
-            }
-            if (limitesApuesta[modalidad].combo !== undefined) {
-                combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
-            }
-        }
-
-        // Calcular total según modalidad
+    // Función para calcular el total de todas las jugadas
+    function calcularTotal() {
         let total = 0;
-        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-            const boxValues = boxVal.split(",").filter(value => value !== "");
-            const countBoxValues = boxValues.length;
-            total = straight * countBoxValues;
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            total = straight;
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + box + (combo * combinaciones);
-        } else if (modalidad === "Combo") {
-            total = combo;
-        } else {
-            total = straight + box + combo;
-        }
+        $(".total").each(function() {
+            total += parseFloat($(this).text()) || 0;
+        });
+        console.log("Total de jugadas antes de multiplicar:", total);
+        console.log("Tracks seleccionados:", selectedTracks);
+        console.log("Días seleccionados:", selectedDays);
 
-        fila.find(".total").text(total.toFixed(2));
+        if (selectedDays === 0) {
+            total = 0;
+        } else {
+            total = (total * selectedTracks * selectedDays).toFixed(2);
+        }
+        console.log("Total después de multiplicar:", total);
+        $("#totalJugadas").text(total);
     }
 
     // Función para calcular el número de combinaciones posibles
@@ -335,130 +136,31 @@ $(document).ready(function() {
         return factorial(totalDigits) / denominator;
     }
 
-    // Función para calcular el total de todas las jugadas
-    function calcularTotal() {
-        let total = 0;
-        $(".total").each(function() {
-            total += parseFloat($(this).text()) || 0;
-        });
-        console.log("Total de jugadas antes de multiplicar:", total);
-        console.log("Tracks seleccionados:", selectedTracks);
-        console.log("Días seleccionados:", selectedDays);
-
-        // Si no hay días seleccionados, el total es 0
-        if (selectedDays === 0) {
-            total = 0;
-        } else {
-            // Multiplicar por el número de tracks seleccionados y días
-            total = (total * selectedTracks * selectedDays).toFixed(2);
-        }
-        console.log("Total después de multiplicar:", total);
-        $("#totalJugadas").text(total);
+    // Función para actualizar placeholders (asegúrate de definir esta función según tu lógica)
+    function actualizarPlaceholders(value, fila) {
+        fila.find(".numeroApostado").attr("placeholder", value);
+        fila.find(".straight").attr("placeholder", value);
+        fila.find(".box").attr("placeholder", value);
+        fila.find(".combo").attr("placeholder", value);
     }
 
-    // Inicializar Bootstrap Modal
-    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
-
-    // **Credenciales de Square**
-    // Asegúrate de que estas credenciales corresponden al entorno correcto
-    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con Production ID si es necesario
-    const locationId = 'L66P47FWVDFJS'; // Reemplaza con Production ID si es necesario
-    const cashtag = '$VladichVasquez'; // Reemplaza con tu propio Cash App cashtag
-
-    // Función para resaltar números duplicados
-    function resaltarDuplicados() {
-        // Obtener todos los campos de número apostado
-        const camposNumeros = document.querySelectorAll('.numeroApostado');
-        const valores = {};
-        const duplicados = new Set();
-
-        // Recopilar valores y detectar duplicados
-        camposNumeros.forEach(campo => {
-            const valor = campo.value.trim();
-            if (valor) {
-                if (valores[valor]) {
-                    duplicados.add(valor);
-                } else {
-                    valores[valor] = true;
-                }
-            }
-        });
-
-        // Aplicar o remover la clase .duplicado
-        camposNumeros.forEach(campo => {
-            if (duplicados.has(campo.value.trim())) {
-                campo.classList.add('duplicado');
-            } else {
-                campo.classList.remove('duplicado');
-            }
-        });
-    }
-
-    // Función para agregar listeners a los campos de número apostado
-    function agregarListenersNumeroApostado() {
-        const camposNumeros = document.querySelectorAll('.numeroApostado');
-        camposNumeros.forEach(campo => {
-            campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
-            campo.addEventListener('input', resaltarDuplicados);
-        });
-    }
-
-    // Función para reiniciar el formulario
-    function resetForm() {
-        $("#lotteryForm")[0].reset();
-        $("#tablaJugadas").empty();
-        jugadaCount = 0;
-        selectedTracks = 0;
-        selectedDays = 0;
-        agregarJugada();
-        $("#totalJugadas").text("0.00");
-        // Resetear los placeholders
-        $("#tablaJugadas tr").each(function() {
-            actualizarPlaceholders("-", $(this));
-        });
+    // Función para agregar una nueva jugada (asegúrate de definir esta función según tu lógica)
+    function agregarJugada() {
+        jugadaCount++;
+        const fila = `
+            <tr>
+                <td>${jugadaCount}</td>
+                <td><input type="text" class="numeroApostado form-control" maxlength="4" /></td>
+                <td class="tipoJuego">-</td>
+                <td><input type="number" class="straight form-control" min="0" step="0.01" /></td>
+                <td><input type="text" class="box form-control" /></td>
+                <td><input type="number" class="combo form-control" min="0" step="0.01" /></td>
+                <td class="total">0.00</td>
+            </tr>
+        `;
+        $("#tablaJugadas").append(fila);
+        agregarListenersNumeroApostado();
         resaltarDuplicados();
-        // Resetear el estado de pago
-        paymentCompleted = false;
-    }
-
-    // Calcular y mostrar las horas límite junto a cada track
-    function mostrarHorasLimite() {
-        $(".cutoff-time").each(function() {
-            const track = $(this).data("track");
-
-            if (track === 'Venezuela') {
-                $(this).hide(); // Oculta el elemento del DOM
-                return;
-            }
-            let cierreStr = "";
-            if (horariosCierre.USA[track]) {
-                cierreStr = horariosCierre.USA[track];
-            }
-            else if (horariosCierre["Santo Domingo"][track]) {
-                cierreStr = horariosCierre["Santo Domingo"][track];
-            }
-            else if (horariosCierre.Venezuela[track]) {
-                cierreStr = horariosCierre.Venezuela[track];
-            }
-            if (cierreStr) {
-                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
-                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
-                const horas = cierre.getHours().toString().padStart(2, '0');
-                const minutos = cierre.getMinutes().toString().padStart(2, '0');
-                const horaLimite = `${horas}:${minutos}`;
-                $(this).text(`Hora límite: ${horaLimite}`);
-            }
-        });
-    }
-
-    // Función para obtener la hora límite de un track
-    function obtenerHoraLimite(track) {
-        for (let region in horariosCierre) {
-            if (horariosCierre[region][track]) {
-                return horariosCierre[region][track];
-            }
-        }
-        return null;
     }
 
     // Función para recopilar datos de las jugadas
@@ -484,7 +186,7 @@ $(document).ready(function() {
                 "Box ($)": $(this).find("td").eq(4).find("input").val() !== "" ? $(this).find("td").eq(4).find("input").val() : "",
                 "Combo ($)": $(this).find("td").eq(5).find("input").val() !== "" ? $(this).find("td").eq(5).find("input").val() : "",
                 "Total ($)": $(this).find("td").eq(6).text(),
-                "Payment Method": "", // Se actualizará después del pago
+                "Payment Method": "",
                 "Jugada Number": jugadaNumber,
                 "Timestamp": timestamp
             };
@@ -520,12 +222,16 @@ $(document).ready(function() {
             console.log("SheetDB:", sheetDBResponse[0]);
             console.log("Backend:", backendResponse[0]);
 
-            // Asumimos que el backend devuelve el ticketNumber o ID creado
-            const createdBackendData = backendResponse[0];
-            const ticketNumber = createdBackendData.ticketNumber || generarNumeroUnico(); // Asegúrate de que el backend devuelve 'ticketNumber'
-
-            // Llamar al callback con éxito y ticketNumber
-            if (callback) callback(true, ticketNumber);
+            // Verificar si el backend devuelve 'ticketNumber'
+            if (backendResponse[0] && backendResponse[0].ticketNumber) {
+                const ticketNumber = backendResponse[0].ticketNumber;
+                console.log("Ticket Number recibido del backend:", ticketNumber);
+                if (callback) callback(true, ticketNumber);
+            } else {
+                console.error("El backend no devolvió 'ticketNumber'.");
+                showAlert("Error al generar el ticket. Por favor, inténtalo de nuevo.", "danger");
+                if (callback) callback(false, null);
+            }
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
             console.error("Detalles del Error:", jqXHR.responseText);
@@ -534,65 +240,62 @@ $(document).ready(function() {
         });
     }
 
-    // Función para confirmar y guardar el ticket
-    function confirmarYGuardarTicket(metodoPago, ticketNumber) {
-        // Limpiar alertas anteriores
-        $("#ticketAlerts").empty();
-
-        // Actualizar el método de pago en el backend
-        $.ajax({
-            url: `${BACKEND_API_URL}/${ticketNumber}`,
-            method: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify({ metodoPago: metodoPago }),
-            success: function(response) {
-                console.log("Método de pago actualizado:", response);
-                showAlert("Ticket confirmado e impreso exitosamente.", "success");
-
-                // Imprimir el ticket
-                window.print();
-
-                // Descargar el ticket como imagen
-                html2canvas(document.querySelector("#preTicket")).then(canvas => {
-                    const imgData = canvas.toDataURL("image/png");
-                    const link = document.createElement('a');
-                    link.href = imgData;
-                    link.download = 'ticket.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    // Compartir el ticket si la API está disponible
-                    if (navigator.share) {
-                        navigator.share({
-                            title: 'Tu Ticket de Apuesta',
-                            text: 'Aquí está tu ticket de apuesta.',
-                            files: [dataURLtoFile(imgData, 'ticket.png')]
-                        }).then(() => {
-                            console.log('Ticket compartido exitosamente.');
-                        }).catch((error) => {
-                            console.error('Error al compartir el ticket:', error);
-                        });
-                    }
-                });
-
-                // Cerrar el modal
-                ticketModal.hide();
-
-                // Reiniciar el formulario
-                resetForm();
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error("Error al actualizar el método de pago:", textStatus, errorThrown);
-                showAlert("Hubo un problema al confirmar el ticket. Por favor, inténtalo de nuevo.", "danger");
-            }
-        });
+    // Función para mostrar alertas
+    function showAlert(message, type) {
+        const alertHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>`;
+        $("#ticketAlerts").html(alertHTML);
     }
 
     // Función para generar número único de ticket de 8 dígitos
     function generarNumeroUnico() {
         return Math.floor(10000000 + Math.random() * 90000000).toString();
     }
+
+    // Función para obtener la hora límite de un track
+    function obtenerHoraLimite(track) {
+        for (let region in horariosCierre) {
+            if (horariosCierre[region][track]) {
+                return horariosCierre[region][track];
+            }
+        }
+        return null;
+    }
+
+    // Función para calcular y mostrar las horas límite junto a cada track
+    function mostrarHorasLimite() {
+        $(".cutoff-time").each(function() {
+            const track = $(this).data("track");
+
+            if (track === 'Venezuela') {
+                $(this).hide();
+                return;
+            }
+            let cierreStr = "";
+            if (horariosCierre.USA[track]) {
+                cierreStr = horariosCierre.USA[track];
+            }
+            else if (horariosCierre["Santo Domingo"][track]) {
+                cierreStr = horariosCierre["Santo Domingo"][track];
+            }
+            else if (horariosCierre.Venezuela[track]) {
+                cierreStr = horariosCierre.Venezuela[track];
+            }
+            if (cierreStr) {
+                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
+                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
+                const horas = cierre.getHours().toString().padStart(2, '0');
+                const minutos = cierre.getMinutes().toString().padStart(2, '0');
+                const horaLimite = `${horas}:${minutos}`;
+                $(this).text(`Hora límite: ${horaLimite}`);
+            }
+        });
+    }
+
+    // Inicializar las horas límite al cargar la página
+    mostrarHorasLimite();
 
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
@@ -770,12 +473,13 @@ $(document).ready(function() {
             $("#ticketJugadas").append(fila);
         });
         $("#ticketTotal").text($("#totalJugadas").text());
-        // Generar número de ticket único de 8 dígitos
+
+        // Generar número de ticket único de 8 dígitos (temporario hasta recibir del backend)
         const numeroTicket = generarNumeroUnico();
         $("#numeroTicket").text(numeroTicket);
 
         // Generar la fecha y hora de transacción
-        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
+        const fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
         $("#ticketTransaccion").text(fechaTransaccion);
 
         // Generar código QR
@@ -802,25 +506,26 @@ $(document).ready(function() {
         // Enviar los datos al backend y SheetDB
         enviarFormulario(jugadasData, function(success, backendTicketNumber) {
             if (success) {
+                console.log(`Ticket Number recibido: ${backendTicketNumber}`);
                 // Asignar el ticketNumber correcto
                 $("#numeroTicket").text(backendTicketNumber);
-                $("#ticketJugadas tr").each(function() {
-                    $(this).find("td").eq(0).text(jugadaCount);
+                $("#ticketJugadas tr").each(function(index) {
+                    $(this).find("td").eq(0).text(index + 1); // Actualizar jugadaCount si es necesario
                 });
+                // Mostrar el modal aquí después de recibir el ticketNumber
+                ticketModal.show();
             } else {
                 showAlert("Error al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
             }
         });
-
-        // Mostrar el modal de previsualización del ticket
-        ticketModal.show();
     });
 
     // Evento para iniciar el pago desde el modal
     $("#iniciarPago").click(function() {
         if (window.userRole !== 'user') {
             // Para otros roles, asumimos pago en efectivo
-            confirmarYGuardarTicket('Efectivo', $("#numeroTicket").text());
+            const ticketNumber = $("#numeroTicket").text();
+            confirmarYGuardarTicket('Efectivo', ticketNumber);
             return;
         }
 
@@ -881,7 +586,8 @@ $(document).ready(function() {
                         paymentCompleted = true; // Marcar como pago completado
                         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
                         // Proceder a guardar las jugadas y generar el ticket final
-                        confirmarYGuardarTicket('Cash App', $("#numeroTicket").text());
+                        const ticketNumber = $("#numeroTicket").text();
+                        confirmarYGuardarTicket('Cash App', ticketNumber);
                     } else {
                         showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
@@ -889,8 +595,8 @@ $(document).ready(function() {
                 } else if (tokenResult.status === 'CANCEL') {
                     showAlert('Pago cancelado por el usuario.', "warning");
                 } else {
-                    showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
-                    console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
+                    showAlert('Error al tokenizar el pago: ' + (tokenResult.errors[0] ? tokenResult.errors[0].message : 'Desconocido'), "danger");
+                    console.error('Error en la tokenización del pago:', tokenResult.errors[0] ? tokenResult.errors[0].message : 'Desconocido');
                 }
             });
 
@@ -934,24 +640,85 @@ $(document).ready(function() {
         }
     }
 
-    // Función para confirmar y guardar el ticket (ya está definida correctamente)
-    // function confirmarYGuardarTicket(metodoPago, ticketNumber) { ... }
+    // Función para confirmar y guardar el ticket
+    function confirmarYGuardarTicket(metodoPago, ticketNumber) {
+        console.log(`Confirmando y guardando el ticket número: ${ticketNumber} con método de pago: ${metodoPago}`);
 
-    // Función para generar número único de ticket de 8 dígitos (ya está definida correctamente)
-    // function generarNumeroUnico() { ... }
+        // Limpiar alertas anteriores
+        $("#ticketAlerts").empty();
 
-    // Función para resaltar números duplicados (ya está definida correctamente)
-    // function resaltarDuplicados() { ... }
+        // Actualizar el método de pago en el backend
+        $.ajax({
+            url: `${BACKEND_API_URL}/${ticketNumber}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ metodoPago: metodoPago }),
+            success: function(response) {
+                console.log("Método de pago actualizado:", response);
+                showAlert("Ticket confirmado e impreso exitosamente.", "success");
 
-    // Función para agregar listeners a los campos de número apostado (ya está definida correctamente)
-    // function agregarListenersNumeroApostado() { ... }
+                // Imprimir el ticket
+                window.print();
 
-    // Función para reiniciar el formulario (ya está definida correctamente)
-    // function resetForm() { ... }
+                // Descargar el ticket como imagen
+                html2canvas(document.querySelector("#preTicket")).then(canvas => {
+                    const imgData = canvas.toDataURL("image/png");
+                    const link = document.createElement('a');
+                    link.href = imgData;
+                    link.download = 'ticket.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
 
-    // Calcular y mostrar las horas límite junto a cada track (ya está definida correctamente)
-    // function mostrarHorasLimite() { ... }
+                    // Compartir el ticket si la API está disponible
+                    if (navigator.share) {
+                        navigator.share({
+                            title: 'Tu Ticket de Apuesta',
+                            text: 'Aquí está tu ticket de apuesta.',
+                            files: [dataURLtoFile(imgData, 'ticket.png')]
+                        }).then(() => {
+                            console.log('Ticket compartido exitosamente.');
+                        }).catch((error) => {
+                            console.error('Error al compartir el ticket:', error);
+                        });
+                    }
+                });
 
-    // Llamar a la función para mostrar las horas límite al cargar la página
-    mostrarHorasLimite();
+                // Cerrar el modal
+                ticketModal.hide();
+
+                // Reiniciar el formulario
+                resetForm();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("Error al actualizar el método de pago:", textStatus, errorThrown);
+                console.error("Detalles del Error:", jqXHR.responseText);
+                let mensajeError = "Hubo un problema al confirmar el ticket. Por favor, inténtalo de nuevo.";
+                if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                    mensajeError = jqXHR.responseJSON.error;
+                }
+                showAlert(mensajeError, "danger");
+            }
+        });
+    }
+
+    // Función para convertir dataURL a File (para compartir)
+    function dataURLtoFile(dataurl, filename) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, {type:mime});
+    }
+
+    // Función para detectar si el dispositivo es móvil
+    function isMobileDevice() {
+        return /Mobi|Android/i.test(navigator.userAgent);
+    }
+
+    // Inicializar listeners y funciones al cargar la página
+    agregarJugada();
+    agregarListenersNumeroApostado();
+    resaltarDuplicados();
 });
