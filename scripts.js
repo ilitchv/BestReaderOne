@@ -613,22 +613,6 @@
         });
         $("#ticketTotal").text($("#totalJugadas").text());
 
-        // Generar número de ticket único y código QR
-        const numeroTicket = generarNumeroUnico();
-        $("#numeroTicket").text(numeroTicket);
-
-        // Generar la fecha y hora de transacción
-        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
-        $("#ticketTransaccion").text(fechaTransaccion);
-
-        // Generar código QR
-        $("#qrcode").empty(); // Limpiar el contenedor anterior
-        new QRCode(document.getElementById("qrcode"), {
-            text: numeroTicket,
-            width: 128,
-            height: 128,
-        });
-
         // Mostrar las fechas de apuesta en el ticket
         $("#ticketFecha").text(fecha);
         console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());
@@ -698,8 +682,24 @@
 
     // Función para confirmar y guardar el ticket
     function confirmarYGuardarTicket(metodoPago) {
+        // Generar número de ticket único y código QR
+        const numeroTicket = generarNumeroUnico();
+        $("#numeroTicket").text(numeroTicket);
+
+        // Generar la fecha y hora de transacción
+        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
+        $("#ticketTransaccion").text(fechaTransaccion);
+
+        // Generar código QR
+        $("#qrcode").empty(); // Limpiar el contenedor anterior
+        new QRCode(document.getElementById("qrcode"), {
+            text: numeroTicket,
+            width: 128,
+            height: 128,
+        });
+
         // Datos comunes a todas las jugadas
-        const ticketNumber = $("#numeroTicket").text();
+        const ticketNumber = numeroTicket;
         const transactionDateTime = fechaTransaccion;
         const betDates = $("#ticketFecha").text();
         const tracks = $("#ticketTracks").text();
