@@ -393,23 +393,16 @@
                 }
             });
 
-            if (isMobileDevice()) {
-                // Para dispositivos móviles, iniciar el flujo de pago y guardar el estado
-                // Guardar el estado necesario en localStorage
-                localStorage.setItem('ticketData', JSON.stringify(ticketData));
+            // Siempre adjuntamos el botón de Cash App Pay
+            const buttonOptions = {
+                shape: 'semiround',
+                width: 'full',
+            };
+            await cashAppPay.attach('#cash-app-pay', buttonOptions);
+            console.log('Cash App Pay adjuntado al contenedor.');
 
-                // Iniciar el flujo de pago
-                const result = await cashAppPay.start();
-                console.log('Resultado de cashAppPay.start():', result);
-            } else {
-                // Para desktop, renderizar el botón de Cash App Pay
-                const buttonOptions = {
-                    shape: 'semiround',
-                    width: 'full',
-                };
-                await cashAppPay.attach('#cash-app-pay', buttonOptions);
-                console.log('Cash App Pay adjuntado al contenedor.');
-            }
+            // Guardar el estado necesario en localStorage
+            localStorage.setItem('ticketData', JSON.stringify(ticketData));
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
