@@ -360,9 +360,12 @@ $(document).ready(function() {
                 },
             });
 
+            const referenceId = 'my-distinct-reference-id-' + Date.now();
+            const redirectURL = window.location.origin + window.location.pathname;
+
             const options = {
-                redirectURL: window.location.origin + window.location.pathname, // Eliminamos '?payment=success'
-                referenceId: 'my-distinct-reference-id-' + Date.now(),
+                redirectURL: `${redirectURL}?referenceId=${referenceId}`,
+                referenceId: referenceId,
             };
 
             const cashAppPay = await payments.cashAppPay(paymentRequest, options);
@@ -376,7 +379,7 @@ $(document).ready(function() {
                     const token = tokenResult.token;
                     console.log('Tokenización exitosa:', token);
                     // Procesar el pago en el backend
-                    const paymentResult = await processPayment(token, totalAmount);
+                    const paymentResult = await processPayment(token, totalAmount, referenceId);
                     if (paymentResult.success) {
                         console.log('Pago procesado exitosamente.');
                         paymentCompleted = true; // Marcar como pago completado
@@ -404,8 +407,9 @@ $(document).ready(function() {
             await cashAppPay.attach('#cash-app-pay', buttonOptions);
             console.log('Cash App Pay adjuntado al contenedor.');
 
-            // No es necesario guardar el estado en localStorage aquí
-            // localStorage.setItem('ticketData', JSON.stringify(ticketData));
+            // Almacenar ticketData y referenceId en localStorage
+            ticketData.referenceId = referenceId;
+            localStorage.setItem('ticketData', JSON.stringify(ticketData));
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
@@ -414,14 +418,14 @@ $(document).ready(function() {
     }
 
     // Función para procesar el pago en el backend
-    async function processPayment(token, amount) {
+    async function processPayment(token, amount, referenceId) {
         try {
             const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ sourceId: token, amount: amount }),
+                body: JSON.stringify({ sourceId: token, amount: amount, referenceId: referenceId }),
             });
 
             if (!response.ok) {
@@ -901,5 +905,81 @@ $(document).ready(function() {
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
+
+    // Verificar si hay referencia de pago y restaurar el estado al cargar la página
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const referenceId = urlParams.get('referenceId');
+
+        if (referenceId) {
+            // Consultar el backend para verificar el estado del pago
+            verificarEstadoPago(referenceId);
+        }
+    });
+
+    // Función para verificar el estado del pago en el backend
+    async function verificarEstadoPago(referenceId) {
+        try {
+            const response = await fetch(`${BACKEND_API_URL}/estado-pago?referenceId=${referenceId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Error al consultar el estado del pago: ${errorText}`);
+            }
+
+            const result = await response.json();
+
+            if (result.paymentStatus === 'COMPLETED') {
+                // El pago fue exitoso
+                paymentCompleted = true;
+                showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
+                // Restaurar el estado y proceder a confirmar y guardar el ticket
+                restaurarEstadoYConfirmarTicket('Cash App');
+            } else {
+                // El pago no fue exitoso o está pendiente
+                showAlert("El pago no se completó o está pendiente. Por favor, inténtalo de nuevo.", "warning");
+            }
+        } catch (error) {
+            console.error('Error al verificar el estado del pago:', error);
+            showAlert('Error al verificar el estado del pago: ' + error.message, 'danger');
+        }
+    }
+
+    // Función para restaurar el estado y confirmar el ticket
+    function restaurarEstadoYConfirmarTicket(metodoPago) {
+        const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
+        if (storedTicketData) {
+            // Restaurar datos del ticket
+            $("#fecha").val(storedTicketData.fecha);
+            $("#tablaJugadas").html(storedTicketData.plays);
+            $("#ticketJugadas").html(storedTicketData.ticketJugadas);
+            $("#ticketTracks").text(storedTicketData.ticketTracks);
+            $("#ticketFecha").text(storedTicketData.ticketFecha);
+            selectedDays = storedTicketData.selectedDays;
+            selectedTracks = storedTicketData.selectedTracks;
+            totalJugadasGlobal = storedTicketData.totalAmount;
+            $("#totalJugadas").text(totalJugadasGlobal);
+
+            // Marcar paymentCompleted como true
+            paymentCompleted = true;
+
+            // Mostrar el modal nuevamente
+            ticketModal.show();
+
+            // Proceder a confirmar y guardar el ticket
+            confirmarYGuardarTicket(metodoPago);
+
+            // Limpiar datos almacenados
+            localStorage.removeItem('ticketData');
+        } else {
+            console.error('No se encontraron datos del ticket en localStorage.');
+            showAlert('No se pudo restaurar el estado del ticket. Por favor, inténtalo de nuevo.', 'danger');
+        }
+    }
 
 });
