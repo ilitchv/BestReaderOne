@@ -1,7 +1,8 @@
  $(document).ready(function() {
+
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Tu URL del backend
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Tu URL del backend en Render
 
     // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
@@ -30,8 +31,8 @@
     console.log('User Role:', userRole);
 
     // Credenciales de Cash App Pay
-    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con tu ID de producción si es necesario
-    const locationId = 'L66P47FWVDFJS'; // Reemplaza con tu ID de producción si es necesario
+    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con tu Application ID de producción si es necesario
+    const locationId = 'L66P47FWVDFJS'; // Reemplaza con tu Location ID de producción si es necesario
 
     // Horarios de cierre por track
     const horariosCierre = {
@@ -145,9 +146,14 @@
             </tr>
         `;
 
+        // Agregar la jugada al DOM
         $("#tablaJugadas").append(fila);
+
+        // Agregar listeners a los nuevos campos
         agregarListenersNumeroApostado();
         resaltarDuplicados();
+
+        // Enfocar el cursor en el campo "Número Apostado" de la nueva jugada
         $("#tablaJugadas tr:last .numeroApostado").focus();
     }
 
@@ -165,8 +171,10 @@
             showAlert("No hay jugadas para eliminar.", "warning");
             return;
         }
+        // Remover la última fila
         $("#tablaJugadas tr:last").remove();
         jugadaCount--;
+        // Actualizar el número de jugadas
         $("#tablaJugadas tr").each(function(index) {
             $(this).find("td:first").text(index + 1);
         });
@@ -289,13 +297,15 @@
         $(".total").each(function() {
             total += parseFloat($(this).text()) || 0;
         });
-        console.log("Total antes de multiplicar:", total);
+        console.log("Total de jugadas antes de multiplicar:", total);
         console.log("Tracks seleccionados:", selectedTracks);
         console.log("Días seleccionados:", selectedDays);
 
+        // Si no hay días seleccionados, el total es 0
         if (selectedDays === 0) {
             total = 0;
         } else {
+            // Multiplicar por el número de tracks seleccionados y días
             total = (total * selectedTracks * selectedDays).toFixed(2);
         }
         console.log("Total después de multiplicar:", total);
@@ -353,7 +363,7 @@
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
-            const cashAppPay = await payments.cashAppPay(paymentRequest);
+            const cashAppPay = await payments.cashAppPay(paymentRequest, options);
 
             console.log('Cash App Pay creado:', cashAppPay);
 
@@ -384,7 +394,11 @@
             });
 
             if (isMobileDevice()) {
-                // Para dispositivos móviles, iniciar el flujo de pago
+                // Para dispositivos móviles, iniciar el flujo de pago y guardar el estado
+                // Guardar el estado necesario en localStorage
+                localStorage.setItem('ticketData', JSON.stringify(ticketData));
+
+                // Iniciar el flujo de pago
                 const result = await cashAppPay.start();
                 console.log('Resultado de cashAppPay.start():', result);
             } else {
@@ -599,8 +613,21 @@
         });
         $("#ticketTotal").text($("#totalJugadas").text());
 
-        // No generar número de ticket ni código QR aquí
-        // Se generarán después de que el pago sea exitoso
+        // Generar número de ticket único y código QR
+        const numeroTicket = generarNumeroUnico();
+        $("#numeroTicket").text(numeroTicket);
+
+        // Generar la fecha y hora de transacción
+        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
+        $("#ticketTransaccion").text(fechaTransaccion);
+
+        // Generar código QR
+        $("#qrcode").empty(); // Limpiar el contenedor anterior
+        new QRCode(document.getElementById("qrcode"), {
+            text: numeroTicket,
+            width: 128,
+            height: 128,
+        });
 
         // Mostrar las fechas de apuesta en el ticket
         $("#ticketFecha").text(fecha);
@@ -622,7 +649,7 @@
             selectedTracks: selectedTracks
         };
 
-        // Almacenar datos en localStorage
+        // Guardar ticketData en localStorage
         localStorage.setItem('ticketData', JSON.stringify(ticketData));
 
         // Mostrar el modal usando Bootstrap 5
@@ -665,34 +692,14 @@
             }
         } else {
             // Para otros roles, asumimos pago en efectivo
-            paymentCompleted = true; // Marcar como pago completado
             confirmarYGuardarTicket('Efectivo');
         }
     });
 
     // Función para confirmar y guardar el ticket
     function confirmarYGuardarTicket(metodoPago) {
-        // Generar número de ticket único y código QR
-        const numeroTicket = generarNumeroUnico();
-        $("#numeroTicket").text(numeroTicket);
-
-        // Generar la fecha y hora de transacción
-        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
-        $("#ticketTransaccion").text(fechaTransaccion);
-
-        // Generar código QR
-        $("#qrcode").empty(); // Limpiar el contenedor anterior
-        new QRCode(document.getElementById("qrcode"), {
-            text: numeroTicket,
-            width: 128,
-            height: 128,
-        });
-
-        // Actualizar ticketData con nueva información
-        ticketData.numeroTicket = numeroTicket;
-        ticketData.fechaTransaccion = fechaTransaccion;
-
         // Datos comunes a todas las jugadas
+        const ticketNumber = $("#numeroTicket").text();
         const transactionDateTime = fechaTransaccion;
         const betDates = $("#ticketFecha").text();
         const tracks = $("#ticketTracks").text();
@@ -704,10 +711,11 @@
 
         // Recorrer cada jugada y preparar los datos
         $("#ticketJugadas tr").each(function() {
+            // Generar número único de 8 dígitos para la jugada
             const jugadaNumber = generarNumeroUnico();
 
             const jugadaData = {
-                "Ticket Number": numeroTicket,
+                "Ticket Number": ticketNumber,
                 "Transaction DateTime": transactionDateTime,
                 "Bet Dates": betDates,
                 "Tracks": tracks,
@@ -722,6 +730,7 @@
                 "Timestamp": timestamp
             };
 
+            // Añadir la jugada al array
             jugadasData.push(jugadaData);
         });
 
@@ -765,26 +774,15 @@
 
             // Opcional: Usar html2canvas para capturar solo el ticket
             html2canvas(document.querySelector("#preTicket")).then(canvas => {
+                // Obtener la imagen en formato data URL
                 const imgData = canvas.toDataURL("image/png");
+                // Crear un enlace para descargar la imagen
                 const link = document.createElement('a');
                 link.href = imgData;
                 link.download = 'ticket.png';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
-                // Opcional: Compartir el ticket si la API está disponible
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'Tu Ticket de Apuesta',
-                        text: 'Aquí está tu ticket de apuesta.',
-                        files: [dataURLtoFile(imgData, 'ticket.png')]
-                    }).then(() => {
-                        console.log('Ticket compartido exitosamente.');
-                    }).catch((error) => {
-                        console.error('Error al compartir el ticket:', error);
-                    });
-                }
             });
 
             // Cerrar el modal
@@ -810,20 +808,17 @@
         selectedDays = 0;
         agregarJugada();
         $("#totalJugadas").text("0.00");
+        // Resetear los placeholders
         $("#tablaJugadas tr").each(function() {
             actualizarPlaceholders("-", $(this));
         });
         resaltarDuplicados();
+        // Resetear el estado de pago
         paymentCompleted = false;
         cashAppPayInitialized = false;
         // Limpiar datos almacenados
         localStorage.removeItem('ticketData');
     }
-
-    // Evento para resetear el formulario
-    $("#resetForm").click(function() {
-        resetForm();
-    });
 
     // Función para mostrar las horas límite junto a cada track
     function mostrarHorasLimite() {
@@ -831,7 +826,7 @@
             const track = $(this).data("track");
 
             if (track === 'Venezuela') {
-                $(this).hide();
+                $(this).hide(); // Oculta el elemento del DOM
                 return;
             }
             let cierreStr = "";
@@ -846,7 +841,7 @@
             }
             if (cierreStr) {
                 const cierre = new Date(`1970-01-01T${cierreStr}:00`);
-                cierre.setMinutes(cierre.getMinutes() - 5);
+                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
                 const horas = cierre.getHours().toString().padStart(2, '0');
                 const minutos = cierre.getMinutes().toString().padStart(2, '0');
                 const horaLimite = `${horas}:${minutos}`;
@@ -867,10 +862,12 @@
 
     // Función para resaltar números duplicados
     function resaltarDuplicados() {
+        // Obtener todos los campos de número apostado
         const camposNumeros = document.querySelectorAll('.numeroApostado');
         const valores = {};
         const duplicados = new Set();
 
+        // Recopilar valores y detectar duplicados
         camposNumeros.forEach(campo => {
             const valor = campo.value.trim();
             if (valor) {
@@ -882,6 +879,7 @@
             }
         });
 
+        // Aplicar o remover la clase .duplicado
         camposNumeros.forEach(campo => {
             if (duplicados.has(campo.value.trim())) {
                 campo.classList.add('duplicado');
@@ -895,29 +893,19 @@
     function agregarListenersNumeroApostado() {
         const camposNumeros = document.querySelectorAll('.numeroApostado');
         camposNumeros.forEach(campo => {
-            campo.removeEventListener('input', resaltarDuplicados);
+            campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
             campo.addEventListener('input', resaltarDuplicados);
         });
     }
 
-    // Función para convertir dataURL a File (para compartir)
-    function dataURLtoFile(dataurl, filename) {
-        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new File([u8arr], filename, {type:mime});
-    }
-
     // Agregar listeners al cargar la página
     agregarListenersNumeroApostado();
-    resaltarDuplicados();
+    resaltarDuplicados(); // Resaltar duplicados al cargar, si los hay
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Verificar si hay éxito de pago y restaurar el estado
+    // Verificar si hay éxito de pago y restaurar el estado al cargar la página
     $(document).ready(function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('payment') === 'success') {
