@@ -1,4 +1,6 @@
- $(document).ready(function() {
+ // scripts.js
+
+$(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
@@ -27,7 +29,7 @@
     let totalJugadasGlobal = 0;
     let fechaTransaccion = '';
     let ticketData = {}; // Objeto para almacenar datos del ticket y preservar el estado
-    const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
+    const userRole = window.userRole || 'user'; // Obtenemos el rol desde la variable global
     console.log('User Role:', userRole);
 
     // Credenciales de Cash App Pay
@@ -359,7 +361,7 @@
             });
 
             const options = {
-                redirectURL: window.location.origin + window.location.pathname + '?payment=success',
+                redirectURL: window.location.origin + window.location.pathname, // Eliminamos '?payment=success'
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
@@ -387,6 +389,7 @@
                     }
                 } else if (tokenResult.status === 'CANCEL') {
                     showAlert('Pago cancelado por el usuario.', "warning");
+                    // No procedemos a generar el ticket
                 } else {
                     showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
                     console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
@@ -401,8 +404,8 @@
             await cashAppPay.attach('#cash-app-pay', buttonOptions);
             console.log('Cash App Pay adjuntado al contenedor.');
 
-            // Guardar el estado necesario en localStorage
-            localStorage.setItem('ticketData', JSON.stringify(ticketData));
+            // No es necesario guardar el estado en localStorage aquí
+            // localStorage.setItem('ticketData', JSON.stringify(ticketData));
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
@@ -626,25 +629,26 @@
             selectedTracks: selectedTracks
         };
 
-        // Guardar ticketData en localStorage
-        localStorage.setItem('ticketData', JSON.stringify(ticketData));
-
         // Mostrar el modal usando Bootstrap 5
         ticketModal.show();
 
         // Ajustar el modal según el rol del usuario
         if (userRole === 'user') {
-            // Inicializar Cash App Pay
+            // Mostrar el contenedor de Cash App Pay
+            $('#cashAppPayContainer').show();
+            // Ocultar el botón "Confirmar e Imprimir"
+            $('#confirmarTicket').hide();
+            // Inicializar Cash App Pay si no está inicializado
             if (!cashAppPayInitialized) {
                 console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
                 initializeCashAppPay(totalJugadasGlobal);
                 cashAppPayInitialized = true;
             }
         } else {
-            // Ocultar botón de pago para roles distintos de 'user'
-            $('#cash-app-pay').empty();
+            // Ocultar el contenedor de Cash App Pay
+            $('#cashAppPayContainer').hide();
             cashAppPayInitialized = false;
-            // Asegurar que el botón 'Confirmar e Imprimir' esté visible
+            // Mostrar el botón "Confirmar e Imprimir"
             $('#confirmarTicket').show();
         }
     });
@@ -897,34 +901,5 @@
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
-
-    // Verificar si hay éxito de pago y restaurar el estado al cargar la página
-    $(document).ready(function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('payment') === 'success') {
-            const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
-            if (storedTicketData) {
-                console.log('Restaurando estado después de pago exitoso.');
-                // Restaurar datos del ticket
-                $("#fecha").val(storedTicketData.fecha);
-                $("#tablaJugadas").html(storedTicketData.plays);
-                $("#ticketJugadas").html(storedTicketData.ticketJugadas);
-                $("#ticketTracks").text(storedTicketData.ticketTracks);
-                $("#ticketFecha").text(storedTicketData.ticketFecha);
-                selectedDays = storedTicketData.selectedDays;
-                selectedTracks = storedTicketData.selectedTracks;
-                totalJugadasGlobal = storedTicketData.totalAmount;
-                $("#totalJugadas").text(totalJugadasGlobal);
-                // Marcar paymentCompleted como true
-                paymentCompleted = true;
-                // Mostrar el modal nuevamente
-                ticketModal.show();
-                // Proceder a confirmar y guardar el ticket
-                confirmarYGuardarTicket('Cash App');
-            } else {
-                console.error('No se encontraron datos del ticket en localStorage.');
-            }
-        }
-    });
 
 });
