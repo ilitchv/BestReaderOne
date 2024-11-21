@@ -29,7 +29,8 @@ $(document).ready(function() {
     let totalJugadasGlobal = 0;
     let fechaTransaccion = '';
     let ticketData = {}; // Objeto para almacenar datos del ticket y preservar el estado
-    const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
+    const userRole = window.userRole || 'user'; // Obtiene el rol del usuario del window.userRole
+
     console.log('User Role:', userRole);
 
     // Credenciales de Cash App Pay
@@ -385,6 +386,10 @@ $(document).ready(function() {
                         confirmarYGuardarTicket('Cash App');
                         // Cerrar el modal automáticamente
                         ticketModal.hide();
+                        // Mostrar el botón Confirmar e Imprimir para roles distintos a 'user'
+                        if (userRole !== 'user') {
+                            $("#confirmarTicketContainer").show();
+                        }
                     } else {
                         showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
@@ -658,8 +663,10 @@ $(document).ready(function() {
         if (userRole === 'user') {
             // Mostrar el contenedor de Cash App Pay
             $('#cash-app-pay-container').show();
-            // Ocultar el botón "Confirmar e Imprimir"
-            $('#confirmarTicket').hide();
+            // Ocultar el botón "Confirmar e Imprimir" para usuarios 'user'
+            $('#confirmarTicketContainer').hide();
+            // Ocultar el botón "Editar" si es necesario
+            // $('#iniciarPago').hide(); // Si decides eliminarlo, no es necesario
             // Inicializar Cash App Pay
             if (!cashAppPayInitialized) {
                 console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
@@ -667,12 +674,10 @@ $(document).ready(function() {
                 cashAppPayInitialized = true;
             }
         } else {
-            // Ocultar botón de pago para roles distintos de 'user'
-            $('#cash-app-pay').empty();
+            // Ocultar el contenedor de Cash App Pay para roles distintos a 'user'
             $('#cash-app-pay-container').hide();
-            cashAppPayInitialized = false;
-            // Asegurar que el botón 'Confirmar e Imprimir' esté visible
-            $('#confirmarTicket').show();
+            // Mostrar el botón "Confirmar e Imprimir" para roles distintos a 'user'
+            $('#confirmarTicketContainer').show();
         }
     });
 
@@ -838,6 +843,8 @@ $(document).ready(function() {
         cashAppPayInitialized = false;
         // Limpiar datos almacenados
         localStorage.removeItem('ticketData');
+        // Ocultar el botón Confirmar e Imprimir
+        $("#confirmarTicketContainer").hide();
     }
 
     // Función para mostrar las horas límite junto a cada track
