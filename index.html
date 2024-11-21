@@ -415,15 +415,16 @@
                             <div class="w-100 mb-2">
                                 <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
                             </div>
-                            <div class="w-100 mb-2">
-                                <button type="button" class="btn btn-primary w-100" id="iniciarPago">
-                                    <i class="bi bi-cash-stack"></i> Pagar con Cash App Pay
-                                </button>
-                            </div>
                             <!-- Contenedor para el Botón de Cash App Pay -->
                             <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
                                 <!-- Aquí se insertará el botón de Cash App Pay -->
                                 <div id="cash-app-pay"></div>
+                            </div>
+                            <!-- Botón para Confirmar e Imprimir (visible para roles distintos a 'user') -->
+                            <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
+                                <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
+                                    <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
+                                </button>
                             </div>
                         </div>
                     </div>
