@@ -313,12 +313,10 @@
     }
 
     // Inicializar Bootstrap Modal
-    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
-
-    // Función para detectar si el dispositivo es móvil
-    function isMobileDevice() {
-        return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
+    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'), {
+        backdrop: 'static', // Evita cerrar el modal haciendo clic fuera
+        keyboard: false // Evita cerrar el modal con la tecla Esc
+    });
 
     // Función para mostrar alertas usando Bootstrap
     function showAlert(message, type) {
@@ -371,10 +369,7 @@
 
             // Añadir listener para tokenización
             cashAppPay.addEventListener('ontokenization', async (event) => {
-                console.log('Evento ontokenization disparado:', event);
                 const { tokenResult } = event.detail;
-                console.log('tokenResult:', tokenResult);
-
                 if (tokenResult.status === 'OK') {
                     const token = tokenResult.token;
                     console.log('Tokenización exitosa:', token);
@@ -382,10 +377,12 @@
                     const paymentResult = await processPayment(token, totalAmount);
                     if (paymentResult.success) {
                         console.log('Pago procesado exitosamente.');
-                        // Mostrar alerta y esperar la redirección
+                        paymentCompleted = true; // Marcar como pago completado
                         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
-                        // Marcar pago como completado
-                        paymentCompleted = true;
+                        // Proceder a confirmar y guardar el ticket
+                        confirmarYGuardarTicket('Cash App');
+                        // Cerrar el modal automáticamente
+                        ticketModal.hide();
                     } else {
                         showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
@@ -393,9 +390,26 @@
                 } else if (tokenResult.status === 'CANCEL') {
                     showAlert('Pago cancelado por el usuario.', "warning");
                     console.log('El usuario canceló el pago.');
+                    // Permitir al usuario intentar nuevamente o cerrar el modal
+                } else if (tokenResult.errors) {
+                    const errorMessages = tokenResult.errors.map(err => err.message).join(', ');
+                    showAlert('Error al tokenizar el pago: ' + errorMessages, "danger");
+                    console.error('Errores en la tokenización del pago:', tokenResult.errors);
                 } else {
-                    showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
-                    console.error('Error en la tokenización del pago:', tokenResult.errors);
+                    showAlert('Error desconocido al tokenizar el pago.', "danger");
+                    console.error('Error desconocido en la tokenización del pago:', tokenResult);
+                }
+            });
+
+            // Opcional: Bloquear el formulario mientras el modal está abierto
+            $('#ticketModal').on('shown.bs.modal', function () {
+                $('form').find('input, button').prop('disabled', true);
+            });
+
+            $('#ticketModal').on('hidden.bs.modal', function () {
+                if (!paymentCompleted) {
+                    // Si el pago no se completó, habilitar el formulario de nuevo
+                    $('form').find('input, button').prop('disabled', false);
                 }
             });
 
@@ -640,21 +654,22 @@
 
         // Ajustar el modal según el rol del usuario
         if (userRole === 'user') {
-            // Mostrar el contenedor de Cash App Pay
-            $('#cashAppPayContainer').show();
-            // Ocultar el botón "Confirmar e Imprimir"
-            $('#confirmarTicket').hide();
-            // Inicializar Cash App Pay si no está inicializado
+            // Inicializar Cash App Pay
             if (!cashAppPayInitialized) {
                 console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
                 initializeCashAppPay(totalJugadasGlobal);
                 cashAppPayInitialized = true;
             }
+            // Mostrar el contenedor de Cash App Pay
+            $('#cash-app-pay-container').show();
+            // Ocultar el botón "Confirmar e Imprimir"
+            $('#confirmarTicket').hide();
         } else {
-            // Ocultar el contenedor de Cash App Pay
-            $('#cashAppPayContainer').hide();
+            // Ocultar botón de pago para roles distintos de 'user'
+            $('#cash-app-pay').empty();
+            $('#cash-app-pay-container').hide();
             cashAppPayInitialized = false;
-            // Mostrar el botón "Confirmar e Imprimir"
+            // Asegurar que el botón 'Confirmar e Imprimir' esté visible
             $('#confirmarTicket').show();
         }
     });
@@ -908,7 +923,7 @@
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Verificar si hay estado de pago y restaurar el estado al cargar la página
+    // Verificar si hay éxito de pago y restaurar el estado al cargar la página
     $(document).ready(function() {
         const urlParams = new URLSearchParams(window.location.search);
         const paymentStatus = urlParams.get('payment_status');
