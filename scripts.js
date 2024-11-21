@@ -1,6 +1,4 @@
- // scripts.js
-
-$(document).ready(function() {
+ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
@@ -11,9 +9,12 @@ $(document).ready(function() {
         mode: "multiple",
         dateFormat: "m-d-Y",
         minDate: "today",
+        maxDate: null,
+        defaultDate: null,
         allowInput: true,
         onChange: function(selectedDates, dateStr, instance) {
             selectedDays = selectedDates.length;
+            console.log("Días seleccionados:", selectedDays);
             calcularTotal();
         },
     });
@@ -357,10 +358,9 @@ $(document).ready(function() {
                 },
             });
 
-            const referenceId = 'ref-' + Date.now();
             const options = {
-                redirectURL: window.location.origin + window.location.pathname, // Sin parámetros estáticos
-                referenceId: referenceId,
+                redirectURL: window.location.origin + window.location.pathname + '?payment=success',
+                referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
             const cashAppPay = await payments.cashAppPay(paymentRequest, options);
@@ -376,7 +376,8 @@ $(document).ready(function() {
                     // Procesar el pago en el backend
                     const paymentResult = await processPayment(token, totalAmount);
                     if (paymentResult.success) {
-                        paymentCompleted = true;
+                        console.log('Pago procesado exitosamente.');
+                        paymentCompleted = true; // Marcar como pago completado
                         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
                         // Proceder a confirmar y guardar el ticket
                         confirmarYGuardarTicket('Cash App');
@@ -392,7 +393,7 @@ $(document).ready(function() {
                 }
             });
 
-            // Adjuntar el botón de Cash App Pay
+            // Siempre adjuntamos el botón de Cash App Pay
             const buttonOptions = {
                 shape: 'semiround',
                 width: 'full',
@@ -633,21 +634,17 @@ $(document).ready(function() {
 
         // Ajustar el modal según el rol del usuario
         if (userRole === 'user') {
-            // Mostrar el contenedor de Cash App Pay
-            $('#cashAppPayContainer').show();
-            // Ocultar el botón "Confirmar e Imprimir"
-            $('#confirmarTicket').hide();
-            // Inicializar Cash App Pay si no está inicializado
+            // Inicializar Cash App Pay
             if (!cashAppPayInitialized) {
                 console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
                 initializeCashAppPay(totalJugadasGlobal);
                 cashAppPayInitialized = true;
             }
         } else {
-            // Ocultar el contenedor de Cash App Pay
-            $('#cashAppPayContainer').hide();
+            // Ocultar botón de pago para roles distintos de 'user'
+            $('#cash-app-pay').empty();
             cashAppPayInitialized = false;
-            // Mostrar el botón "Confirmar e Imprimir"
+            // Asegurar que el botón 'Confirmar e Imprimir' esté visible
             $('#confirmarTicket').show();
         }
     });
@@ -901,12 +898,10 @@ $(document).ready(function() {
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Verificar estado de pago al cargar la página
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment_status');
-
-    if (paymentStatus) {
-        if (paymentStatus === 'COMPLETED') {
+    // Verificar si hay éxito de pago y restaurar el estado al cargar la página
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment') === 'success') {
             const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
             if (storedTicketData) {
                 console.log('Restaurando estado después de pago exitoso.');
@@ -926,20 +921,13 @@ $(document).ready(function() {
                 ticketModal.show();
                 // Proceder a confirmar y guardar el ticket
                 confirmarYGuardarTicket('Cash App');
-                // Limpiar datos almacenados
-                localStorage.removeItem('ticketData');
-            } else {                    
+            } else {
                 console.error('No se encontraron datos del ticket en localStorage.');
             }
-        } else if (paymentStatus === 'CANCELLED') {
-            showAlert("Pago cancelado. No se generará el ticket.", "warning");
-            // Limpiar datos almacenados
-            localStorage.removeItem('ticketData');
-        } else {
-            showAlert("El pago no se completó correctamente.", "danger");
-            // Limpiar datos almacenados
-            localStorage.removeItem('ticketData');
         }
-    }
+    });
 
 });
+
+
+
