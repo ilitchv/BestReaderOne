@@ -1,4 +1,6 @@
- $(document).ready(function() {
+ // scripts.js
+
+$(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
@@ -654,16 +656,16 @@
 
         // Ajustar el modal según el rol del usuario
         if (userRole === 'user') {
+            // Mostrar el contenedor de Cash App Pay
+            $('#cash-app-pay-container').show();
+            // Ocultar el botón "Confirmar e Imprimir"
+            $('#confirmarTicket').hide();
             // Inicializar Cash App Pay
             if (!cashAppPayInitialized) {
                 console.log('Usuario con rol "user" identificado. Inicializando Cash App Pay.');
                 initializeCashAppPay(totalJugadasGlobal);
                 cashAppPayInitialized = true;
             }
-            // Mostrar el contenedor de Cash App Pay
-            $('#cash-app-pay-container').show();
-            // Ocultar el botón "Confirmar e Imprimir"
-            $('#confirmarTicket').hide();
         } else {
             // Ocultar botón de pago para roles distintos de 'user'
             $('#cash-app-pay').empty();
