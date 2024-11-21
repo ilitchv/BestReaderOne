@@ -359,7 +359,7 @@ $(document).ready(function() {
 
             const referenceId = 'ref-' + Date.now();
             const options = {
-                redirectURL: window.location.origin + window.location.pathname,
+                redirectURL: window.location.origin + window.location.pathname, // Sin parámetros estáticos
                 referenceId: referenceId,
             };
 
@@ -378,6 +378,7 @@ $(document).ready(function() {
                     if (paymentResult.success) {
                         paymentCompleted = true;
                         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
+                        // Proceder a confirmar y guardar el ticket
                         confirmarYGuardarTicket('Cash App');
                     } else {
                         showAlert('Error al procesar el pago: ' + paymentResult.error, 'danger');
