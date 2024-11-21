@@ -1,6 +1,4 @@
- // scripts.js
-
-$(document).ready(function() {
+ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
@@ -11,9 +9,12 @@ $(document).ready(function() {
         mode: "multiple",
         dateFormat: "m-d-Y",
         minDate: "today",
+        maxDate: null,
+        defaultDate: null,
         allowInput: true,
         onChange: function(selectedDates, dateStr, instance) {
             selectedDays = selectedDates.length;
+            console.log("Días seleccionados:", selectedDays);
             calcularTotal();
         },
     });
@@ -349,10 +350,6 @@ $(document).ready(function() {
             const payments = window.Square.payments(applicationId, locationId);
 
             const referenceId = 'ref-' + Date.now();
-            const options = {
-                redirectURL: `${window.location.origin}${window.location.pathname}?payment_status={payment_status}&reference_id=${referenceId}`, // Asegúrate de que Cash App Pay reemplace {payment_status}
-                referenceId: referenceId,
-            };
 
             const paymentRequest = payments.paymentRequest({
                 countryCode: 'US',
@@ -363,37 +360,46 @@ $(document).ready(function() {
                 },
             });
 
+            const options = {
+                redirectURL: `${window.location.origin}${window.location.pathname}?payment_status={payment_status}&reference_id=${referenceId}`,
+                referenceId: referenceId,
+            };
+
             const cashAppPay = await payments.cashAppPay(paymentRequest, options);
 
             console.log('Cash App Pay creado:', cashAppPay);
 
             // Añadir listener para tokenización
             cashAppPay.addEventListener('ontokenization', async (event) => {
+                console.log('Evento ontokenization disparado:', event);
                 const { tokenResult } = event.detail;
+                console.log('tokenResult:', tokenResult);
+
                 if (tokenResult.status === 'OK') {
                     const token = tokenResult.token;
                     console.log('Tokenización exitosa:', token);
                     // Procesar el pago en el backend
                     const paymentResult = await processPayment(token, totalAmount);
                     if (paymentResult.success) {
-                        paymentCompleted = true;
+                        console.log('Pago procesado exitosamente.');
+                        // Mostrar alerta y esperar la redirección
                         showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
-                        confirmarYGuardarTicket('Cash App');
+                        // Marcar pago como completado
+                        paymentCompleted = true;
                     } else {
-                        showAlert('Error en el backend: ' + paymentResult.error, "danger");
+                        showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else if (tokenResult.status === 'CANCEL') {
-                    console.log('Pago cancelado por el usuario.');
                     showAlert('Pago cancelado por el usuario.', "warning");
-                    // No marcar como completado y no llamar a confirmarYGuardarTicket
+                    console.log('El usuario canceló el pago.');
                 } else {
-                    console.log('Error en la tokenización del pago:', tokenResult.errors[0].message);
                     showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
+                    console.error('Error en la tokenización del pago:', tokenResult.errors);
                 }
             });
 
-            // Adjuntar el botón de Cash App Pay
+            // Siempre adjuntamos el botón de Cash App Pay
             const buttonOptions = {
                 shape: 'semiround',
                 width: 'full',
@@ -902,29 +908,56 @@ $(document).ready(function() {
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Verificar estado de pago al cargar la página
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment_status');
-    const referenceId = urlParams.get('reference_id'); // Asegúrate de enviar reference_id en la redirección
+    // Verificar si hay estado de pago y restaurar el estado al cargar la página
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentStatus = urlParams.get('payment_status');
+        const referenceId = urlParams.get('reference_id');
 
-    console.log("payment_status:", paymentStatus);
-    console.log("reference_id:", referenceId);
+        console.log("payment_status:", paymentStatus);
+        console.log("reference_id:", referenceId);
 
-    if (paymentStatus && referenceId) {
-        if (paymentStatus === 'COMPLETED') {
-            console.log("Pago completado. Procediendo a generar el ticket.");
-            confirmarYGuardarTicket('Cash App');
-        } else if (paymentStatus === 'CANCELLED') {
-            console.log("Pago cancelado por el usuario.");
-            showAlert("Pago cancelado. No se generará el ticket.", "warning");
-            // Mantener el formulario intacto para que el usuario pueda intentarlo de nuevo
-        } else {
-            console.log("Estado de pago desconocido:", paymentStatus);
-            showAlert("El pago no se completó correctamente.", "danger");
+        if (paymentStatus) {
+            if (paymentStatus === 'COMPLETED') {
+                const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
+                if (storedTicketData) {
+                    console.log('Restaurando estado después de pago exitoso.');
+                    // Restaurar datos del ticket
+                    $("#fecha").val(storedTicketData.fecha);
+                    $("#tablaJugadas").html(storedTicketData.plays);
+                    $("#ticketJugadas").html(storedTicketData.ticketJugadas);
+                    $("#ticketTracks").text(storedTicketData.ticketTracks);
+                    $("#ticketFecha").text(storedTicketData.ticketFecha);
+                    selectedDays = storedTicketData.selectedDays;
+                    selectedTracks = storedTicketData.selectedTracks;
+                    totalJugadasGlobal = storedTicketData.totalAmount;
+                    $("#totalJugadas").text(totalJugadasGlobal);
+                    // Marcar paymentCompleted como true
+                    paymentCompleted = true;
+                    // Mostrar el modal nuevamente
+                    ticketModal.show();
+                    // Proceder a confirmar y guardar el ticket
+                    confirmarYGuardarTicket('Cash App');
+                    // Limpiar datos almacenados
+                    localStorage.removeItem('ticketData');
+                } else {
+                    console.error('No se encontraron datos del ticket en localStorage.');
+                }
+            } else if (paymentStatus === 'CANCELLED') {
+                showAlert("Pago cancelado. No se generará el ticket.", "warning");
+                console.log('Pago cancelado por el usuario.');
+                // No resetear el formulario, permitir al usuario intentarlo de nuevo
+                // Limpiar datos almacenados
+                localStorage.removeItem('ticketData');
+            } else {
+                showAlert("El pago no se completó correctamente.", "danger");
+                console.log('Estado de pago desconocido:', paymentStatus);
+                // Limpiar datos almacenados
+                localStorage.removeItem('ticketData');
+            }
+            // Remover los parámetros de la URL
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
-
-        // Limpiar los parámetros de la URL para evitar repetidos
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    });
 
 });
