@@ -355,7 +355,7 @@ $(document).ready(function() {
                 countryCode: 'US',
                 currencyCode: 'USD',
                 total: {
-                    amount: Math.round(totalAmount * 100), // Convertir a centavos y enviar como entero
+                    amount: Math.round(totalAmount * 100).toString(), // Convertir a centavos y a string
                     label: 'Total',
                 },
             });
