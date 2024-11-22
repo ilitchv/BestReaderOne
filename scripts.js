@@ -360,6 +360,8 @@ $(document).ready(function() {
                 },
             });
 
+            console.log('Payment Request:', paymentRequest);
+
             const options = {
                 redirectURL: `${window.location.origin}${window.location.pathname}?payment_status={payment_status}&reference_id=${referenceId}`,
                 referenceId: referenceId,
@@ -392,7 +394,6 @@ $(document).ready(function() {
                 } else if (tokenResult.status === 'CANCEL') {
                     showAlert('Pago cancelado por el usuario.', "warning");
                     console.log('El usuario canceló el pago.');
-                    // Permitir al usuario intentar nuevamente o cerrar el modal
                 } else if (tokenResult.errors) {
                     const errorMessages = tokenResult.errors.map(err => err.message).join(', ');
                     showAlert('Error al tokenizar el pago: ' + errorMessages, "danger");
@@ -415,7 +416,7 @@ $(document).ready(function() {
                 }
             });
 
-            // Siempre adjuntamos el botón de Cash App Pay
+            // Adjuntar el botón de Cash App Pay
             const buttonOptions = {
                 shape: 'semiround',
                 width: 'full',
