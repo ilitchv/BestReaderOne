@@ -33,8 +33,8 @@ $(document).ready(function() {
     console.log('User Role:', userRole);
 
     // Credenciales de Cash App Pay
-    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con tu Application ID de producción si es necesario
-    const locationId = 'L66P47FWVDFJS'; // Reemplaza con tu Location ID de producción si es necesario
+    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con tu Application ID de Sandbox
+    const locationId = 'L66P47FWVDFJS'; // Reemplaza con tu Location ID de Sandbox
 
     // Horarios de cierre por track
     const horariosCierre = {
@@ -351,16 +351,19 @@ $(document).ready(function() {
 
             const referenceId = 'ref-' + Date.now();
 
-            const paymentRequest = payments.paymentRequest({
+            const paymentRequest = {
                 countryCode: 'US',
                 currencyCode: 'USD',
                 total: {
                     amount: Math.round(totalAmount * 100).toString(), // Convertir a centavos y a string
                     label: 'Total',
                 },
-            });
+            };
 
             console.log('Payment Request:', paymentRequest);
+
+            const paymentResponse = await payments.paymentRequest(paymentRequest);
+            console.log('Payment Response:', paymentResponse);
 
             const options = {
                 redirectURL: `${window.location.origin}${window.location.pathname}?payment_status={payment_status}&reference_id=${referenceId}`,
@@ -441,7 +444,7 @@ $(document).ready(function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ sourceId: token, amount: amount }),
+                body: JSON.stringify({ sourceId: token, amount: Math.round(amount * 100).toString() }), // Enviar como string
             });
 
             if (!response.ok) {
