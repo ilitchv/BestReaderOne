@@ -1,4 +1,6 @@
- $(document).ready(function() {
+ // scripts.js
+
+$(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
@@ -358,8 +360,8 @@
                 },
             });
 
+            // Eliminamos 'redirectURL' de las opciones
             const options = {
-                redirectURL: window.location.origin + window.location.pathname + '?payment=success',
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
@@ -387,9 +389,13 @@
                     }
                 } else if (tokenResult.status === 'CANCEL') {
                     showAlert('Pago cancelado por el usuario.', "warning");
-                } else {
+                    // No procedemos con la generación del ticket
+                } else if (tokenResult.errors) {
                     showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
                     console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
+                } else {
+                    showAlert('Error desconocido al tokenizar el pago.', "danger");
+                    console.error('Error desconocido en la tokenización del pago:', tokenResult);
                 }
             });
 
@@ -898,33 +904,6 @@
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Verificar si hay éxito de pago y restaurar el estado al cargar la página
-    $(document).ready(function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('payment') === 'success') {
-            const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
-            if (storedTicketData) {
-                console.log('Restaurando estado después de pago exitoso.');
-                // Restaurar datos del ticket
-                $("#fecha").val(storedTicketData.fecha);
-                $("#tablaJugadas").html(storedTicketData.plays);
-                $("#ticketJugadas").html(storedTicketData.ticketJugadas);
-                $("#ticketTracks").text(storedTicketData.ticketTracks);
-                $("#ticketFecha").text(storedTicketData.ticketFecha);
-                selectedDays = storedTicketData.selectedDays;
-                selectedTracks = storedTicketData.selectedTracks;
-                totalJugadasGlobal = storedTicketData.totalAmount;
-                $("#totalJugadas").text(totalJugadasGlobal);
-                // Marcar paymentCompleted como true
-                paymentCompleted = true;
-                // Mostrar el modal nuevamente
-                ticketModal.show();
-                // Proceder a confirmar y guardar el ticket
-                confirmarYGuardarTicket('Cash App');
-            } else {
-                console.error('No se encontraron datos del ticket en localStorage.');
-            }
-        }
-    });
+    // Eliminamos el bloque que verifica 'payment=success' en la URL, ya que no usamos 'redirectURL'
 
 });
