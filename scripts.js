@@ -360,8 +360,8 @@ $(document).ready(function() {
                 },
             });
 
-            // Eliminamos 'redirectURL' de las opciones
             const options = {
+                redirectURL: window.location.href.split('?')[0],
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
@@ -369,7 +369,7 @@ $(document).ready(function() {
 
             console.log('Cash App Pay creado:', cashAppPay);
 
-            // Añadir listener para tokenización
+            // Añadir listener para tokenización (funciona en escritorio)
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
@@ -399,7 +399,7 @@ $(document).ready(function() {
                 }
             });
 
-            // Siempre adjuntamos el botón de Cash App Pay
+            // Adjuntar el botón de Cash App Pay
             const buttonOptions = {
                 shape: 'semiround',
                 width: 'full',
@@ -904,6 +904,47 @@ $(document).ready(function() {
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Eliminamos el bloque que verifica 'payment=success' en la URL, ya que no usamos 'redirectURL'
+    // Al cargar la página, verificar el estado del pago
+    $(document).ready(function() {
+        // Verificar el estado del pago en los parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const status = urlParams.get('status');
+        const paymentId = urlParams.get('paymentId');
+
+        if (status === 'COMPLETED') {
+            // El pago fue exitoso
+            const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
+            if (storedTicketData) {
+                console.log('Restaurando estado después de pago exitoso.');
+                // Restaurar datos del ticket
+                $("#fecha").val(storedTicketData.fecha);
+                $("#tablaJugadas").html(storedTicketData.plays);
+                $("#ticketJugadas").html(storedTicketData.ticketJugadas);
+                $("#ticketTracks").text(storedTicketData.ticketTracks);
+                $("#ticketFecha").text(storedTicketData.ticketFecha);
+                selectedDays = storedTicketData.selectedDays;
+                selectedTracks = storedTicketData.selectedTracks;
+                totalJugadasGlobal = storedTicketData.totalAmount;
+                $("#totalJugadas").text(totalJugadasGlobal);
+                // Marcar paymentCompleted como true
+                paymentCompleted = true;
+                // Mostrar el modal nuevamente
+                ticketModal.show();
+                // Proceder a confirmar y guardar el ticket
+                confirmarYGuardarTicket('Cash App');
+
+                // Limpiar los parámetros de la URL para evitar confusiones
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            } else {
+                console.error('No se encontraron datos del ticket en localStorage.');
+            }
+        } else if (status === 'CANCELED') {
+            // El pago fue cancelado
+            showAlert('Pago cancelado por el usuario.', 'warning');
+            // Limpiar los parámetros de la URL para evitar confusiones
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
 
 });
