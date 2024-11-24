@@ -417,23 +417,33 @@ $(document).ready(function() {
     }
 
     // Función para procesar el pago en el backend
-    async function processPayment(token, amount) {
+    async function processPayment(sourceIdOrPaymentId, amount) {
         try {
+            const payload = {};
+            if (/^[a-zA-Z0-9]{10,}$/.test(sourceIdOrPaymentId)) { // Simple regex para identificar paymentId o sourceId
+                // Asumiendo que sourceId tiene un formato diferente, ajusta esto según tu implementación
+                payload.sourceId = sourceIdOrPaymentId;
+            } else {
+                payload.paymentId = sourceIdOrPaymentId;
+            }
+            payload.amount = amount;
+
             const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ sourceId: token, amount: amount }),
+                body: JSON.stringify(payload),
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Backend respondió con error: ${errorText}`);
-            }
-
             const result = await response.json();
-            return result;
+
+            if (response.ok) {
+                return result;
+            } else {
+                console.error('Error del backend:', result);
+                return { success: false, error: result.error || 'Error desconocido en el backend.' };
+            }
         } catch (error) {
             console.error('Error al procesar el pago:', error);
             return { success: false, error: error.message };
@@ -911,31 +921,16 @@ $(document).ready(function() {
         const status = urlParams.get('status');
         const paymentId = urlParams.get('paymentId');
 
-        if (status === 'COMPLETED') {
-            // El pago fue exitoso
+        if (status === 'COMPLETED' && paymentId) {
+            // Obtener el monto total desde el almacenamiento local
             const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
             if (storedTicketData) {
-                console.log('Restaurando estado después de pago exitoso.');
-                // Restaurar datos del ticket
-                $("#fecha").val(storedTicketData.fecha);
-                $("#tablaJugadas").html(storedTicketData.plays);
-                $("#ticketJugadas").html(storedTicketData.ticketJugadas);
-                $("#ticketTracks").text(storedTicketData.ticketTracks);
-                $("#ticketFecha").text(storedTicketData.ticketFecha);
-                selectedDays = storedTicketData.selectedDays;
-                selectedTracks = storedTicketData.selectedTracks;
-                totalJugadasGlobal = storedTicketData.totalAmount;
-                $("#totalJugadas").text(totalJugadasGlobal);
-                // Marcar paymentCompleted como true
-                paymentCompleted = true;
-                // Mostrar el modal nuevamente
-                ticketModal.show();
-                // Proceder a confirmar y guardar el ticket
-                confirmarYGuardarTicket('Cash App');
+                const totalAmount = storedTicketData.totalAmount;
+                console.log('Procesando paymentId después de pago exitoso:', paymentId, 'monto:', totalAmount);
+                processPaymentWithPaymentId(paymentId, totalAmount);
 
-                // Limpiar los parámetros de la URL para evitar confusiones
+                // Limpiar los parámetros de la URL para evitar acciones repetidas
                 window.history.replaceState({}, document.title, window.location.pathname);
-
             } else {
                 console.error('No se encontraron datos del ticket en localStorage.');
             }
@@ -946,5 +941,38 @@ $(document).ready(function() {
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     });
+
+    // Función para procesar el pago usando paymentId (para dispositivos móviles)
+    async function processPaymentWithPaymentId(paymentId, amount) {
+        console.log('Procesando paymentId:', paymentId, 'con monto:', amount);
+        try {
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ paymentId: paymentId, amount: amount }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                if (result.success) {
+                    console.log('Pago procesado exitosamente con paymentId.');
+                    paymentCompleted = true;
+                    showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
+                    confirmarYGuardarTicket('Cash App');
+                } else {
+                    showAlert('Error al procesar el pago: ' + result.error, 'danger');
+                }
+            } else {
+                console.error('Error del backend:', result);
+                showAlert('Error al procesar el pago: ' + (result.error || 'Error desconocido.'), 'danger');
+            }
+        } catch (error) {
+            console.error('Error al procesar el pago:', error);
+            showAlert('Error al procesar el pago: ' + error.message, 'danger');
+        }
+    }
 
 });
