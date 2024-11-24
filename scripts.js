@@ -32,10 +32,6 @@ $(document).ready(function() {
     const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
     console.log('User Role:', userRole);
 
-    // Credenciales de Cash App Pay
-    const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con tu Application ID de producción si es necesario
-    const locationId = 'L66P47FWVDFJS'; // Reemplaza con tu Location ID de producción si es necesario
-
     // Horarios de cierre por track
     const horariosCierre = {
         "USA": {
@@ -342,13 +338,18 @@ $(document).ready(function() {
             return;
         }
 
-        if (!applicationId || !locationId) {
-            console.error('applicationId o locationId son undefined.');
-            showAlert('Error en las credenciales de Square. Por favor, contacta al administrador.', 'danger');
-            return;
-        }
-
         try {
+            // Obtener las credenciales de Square desde el backend
+            const credentialsResponse = await fetch(`${BACKEND_API_URL}/square-credentials`);
+            const credentials = await credentialsResponse.json();
+            const { applicationId, locationId } = credentials;
+
+            if (!applicationId || !locationId) {
+                showAlert('Error en las credenciales de Square. Por favor, contacta al administrador.', 'danger');
+                console.error('applicationId o locationId son undefined.');
+                return;
+            }
+
             const payments = window.Square.payments(applicationId, locationId);
 
             const paymentRequest = payments.paymentRequest({
@@ -373,10 +374,10 @@ $(document).ready(function() {
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
-                    const paymentId = tokenResult.token;
-                    console.log('Tokenización exitosa:', paymentId);
+                    const sourceId = tokenResult.token;
+                    console.log('Tokenización exitosa:', sourceId);
                     // Procesar el pago en el backend
-                    const paymentResult = await processPayment(paymentId, totalAmount);
+                    const paymentResult = await processPayment(sourceId, totalAmount);
                     if (paymentResult.success) {
                         console.log('Pago procesado exitosamente.');
                         paymentCompleted = true; // Marcar como pago completado
@@ -417,10 +418,10 @@ $(document).ready(function() {
     }
 
     // Función para procesar el pago en el backend
-    async function processPayment(paymentId, amount) {
+    async function processPayment(sourceId, amount) {
         try {
             const payload = {
-                paymentId: paymentId,
+                sourceId: sourceId,
                 amount: amount,
             };
 
@@ -653,20 +654,13 @@ $(document).ready(function() {
                 cashAppPayInitialized = true;
             }
         } else {
-            // Ocultar botón de pago para roles distintos de 'user'
-            $('#cashAppPayContainer').show();
+            // Mostrar contenedores de Confirmar e Imprimir y ocultar Cash App Pay
+            $('#cashAppPayContainer').hide();
             $('#confirmarTicketContainer').show();
-            $('#cash-app-pay').empty();
-            cashAppPayInitialized = false;
             // Asegurar que el botón 'Confirmar e Imprimir' esté visible
             $('#confirmarTicket').show();
         }
     });
-
-    // Función para generar número único de ticket de 8 dígitos
-    function generarNumeroUnico() {
-        return Math.floor(10000000 + Math.random() * 90000000).toString();
-    }
 
     // Evento para confirmar e imprimir el ticket
     $("#confirmarTicket").click(function() {
@@ -728,10 +722,10 @@ $(document).ready(function() {
                 "Tracks": tracks,
                 "Bet Number": $(this).find("td").eq(1).text(),
                 "Game Mode": $(this).find("td").eq(2).text(),
-                "Straight ($)": $(this).find("td").eq(3).text(),
-                "Box ($)": $(this).find("td").eq(4).text() !== "-" ? $(this).find("td").eq(4).text() : "",
-                "Combo ($)": $(this).find("td").eq(5).text() !== "-" ? $(this).find("td").eq(5).text() : "",
-                "Total ($)": $(this).find("td").eq(6).text(),
+                "Straight ($)": parseFloat($(this).find("td").eq(3).text()),
+                "Box ($)": $(this).find("td").eq(4).text() !== "-" ? parseFloat($(this).find("td").eq(4).text()) : null,
+                "Combo ($)": $(this).find("td").eq(5).text() !== "-" ? parseFloat($(this).find("td").eq(5).text()) : null,
+                "Total ($)": parseFloat($(this).find("td").eq(6).text()),
                 "Payment Method": metodoPago,
                 "Jugada Number": jugadaNumber,
                 "Timestamp": timestamp
@@ -912,33 +906,8 @@ $(document).ready(function() {
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Al cargar la página, verificar el estado del pago
-    $(document).ready(function() {
-        // Verificar el estado del pago en los parámetros de la URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const status = urlParams.get('status');
-        const paymentId = urlParams.get('paymentId');
-
-        if (status === 'COMPLETED' && paymentId) {
-            // Obtener el monto total desde el almacenamiento local
-            const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
-            if (storedTicketData) {
-                const totalAmount = storedTicketData.totalAmount;
-                console.log('Procesando paymentId después de pago exitoso:', paymentId, 'monto:', totalAmount);
-                processPaymentWithPaymentId(paymentId, totalAmount);
-
-                // Limpiar los parámetros de la URL para evitar acciones repetidas
-                window.history.replaceState({}, document.title, window.location.pathname);
-            } else {
-                console.error('No se encontraron datos del ticket en localStorage.');
-            }
-        } else if (status === 'CANCELED') {
-            // El pago fue cancelado
-            showAlert('Pago cancelado por el usuario.', 'warning');
-            // Limpiar los parámetros de la URL para evitar confusiones
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-    });
+    // Manejar la carga de la página para verificar el estado del pago
+    // Este bloque ya está integrado en el main $(document).ready al inicio
 
     // Función para procesar el pago usando paymentId (para dispositivos móviles)
     async function processPaymentWithPaymentId(paymentId, amount) {
@@ -949,7 +918,7 @@ $(document).ready(function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ paymentId: paymentId, amount: amount }),
+                body: JSON.stringify({ sourceId: paymentId, amount: amount }),
             });
 
             const result = await response.json();
@@ -961,15 +930,15 @@ $(document).ready(function() {
                     showAlert("Pago realizado exitosamente a través de Cash App Pay.", "success");
                     confirmarYGuardarTicket('Cash App');
                 } else {
-                    showAlert('Error al procesar el pago: ' + result.error, 'danger');
+                    showAlert('Error al procesar el pago: ' + result.error, "danger");
                 }
             } else {
                 console.error('Error del backend:', result);
-                showAlert('Error al procesar el pago: ' + (result.error || 'Error desconocido.'), 'danger');
+                showAlert('Error al procesar el pago: ' + (result.error || 'Error desconocido.'), "danger");
             }
         } catch (error) {
             console.error('Error al procesar el pago:', error);
-            showAlert('Error al procesar el pago: ' + error.message, 'danger');
+            showAlert('Error al procesar el pago: ' + error.message, "danger");
         }
     }
 
