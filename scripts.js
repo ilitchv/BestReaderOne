@@ -361,7 +361,7 @@ $(document).ready(function() {
             });
 
             const options = {
-                redirectURL: window.location.href.split('?')[0],
+                redirectURL: window.location.href, // Mantener los parámetros de consulta
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
@@ -373,10 +373,10 @@ $(document).ready(function() {
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
-                    const token = tokenResult.token;
-                    console.log('Tokenización exitosa:', token);
+                    const paymentId = tokenResult.token;
+                    console.log('Tokenización exitosa:', paymentId);
                     // Procesar el pago en el backend
-                    const paymentResult = await processPayment(token, totalAmount);
+                    const paymentResult = await processPayment(paymentId, totalAmount);
                     if (paymentResult.success) {
                         console.log('Pago procesado exitosamente.');
                         paymentCompleted = true; // Marcar como pago completado
@@ -417,16 +417,12 @@ $(document).ready(function() {
     }
 
     // Función para procesar el pago en el backend
-    async function processPayment(sourceIdOrPaymentId, amount) {
+    async function processPayment(paymentId, amount) {
         try {
-            const payload = {};
-            // Determinar si es sourceId o paymentId
-            if (sourceIdOrPaymentId.startsWith('source_')) { // Ajusta según el prefijo real de sourceId
-                payload.sourceId = sourceIdOrPaymentId;
-            } else {
-                payload.paymentId = sourceIdOrPaymentId;
-            }
-            payload.amount = amount;
+            const payload = {
+                paymentId: paymentId,
+                amount: amount,
+            };
 
             const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
@@ -658,6 +654,8 @@ $(document).ready(function() {
             }
         } else {
             // Ocultar botón de pago para roles distintos de 'user'
+            $('#cashAppPayContainer').show();
+            $('#confirmarTicketContainer').show();
             $('#cash-app-pay').empty();
             cashAppPayInitialized = false;
             // Asegurar que el botón 'Confirmar e Imprimir' esté visible
