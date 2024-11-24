@@ -36,11 +36,14 @@
 
                 // Hacer visible o no el botón de Cash App Pay según el rol
                 const cashAppContainer = document.getElementById('cashAppPayContainer');
+                const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
                 if (cashAppContainer) {
                     if (userRole === 'user') {
                         cashAppContainer.style.display = 'block';
+                        confirmarTicketContainer.style.display = 'none';
                     } else {
                         cashAppContainer.style.display = 'none';
+                        confirmarTicketContainer.style.display = 'block';
                     }
                 }
             }
