@@ -329,6 +329,11 @@ $(document).ready(function() {
         $("#ticketAlerts").html(alertHTML);
     }
 
+    // Función para generar número único de ticket de 8 dígitos
+    function generarNumeroUnico() {
+        return Math.floor(10000000 + Math.random() * 90000000).toString();
+    }
+
     // Función para inicializar Cash App Pay utilizando el SDK de Square
     async function initializeCashAppPay(totalAmount) {
         console.log('Inicializando Cash App Pay con total:', totalAmount);
@@ -906,7 +911,7 @@ $(document).ready(function() {
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite();
 
-    // Manejar la carga de la página para verificar el estado del pago
+    // Al cargar la página, verificar el estado del pago
     // Este bloque ya está integrado en el main $(document).ready al inicio
 
     // Función para procesar el pago usando paymentId (para dispositivos móviles)
@@ -941,5 +946,33 @@ $(document).ready(function() {
             showAlert('Error al procesar el pago: ' + error.message, "danger");
         }
     }
+
+    // Manejar la carga de la página para verificar el estado del pago
+    $(window).on('load', function() {
+        // Verificar el estado del pago en los parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const status = urlParams.get('status');
+        const paymentId = urlParams.get('paymentId');
+
+        if (status === 'COMPLETED' && paymentId) {
+            // Obtener el monto total desde el almacenamiento local
+            const storedTicketData = JSON.parse(localStorage.getItem('ticketData'));
+            if (storedTicketData) {
+                const totalAmount = storedTicketData.totalAmount;
+                console.log('Procesando paymentId después de pago exitoso:', paymentId, 'monto:', totalAmount);
+                processPaymentWithPaymentId(paymentId, totalAmount);
+
+                // Limpiar los parámetros de la URL para evitar acciones repetidas
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                console.error('No se encontraron datos del ticket en localStorage.');
+            }
+        } else if (status === 'CANCELED') {
+            // El pago fue cancelado
+            showAlert('Pago cancelado por el usuario.', 'warning');
+            // Limpiar los parámetros de la URL para evitar confusiones
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
 
 });
