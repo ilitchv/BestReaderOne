@@ -384,7 +384,7 @@ $(document).ready(function() {
                         // Proceder a confirmar y guardar el ticket
                         confirmarYGuardarTicket('Cash App');
                     } else {
-                        showAlert('Error al procesar el pago: ' + paymentResult.error, 'danger');
+                        showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
                 } else if (tokenResult.status === 'CANCEL') {
@@ -420,8 +420,8 @@ $(document).ready(function() {
     async function processPayment(sourceIdOrPaymentId, amount) {
         try {
             const payload = {};
-            if (/^[a-zA-Z0-9]{10,}$/.test(sourceIdOrPaymentId)) { // Simple regex para identificar paymentId o sourceId
-                // Asumiendo que sourceId tiene un formato diferente, ajusta esto según tu implementación
+            // Determinar si es sourceId o paymentId
+            if (sourceIdOrPaymentId.startsWith('source_')) { // Ajusta según el prefijo real de sourceId
                 payload.sourceId = sourceIdOrPaymentId;
             } else {
                 payload.paymentId = sourceIdOrPaymentId;
