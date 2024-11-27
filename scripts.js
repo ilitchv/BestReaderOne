@@ -337,6 +337,12 @@ $(document).ready(function() {
 
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
+        // Verificar si hay un pago pendiente
+        if (!paymentCompleted && ticketId) {
+            showAlert("Tienes un ticket pendiente de pago. Por favor, completa el pago antes de generar uno nuevo.", "warning");
+            return;
+        }
+
         // Limpiar alertas anteriores
         $("#ticketAlerts").empty();
 
@@ -547,6 +553,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.ticketId) {
                     ticketId = response.ticketId;
+                    paymentCompleted = false; // Reiniciar el estado de pago
                     // Mostrar el modal usando Bootstrap 5
                     ticketModal.show();
 
@@ -922,6 +929,7 @@ $(document).ready(function() {
             ticketData = {};
             paymentCompleted = false;
             cashAppPayInitialized = false;
+            ticketId = null;
 
             // Opcional: Informar al backend que puede eliminar el ticketData almacenado
             $.ajax({
