@@ -4,7 +4,7 @@ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api';
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Incluye '/jugadas' para coincidir con las rutas del backend
 
     // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
@@ -539,7 +539,7 @@ $(document).ready(function() {
 
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
-            url: `${BACKEND_API_URL}/store-ticket`,
+            url: `${BACKEND_API_URL}/store-ticket`, // Ruta corregida
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -587,7 +587,7 @@ $(document).ready(function() {
 
         try {
             // Obtener las credenciales de Square desde el backend
-            const credentialsResponse = await fetch(`${BACKEND_API_URL}/square-credentials`);
+            const credentialsResponse = await fetch(`${BACKEND_API_URL}/square-credentials`); // Ruta corregida
             const credentials = await credentialsResponse.json();
             const { applicationId, locationId } = credentials;
 
@@ -675,7 +675,7 @@ $(document).ready(function() {
                 amount: amount,
             };
 
-            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, { // Ruta corregida
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -708,7 +708,7 @@ $(document).ready(function() {
         if (ticketId) {
             // Recuperar ticketData desde el backend
             $.ajax({
-                url: `${BACKEND_API_URL}/retrieve-ticket`,
+                url: `${BACKEND_API_URL}/retrieve-ticket`, // Ruta corregida
                 method: 'POST',
                 dataType: 'json',
                 contentType: 'application/json',
@@ -761,7 +761,7 @@ $(document).ready(function() {
     async function processPaymentWithPaymentId(paymentId, amount) {
         console.log('Procesando paymentId:', paymentId, 'con monto:', amount);
         try {
-            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, { // Ruta corregida
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -880,7 +880,7 @@ $(document).ready(function() {
 
         // Enviar al Backend
         const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/jugadas`,
+            url: BACKEND_API_URL, // Ruta correcta
             method: "POST",
             dataType: "json",
             contentType: "application/json",
@@ -920,13 +920,12 @@ $(document).ready(function() {
 
             // Limpiar datos almacenados
             ticketData = {};
-            ticketId = null;
             paymentCompleted = false;
             cashAppPayInitialized = false;
 
             // Opcional: Informar al backend que puede eliminar el ticketData almacenado
             $.ajax({
-                url: `${BACKEND_API_URL}/delete-ticket`,
+                url: `${BACKEND_API_URL}/delete-ticket`, // Ruta corregida
                 method: 'POST',
                 dataType: 'json',
                 contentType: "application/json",
