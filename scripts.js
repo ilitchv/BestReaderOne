@@ -30,6 +30,7 @@ $(document).ready(function() {
     let fechaTransaccion = '';
     let ticketData = {}; // Objeto para almacenar datos del ticket
     let ticketId = null; // Variable para almacenar el ticketId
+    let cashAppPayInstance = null; // Variable para almacenar la instancia de Cash App Pay
     const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
     console.log('User Role:', userRole);
 
@@ -554,6 +555,11 @@ $(document).ready(function() {
                 if (response.ticketId) {
                     ticketId = response.ticketId;
                     paymentCompleted = false; // Reiniciar el estado de pago
+
+                    // Actualizar la URL para incluir ticketId
+                    const newURL = `${window.location.origin}${window.location.pathname}?ticketId=${encodeURIComponent(ticketId)}`;
+                    window.history.replaceState({ path: newURL }, '', newURL);
+
                     // Mostrar el modal usando Bootstrap 5
                     ticketModal.show();
 
@@ -615,16 +621,18 @@ $(document).ready(function() {
                 },
             });
 
-            // Incluir ticketId en redirectURL
-            const currentURL = window.location.href.split('?')[0]; // Eliminar query params si los hay
-            const redirectURL = `${currentURL}?ticketId=${encodeURIComponent(ticketId)}`;
+            // La URL actual ya contiene ticketId
+            const currentURL = window.location.href;
 
             const options = {
-                redirectURL: redirectURL,
+                redirectURL: currentURL,
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
             const cashAppPay = await payments.cashAppPay(paymentRequest, options);
+
+            // Almacenar la instancia
+            cashAppPayInstance = cashAppPay;
 
             console.log('Cash App Pay creado:', cashAppPay);
 
@@ -646,15 +654,29 @@ $(document).ready(function() {
                         showAlert('Error al procesar el pago: ' + paymentResult.error, "danger");
                         console.error('Error en el backend al procesar el pago:', paymentResult.error);
                     }
-                } else if (tokenResult.status === 'CANCEL') {
-                    showAlert('Pago cancelado por el usuario.', "warning");
-                    // No procedemos con la generación del ticket
-                } else if (tokenResult.errors) {
-                    showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
-                    console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
                 } else {
-                    showAlert('Error desconocido al tokenizar el pago.', "danger");
-                    console.error('Error desconocido en la tokenización del pago:', tokenResult);
+                    // Manejar cancelación o errores
+                    if (tokenResult.status === 'CANCEL') {
+                        showAlert('Pago cancelado por el usuario.', "warning");
+                    } else if (tokenResult.errors) {
+                        showAlert('Error al tokenizar el pago: ' + tokenResult.errors[0].message, "danger");
+                        console.error('Error en la tokenización del pago:', tokenResult.errors[0].message);
+                    } else {
+                        showAlert('Error desconocido al tokenizar el pago.', "danger");
+                        console.error('Error desconocido en la tokenización del pago:', tokenResult);
+                    }
+
+                    // Destruir la instancia de Cash App Pay
+                    if (cashAppPayInstance) {
+                        try {
+                            cashAppPayInstance.destroy();
+                            cashAppPayInstance = null;
+                            cashAppPayInitialized = false;
+                            console.log('Cash App Pay instance destroyed after cancellation or error.');
+                        } catch (error) {
+                            console.error('Error al destruir la instancia de Cash App Pay después de cancelación o error:', error);
+                        }
+                    }
                 }
             });
 
@@ -665,8 +687,6 @@ $(document).ready(function() {
             };
             await cashAppPay.attach('#cash-app-pay', buttonOptions);
             console.log('Cash App Pay adjuntado al contenedor.');
-
-            // Ya no guardamos ticketData en localStorage
 
         } catch (error) {
             console.error('Error al inicializar Cash App Pay:', error);
@@ -706,7 +726,7 @@ $(document).ready(function() {
 
     // Modificar el manejador de carga de la ventana para recuperar ticketData desde el backend usando ticketId
     $(window).on('load', function() {
-        // Verificar el estado del pago en los parámetros de la URL
+        // Obtener los parámetros de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
         const paymentId = urlParams.get('paymentId');
@@ -737,13 +757,9 @@ $(document).ready(function() {
                             const totalAmount = ticketData.totalAmount;
                             console.log('Procesando paymentId después de pago exitoso:', paymentId, 'monto:', totalAmount);
                             processPaymentWithPaymentId(paymentId, totalAmount);
-                            // Limpiar los parámetros de la URL para evitar acciones repetidas
-                            window.history.replaceState({}, document.title, window.location.pathname);
                         } else if (status === 'CANCELED') {
                             // El pago fue cancelado
                             showAlert('Pago cancelado por el usuario.', 'warning');
-                            // Limpiar los parámetros de la URL para evitar confusiones
-                            window.history.replaceState({}, document.title, window.location.pathname);
                         } else {
                             // Si no hay estado de pago, inicializar Cash App Pay nuevamente
                             if (!cashAppPayInitialized) {
@@ -752,6 +768,11 @@ $(document).ready(function() {
                                 cashAppPayInitialized = true;
                             }
                         }
+
+                        // Limpiar los parámetros de la URL para evitar acciones repetidas
+                        const newURL = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, document.title, newURL);
+
                     } else {
                         showAlert('Error al recuperar los datos del ticket. Por favor, inténtalo de nuevo.', 'danger');
                     }
@@ -931,6 +952,17 @@ $(document).ready(function() {
             cashAppPayInitialized = false;
             ticketId = null;
 
+            // Destruir la instancia de Cash App Pay si existe
+            if (cashAppPayInstance) {
+                try {
+                    cashAppPayInstance.destroy();
+                    cashAppPayInstance = null;
+                    console.log('Cash App Pay instance destroyed after completing the process.');
+                } catch (error) {
+                    console.error('Error al destruir la instancia de Cash App Pay:', error);
+                }
+            }
+
             // Opcional: Informar al backend que puede eliminar el ticketData almacenado
             $.ajax({
                 url: `${BACKEND_API_URL}/delete-ticket`, // Ruta corregida
@@ -939,6 +971,11 @@ $(document).ready(function() {
                 contentType: "application/json",
                 data: JSON.stringify({ ticketId: ticketId })
             });
+
+            // Limpiar los parámetros de la URL
+            const newURL = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, newURL);
+
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
             showAlert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
@@ -964,6 +1001,17 @@ $(document).ready(function() {
         cashAppPayInitialized = false;
         ticketData = {};
         ticketId = null;
+
+        // Destruir la instancia de Cash App Pay si existe
+        if (cashAppPayInstance) {
+            try {
+                cashAppPayInstance.destroy();
+                cashAppPayInstance = null;
+                console.log('Cash App Pay instance destroyed in resetForm.');
+            } catch (error) {
+                console.error('Error al destruir la instancia de Cash App Pay en resetForm:', error);
+            }
+        }
     }
 
     // Función para mostrar las horas límite junto a cada track
