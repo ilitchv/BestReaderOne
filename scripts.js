@@ -560,6 +560,11 @@ $(document).ready(function() {
                     const newURL = `${window.location.origin}${window.location.pathname}?ticketId=${encodeURIComponent(ticketId)}`;
                     window.history.replaceState({ path: newURL }, '', newURL);
 
+                    // Limpiar campos de QR y número de ticket
+                    $("#numeroTicket").text('');
+                    $("#ticketTransaccion").text('');
+                    $("#qrcode").empty();
+
                     // Mostrar el modal usando Bootstrap 5
                     ticketModal.show();
 
@@ -749,6 +754,11 @@ $(document).ready(function() {
                         $("#ticketJugadas").html(ticketData.ticketJugadasHTML);
                         $("#ticketTotal").text(ticketData.totalAmount.toFixed(2));
                         $("#ticketFecha").text(ticketData.ticketFecha);
+
+                        // Limpiar campos de QR y número de ticket
+                        $("#numeroTicket").text('');
+                        $("#ticketTransaccion").text('');
+                        $("#qrcode").empty();
 
                         // Mostrar el modal
                         ticketModal.show();
