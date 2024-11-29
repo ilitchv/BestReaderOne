@@ -328,7 +328,7 @@ $(document).ready(function() {
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         `;
-        $("#ticketAlerts").html(alertHTML);
+        $("#ticketAlerts").append(alertHTML); // Cambiado de .html() a .append()
     }
 
     // Función para generar número único de ticket de 8 dígitos
@@ -407,7 +407,7 @@ $(document).ready(function() {
             if (!numero || (numero.length < 2 || numero.length > 4)) {
                 jugadasValidas = false;
                 showAlert("Por favor, ingresa números apostados válidos (2, 3 o 4 dígitos).", "danger");
-                return false;
+                return false; // Salir del each
             }
             if (modalidad === "-") {
                 jugadasValidas = false;
@@ -588,7 +588,9 @@ $(document).ready(function() {
             },
             error: function(error) {
                 console.error('Error al almacenar los datos del ticket:', error);
-                showAlert('Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.', 'danger');
+                // Mostrar el mensaje de error detallado del backend si está disponible
+                const errorMsg = error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
+                showAlert(errorMsg, 'danger');
             }
         });
     });
@@ -1017,7 +1019,12 @@ $(document).ready(function() {
 
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
-            showAlert("Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.", "danger");
+            // Intentar obtener el error detallado del backend
+            let errorMsg = "Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.";
+            if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                errorMsg = jqXHR.responseJSON.error;
+            }
+            showAlert(errorMsg, "danger");
         });
     }
 
@@ -1056,7 +1063,41 @@ $(document).ready(function() {
         localStorage.removeItem('ticketId');
     }
 
-    // Función para mostrar las horas límite junto a cada track
+    // Función para deshabilitar tracks basados en su hora de cierre
+    function actualizarEstadoTracks() {
+        const ahora = new Date();
+        const ahoraStr = ahora.toTimeString().split(' ')[0].substring(0,5); // "HH:MM"
+
+        for (let region in horariosCierre) {
+            for (let track in horariosCierre[region]) {
+                const horaCierreStr = horariosCierre[region][track];
+                const [horaCierre, minutoCierre] = horaCierreStr.split(":").map(Number);
+                const horaCierreMiliseconds = horaCierre * 60 + minutoCierre;
+                const ahoraMiliseconds = ahora.getHours() * 60 + ahora.getMinutes();
+
+                if (ahoraMiliseconds >= horaCierreMiliseconds) {
+                    // Deshabilitar el checkbox correspondiente
+                    $(`.track-checkbox[value="${track}"]`).prop('disabled', true);
+                    // Opcional: Desmarcar el checkbox si estaba seleccionado
+                    $(`.track-checkbox[value="${track}"]`).prop('checked', false);
+                    // Añadir una clase para indicar que está cerrado (opcional)
+                    $(`.track-checkbox[value="${track}"]`).closest('label').addClass('closed-track');
+                } else {
+                    // Habilitar el checkbox si aún no está cerrado
+                    $(`.track-checkbox[value="${track}"]`).prop('disabled', false);
+                    $(`.track-checkbox[value="${track}"]`).closest('label').removeClass('closed-track');
+                }
+            }
+        }
+    }
+
+    // Llamar a la función al cargar la página
+    actualizarEstadoTracks();
+
+    // Actualizar el estado de los tracks cada minuto
+    setInterval(actualizarEstadoTracks, 60000);
+
+    // Función para mostrar las horas límite junto a cada track (Opcional)
     function mostrarHorasLimite() {
         $(".cutoff-time").each(function() {
             const track = $(this).data("track");
