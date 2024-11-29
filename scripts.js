@@ -4,7 +4,7 @@ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/jugadas'; // Incluye '/jugadas' para coincidir con las rutas del backend
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api'; // Ajustado para reflejar las rutas del backend
 
     // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
@@ -339,7 +339,7 @@ $(document).ready(function() {
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
         // Verificar si hay un pago pendiente
-        if (!paymentCompleted && ticketId) {
+        if (!paymentCompleted && localStorage.getItem('ticketId')) {
             showAlert("Tienes un ticket pendiente de pago. Por favor, completa el pago antes de generar uno nuevo.", "warning");
             return;
         }
@@ -546,7 +546,7 @@ $(document).ready(function() {
 
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
-            url: `${BACKEND_API_URL}/store-ticket`, // Ruta corregida
+            url: `${BACKEND_API_URL}/store-ticket`, // Ruta actualizada
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -556,9 +556,8 @@ $(document).ready(function() {
                     ticketId = response.ticketId;
                     paymentCompleted = false; // Reiniciar el estado de pago
 
-                    // Actualizar la URL para incluir ticketId
-                    const newURL = `${window.location.origin}${window.location.pathname}?ticketId=${encodeURIComponent(ticketId)}`;
-                    window.history.replaceState({ path: newURL }, '', newURL);
+                    // Guardar ticketId en localStorage
+                    localStorage.setItem('ticketId', ticketId);
 
                     // Limpiar campos de QR y número de ticket
                     $("#numeroTicket").text('');
@@ -605,7 +604,7 @@ $(document).ready(function() {
 
         try {
             // Obtener las credenciales de Square desde el backend
-            const credentialsResponse = await fetch(`${BACKEND_API_URL}/square-credentials`); // Ruta corregida
+            const credentialsResponse = await fetch(`${BACKEND_API_URL}/square-credentials`);
             const credentials = await credentialsResponse.json();
             const { applicationId, locationId } = credentials;
 
@@ -626,11 +625,11 @@ $(document).ready(function() {
                 },
             });
 
-            // La URL actual ya contiene ticketId
-            const currentURL = window.location.href;
+            // La URL actual no contiene parámetros
+            const currentURL = window.location.origin + window.location.pathname;
 
             const options = {
-                redirectURL: currentURL,
+                redirectURL: `${currentURL}?ticketId=${ticketId}`,
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
@@ -705,9 +704,10 @@ $(document).ready(function() {
             const payload = {
                 sourceId: sourceId,
                 amount: amount,
+                ticketId: ticketId
             };
 
-            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, { // Ruta corregida
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -731,16 +731,18 @@ $(document).ready(function() {
 
     // Modificar el manejador de carga de la ventana para recuperar ticketData desde el backend usando ticketId
     $(window).on('load', function() {
+        // Obtener ticketId de localStorage
+        ticketId = localStorage.getItem('ticketId');
+
         // Obtener los parámetros de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
         const paymentId = urlParams.get('paymentId');
-        ticketId = urlParams.get('ticketId');
 
         if (ticketId) {
             // Recuperar ticketData desde el backend
             $.ajax({
-                url: `${BACKEND_API_URL}/retrieve-ticket`, // Ruta corregida
+                url: `${BACKEND_API_URL}/retrieve-ticket`,
                 method: 'POST',
                 dataType: 'json',
                 contentType: 'application/json',
@@ -763,33 +765,42 @@ $(document).ready(function() {
                         // Mostrar el modal
                         ticketModal.show();
 
-                        if (status === 'COMPLETED' && paymentId) {
-                            const totalAmount = ticketData.totalAmount;
-                            console.log('Procesando paymentId después de pago exitoso:', paymentId, 'monto:', totalAmount);
-                            processPaymentWithPaymentId(paymentId, totalAmount);
-                        } else if (status === 'CANCELED') {
-                            // El pago fue cancelado
-                            showAlert('Pago cancelado por el usuario.', 'warning');
-                        } else {
-                            // Si no hay estado de pago, inicializar Cash App Pay nuevamente
-                            if (!cashAppPayInitialized) {
-                                console.log('Inicializando Cash App Pay después de recuperar ticketData.');
-                                initializeCashAppPay(ticketData.totalAmount);
-                                cashAppPayInitialized = true;
+                        // Verificar el estado del pago en el backend
+                        $.ajax({
+                            url: `${BACKEND_API_URL}/check-payment-status`,
+                            method: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ ticketId: ticketId }),
+                            success: function(paymentResponse) {
+                                if (paymentResponse.paymentCompleted) {
+                                    paymentCompleted = true;
+                                    confirmarYGuardarTicket('Cash App');
+                                } else {
+                                    if (!cashAppPayInitialized) {
+                                        console.log('Inicializando Cash App Pay después de recuperar ticketData.');
+                                        initializeCashAppPay(ticketData.totalAmount);
+                                        cashAppPayInitialized = true;
+                                    }
+                                }
+                            },
+                            error: function(error) {
+                                console.error('Error al verificar el estado del pago:', error);
+                                showAlert('Error al verificar el estado del pago. Por favor, inténtalo de nuevo.', 'danger');
                             }
-                        }
-
-                        // Limpiar los parámetros de la URL para evitar acciones repetidas
-                        const newURL = window.location.origin + window.location.pathname;
-                        window.history.replaceState({}, document.title, newURL);
+                        });
 
                     } else {
                         showAlert('Error al recuperar los datos del ticket. Por favor, inténtalo de nuevo.', 'danger');
+                        // Limpiar ticketId de localStorage
+                        localStorage.removeItem('ticketId');
                     }
                 },
                 error: function(error) {
                     console.error('Error al recuperar los datos del ticket:', error);
                     showAlert('Error al recuperar los datos del ticket. Por favor, inténtalo de nuevo.', 'danger');
+                    // Limpiar ticketId de localStorage
+                    localStorage.removeItem('ticketId');
                 }
             });
         }
@@ -799,12 +810,18 @@ $(document).ready(function() {
     async function processPaymentWithPaymentId(paymentId, amount) {
         console.log('Procesando paymentId:', paymentId, 'con monto:', amount);
         try {
-            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, { // Ruta corregida
+            const payload = {
+                sourceId: paymentId,
+                amount: amount,
+                ticketId: ticketId
+            };
+
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ sourceId: paymentId, amount: amount }),
+                body: JSON.stringify(payload),
             });
 
             const result = await response.json();
@@ -847,62 +864,80 @@ $(document).ready(function() {
         }
     });
 
-    // Modificar confirmarYGuardarTicket para usar ticketData.jugadas
+    // Modificar confirmarYGuardarTicket para validar en el servidor antes de generar el ticket
     function confirmarYGuardarTicket(metodoPago) {
-        // Generar número de ticket único y código QR
-        const numeroTicket = generarNumeroUnico();
-        $("#numeroTicket").text(numeroTicket);
+        // Validar en el servidor que el pago ha sido completado
+        $.ajax({
+            url: `${BACKEND_API_URL}/validate-ticket`,
+            method: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({ ticketId: ticketId }),
+            success: function(response) {
+                if (response.valid) {
+                    // Generar número de ticket único y código QR
+                    const numeroTicket = generarNumeroUnico();
+                    $("#numeroTicket").text(numeroTicket);
 
-        // Generar la fecha y hora de transacción
-        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
-        $("#ticketTransaccion").text(fechaTransaccion);
+                    // Generar la fecha y hora de transacción
+                    fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
+                    $("#ticketTransaccion").text(fechaTransaccion);
 
-        // Generar código QR
-        $("#qrcode").empty(); // Limpiar el contenedor anterior
-        new QRCode(document.getElementById("qrcode"), {
-            text: numeroTicket,
-            width: 128,
-            height: 128,
+                    // Generar código QR
+                    $("#qrcode").empty(); // Limpiar el contenedor anterior
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: numeroTicket,
+                        width: 128,
+                        height: 128,
+                    });
+
+                    // Datos comunes a todas las jugadas
+                    const ticketNumber = numeroTicket;
+                    const transactionDateTime = fechaTransaccion;
+                    const betDates = ticketData.ticketFecha;
+                    const tracks = ticketData.ticketTracks;
+                    const totalTicket = ticketData.totalAmount.toFixed(2);
+                    const timestamp = new Date().toISOString();
+
+                    // Array para almacenar las jugadas
+                    const jugadasData = [];
+
+                    // Recorrer cada jugada y preparar los datos
+                    ticketData.jugadas.forEach(function(jugada) {
+                        // Generar número único de 8 dígitos para la jugada
+                        const jugadaNumber = generarNumeroUnico();
+
+                        const jugadaData = {
+                            "Ticket Number": ticketNumber,
+                            "Transaction DateTime": transactionDateTime,
+                            "Bet Dates": betDates,
+                            "Tracks": tracks,
+                            "Bet Number": jugada.numero,
+                            "Game Mode": jugada.modalidad,
+                            "Straight ($)": jugada.straight,
+                            "Box ($)": jugada.box !== "-" ? parseFloat(jugada.box) : null,
+                            "Combo ($)": jugada.combo !== "-" ? parseFloat(jugada.combo) : null,
+                            "Total ($)": jugada.total,
+                            "Payment Method": metodoPago,
+                            "Jugada Number": jugadaNumber,
+                            "Timestamp": timestamp
+                        };
+
+                        // Añadir la jugada al array
+                        jugadasData.push(jugadaData);
+                    });
+
+                    // Enviar datos a ambos destinos
+                    enviarFormulario(jugadasData);
+                } else {
+                    showAlert('El pago no ha sido completado o el ticket no es válido.', 'danger');
+                }
+            },
+            error: function(error) {
+                console.error('Error al validar el ticket en el servidor:', error);
+                showAlert('Error al validar el ticket. Por favor, inténtalo de nuevo.', 'danger');
+            }
         });
-
-        // Datos comunes a todas las jugadas
-        const ticketNumber = numeroTicket;
-        const transactionDateTime = fechaTransaccion;
-        const betDates = ticketData.ticketFecha;
-        const tracks = ticketData.ticketTracks;
-        const totalTicket = ticketData.totalAmount.toFixed(2);
-        const timestamp = new Date().toISOString();
-
-        // Array para almacenar las jugadas
-        const jugadasData = [];
-
-        // Recorrer cada jugada y preparar los datos
-        ticketData.jugadas.forEach(function(jugada) {
-            // Generar número único de 8 dígitos para la jugada
-            const jugadaNumber = generarNumeroUnico();
-
-            const jugadaData = {
-                "Ticket Number": ticketNumber,
-                "Transaction DateTime": transactionDateTime,
-                "Bet Dates": betDates,
-                "Tracks": tracks,
-                "Bet Number": jugada.numero,
-                "Game Mode": jugada.modalidad,
-                "Straight ($)": jugada.straight,
-                "Box ($)": jugada.box !== "-" ? parseFloat(jugada.box) : null,
-                "Combo ($)": jugada.combo !== "-" ? parseFloat(jugada.combo) : null,
-                "Total ($)": jugada.total,
-                "Payment Method": metodoPago,
-                "Jugada Number": jugadaNumber,
-                "Timestamp": timestamp
-            };
-
-            // Añadir la jugada al array
-            jugadasData.push(jugadaData);
-        });
-
-        // Enviar datos a ambos destinos
-        enviarFormulario(jugadasData);
     }
 
     // Modificar enviarFormulario para limpiar el estado después de completar
@@ -916,9 +951,9 @@ $(document).ready(function() {
             data: JSON.stringify(datos)
         });
 
-        // Enviar al Backend
+        // Enviar al Backend para guardar en MongoDB
         const backendRequest = $.ajax({
-            url: BACKEND_API_URL, // Ruta correcta
+            url: `${BACKEND_API_URL}/save-jugadas`, // Ruta actualizada
             method: "POST",
             dataType: "json",
             contentType: "application/json",
@@ -973,14 +1008,8 @@ $(document).ready(function() {
                 }
             }
 
-            // Opcional: Informar al backend que puede eliminar el ticketData almacenado
-            $.ajax({
-                url: `${BACKEND_API_URL}/delete-ticket`, // Ruta corregida
-                method: 'POST',
-                dataType: 'json',
-                contentType: "application/json",
-                data: JSON.stringify({ ticketId: ticketId })
-            });
+            // Limpiar ticketId de localStorage
+            localStorage.removeItem('ticketId');
 
             // Limpiar los parámetros de la URL
             const newURL = window.location.origin + window.location.pathname;
@@ -1022,6 +1051,9 @@ $(document).ready(function() {
                 console.error('Error al destruir la instancia de Cash App Pay en resetForm:', error);
             }
         }
+
+        // Limpiar ticketId de localStorage
+        localStorage.removeItem('ticketId');
     }
 
     // Función para mostrar las horas límite junto a cada track
