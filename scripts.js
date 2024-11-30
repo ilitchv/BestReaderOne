@@ -18,6 +18,7 @@ $(document).ready(function() {
             selectedDays = selectedDates.length;
             console.log("Días seleccionados:", selectedDays);
             calcularTotal();
+            actualizarEstadoTracks(); // Actualizar tracks al cambiar la fecha
         },
     });
 
@@ -328,7 +329,7 @@ $(document).ready(function() {
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         `;
-        $("#ticketAlerts").append(alertHTML); // Cambiado de .html() a .append()
+        $("#ticketAlerts").append(alertHTML);
     }
 
     // Función para generar número único de ticket de 8 dígitos
@@ -338,14 +339,14 @@ $(document).ready(function() {
 
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
+        // Limpiar alertas anteriores
+        $("#ticketAlerts").empty();
+
         // Verificar si hay un pago pendiente
         if (!paymentCompleted && localStorage.getItem('ticketId')) {
             showAlert("Tienes un ticket pendiente de pago. Por favor, completa el pago antes de generar uno nuevo.", "warning");
             return;
         }
-
-        // Limpiar alertas anteriores
-        $("#ticketAlerts").empty();
 
         // Validar formulario
         const fecha = $("#fecha").val();
@@ -861,7 +862,8 @@ $(document).ready(function() {
                 showAlert("Por favor, procede con el pago haciendo clic en el botón Cash App Pay.", "warning");
             }
         } else {
-            // Para otros roles, asumimos pago en efectivo
+            // Para roles admin y dealer, establecer paymentCompleted en true
+            paymentCompleted = true;
             confirmarYGuardarTicket('Efectivo');
         }
     });
@@ -1028,6 +1030,11 @@ $(document).ready(function() {
         });
     }
 
+    // Evento para el botón de reset
+    $("#resetForm").click(function() {
+        resetForm();
+    });
+
     // Función para reiniciar el formulario
     function resetForm() {
         $("#lotteryForm")[0].reset();
@@ -1061,12 +1068,32 @@ $(document).ready(function() {
 
         // Limpiar ticketId de localStorage
         localStorage.removeItem('ticketId');
+
+        // Limpiar alertas
+        $("#ticketAlerts").empty();
+
+        // Habilitar todos los tracks y remover clases
+        $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
     }
 
     // Función para deshabilitar tracks basados en su hora de cierre
     function actualizarEstadoTracks() {
+        const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
+        if (!fechaSeleccionadaStr) return;
+
+        const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
+        const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
+
+        const fechaActual = new Date();
+        const esMismoDia = fechaSeleccionada.toDateString() === fechaActual.toDateString();
+
+        if (!esMismoDia) {
+            // Habilitar todos los tracks para fechas futuras
+            $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
+            return;
+        }
+
         const ahora = new Date();
-        const ahoraStr = ahora.toTimeString().split(' ')[0].substring(0,5); // "HH:MM"
 
         for (let region in horariosCierre) {
             for (let track in horariosCierre[region]) {
@@ -1077,15 +1104,10 @@ $(document).ready(function() {
 
                 if (ahoraMiliseconds >= horaCierreMiliseconds) {
                     // Deshabilitar el checkbox correspondiente
-                    $(`.track-checkbox[value="${track}"]`).prop('disabled', true);
-                    // Opcional: Desmarcar el checkbox si estaba seleccionado
-                    $(`.track-checkbox[value="${track}"]`).prop('checked', false);
-                    // Añadir una clase para indicar que está cerrado (opcional)
-                    $(`.track-checkbox[value="${track}"]`).closest('label').addClass('closed-track');
+                    $(`.track-checkbox[value="${track}"]`).prop('disabled', true).prop('checked', false).closest('label').addClass('closed-track');
                 } else {
                     // Habilitar el checkbox si aún no está cerrado
-                    $(`.track-checkbox[value="${track}"]`).prop('disabled', false);
-                    $(`.track-checkbox[value="${track}"]`).closest('label').removeClass('closed-track');
+                    $(`.track-checkbox[value="${track}"]`).prop('disabled', false).closest('label').removeClass('closed-track');
                 }
             }
         }
@@ -1094,8 +1116,26 @@ $(document).ready(function() {
     // Llamar a la función al cargar la página
     actualizarEstadoTracks();
 
-    // Actualizar el estado de los tracks cada minuto
-    setInterval(actualizarEstadoTracks, 60000);
+    // Actualizar el estado de los tracks cada vez que cambie la fecha
+    $("#fecha").change(function() {
+        actualizarEstadoTracks();
+    });
+
+    // Actualizar el estado de los tracks cada minuto si la fecha es hoy
+    setInterval(function() {
+        const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
+        if (!fechaSeleccionadaStr) return;
+
+        const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
+        const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
+
+        const fechaActual = new Date();
+        const esMismoDia = fechaSeleccionada.toDateString() === fechaActual.toDateString();
+
+        if (esMismoDia) {
+            actualizarEstadoTracks();
+        }
+    }, 60000);
 
     // Función para mostrar las horas límite junto a cada track (Opcional)
     function mostrarHorasLimite() {
