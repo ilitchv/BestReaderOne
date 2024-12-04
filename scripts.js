@@ -313,11 +313,6 @@ $(document).ready(function() {
     // Inicializar Bootstrap Modal
     var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
-    // Función para detectar si el dispositivo es móvil
-    function isMobileDevice() {
-        return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-
     // Función para mostrar alertas usando Bootstrap
     function showAlert(message, type) {
         const alertHTML = `
