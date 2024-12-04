@@ -1,4 +1,4 @@
-/* Estilos Básicos */
+ /* Estilos Básicos */
 :root {
     --color-fondo: #0a0a0a; /* Fondo oscuro */
     --color-neon-cian: #00ffff;
@@ -316,4 +316,13 @@ input::-ms-input-placeholder { /* Microsoft Edge */
 /* Ocultar la hora límite para el track "Venezuela" cambiando el color del texto */
 .cutoff-time[data-track='Venezuela'] {
     color: var(--color-fondo);
+}
+
+/* Previsualización de Comprobante de Pago */
+#previsualizacionComprobante img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    padding: 5px;
+    border-radius: 5px;
 }
