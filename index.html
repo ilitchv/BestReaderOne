@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+ <!DOCTYPE html> 
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -34,24 +34,21 @@
                 // Mostrar el contenido una vez verificado
                 document.documentElement.style.display = '';
 
-                // Hacer visible o no el botón de Cash App Pay según el rol
-                const cashAppContainer = document.getElementById('cashAppPayContainer');
+                // Mostrar u ocultar elementos según el rol
                 const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
-                if (cashAppContainer) {
+                const confirmarPagoFormContainer = document.getElementById('confirmarPagoFormContainer');
+                if (confirmarTicketContainer && confirmarPagoFormContainer) {
                     if (userRole === 'user') {
-                        cashAppContainer.style.display = 'block';
+                        confirmarPagoFormContainer.style.display = 'block';
                         confirmarTicketContainer.style.display = 'none';
                     } else {
-                        cashAppContainer.style.display = 'none';
+                        confirmarPagoFormContainer.style.display = 'none';
                         confirmarTicketContainer.style.display = 'block';
                     }
                 }
             }
         });
     </script>
-    
-    <!-- SDK de Square Web Payments (Sandbox) -->
-    <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
 </head>
 <body>
     <div class="container my-5">
@@ -368,7 +365,7 @@
                      <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
                  </button>
                 </div>
-                </form>
+            </form>
             <!-- Modal para Previsualizar Ticket -->
             <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
@@ -418,10 +415,22 @@
                             <div class="w-100 mb-2">
                                 <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
                             </div>
-                            <!-- Contenedor para el Botón de Cash App Pay -->
-                            <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
-                                <!-- Aquí se insertará el botón de Cash App Pay -->
-                                <div id="cash-app-pay"></div>
+                            <!-- Formulario de Confirmación de Pago Manual -->
+                            <div id="confirmarPagoFormContainer" class="w-100 mb-2" style="display: none;">
+                                <form id="confirmarPagoForm">
+                                    <div class="mb-3">
+                                        <label for="codigoTransaccion" class="form-label">Código de Transacción</label>
+                                        <input type="text" class="form-control" id="codigoTransaccion" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="comprobantePago" class="form-label">Subir Comprobante de Pago (Opcional)</label>
+                                        <input type="file" class="form-control" id="comprobantePago" accept="image/*">
+                                        <div id="previsualizacionComprobante" class="mt-2"></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100" id="confirmarPago">
+                                        <i class="bi bi-check-circle-fill"></i> Confirmar Pago
+                                    </button>
+                                </form>
                             </div>
                             <!-- Botón para Confirmar e Imprimir (visible para roles distintos a 'user') -->
                             <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
@@ -461,17 +470,6 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <!-- Supabase JS -->
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-        <!-- Verificar si el SDK de Square se ha cargado -->
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                if (window.Square) {
-                    console.log('Square SDK cargado correctamente.');
-                } else {
-                    console.error('Square SDK no se cargó.');
-                }
-            });
-        </script>
 
         <!-- Tu archivo JavaScript principal -->
         <script src="scripts.js"></script>
