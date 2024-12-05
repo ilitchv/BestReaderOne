@@ -4,7 +4,12 @@ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api'; // Ajustado para reflejar las rutas del backend
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api';
+
+    // Obtener el token JWT y el rol del usuario
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
+    console.log('User Role:', userRole);
 
     // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
@@ -29,8 +34,6 @@ $(document).ready(function() {
     let fechaTransaccion = '';
     let ticketData = {}; // Objeto para almacenar datos del ticket
     let ticketId = null; // Variable para almacenar el ticketId
-    const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
-    console.log('User Role:', userRole);
 
     // Horarios de cierre por track
     const horariosCierre = {
@@ -533,7 +536,7 @@ $(document).ready(function() {
 
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
-            url: `${BACKEND_API_URL}/store-ticket`, // Ruta actualizada
+            url: `${BACKEND_API_URL}/store-ticket`,
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -613,6 +616,9 @@ $(document).ready(function() {
         $.ajax({
             url: `${BACKEND_API_URL}/confirmar-pago-manual`,
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}` // Incluimos el token JWT
+            },
             data: formData,
             processData: false,
             contentType: false,
@@ -667,6 +673,9 @@ $(document).ready(function() {
         $.ajax({
             url: `${BACKEND_API_URL}/validate-ticket`,
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}` // Incluimos el token JWT
+            },
             dataType: 'json',
             contentType: 'application/json',
             data: JSON.stringify({ ticketId: ticketId, userRole: userRole }),
@@ -753,8 +762,11 @@ $(document).ready(function() {
 
         // Enviar al Backend para guardar en MongoDB
         const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/save-jugadas`, // Ruta actualizada
+            url: `${BACKEND_API_URL}/save-jugadas`,
             method: "POST",
+            headers: {
+                'Authorization': `Bearer ${token}` // Incluimos el token JWT
+            },
             dataType: "json",
             contentType: "application/json",
             data: JSON.stringify(datos)
