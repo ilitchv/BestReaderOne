@@ -536,7 +536,7 @@ $(document).ready(function() {
 
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
-            url: `${BACKEND_API_URL}/store-ticket`,
+            url: `${BACKEND_API_URL}/tickets/store-ticket`, // Ruta actualizada
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -614,7 +614,7 @@ $(document).ready(function() {
 
         // Enviar los datos al backend para validación
         $.ajax({
-            url: `${BACKEND_API_URL}/confirmar-pago-manual`,
+            url: `${BACKEND_API_URL}/tickets/confirmar-pago-manual`, // Ruta actualizada
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}` // Incluimos el token JWT
@@ -671,7 +671,7 @@ $(document).ready(function() {
     function confirmarYGuardarTicket(metodoPago) {
         // Validar en el servidor que el pago ha sido completado (solo para usuarios)
         $.ajax({
-            url: `${BACKEND_API_URL}/validate-ticket`,
+            url: `${BACKEND_API_URL}/tickets/validate-ticket`, // Ruta actualizada
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}` // Incluimos el token JWT
@@ -762,7 +762,7 @@ $(document).ready(function() {
 
         // Enviar al Backend para guardar en MongoDB
         const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/save-jugadas`,
+            url: `${BACKEND_API_URL}/jugadas/save-jugadas`, // Ruta actualizada
             method: "POST",
             headers: {
                 'Authorization': `Bearer ${token}` // Incluimos el token JWT
