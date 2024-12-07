@@ -313,12 +313,15 @@ $(document).ready(function() {
     $("#generarTicket").click(function() {
         $("#ticketAlerts").empty();
 
-        const fecha = $("#fecha").val();
-        console.log("Valor de fecha:", fecha);
-        if (!fecha) {
+        const fechaStr = $("#fecha").val();
+        console.log("Valor de fecha:", fechaStr);
+        if (!fechaStr) {
             showAlert("Por favor, selecciona una fecha.", "warning");
             return;
         }
+        // Convertir fechaStr a array
+        const fechasArray = fechaStr ? fechaStr.split(", ") : [];
+
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
         if (!tracks || tracks.length === 0) {
             showAlert("Por favor, selecciona al menos un track.", "warning");
@@ -331,14 +334,14 @@ $(document).ready(function() {
             return;
         }
 
-        const fechasArray = fecha.split(", ");
+        const fechasValidacion = fechasArray;
         const fechaActual = new Date();
         const yearActual = fechaActual.getFullYear();
         const monthActual = fechaActual.getMonth();
         const dayActual = fechaActual.getDate();
         const fechaActualSinHora = new Date(yearActual, monthActual, dayActual);
 
-        for (let fechaSeleccionadaStr of fechasArray) {
+        for (let fechaSeleccionadaStr of fechasValidacion) {
             const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
             const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
 
@@ -362,6 +365,7 @@ $(document).ready(function() {
         }
 
         let jugadasValidas = true;
+        const jugadasArray = [];
         $("#tablaJugadas tr").each(function() {
             const numero = $(this).find(".numeroApostado").val();
             const modalidad = $(this).find(".tipoJuego").text();
@@ -421,56 +425,33 @@ $(document).ready(function() {
                 }
             }
 
-            if (limitesApuesta[modalidad]) {
-                if (parseFloat($(this).find(".straight").val()) > (limitesApuesta[modalidad].straight || Infinity)) {
-                    jugadasValidas = false;
-                    showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
-                    return false;
-                }
-                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
-                    jugadasValidas = false;
-                    showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
-                    return false;
-                }
-                if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
-                    jugadasValidas = false;
-                    showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
-                    return false;
-                }
-            }
-        });
-        if (!jugadasValidas) {
-            return;
-        }
-
-        const tracksTexto = tracks.join(", ");
-        $("#ticketTracks").text(tracksTexto);
-        $("#ticketJugadas").empty();
-        const jugadasArray = [];
-        $("#tablaJugadas tr").each(function() {
-            const num = $(this).find(".numeroApostado").val();
-            const modalidad = $(this).find(".tipoJuego").text();
             const straight = parseFloat($(this).find(".straight").val()) || 0;
             const boxVal = $(this).find(".box").val();
             const box = boxVal !== "" ? boxVal : "-";
             const comboVal = $(this).find(".combo").val();
             const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
             const total = parseFloat($(this).find(".total").text()) || 0;
-            const fila = ` 
-                <tr>
-                    <td>${$(this).find("td").first().text()}</td>
-                    <td>${num}</td>
-                    <td>${modalidad}</td>
-                    <td>${straight.toFixed(2)}</td>
-                    <td>${box !== "-" ? box : "-"}</td>
-                    <td>${combo !== "-" ? combo.toFixed(2) : "-"}</td>
-                    <td>${total.toFixed(2)}</td>
-                </tr>
-            `;
-            $("#ticketJugadas").append(fila);
+
+            if (limitesApuesta[modalidad]) {
+                if (straight > (limitesApuesta[modalidad].straight || Infinity)) {
+                    jugadasValidas = false;
+                    showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
+                    return false;
+                }
+                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat(boxVal) > (limitesApuesta[modalidad].box || Infinity)) {
+                    jugadasValidas = false;
+                    showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
+                    return false;
+                }
+                if (limitesApuesta[modalidad].combo !== undefined && combo !== "-" && combo > (limitesApuesta[modalidad].combo || Infinity)) {
+                    jugadasValidas = false;
+                    showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
+                    return false;
+                }
+            }
 
             jugadasArray.push({
-                numero: num,
+                numero: numero,
                 modalidad: modalidad,
                 straight: straight,
                 box: box,
@@ -478,21 +459,46 @@ $(document).ready(function() {
                 total: total
             });
         });
-        $("#ticketTotal").text($("#totalJugadas").text());
 
-        $("#ticketFecha").text(fecha);
+        if (!jugadasValidas) {
+            return;
+        }
+
+        const tracksTexto = tracks.join(", ");
+        $("#ticketTracks").text(tracksTexto);
+        $("#ticketJugadas").empty();
+        jugadasArray.forEach((jugada, index) => {
+            const fila = ` 
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${jugada.numero}</td>
+                    <td>${jugada.modalidad}</td>
+                    <td>${jugada.straight.toFixed(2)}</td>
+                    <td>${jugada.box !== "-" ? jugada.box : "-"}</td>
+                    <td>${jugada.combo !== "-" ? jugada.combo.toFixed(2) : "-"}</td>
+                    <td>${jugada.total.toFixed(2)}</td>
+                </tr>
+            `;
+            $("#ticketJugadas").append(fila);
+        });
+
+        $("#ticketTotal").text($("#totalJugadas").text());
+        $("#ticketFecha").text(fechaStr);
         console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
+        // Aquí usamos fechasArray en lugar de fechaStr
+        const fechasArray = fechaStr ? fechaStr.split(", ") : [];
+
         ticketData = {
-            fecha: fecha,
+            fecha: fechasArray,
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
             ticketJugadasHTML: $("#ticketJugadas").html(),
             ticketTracks: tracksTexto,
-            ticketFecha: fecha,
+            ticketFecha: fechaStr,
             selectedDays: selectedDays,
             selectedTracks: selectedTracks
         };
@@ -868,5 +874,3 @@ $(document).ready(function() {
     mostrarHorasLimite();
 
 });
-
-// Breve resumen: Se actualizaron las rutas y cabeceras sin eliminar líneas, manteniendo la lógica y el orden original.
