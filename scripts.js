@@ -2,13 +2,14 @@
 
 $(document).ready(function() {
 
-    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
+    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr';
     const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api';
 
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole') || 'user';
     console.log('User Role:', userRole);
 
+    // Inicializar Flatpickr
     flatpickr("#fecha", {
         mode: "multiple",
         dateFormat: "m-d-Y",
@@ -80,7 +81,6 @@ $(document).ready(function() {
 
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
-
         const esUSA = tracks.some(track => Object.keys(horariosCierre.USA).includes(track));
         const esSD = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
         const incluyeVenezuela = tracks.includes("Venezuela");
@@ -307,8 +307,8 @@ $(document).ready(function() {
             return;
         }
 
-        // Convertimos fechaStr a array de strings
-        const selectedFechasArray = fechaStr.split(", ");
+        // Aquí definimos fechasProcesadas una sola vez
+        const fechasProcesadas = fechaStr.split(", ");
 
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
         if (!tracks || tracks.length === 0) {
@@ -322,7 +322,7 @@ $(document).ready(function() {
             return;
         }
 
-        const fechasValidacion = selectedFechasArray;
+        const fechasValidacion = fechasProcesadas;
         const fechaActual = new Date();
         const yearActual = fechaActual.getFullYear();
         const monthActual = fechaActual.getMonth();
@@ -475,11 +475,11 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Aquí usamos selectedFechasArray en vez de fechaStr
-        const selectedFechasArray = fechaStr.split(", ");
+        // Usamos fechasProcesadas (definida una sola vez)
+        const fechasProcesadas = fechaStr.split(", ");
 
         ticketData = {
-            fecha: selectedFechasArray,
+            fecha: fechasProcesadas,
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
