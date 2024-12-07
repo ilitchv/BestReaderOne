@@ -2,28 +2,23 @@
 
 $(document).ready(function() {
 
-    // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
     const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api';
 
-    // Obtener el token JWT y el rol del usuario
     const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
+    const userRole = localStorage.getItem('userRole') || 'user';
     console.log('User Role:', userRole);
 
-    // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
         mode: "multiple",
         dateFormat: "m-d-Y",
         minDate: "today",
-        maxDate: null,
-        defaultDate: null,
         allowInput: true,
         onChange: function(selectedDates, dateStr, instance) {
             selectedDays = selectedDates.length;
             console.log("Días seleccionados:", selectedDays);
             calcularTotal();
-            actualizarEstadoTracks(); // Actualizar tracks al cambiar la fecha
+            actualizarEstadoTracks();
         },
     });
 
@@ -31,11 +26,9 @@ $(document).ready(function() {
     let selectedTracks = 0;
     let selectedDays = 0;
     let totalJugadasGlobal = 0;
-    let fechaTransaccion = '';
-    let ticketData = {}; // Objeto para almacenar datos del ticket
-    let ticketId = null; // Variable para almacenar el ticketId
+    let ticketData = {};
+    let ticketId = null;
 
-    // Horarios de cierre por track
     const horariosCierre = {
         "USA": {
             "New York Mid Day": "14:25",
@@ -73,7 +66,6 @@ $(document).ready(function() {
         }
     };
 
-    // Límites de apuestas por modalidad
     const limitesApuesta = {
         "Win 4": { "straight": 6, "box": 30, "combo": 50 },
         "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
@@ -86,7 +78,6 @@ $(document).ready(function() {
         "Combo": { "combo": 50 }
     };
 
-    // Función para determinar la modalidad de juego
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
 
@@ -128,7 +119,6 @@ $(document).ready(function() {
         return modalidad;
     }
 
-    // Función para agregar una nueva jugada
     function agregarJugada() {
         if (jugadaCount >= 100) {
             showAlert("Has alcanzado el máximo de 100 jugadas.", "danger");
@@ -153,15 +143,12 @@ $(document).ready(function() {
         $("#tablaJugadas tr:last .numeroApostado").focus();
     }
 
-    // Agregar una jugada inicial
     agregarJugada();
 
-    // Evento para agregar más jugadas
     $("#agregarJugada").click(function() {
         agregarJugada();
     });
 
-    // Evento para eliminar la última jugada
     $("#eliminarJugada").click(function() {
         if (jugadaCount === 0) {
             showAlert("No hay jugadas para eliminar.", "warning");
@@ -320,8 +307,8 @@ $(document).ready(function() {
             return;
         }
 
-        // Convertir fechaStr a array de strings
-        const fechasArray = fechaStr.split(", ");
+        // Convertimos fechaStr a array de strings
+        const selectedFechasArray = fechaStr.split(", ");
 
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
         if (!tracks || tracks.length === 0) {
@@ -335,7 +322,7 @@ $(document).ready(function() {
             return;
         }
 
-        const fechasValidacion = fechasArray;
+        const fechasValidacion = selectedFechasArray;
         const fechaActual = new Date();
         const yearActual = fechaActual.getFullYear();
         const monthActual = fechaActual.getMonth();
@@ -488,11 +475,11 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Usamos fechasArray en vez de fechaStr (ya definido arriba)
-        const fechasArray = fechaStr.split(", ");
+        // Aquí usamos selectedFechasArray en vez de fechaStr
+        const selectedFechasArray = fechaStr.split(", ");
 
         ticketData = {
-            fecha: fechasArray,
+            fecha: selectedFechasArray,
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
@@ -761,7 +748,9 @@ $(document).ready(function() {
     }
 
     function actualizarEstadoTracks() {
-        const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
+        const fechaVal = $("#fecha").val();
+        if (!fechaVal) return;
+        const fechaSeleccionadaStr = fechaVal.split(", ")[0];
         if (!fechaSeleccionadaStr) return;
 
         const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
@@ -796,7 +785,9 @@ $(document).ready(function() {
     $("#fecha").change(function() { actualizarEstadoTracks(); });
 
     setInterval(function() {
-        const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
+        const fechaVal = $("#fecha").val();
+        if (!fechaVal) return;
+        const fechaSeleccionadaStr = fechaVal.split(", ")[0];
         if (!fechaSeleccionadaStr) return;
 
         const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
