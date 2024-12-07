@@ -319,8 +319,9 @@ $(document).ready(function() {
             showAlert("Por favor, selecciona una fecha.", "warning");
             return;
         }
-        // Convertir fechaStr a array
-        const fechasArray = fechaStr ? fechaStr.split(", ") : [];
+
+        // Convertir fechaStr a array de strings
+        const fechasArray = fechaStr.split(", ");
 
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
         if (!tracks || tracks.length === 0) {
@@ -431,7 +432,6 @@ $(document).ready(function() {
             const comboVal = $(this).find(".combo").val();
             const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
             const total = parseFloat($(this).find(".total").text()) || 0;
-
             if (limitesApuesta[modalidad]) {
                 if (straight > (limitesApuesta[modalidad].straight || Infinity)) {
                     jugadasValidas = false;
@@ -488,8 +488,8 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Aquí usamos fechasArray en lugar de fechaStr
-        const fechasArray = fechaStr ? fechaStr.split(", ") : [];
+        // Usamos fechasArray en vez de fechaStr (ya definido arriba)
+        const fechasArray = fechaStr.split(", ");
 
         ticketData = {
             fecha: fechasArray,
