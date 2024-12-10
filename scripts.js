@@ -9,20 +9,6 @@ $(document).ready(function() {
     const userRole = localStorage.getItem('userRole') || 'user';
     console.log('User Role:', userRole);
 
-    // Inicializar Flatpickr
-    flatpickr("#fecha", {
-        mode: "multiple",
-        dateFormat: "m-d-Y",
-        minDate: "today",
-        allowInput: true,
-        onChange: function(selectedDates, dateStr, instance) {
-            selectedDays = selectedDates.length;
-            console.log("Días seleccionados:", selectedDays);
-            calcularTotal();
-            actualizarEstadoTracks();
-        },
-    });
-
     let jugadaCount = 0;
     let selectedTracks = 0;
     let selectedDays = 0;
@@ -30,6 +16,7 @@ $(document).ready(function() {
     let ticketData = {};
     let ticketId = null;
 
+    // Horarios de cierre por track
     const horariosCierre = {
         "USA": {
             "New York Mid Day": "14:25",
@@ -67,6 +54,7 @@ $(document).ready(function() {
         }
     };
 
+    // Límites de apuesta por modalidad
     const limitesApuesta = {
         "Win 4": { "straight": 6, "box": 30, "combo": 50 },
         "Peak 3": { "straight": 35, "box": 50, "combo": 70 },
@@ -78,6 +66,20 @@ $(document).ready(function() {
         "RD-Pale": { "straight": 20 },
         "Combo": { "combo": 50 }
     };
+
+    // Inicializar Flatpickr
+    flatpickr("#fecha", {
+        mode: "multiple",
+        dateFormat: "m-d-Y",
+        minDate: "today",
+        allowInput: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            selectedDays = selectedDates.length;
+            console.log("Días seleccionados:", selectedDays);
+            calcularTotal();
+            actualizarEstadoTracks();
+        },
+    });
 
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
@@ -307,7 +309,7 @@ $(document).ready(function() {
             return;
         }
 
-        // Aquí definimos fechasProcesadas una sola vez
+        // Declaramos fechasProcesadas UNA sola vez
         const fechasProcesadas = fechaStr.split(", ");
 
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
@@ -475,9 +477,7 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Usamos fechasProcesadas (definida una sola vez)
-        const fechasProcesadas = fechaStr.split(", ");
-
+        // Aquí usamos fechasProcesadas una sola vez, ya declarada arriba
         ticketData = {
             fecha: fechasProcesadas,
             tracks: tracks,
@@ -595,7 +595,6 @@ $(document).ready(function() {
 
     $("#confirmarTicket").click(function() {
         $("#ticketAlerts").empty();
-
         if (userRole === 'user') {
             showAlert("Por favor, confirma tu pago antes de generar el ticket.", "warning");
         } else {
