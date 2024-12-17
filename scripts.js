@@ -7,7 +7,17 @@ $(document).ready(function() {
 
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole') || 'user';
+    const userId = localStorage.getItem('userId'); // Obtener el userId del localStorage
+
+    if (!userId) {
+        console.error('Error: userId no está presente en localStorage.');
+        showAlert('Error de autenticación. Por favor, inicia sesión nuevamente.', 'danger');
+        // Opcional: Redirigir al usuario a la página de inicio de sesión
+        return;
+    }
+
     console.log('User Role:', userRole);
+    console.log('User ID:', userId);
 
     let jugadaCount = 0;
     let selectedTracks = 0;
@@ -651,7 +661,8 @@ $(document).ready(function() {
                             "Total ($)": jugada.total,
                             "Payment Method": metodoPago,
                             "Jugada Number": jugadaNumber,
-                            "Timestamp": timestamp
+                            "Timestamp": timestamp,
+                            "User": userId // Añadido el campo User
                         };
                         jugadasData.push(jugadaData);
                     });
