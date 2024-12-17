@@ -406,9 +406,10 @@ $(document).ready(function() {
             } else if (["Win 4", "Peak 3"].includes(modalidad)) {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
                 const boxVal = $(this).find(".box").val();
-                const box = boxVal !== "" ? parseFloat(boxVal) : 0;
-                const combo = parseFloat($(this).find(".combo").val()) || 0;
-                if (straight <= 0 && box <= 0 && combo <= 0) {
+                const boxNum = boxVal !== "" ? parseFloat(boxVal) : 0;
+                const comboVal = $(this).find(".combo").val();
+                const comboNum = comboVal !== "" ? parseFloat(comboVal) : 0;
+                if (straight <= 0 && boxNum <= 0 && comboNum <= 0) {
                     jugadasValidas = false;
                     showAlert(`Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.`, "danger");
                     return false;
@@ -417,34 +418,20 @@ $(document).ready(function() {
 
             const straight = parseFloat($(this).find(".straight").val()) || 0;
             const boxVal = $(this).find(".box").val();
-            const box = boxVal !== "" ? boxVal : "-";
             const comboVal = $(this).find(".combo").val();
-            const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
+
+            // Convertir "-" a null
+            const boxParsed = (boxVal && boxVal !== "-") ? parseFloat(boxVal) : null;
+            const comboParsed = (comboVal && comboVal !== "-") ? parseFloat(comboVal) : null;
+
             const total = parseFloat($(this).find(".total").text()) || 0;
-            if (limitesApuesta[modalidad]) {
-                if (straight > (limitesApuesta[modalidad].straight || Infinity)) {
-                    jugadasValidas = false;
-                    showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
-                    return false;
-                }
-                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat(boxVal) > (limitesApuesta[modalidad].box || Infinity)) {
-                    jugadasValidas = false;
-                    showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
-                    return false;
-                }
-                if (limitesApuesta[modalidad].combo !== undefined && combo !== "-" && combo > (limitesApuesta[modalidad].combo || Infinity)) {
-                    jugadasValidas = false;
-                    showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
-                    return false;
-                }
-            }
 
             jugadasArray.push({
                 numero: numero,
                 modalidad: modalidad,
                 straight: straight,
-                box: box,
-                combo: combo,
+                box: boxParsed,   // null si era "-"
+                combo: comboParsed, // null si era "-"
                 total: total
             });
         });
@@ -463,8 +450,8 @@ $(document).ready(function() {
                     <td>${jugada.numero}</td>
                     <td>${jugada.modalidad}</td>
                     <td>${jugada.straight.toFixed(2)}</td>
-                    <td>${jugada.box !== "-" ? jugada.box : "-"}</td>
-                    <td>${jugada.combo !== "-" ? jugada.combo.toFixed(2) : "-"}</td>
+                    <td>${jugada.box !== null ? jugada.box : "-"}</td>
+                    <td>${jugada.combo !== null ? jugada.combo.toFixed(2) : "-"}</td>
                     <td>${jugada.total.toFixed(2)}</td>
                 </tr>
             `;
@@ -477,9 +464,9 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Añadir el campo user al ticketData, ajusta el valor según lo que el backend requiera.
+        // Agregar el campo user si el backend lo requiere, ajusta el valor.
         ticketData = {
-            fecha: fechasProcesadas, // Envío las fechas como strings
+            fecha: fechasProcesadas,
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
@@ -488,7 +475,7 @@ $(document).ready(function() {
             ticketFecha: fechaStr,
             selectedDays: selectedDays,
             selectedTracks: selectedTracks,
-            user: "64b2f0fe9b6c4bfe3f39f9f8" // Ajusta este valor al userId que espera el backend
+            user: "64b2f0fe9b6c4bfe3f39f9f8" // Ajusta el userId aquí si es necesario.
         };
 
         $.ajax({
@@ -639,7 +626,7 @@ $(document).ready(function() {
                     const jugadasData = [];
                     ticketData.jugadas.forEach(function(jugada) {
                         const jugadaNumber = generarNumeroUnico();
-                        const jugadaData = {
+                        jugadasData.push({
                             "Ticket Number": ticketNumber,
                             "Transaction DateTime": transactionDateTime,
                             "Bet Dates": betDates,
@@ -647,14 +634,13 @@ $(document).ready(function() {
                             "Bet Number": jugada.numero,
                             "Game Mode": jugada.modalidad,
                             "Straight ($)": jugada.straight,
-                            "Box ($)": jugada.box !== "-" ? parseFloat(jugada.box) : null,
-                            "Combo ($)": jugada.combo !== "-" ? parseFloat(jugada.combo) : null,
+                            "Box ($)": jugada.box !== null ? jugada.box : null,
+                            "Combo ($)": jugada.combo !== null ? jugada.combo : null,
                             "Total ($)": jugada.total,
                             "Payment Method": metodoPago,
                             "Jugada Number": jugadaNumber,
                             "Timestamp": timestamp
-                        };
-                        jugadasData.push(jugadaData);
+                        });
                     });
 
                     enviarFormulario(jugadasData);
