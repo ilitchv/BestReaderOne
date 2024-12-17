@@ -9,10 +9,14 @@ $(document).ready(function() {
     const userRole = localStorage.getItem('userRole') || 'user';
     const userId = localStorage.getItem('userId'); // Obtener el userId del localStorage
 
+    // Verificar que userId exista; si no existe, mostrar mensaje y redirigir
     if (!userId) {
         console.error('Error: userId no está presente en localStorage.');
         showAlert('Error de autenticación. Por favor, inicia sesión nuevamente.', 'danger');
-        // Opcional: Redirigir al usuario a la página de inicio de sesión
+        // Ajusta la URL a la página de login real de tu aplicación
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 3000);
         return;
     }
 
