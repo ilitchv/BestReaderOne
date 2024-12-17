@@ -13,42 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="styles.css" rel="stylesheet">
-
-    <!-- Verificación de Autenticación y Rol del Usuario -->
-    <script>
-        // Ocultar el contenido hasta que se verifique la autenticación
-        document.documentElement.style.display = 'none';
-
-        // Verificar si el usuario está autenticado y obtener su rol
-        document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('token');
-            const userRole = localStorage.getItem('userRole'); // Asegúrate de almacenar el rol del usuario en localStorage
-
-            // Asignar userRole a una variable global para que scripts.js pueda acceder a ella
-            window.userRole = userRole;
-
-            if (!token) {
-                alert('Debes iniciar sesión para acceder a esta página.');
-                window.location.href = 'login.html';
-            } else {
-                // Mostrar el contenido una vez verificado
-                document.documentElement.style.display = '';
-
-                // Mostrar u ocultar elementos según el rol
-                const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
-                const confirmarPagoFormContainer = document.getElementById('confirmarPagoFormContainer');
-                if (confirmarTicketContainer && confirmarPagoFormContainer) {
-                    if (userRole === 'user') {
-                        confirmarPagoFormContainer.style.display = 'block';
-                        confirmarTicketContainer.style.display = 'none';
-                    } else {
-                        confirmarPagoFormContainer.style.display = 'none';
-                        confirmarTicketContainer.style.display = 'block';
-                    }
-                }
-            }
-        });
-    </script>
 </head>
 <body>
     <div class="container my-5">
