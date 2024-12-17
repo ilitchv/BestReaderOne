@@ -310,7 +310,6 @@ $(document).ready(function() {
             return;
         }
 
-        // Declaramos fechasProcesadas UNA sola vez
         const fechasProcesadas = fechaStr.split(", ");
 
         const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
@@ -478,9 +477,8 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Aquí usamos fechasProcesadas una sola vez, ya declarada arriba
         ticketData = {
-            fecha: fechasProcesadas,
+            fecha: fechasProcesadas, // Envío las fechas como strings, sin convertirlas
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
@@ -653,7 +651,6 @@ $(document).ready(function() {
                             "Payment Method": metodoPago,
                             "Jugada Number": jugadaNumber,
                             "Timestamp": timestamp
-                            // Quitado el campo User
                         };
                         jugadasData.push(jugadaData);
                     });
