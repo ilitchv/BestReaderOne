@@ -7,21 +7,8 @@ $(document).ready(function() {
 
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole') || 'user';
-    const userId = localStorage.getItem('userId'); // Obtener el userId del localStorage
-
-    // Verificar que userId exista; si no existe, mostrar mensaje y redirigir
-    if (!userId) {
-        console.error('Error: userId no está presente en localStorage.');
-        showAlert('Error de autenticación. Por favor, inicia sesión nuevamente.', 'danger');
-        // Ajusta la URL a la página de login real de tu aplicación
-        setTimeout(() => {
-            window.location.href = '/login.html';
-        }, 3000);
-        return;
-    }
 
     console.log('User Role:', userRole);
-    console.log('User ID:', userId);
 
     let jugadaCount = 0;
     let selectedTracks = 0;
@@ -665,8 +652,8 @@ $(document).ready(function() {
                             "Total ($)": jugada.total,
                             "Payment Method": metodoPago,
                             "Jugada Number": jugadaNumber,
-                            "Timestamp": timestamp,
-                            "User": userId // Añadido el campo User
+                            "Timestamp": timestamp
+                            // Quitado el campo User
                         };
                         jugadasData.push(jugadaData);
                     });
