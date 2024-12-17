@@ -477,8 +477,9 @@ $(document).ready(function() {
 
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
+        // Añadir el campo user al ticketData, ajusta el valor según lo que el backend requiera.
         ticketData = {
-            fecha: fechasProcesadas, // Envío las fechas como strings, sin convertirlas
+            fecha: fechasProcesadas, // Envío las fechas como strings
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
@@ -486,7 +487,8 @@ $(document).ready(function() {
             ticketTracks: tracksTexto,
             ticketFecha: fechaStr,
             selectedDays: selectedDays,
-            selectedTracks: selectedTracks
+            selectedTracks: selectedTracks,
+            user: "64b2f0fe9b6c4bfe3f39f9f8" // Ajusta este valor al userId que espera el backend
         };
 
         $.ajax({
