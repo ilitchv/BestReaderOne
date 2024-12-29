@@ -596,7 +596,7 @@ $(document).ready(function() {
         });
     });
 
-    // Modificar initializeCashAppPay para incluir ticketId en redirectURL
+    // Función para inicializar Cash App Pay
     async function initializeCashAppPay(totalAmount) {
         console.log('Inicializando Cash App Pay con total:', totalAmount);
         if (!window.Square) {
@@ -944,7 +944,7 @@ $(document).ready(function() {
         });
     }
 
-    // Modificar enviarFormulario para limpiar el estado después de completar
+    // Función para enviar los datos a SheetDB y al Backend
     function enviarFormulario(datos) {
         // Enviar a SheetDB
         const sheetDBRequest = $.ajax({
