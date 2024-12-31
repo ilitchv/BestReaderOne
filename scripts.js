@@ -1,4 +1,6 @@
- // scripts.js
+ /***********************
+ * scripts.js (MODIFICADO)
+ ***********************/
 
 $(document).ready(function() {
 
@@ -471,12 +473,20 @@ $(document).ready(function() {
                     showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
-                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
+                if (
+                    limitesApuesta[modalidad].box !== undefined &&
+                    modalidad !== "Pulito" &&
+                    modalidad !== "Pulito-Combinado" &&
+                    parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)
+                ) {
                     jugadasValidas = false;
                     showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
-                if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
+                if (
+                    limitesApuesta[modalidad].combo !== undefined &&
+                    parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)
+                ) {
                     jugadasValidas = false;
                     showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
                     return false;
@@ -545,12 +555,18 @@ $(document).ready(function() {
             selectedTracks: selectedTracks
         };
 
+        // Obtener token almacenado
+        const token = localStorage.getItem('token'); // <-- AÑADIDO
+
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
-            url: `${BACKEND_API_URL}/store-ticket`, // Ruta actualizada
+            url: `${BACKEND_API_URL}/store-ticket`,
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
+            headers: {
+                'Authorization': 'Bearer ' + token // <-- AÑADIDO
+            },
             data: JSON.stringify(ticketData),
             success: function(response) {
                 if (response.ticketId) {
@@ -590,7 +606,9 @@ $(document).ready(function() {
             error: function(error) {
                 console.error('Error al almacenar los datos del ticket:', error);
                 // Mostrar el mensaje de error detallado del backend si está disponible
-                const errorMsg = error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
+                const errorMsg = error.responseJSON && error.responseJSON.error
+                  ? error.responseJSON.error
+                  : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
                 showAlert(errorMsg, 'danger');
             }
         });
@@ -643,7 +661,7 @@ $(document).ready(function() {
 
             console.log('Cash App Pay creado:', cashAppPay);
 
-            // Añadir listener para tokenización (funciona en escritorio)
+            // Añadir listener para tokenización
             cashAppPay.addEventListener('ontokenization', async (event) => {
                 const { tokenResult } = event.detail;
                 if (tokenResult.status === 'OK') {
@@ -714,6 +732,9 @@ $(document).ready(function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    // Authorization no es imprescindible aquí (depende si /procesar-pago requiere token).
+                    // Si el backend lo exige, añadir:
+                    // 'Authorization': 'Bearer ' + localStorage.getItem('token') 
                 },
                 body: JSON.stringify(payload),
             });
@@ -744,11 +765,15 @@ $(document).ready(function() {
 
         if (ticketId) {
             // Recuperar ticketData desde el backend
+            const token = localStorage.getItem('token'); // <-- AÑADIDO
             $.ajax({
                 url: `${BACKEND_API_URL}/retrieve-ticket`,
                 method: 'POST',
                 dataType: 'json',
                 contentType: 'application/json',
+                headers: {
+                    'Authorization': 'Bearer ' + token // <-- AÑADIDO
+                },
                 data: JSON.stringify({ ticketId: ticketId }),
                 success: function(response) {
                     if (response.ticketData) {
@@ -774,6 +799,9 @@ $(document).ready(function() {
                             method: 'POST',
                             dataType: 'json',
                             contentType: 'application/json',
+                            headers: {
+                                'Authorization': 'Bearer ' + token // <-- AÑADIDO
+                            },
                             data: JSON.stringify({ ticketId: ticketId }),
                             success: function(paymentResponse) {
                                 if (paymentResponse.paymentCompleted) {
@@ -823,6 +851,7 @@ $(document).ready(function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    // Mismo criterio, añadir token si /procesar-pago lo requiere.
                 },
                 body: JSON.stringify(payload),
             });
@@ -870,12 +899,15 @@ $(document).ready(function() {
 
     // Modificar confirmarYGuardarTicket para validar en el servidor antes de generar el ticket
     function confirmarYGuardarTicket(metodoPago) {
-        // Validar en el servidor que el pago ha sido completado
+        const token = localStorage.getItem('token'); // <-- AÑADIDO
         $.ajax({
             url: `${BACKEND_API_URL}/validate-ticket`,
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
+            headers: {
+                'Authorization': 'Bearer ' + token // <-- AÑADIDO
+            },
             data: JSON.stringify({ ticketId: ticketId }),
             success: function(response) {
                 if (response.valid) {
@@ -888,7 +920,7 @@ $(document).ready(function() {
                     $("#ticketTransaccion").text(fechaTransaccion);
 
                     // Generar código QR
-                    $("#qrcode").empty(); // Limpiar el contenedor anterior
+                    $("#qrcode").empty();
                     new QRCode(document.getElementById("qrcode"), {
                         text: numeroTicket,
                         width: 128,
@@ -908,9 +940,7 @@ $(document).ready(function() {
 
                     // Recorrer cada jugada y preparar los datos
                     ticketData.jugadas.forEach(function(jugada) {
-                        // Generar número único de 8 dígitos para la jugada
                         const jugadaNumber = generarNumeroUnico();
-
                         const jugadaData = {
                             "Ticket Number": ticketNumber,
                             "Transaction DateTime": transactionDateTime,
@@ -926,8 +956,6 @@ $(document).ready(function() {
                             "Jugada Number": jugadaNumber,
                             "Timestamp": timestamp
                         };
-
-                        // Añadir la jugada al array
                         jugadasData.push(jugadaData);
                     });
 
@@ -955,12 +983,16 @@ $(document).ready(function() {
             data: JSON.stringify(datos)
         });
 
-        // Enviar al Backend para guardar en MongoDB
+        // También mandar jugadas al backend /save-jugadas
+        const token = localStorage.getItem('token'); // <-- AÑADIDO
         const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/save-jugadas`, // Ruta actualizada
+            url: `${BACKEND_API_URL}/save-jugadas`,
             method: "POST",
             dataType: "json",
             contentType: "application/json",
+            headers: {
+                'Authorization': 'Bearer ' + token // <-- AÑADIDO
+            },
             data: JSON.stringify(datos)
         });
 
@@ -974,8 +1006,6 @@ $(document).ready(function() {
             showAlert("Ticket guardado y enviado exitosamente.", "success");
 
             // Después de que ambas solicitudes se hayan completado con éxito
-
-            // Imprimir el ticket
             window.print();
 
             // Descargar el ticket como imagen
@@ -1021,7 +1051,6 @@ $(document).ready(function() {
 
         }).fail(function(jqXHR, textStatus, errorThrown) {
             console.error("Error al enviar datos:", textStatus, errorThrown);
-            // Intentar obtener el error detallado del backend
             let errorMsg = "Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.";
             if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
                 errorMsg = jqXHR.responseJSON.error;
@@ -1049,7 +1078,6 @@ $(document).ready(function() {
             actualizarPlaceholders("-", $(this));
         });
         resaltarDuplicados();
-        // Resetear el estado de pago
         paymentCompleted = false;
         cashAppPayInitialized = false;
         ticketData = {};
@@ -1103,10 +1131,8 @@ $(document).ready(function() {
                 const ahoraMiliseconds = ahora.getHours() * 60 + ahora.getMinutes();
 
                 if (ahoraMiliseconds >= horaCierreMiliseconds) {
-                    // Deshabilitar el checkbox correspondiente
                     $(`.track-checkbox[value="${track}"]`).prop('disabled', true).prop('checked', false).closest('label').addClass('closed-track');
                 } else {
-                    // Habilitar el checkbox si aún no está cerrado
                     $(`.track-checkbox[value="${track}"]`).prop('disabled', false).closest('label').removeClass('closed-track');
                 }
             }
@@ -1179,12 +1205,10 @@ $(document).ready(function() {
 
     // Función para resaltar números duplicados
     function resaltarDuplicados() {
-        // Obtener todos los campos de número apostado
         const camposNumeros = document.querySelectorAll('.numeroApostado');
         const valores = {};
         const duplicados = new Set();
 
-        // Recopilar valores y detectar duplicados
         camposNumeros.forEach(campo => {
             const valor = campo.value.trim();
             if (valor) {
@@ -1196,7 +1220,6 @@ $(document).ready(function() {
             }
         });
 
-        // Aplicar o remover la clase .duplicado
         camposNumeros.forEach(campo => {
             if (duplicados.has(campo.value.trim())) {
                 campo.classList.add('duplicado');
@@ -1210,16 +1233,13 @@ $(document).ready(function() {
     function agregarListenersNumeroApostado() {
         const camposNumeros = document.querySelectorAll('.numeroApostado');
         camposNumeros.forEach(campo => {
-            campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
+            campo.removeEventListener('input', resaltarDuplicados);
             campo.addEventListener('input', resaltarDuplicados);
         });
     }
 
     // Agregar listeners al cargar la página
     agregarListenersNumeroApostado();
-    resaltarDuplicados(); // Resaltar duplicados al cargar, si los hay
-
-    // Llamar a la función para mostrar las horas límite al cargar la página
+    resaltarDuplicados(); 
     mostrarHorasLimite();
-
 });
