@@ -1,4 +1,7 @@
-// scripts.js
+ /**************************************************************************************
+ * scripts.js
+ * Versión original completa, con 3 ajustes mínimos indicados con: // [CAMBIO X]
+ **************************************************************************************/
 
 $(document).ready(function() {
 
@@ -135,7 +138,7 @@ $(document).ready(function() {
             return;
         }
         jugadaCount++;
-        const fila = 
+        const fila = `
             <tr>
                 <td>${jugadaCount}</td>
                 <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
@@ -145,7 +148,7 @@ $(document).ready(function() {
                 <td><input type="number" class="form-control combo" min="0" max="50.00" step="0.10" placeholder="Ej: 3.00"></td>
                 <td class="total">0.00</td>
             </tr>
-        ;
+        `;
 
         // Agregar la jugada al DOM
         $("#tablaJugadas").append(fila);
@@ -206,7 +209,7 @@ $(document).ready(function() {
     // Función para actualizar los placeholders según la modalidad
     function actualizarPlaceholders(modalidad, fila) {
         if (limitesApuesta[modalidad]) {
-            fila.find(".straight").attr("placeholder", Máximo $${limitesApuesta[modalidad].straight}).prop('disabled', false);
+            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
         } else {
             fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
         }
@@ -218,12 +221,12 @@ $(document).ready(function() {
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            fila.find(".box").attr("placeholder", Máximo $${limitesApuesta[modalidad].box}).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", Máximo $${limitesApuesta[modalidad].combo}).prop('disabled', false);
+            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
+            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
         } else if (modalidad === "Combo") {
             fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
             fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", Máximo $${limitesApuesta.Combo.combo}).prop('disabled', false);
+            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
         } else {
             fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
             fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
@@ -323,12 +326,12 @@ $(document).ready(function() {
 
     // Función para mostrar alertas usando Bootstrap
     function showAlert(message, type) {
-        const alertHTML = 
+        const alertHTML = `
             <div class="alert alert-${type} alert-dismissible fade show" role="alert">
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
-        ;
+        `;
         $("#ticketAlerts").append(alertHTML);
     }
 
@@ -392,7 +395,7 @@ $(document).ready(function() {
                         const horaLimite = new Date();
                         horaLimite.setHours(parseInt(horas), parseInt(minutos) - 5, 0, 0);
                         if (horaActual > horaLimite) {
-                            showAlert(El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha., "danger");
+                            showAlert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o fecha.`, "danger");
                             return;
                         }
                     }
@@ -431,7 +434,7 @@ $(document).ready(function() {
 
             if (tracksRequeridos.length > 0 && tracksSeleccionadosParaModalidad.length === 0) {
                 jugadasValidas = false;
-                showAlert(La jugada con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente., "danger");
+                showAlert(`La jugada con modalidad "${modalidad}" requiere al menos un track seleccionado correspondiente.`, "danger");
                 return false;
             }
 
@@ -460,7 +463,7 @@ $(document).ready(function() {
                 const combo = parseFloat($(this).find(".combo").val()) || 0;
                 if (straight <= 0 && box <= 0 && combo <= 0) {
                     jugadasValidas = false;
-                    showAlert(Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}., "danger");
+                    showAlert(`Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.`, "danger");
                     return false;
                 }
             }
@@ -468,17 +471,17 @@ $(document).ready(function() {
             if (limitesApuesta[modalidad]) {
                 if (parseFloat($(this).find(".straight").val()) > (limitesApuesta[modalidad].straight || Infinity)) {
                     jugadasValidas = false;
-                    showAlert(El monto en Straight excede el límite para ${modalidad}., "danger");
+                    showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
                 if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
                     jugadasValidas = false;
-                    showAlert(El monto en Box excede el límite para ${modalidad}., "danger");
+                    showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
                 if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
                     jugadasValidas = false;
-                    showAlert(El monto en Combo excede el límite para ${modalidad}., "danger");
+                    showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
             }
@@ -501,7 +504,7 @@ $(document).ready(function() {
             const comboVal = $(this).find(".combo").val();
             const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
             const total = parseFloat($(this).find(".total").text()) || 0;
-            const fila =  
+            const fila = ` 
                 <tr>
                     <td>${$(this).find("td").first().text()}</td>
                     <td>${num}</td>
@@ -511,7 +514,7 @@ $(document).ready(function() {
                     <td>${combo !== "-" ? combo.toFixed(2) : "-"}</td>
                     <td>${total.toFixed(2)}</td>
                 </tr>
-            ;
+            `;
             $("#ticketJugadas").append(fila);
 
             jugadasArray.push({
@@ -532,12 +535,22 @@ $(document).ready(function() {
         // Calcular el total global
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Almacenar datos necesarios en ticketData
+        // [CAMBIO 1] Convertir arrays a JSON + Añadir paymentMethod
+        const splittedFechas = fecha.split(", "); // Array de fechas
+        const fechaJSON      = JSON.stringify(splittedFechas);
+        const tracksJSON     = JSON.stringify(tracks);
+        const jugadasJSON    = JSON.stringify(jugadasArray);
+
+        // [CAMBIO 2] Incluir un paymentMethod
+        let metodoPago = "shopify"; // Fíjalo a 'shopify' o 'balance' si quieres
+
+        // [CAMBIO 1/2] ticketData con JSON.stringify + paymentMethod
         ticketData = {
-            fecha: fecha,
-            tracks: tracks,
-            jugadas: jugadasArray,
+            fecha: fechaJSON,
+            tracks: tracksJSON,
+            jugadas: jugadasJSON,
             totalAmount: totalJugadasGlobal,
+            paymentMethod: metodoPago, // Nuevo
             ticketJugadasHTML: $("#ticketJugadas").html(),
             ticketTracks: tracksTexto,
             ticketFecha: fecha,
@@ -546,11 +559,15 @@ $(document).ready(function() {
         };
 
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
+        // [CAMBIO 3] Incluir el header Authorization
         $.ajax({
-            url: ${BACKEND_API_URL}/store-ticket, // Ruta actualizada
+            url: `${BACKEND_API_URL}/store-ticket`, // Ruta actualizada
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
+            headers: {
+              'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
             data: JSON.stringify(ticketData),
             success: function(response) {
                 if (response.ticketId) {
@@ -590,7 +607,9 @@ $(document).ready(function() {
             error: function(error) {
                 console.error('Error al almacenar los datos del ticket:', error);
                 // Mostrar el mensaje de error detallado del backend si está disponible
-                const errorMsg = error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
+                const errorMsg = error.responseJSON && error.responseJSON.error 
+                                ? error.responseJSON.error 
+                                : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
                 showAlert(errorMsg, 'danger');
             }
         });
@@ -607,7 +626,7 @@ $(document).ready(function() {
 
         try {
             // Obtener las credenciales de Square desde el backend
-            const credentialsResponse = await fetch(${BACKEND_API_URL}/square-credentials);
+            const credentialsResponse = await fetch(`${BACKEND_API_URL}/square-credentials`);
             const credentials = await credentialsResponse.json();
             const { applicationId, locationId } = credentials;
 
@@ -632,7 +651,7 @@ $(document).ready(function() {
             const currentURL = window.location.origin + window.location.pathname;
 
             const options = {
-                redirectURL: ${currentURL}?ticketId=${ticketId},
+                redirectURL: `${currentURL}?ticketId=${ticketId}`,
                 referenceId: 'my-distinct-reference-id-' + Date.now(),
             };
 
@@ -710,7 +729,7 @@ $(document).ready(function() {
                 ticketId: ticketId
             };
 
-            const response = await fetch(${BACKEND_API_URL}/procesar-pago, {
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -745,7 +764,7 @@ $(document).ready(function() {
         if (ticketId) {
             // Recuperar ticketData desde el backend
             $.ajax({
-                url: ${BACKEND_API_URL}/retrieve-ticket,
+                url: `${BACKEND_API_URL}/retrieve-ticket`,
                 method: 'POST',
                 dataType: 'json',
                 contentType: 'application/json',
@@ -770,7 +789,7 @@ $(document).ready(function() {
 
                         // Verificar el estado del pago en el backend
                         $.ajax({
-                            url: ${BACKEND_API_URL}/check-payment-status,
+                            url: `${BACKEND_API_URL}/check-payment-status`,
                             method: 'POST',
                             dataType: 'json',
                             contentType: 'application/json',
@@ -819,7 +838,7 @@ $(document).ready(function() {
                 ticketId: ticketId
             };
 
-            const response = await fetch(${BACKEND_API_URL}/procesar-pago, {
+            const response = await fetch(`${BACKEND_API_URL}/procesar-pago`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -872,7 +891,7 @@ $(document).ready(function() {
     function confirmarYGuardarTicket(metodoPago) {
         // Validar en el servidor que el pago ha sido completado
         $.ajax({
-            url: ${BACKEND_API_URL}/validate-ticket,
+            url: `${BACKEND_API_URL}/validate-ticket`,
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -957,7 +976,7 @@ $(document).ready(function() {
 
         // Enviar al Backend para guardar en MongoDB
         const backendRequest = $.ajax({
-            url: ${BACKEND_API_URL}/save-jugadas, // Ruta actualizada
+            url: `${BACKEND_API_URL}/save-jugadas`, // Ruta actualizada
             method: "POST",
             dataType: "json",
             contentType: "application/json",
@@ -1104,10 +1123,10 @@ $(document).ready(function() {
 
                 if (ahoraMiliseconds >= horaCierreMiliseconds) {
                     // Deshabilitar el checkbox correspondiente
-                    $(.track-checkbox[value="${track}"]).prop('disabled', true).prop('checked', false).closest('label').addClass('closed-track');
+                    $(`.track-checkbox[value="${track}"]`).prop('disabled', true).prop('checked', false).closest('label').addClass('closed-track');
                 } else {
                     // Habilitar el checkbox si aún no está cerrado
-                    $(.track-checkbox[value="${track}"]).prop('disabled', false).closest('label').removeClass('closed-track');
+                    $(`.track-checkbox[value="${track}"]`).prop('disabled', false).closest('label').removeClass('closed-track');
                 }
             }
         }
@@ -1157,12 +1176,12 @@ $(document).ready(function() {
                 cierreStr = horariosCierre.Venezuela[track];
             }
             if (cierreStr) {
-                const cierre = new Date(1970-01-01T${cierreStr}:00);
+                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
                 cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
                 const horas = cierre.getHours().toString().padStart(2, '0');
                 const minutos = cierre.getMinutes().toString().padStart(2, '0');
-                const horaLimite = ${horas}:${minutos};
-                $(this).text(Hora límite: ${horaLimite});
+                const horaLimite = `${horas}:${minutos}`;
+                $(this).text(`Hora límite: ${horaLimite}`);
             }
         });
     }
@@ -1221,4 +1240,4 @@ $(document).ready(function() {
 
     // Llamar a la función para mostrar las horas límite al cargar la página
     mostrarHorasLimite(); 
-});   
+}); 
