@@ -125,173 +125,6 @@ $(document).ready(function() {
         return modalidad;
     }
 
-    // Función para agregar listeners a los campos de número apostado
-    function agregarListenersNumeroApostado() {
-        const camposNumeros = document.querySelectorAll('.numeroApostado');
-        camposNumeros.forEach(campo => {
-            campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
-            campo.addEventListener('input', resaltarDuplicados);
-        });
-    }
-
-    // Función para resaltar números duplicados
-    function resaltarDuplicados() {
-        // Obtener todos los campos de número apostado
-        const camposNumeros = document.querySelectorAll('.numeroApostado');
-        const valores = {};
-        const duplicados = new Set();
-
-        // Recopilar valores y detectar duplicados
-        camposNumeros.forEach(campo => {
-            const valor = campo.value.trim();
-            if (valor) {
-                if (valores[valor]) {
-                    duplicados.add(valor);
-                } else {
-                    valores[valor] = true;
-                }
-            }
-        });
-
-        // Aplicar o remover la clase .duplicado
-        camposNumeros.forEach(campo => {
-            if (duplicados.has(campo.value.trim())) {
-                campo.classList.add('duplicado');
-            } else {
-                campo.classList.remove('duplicado');
-            }
-        });
-    }
-
-    // Función para actualizar los placeholders según la modalidad
-    function actualizarPlaceholders(modalidad, fila) {
-        if (limitesApuesta[modalidad]) {
-            fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight}`).prop('disabled', false);
-        } else {
-            fila.find(".straight").attr("placeholder", "Ej: 5.00").prop('disabled', false);
-        }
-
-        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-            fila.find(".box").attr("placeholder", "1,2,3").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) {
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", "No aplica").prop('disabled', true).val('');
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            fila.find(".box").attr("placeholder", `Máximo $${limitesApuesta[modalidad].box}`).prop('disabled', false);
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta[modalidad].combo}`).prop('disabled', false);
-        } else if (modalidad === "Combo") {
-            fila.find(".straight").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".box").attr("placeholder", "No aplica").prop('disabled', true).val('');
-            fila.find(".combo").attr("placeholder", `Máximo $${limitesApuesta.Combo.combo}`).prop('disabled', false);
-        } else {
-            fila.find(".box").attr("placeholder", "Ej: 2.50").prop('disabled', false);
-            fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
-        }
-    }
-
-    // Función para calcular el total de una jugada
-    function calcularTotalJugada(fila) {
-        const modalidad = fila.find(".tipoJuego").text();
-        const numero = fila.find(".numeroApostado").val();
-        if (!numero || numero.length < 2 || numero.length > 4) {
-            fila.find(".total").text("0.00");
-            return;
-        }
-
-        const combinaciones = calcularCombinaciones(numero);
-        let straight = parseFloat(fila.find(".straight").val()) || 0;
-        let boxVal = fila.find(".box").val().trim();
-        let box = parseFloat(boxVal) || 0;
-        let combo = parseFloat(fila.find(".combo").val()) || 0;
-
-        // Aplicar límites según modalidad
-        if (limitesApuesta[modalidad]) {
-            straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
-            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
-                box = Math.min(box, limitesApuesta[modalidad].box || box);
-            }
-            if (limitesApuesta[modalidad].combo !== undefined) {
-                combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
-            }
-        }
-
-        // Calcular total según modalidad
-        let total = 0;
-        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-            const boxValues = boxVal.split(",").filter(value => value !== "");
-            const countBoxValues = boxValues.length;
-            total = straight * countBoxValues;
-        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
-            total = straight;
-        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + box + (combo * combinaciones);
-        } else if (modalidad === "Combo") {
-            total = combo;
-        } else {
-            total = straight + box + combo;
-        }
-
-        fila.find(".total").text(total.toFixed(2));
-    }
-
-    // Función para calcular el número de combinaciones posibles
-    function calcularCombinaciones(numero) {
-        const counts = {};
-        for (let char of numero) {
-            counts[char] = (counts[char] || 0) + 1;
-        }
-        let factorial = (n) => n <= 1 ? 1 : n * factorial(n - 1);
-        let totalDigits = numero.length;
-        let denominator = 1;
-        for (let digit in counts) {
-            if (counts.hasOwnProperty(digit)) {
-                denominator *= factorial(counts[digit]);
-            }
-        }
-        return factorial(totalDigits) / denominator;
-    }
-
-    // Función para calcular el total de todas las jugadas
-    function calcularTotal() {
-        let total = 0;
-        $(".total").each(function() {
-            total += parseFloat($(this).text()) || 0;
-        });
-        console.log("Total de jugadas antes de multiplicar:", total);
-        console.log("Tracks seleccionados:", selectedTracks);
-        console.log("Días seleccionados:", selectedDays);
-
-        // Si no hay días seleccionados, el total es 0
-        if (selectedDays === 0) {
-            total = 0;
-        } else {
-            // Multiplicar por el número de tracks seleccionados y días
-            total = (total * selectedTracks * selectedDays).toFixed(2);
-        }
-        console.log("Total después de multiplicar:", total);
-        $("#totalJugadas").text(total);
-    }
-
-    // Inicializar Bootstrap Modal
-    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
-
-    // Función para mostrar alertas usando Bootstrap
-    function showAlert(message, type) {
-        const alertHTML = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-            </div>
-        `;
-        $("#ticketAlerts").append(alertHTML);
-    }
-
-    // Función para generar número único de ticket de 8 dígitos
-    function generarNumeroUnico() {
-        return Math.floor(10000000 + Math.random() * 90000000).toString();
-    }
-
     // Función para agregar una nueva jugada
     function agregarJugada() {
         if (jugadaCount >= 100) {
@@ -384,6 +217,51 @@ $(document).ready(function() {
         return factorial(totalDigits) / denominator;
     }
 
+    // Función para calcular el total de una jugada
+    function calcularTotalJugada(fila) {
+        const modalidad = fila.find(".tipoJuego").text();
+        const numero = fila.find(".numeroApostado").val();
+        if (!numero || numero.length < 2 || numero.length > 4) {
+            fila.find(".total").text("0.00");
+            return;
+        }
+
+        const combinaciones = calcularCombinaciones(numero);
+        let straight = parseFloat(fila.find(".straight").val()) || 0;
+        let boxVal = fila.find(".box").val().trim();
+        let box = parseFloat(boxVal) || 0;
+        let combo = parseFloat(fila.find(".combo").val()) || 0;
+
+        // Aplicar límites según modalidad
+        if (limitesApuesta[modalidad]) {
+            straight = Math.min(straight, limitesApuesta[modalidad].straight || straight);
+            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
+                box = Math.min(box, limitesApuesta[modalidad].box || box);
+            }
+            if (limitesApuesta[modalidad].combo !== undefined) {
+                combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
+            }
+        }
+
+        // Calcular total según modalidad
+        let total = 0;
+        if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
+            const boxValues = boxVal.split(",").filter(value => value !== "");
+            const countBoxValues = boxValues.length;
+            total = straight * countBoxValues;
+        } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
+            total = straight;
+        } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
+            total = straight + box + (combo * combinaciones);
+        } else if (modalidad === "Combo") {
+            total = combo;
+        } else {
+            total = straight + box + combo;
+        }
+
+        fila.find(".total").text(total.toFixed(2));
+    }
+
     // Función para calcular el total de todas las jugadas
     function calcularTotal() {
         let total = 0;
@@ -403,6 +281,63 @@ $(document).ready(function() {
         }
         console.log("Total después de multiplicar:", total);
         $("#totalJugadas").text(total);
+    }
+
+    // Inicializar Bootstrap Modal
+    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
+
+    // Función para mostrar alertas usando Bootstrap
+    function showAlert(message, type) {
+        const alertHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        `;
+        $("#ticketAlerts").append(alertHTML);
+    }
+
+    // Función para generar número único de ticket de 8 dígitos
+    function generarNumeroUnico() {
+        return Math.floor(10000000 + Math.random() * 90000000).toString();
+    }
+
+    // Función para agregar listeners a los campos de número apostado
+    function agregarListenersNumeroApostado() {
+        const camposNumeros = document.querySelectorAll('.numeroApostado');
+        camposNumeros.forEach(campo => {
+            campo.removeEventListener('input', resaltarDuplicados); // Evitar duplicar listeners
+            campo.addEventListener('input', resaltarDuplicados);
+        });
+    }
+
+    // Función para resaltar números duplicados
+    function resaltarDuplicados() {
+        // Obtener todos los campos de número apostado
+        const camposNumeros = document.querySelectorAll('.numeroApostado');
+        const valores = {};
+        const duplicados = new Set();
+
+        // Recopilar valores y detectar duplicados
+        camposNumeros.forEach(campo => {
+            const valor = campo.value.trim();
+            if (valor) {
+                if (valores[valor]) {
+                    duplicados.add(valor);
+                } else {
+                    valores[valor] = true;
+                }
+            }
+        });
+
+        // Aplicar o remover la clase .duplicado
+        camposNumeros.forEach(campo => {
+            if (duplicados.has(campo.value.trim())) {
+                campo.classList.add('duplicado');
+            } else {
+                campo.classList.remove('duplicado');
+            }
+        });
     }
 
     // Función para actualizar los placeholders según la modalidad
@@ -431,9 +366,6 @@ $(document).ready(function() {
             fila.find(".combo").attr("placeholder", "Ej: 3.00").prop('disabled', false);
         }
     }
-
-    // Inicializar Bootstrap Modal
-    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
     // Función para deshabilitar tracks basados en su hora de cierre
     function actualizarEstadoTracks() {
@@ -738,12 +670,18 @@ $(document).ready(function() {
             selectedTracks: selectedTracks
         };
 
+        // Obtener el token de localStorage
+        const token = localStorage.getItem('token'); // Asegúrate de que el token esté almacenado con la clave 'token'
+
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
             url: `${BACKEND_API_URL}/store-ticket`, // Ruta actualizada
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
+            headers: {
+                'Authorization': `Bearer ${token}` // Incluir el token de autenticación
+            },
             data: JSON.stringify(ticketData),
             success: function(response) {
                 if (response.ticketId) {
