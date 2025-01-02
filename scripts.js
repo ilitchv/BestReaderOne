@@ -468,6 +468,13 @@ $(document).ready(function() {
         return null;
     }
 
+    // Llamar a la función para mostrar las horas límite al cargar la página
+    mostrarHorasLimite();
+
+    // Agregar listeners al cargar la página
+    agregarListenersNumeroApostado();
+    resaltarDuplicados();
+
     // Evento para generar el ticket
     $("#generarTicket").click(function() {
         // Limpiar alertas anteriores
@@ -626,7 +633,7 @@ $(document).ready(function() {
             const comboVal = $(this).find(".combo").val();
             const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
             const total = parseFloat($(this).find(".total").text()) || 0;
-            const fila = ` 
+            const filaHTML = `
                 <tr>
                     <td>${$(this).find("td").first().text()}</td>
                     <td>${num}</td>
@@ -637,7 +644,7 @@ $(document).ready(function() {
                     <td>${total.toFixed(2)}</td>
                 </tr>
             `;
-            $("#ticketJugadas").append(fila);
+            $("#ticketJugadas").append(filaHTML);
 
             jugadasArray.push({
                 numero: num,
@@ -651,7 +658,7 @@ $(document).ready(function() {
         $("#ticketTotal").text($("#totalJugadas").text());
 
         // Mostrar las fechas de apuesta en el ticket
-        $("#ticketFecha").text(fecha);
+        $("#ticketFecha").text(fechasArray.join(", "));
         console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());
 
         // Calcular el total global
@@ -659,13 +666,13 @@ $(document).ready(function() {
 
         // Almacenar datos necesarios en ticketData
         ticketData = {
-            fecha: fecha,
+            fecha: fechasArray, // Convertir a arreglo
             tracks: tracks,
             jugadas: jugadasArray,
             totalAmount: totalJugadasGlobal,
             ticketJugadasHTML: $("#ticketJugadas").html(),
             ticketTracks: tracksTexto,
-            ticketFecha: fecha,
+            ticketFecha: fechasArray.join(", "), // Para visualización, puede permanecer como cadena
             selectedDays: selectedDays,
             selectedTracks: selectedTracks
         };
@@ -705,7 +712,7 @@ $(document).ready(function() {
                 console.error('Error al almacenar los datos del ticket:', error);
                 // Mostrar el mensaje de error detallado del backend si está disponible
                 const errorMsg = error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
-                showAlert(errorMsg, 'danger');
+                showAlert(errorMsg, "danger");
             }
         });
     });
@@ -752,268 +759,5 @@ $(document).ready(function() {
             });
         }
     });
-
-    // Evento para confirmar e imprimir el ticket
-    $("#confirmarTicket").click(function() {
-        // Limpiar alertas anteriores
-        $("#ticketAlerts").empty();
-
-        // Generar número de ticket único y código QR
-        const numeroTicket = generarNumeroUnico();
-        $("#numeroTicket").text(numeroTicket);
-
-        // Generar la fecha y hora de transacción
-        fechaTransaccion = dayjs().format('MM-DD-YYYY hh:mm A');
-        $("#ticketTransaccion").text(fechaTransaccion);
-
-        // Generar código QR
-        $("#qrcode").empty(); // Limpiar el contenedor anterior
-        new QRCode(document.getElementById("qrcode"), {
-            text: numeroTicket,
-            width: 128,
-            height: 128,
-        });
-
-        // Datos comunes a todas las jugadas
-        const ticketNumber = numeroTicket;
-        const transactionDateTime = fechaTransaccion;
-        const betDates = ticketData.ticketFecha;
-        const tracks = ticketData.ticketTracks;
-        const totalTicket = ticketData.totalAmount.toFixed(2);
-        const timestamp = new Date().toISOString();
-
-        // Array para almacenar las jugadas
-        const jugadasData = [];
-
-        // Recorrer cada jugada y preparar los datos
-        ticketData.jugadas.forEach(function(jugada) {
-            // Generar número único de 8 dígitos para la jugada
-            const jugadaNumber = generarNumeroUnico();
-
-            const jugadaData = {
-                "Ticket Number": ticketNumber,
-                "Transaction DateTime": transactionDateTime,
-                "Bet Dates": betDates,
-                "Tracks": tracks,
-                "Bet Number": jugada.numero,
-                "Game Mode": jugada.modalidad,
-                "Straight ($)": jugada.straight,
-                "Box ($)": jugada.box !== "-" ? parseFloat(jugada.box) : null,
-                "Combo ($)": jugada.combo !== "-" ? parseFloat(jugada.combo) : null,
-                "Total ($)": jugada.total,
-                "Payment Method": "Efectivo", // Por ahora, sin integración de pagos
-                "Jugada Number": jugadaNumber,
-                "Timestamp": timestamp
-            };
-
-            // Añadir la jugada al array
-            jugadasData.push(jugadaData);
-        });
-
-        // Enviar datos a ambos destinos
-        enviarFormulario(jugadasData);
-    });
-
-    // Función para enviar los datos a SheetDB y al Backend
-    function enviarFormulario(datos) {
-        // Enviar a SheetDB
-        const sheetDBRequest = $.ajax({
-            url: SHEETDB_API_URL,
-            method: "POST",
-            dataType: "json",
-            contentType: "application/json",
-            data: JSON.stringify(datos)
-        });
-
-        // Enviar al Backend para guardar en MongoDB
-        const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/save-jugadas`, // Ruta actualizada
-            method: "POST",
-            dataType: "json",
-            contentType: "application/json",
-            data: JSON.stringify(datos)
-        });
-
-        // Esperar a que ambas solicitudes se completen
-        $.when(sheetDBRequest, backendRequest).done(function(sheetDBResponse, backendResponse) {
-            console.log("Datos enviados a ambos destinos:");
-            console.log("SheetDB:", sheetDBResponse);
-            console.log("Backend:", backendResponse);
-
-            // Mostrar mensaje de éxito
-            showAlert("Ticket guardado y enviado exitosamente.", "success");
-
-            // Imprimir el ticket
-            window.print();
-
-            // Descargar el ticket como imagen
-            html2canvas(document.querySelector("#preTicket")).then(canvas => {
-                const imgData = canvas.toDataURL("image/png");
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = 'ticket.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-
-            // Cerrar el modal
-            ticketModal.hide();
-
-            // Reiniciar el formulario
-            resetForm();
-
-            // Limpiar datos almacenados
-            ticketData = {};
-            ticketId = null;
-
-            // Limpiar ticketId de localStorage
-            localStorage.removeItem('ticketId');
-
-            // Limpiar los parámetros de la URL
-            const newURL = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, newURL);
-
-        }).fail(function(jqXHR, textStatus, errorThrown) {
-            console.error("Error al enviar datos:", textStatus, errorThrown);
-            // Intentar obtener el error detallado del backend
-            let errorMsg = "Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.";
-            if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
-                errorMsg = jqXHR.responseJSON.error;
-            }
-            showAlert(errorMsg, "danger");
-        });
-    }
-
-    // Evento para el botón de reset
-    $("#resetForm").click(function() {
-        resetForm();
-    });
-
-    // Función para reiniciar el formulario
-    function resetForm() {
-        $("#lotteryForm")[0].reset();
-        $("#tablaJugadas").empty();
-        jugadaCount = 0;
-        selectedTracks = 0;
-        selectedDays = 0;
-        agregarJugada();
-        $("#totalJugadas").text("0.00");
-        // Resetear los placeholders
-        $("#tablaJugadas tr").each(function() {
-            actualizarPlaceholders("-", $(this));
-        });
-        resaltarDuplicados();
-        // Resetear el estado de pago (aunque por ahora no lo usamos)
-        ticketData = {};
-        ticketId = null;
-
-        // Limpiar ticketId de localStorage
-        localStorage.removeItem('ticketId');
-
-        // Limpiar alertas
-        $("#ticketAlerts").empty();
-
-        // Habilitar todos los tracks y remover clases
-        $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
-    }
-
-    // Función para deshabilitar tracks basados en su hora de cierre
-    function actualizarEstadoTracks() {
-        const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
-        if (!fechaSeleccionadaStr) return;
-
-        const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
-        const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
-
-        const fechaActual = new Date();
-        const esMismoDia = fechaSeleccionada.toDateString() === fechaActual.toDateString();
-
-        if (!esMismoDia) {
-            // Habilitar todos los tracks para fechas futuras
-            $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
-            return;
-        }
-
-        const ahora = new Date();
-
-        for (let region in horariosCierre) {
-            for (let track in horariosCierre[region]) {
-                const horaCierreStr = horariosCierre[region][track];
-                const [horaCierre, minutoCierre] = horaCierreStr.split(":").map(Number);
-                const horaCierreMiliseconds = horaCierre * 60 + minutoCierre;
-                const ahoraMiliseconds = ahora.getHours() * 60 + ahora.getMinutes();
-
-                if (ahoraMiliseconds >= horaCierreMiliseconds) {
-                    // Deshabilitar el checkbox correspondiente
-                    $(`.track-checkbox[value="${track}"]`).prop('disabled', true).prop('checked', false).closest('label').addClass('closed-track');
-                } else {
-                    // Habilitar el checkbox si aún no está cerrado
-                    $(`.track-checkbox[value="${track}"]`).prop('disabled', false).closest('label').removeClass('closed-track');
-                }
-            }
-        }
-    }
-
-    // Llamar a la función al cargar la página
-    actualizarEstadoTracks();
-
-    // Actualizar el estado de los tracks cada vez que cambie la fecha
-    $("#fecha").change(function() {
-        actualizarEstadoTracks();
-    });
-
-    // Actualizar el estado de los tracks cada minuto si la fecha es hoy
-    setInterval(function() {
-        const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
-        if (!fechaSeleccionadaStr) return;
-
-        const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
-        const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
-
-        const fechaActual = new Date();
-        const esMismoDia = fechaSeleccionada.toDateString() === fechaActual.toDateString();
-
-        if (esMismoDia) {
-            actualizarEstadoTracks();
-        }
-    }, 60000);
-
-    // Función para mostrar las horas límite junto a cada track (Opcional)
-    function mostrarHorasLimite() {
-        $(".cutoff-time").each(function() {
-            const track = $(this).data("track");
-
-            if (track === 'Venezuela') {
-                $(this).hide(); // Oculta el elemento del DOM
-                return;
-            }
-            let cierreStr = "";
-            if (horariosCierre.USA[track]) {
-                cierreStr = horariosCierre.USA[track];
-            }
-            else if (horariosCierre["Santo Domingo"][track]) {
-                cierreStr = horariosCierre["Santo Domingo"][track];
-            }
-            else if (horariosCierre.Venezuela[track]) {
-                cierreStr = horariosCierre.Venezuela[track];
-            }
-            if (cierreStr) {
-                const cierre = new Date(`1970-01-01T${cierreStr}:00`);
-                cierre.setMinutes(cierre.getMinutes() - 5); // 5 minutos antes
-                const horas = cierre.getHours().toString().padStart(2, '0');
-                const minutos = cierre.getMinutes().toString().padStart(2, '0');
-                const horaLimite = `${horas}:${minutos}`;
-                $(this).text(`Hora límite: ${horaLimite}`);
-            }
-        });
-    }
-
-    // Llamar a la función para mostrar las horas límite al cargar la página
-    mostrarHorasLimite();
-
-    // Agregar listeners al cargar la página
-    agregarListenersNumeroApostado();
-    resaltarDuplicados();
 
 });
