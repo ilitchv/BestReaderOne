@@ -1,4 +1,4 @@
- // scripts.js
+  // scripts.js
 
 $(document).ready(function() {
 
@@ -237,7 +237,7 @@ $(document).ready(function() {
             if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
                 box = Math.min(box, limitesApuesta[modalidad].box || box);
             }
-            if (limitesApuesta[modalidad].combo !== undefined) {
+            if (limitesApuesta[modalidad].combo !== undefined && combo !== null) {
                 combo = Math.min(combo, limitesApuesta[modalidad].combo || combo);
             }
         }
@@ -605,12 +605,12 @@ $(document).ready(function() {
                     showAlert(`El monto en Straight excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
-                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity)) {
+                if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado" && (parseFloat($(this).find(".box").val()) > (limitesApuesta[modalidad].box || Infinity))) {
                     jugadasValidas = false;
                     showAlert(`El monto en Box excede el límite para ${modalidad}.`, "danger");
                     return false;
                 }
-                if (limitesApuesta[modalidad].combo !== undefined && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity)) {
+                if (limitesApuesta[modalidad].combo !== undefined && (combo !== null && parseFloat($(this).find(".combo").val()) > (limitesApuesta[modalidad].combo || Infinity))) {
                     jugadasValidas = false;
                     showAlert(`El monto en Combo excede el límite para ${modalidad}.`, "danger");
                     return false;
@@ -623,7 +623,7 @@ $(document).ready(function() {
 
         // Preparar datos para el ticket
         const tracksTexto = tracks.join(", ");
-        $("#ticketTracks").text(tracksTexto);
+        $("#ticketTracks").text(tracksTexto); // Solo para visualización en el modal
         $("#ticketJugadas").empty();
         const jugadasArrayFinal = [];
         $("#tablaJugadas tr").each(function() {
@@ -660,13 +660,13 @@ $(document).ready(function() {
         $("#ticketTotal").text($("#totalJugadas").text());
 
         // Mostrar las fechas de apuesta en el ticket
-        $("#ticketFecha").text(fechasArray.join(", "));
+        $("#ticketFecha").text(fechasArray.join(", ")); // Solo para visualización en el modal
         console.log("Fechas asignadas a #ticketFecha:", $("#ticketFecha").text());
 
         // Calcular el total global
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Almacenar datos necesarios en ticketData
+        // Almacenar datos necesarios en ticketData (sin ticketTracks y ticketFecha)
         ticketData = {
             fecha: fechasArrayISO, // Convertir a arreglo ISO
             tracks: tracks,
@@ -742,10 +742,21 @@ $(document).ready(function() {
                     if (response.ticketData) {
                         ticketData = response.ticketData;
 
-                        $("#ticketTracks").text(ticketData.ticketTracks);
-                        $("#ticketJugadas").html(ticketData.ticketJugadasHTML);
+                        // Asumiendo que el backend retorna 'tracksTexto' y 'ticketJugadasHTML'
+                        // Si no, ajusta según la estructura de respuesta del backend
+                        $("#ticketTracks").text(ticketData.tracks.join(", "));
+                        $("#ticketJugadas").html(ticketData.jugadas.map(j => `
+                            <tr>
+                                <td>${j.numero}</td>
+                                <td>${j.modalidad}</td>
+                                <td>${j.straight.toFixed(2)}</td>
+                                <td>${j.box !== null ? j.box.toFixed(2) : "-"}</td>
+                                <td>${j.combo !== null ? j.combo.toFixed(2) : "-"}</td>
+                                <td>${j.total.toFixed(2)}</td>
+                            </tr>
+                        `).join(''));
                         $("#ticketTotal").text(ticketData.totalAmount.toFixed(2));
-                        $("#ticketFecha").text(ticketData.ticketFecha);
+                        $("#ticketFecha").text(ticketData.fecha.join(", "));
 
                         $("#numeroTicket").text('');
                         $("#ticketTransaccion").text('');
