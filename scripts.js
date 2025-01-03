@@ -1,4 +1,4 @@
-  // scripts.js
+ // scripts.js
 
 $(document).ready(function() {
 
@@ -621,6 +621,9 @@ $(document).ready(function() {
             return;
         }
 
+        // Generar un número de ticket único
+        const ticketNumber = generarNumeroUnico();
+
         // Preparar datos para el ticket
         const tracksTexto = tracks.join(", ");
         $("#ticketTracks").text(tracksTexto); // Solo para visualización en el modal
@@ -668,6 +671,7 @@ $(document).ready(function() {
 
         // Almacenar datos necesarios en ticketData (sin ticketTracks y ticketFecha)
         ticketData = {
+            ticketNumber: ticketNumber, // Añadido
             fecha: fechasArrayISO, // Convertir a arreglo ISO
             tracks: tracks,
             jugadas: jugadasArrayFinal,
@@ -757,6 +761,7 @@ $(document).ready(function() {
                         `).join(''));
                         $("#ticketTotal").text(ticketData.totalAmount.toFixed(2));
                         $("#ticketFecha").text(ticketData.fecha.join(", "));
+                        $("#ticketNumber").text(ticketData.ticketNumber); // Añadido para mostrar el número de ticket
 
                         $("#numeroTicket").text('');
                         $("#ticketTransaccion").text('');
