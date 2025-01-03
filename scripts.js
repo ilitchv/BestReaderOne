@@ -1,7 +1,7 @@
  /***************************************************************************************
  * scripts.js
- * Versión ajustada para evitar referencias a campos innecesarios y satisfacer
- * requisitos de "Ticket Number" en cada jugada para el backend.
+ * Versión ajustada para recibir/enviar JSON al backend (en lugar de multipart/form-data),
+ * manteniendo todo el flujo de la app como ya lo tienes (jugadas, tracks, etc.).
  ***************************************************************************************/
 
 $(document).ready(function() {
@@ -620,9 +620,6 @@ $(document).ready(function() {
         // Calcular total
         totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
-        // Quitar warnings si no son necesarios => (tracksTexto, etc.)
-        // Al backend no le mandamos "ticketTracks" ni "ticketFecha" si no son requeridos.
-
         // Transformar las fechas a formato ISO
         const fechasSeleccionadas = fecha.split(", ").map(fechaStr => {
             const [m, d, y] = fechaStr.split('-').map(Number);
@@ -647,7 +644,7 @@ $(document).ready(function() {
         const token = localStorage.getItem('token');
         console.log("Token de Autenticación:", token);
 
-        // Enviar al backend
+        // Enviar al backend como JSON
         $.ajax({
             url: `${BACKEND_API_URL}/store-ticket`,
             method: 'POST',
