@@ -26,7 +26,6 @@ $(document).ready(function() {
     let selectedTracks = 0;
     let selectedDays = 0;
     let totalJugadasGlobal = 0;
-    let fechaTransaccion = '';
     let ticketData = {}; // Objeto para almacenar datos del ticket
     let ticketId = null; // Variable para almacenar el ticketId
     const userRole = localStorage.getItem('userRole') || 'user'; // Por defecto 'user' si no está establecido
@@ -229,8 +228,8 @@ $(document).ready(function() {
         const combinaciones = calcularCombinaciones(numero);
         let straight = parseFloat(fila.find(".straight").val()) || 0;
         let boxVal = fila.find(".box").val().trim();
-        let box = parseFloat(boxVal) || 0;
-        let combo = parseFloat(fila.find(".combo").val()) || 0;
+        let box = boxVal !== "" ? parseFloat(boxVal) : null; // Cambiado a número o null
+        let combo = parseFloat(fila.find(".combo").val()) || null; // Cambiado a número o null
 
         // Aplicar límites según modalidad
         if (limitesApuesta[modalidad]) {
@@ -252,11 +251,12 @@ $(document).ready(function() {
         } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
             total = straight;
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + box + (combo * combinaciones);
+            const comboMultiplicado = combo ? (combo * combinaciones) : 0;
+            total = straight + (box || 0) + comboMultiplicado;
         } else if (modalidad === "Combo") {
-            total = combo;
+            total = combo || 0;
         } else {
-            total = straight + box + combo;
+            total = straight + (box || 0) + (combo || 0);
         }
 
         fila.find(".total").text(total.toFixed(2));
@@ -390,10 +390,10 @@ $(document).ready(function() {
             for (let track in horariosCierre[region]) {
                 const horaCierreStr = horariosCierre[region][track];
                 const [horaCierre, minutoCierre] = horaCierreStr.split(":").map(Number);
-                const horaCierreMiliseconds = horaCierre * 60 + minutoCierre;
-                const ahoraMiliseconds = ahora.getHours() * 60 + ahora.getMinutes();
+                const horaCierreMinutos = horaCierre * 60 + minutoCierre;
+                const ahoraMinutos = ahora.getHours() * 60 + ahora.getMinutes();
 
-                if (ahoraMiliseconds >= horaCierreMiliseconds) {
+                if (ahoraMinutos >= horaCierreMinutos) {
                     // Deshabilitar el checkbox correspondiente
                     $(`.track-checkbox[value="${track}"]`).prop('disabled', true).prop('checked', false).closest('label').addClass('closed-track');
                 } else {
@@ -589,9 +589,10 @@ $(document).ready(function() {
             } else if (["Win 4", "Peak 3"].includes(modalidad)) {
                 const straight = parseFloat($(this).find(".straight").val()) || 0;
                 const boxVal = $(this).find(".box").val();
-                const box = boxVal !== "" ? parseFloat(boxVal) : 0;
-                const combo = parseFloat($(this).find(".combo").val()) || 0;
-                if (straight <= 0 && box <= 0 && combo <= 0) {
+                const box = boxVal !== "" ? parseFloat(boxVal) : null; // Cambiado a número o null
+                const comboVal = $(this).find(".combo").val();
+                const combo = comboVal !== "" ? parseFloat(comboVal) : null; // Cambiado a número o null
+                if ((straight <= 0) && ((box === null || box <= 0)) && ((combo === null || combo <= 0))) {
                     jugadasValidas = false;
                     showAlert(`Por favor, ingresa al menos una apuesta en Straight, Box o Combo para ${modalidad}.`, "danger");
                     return false;
@@ -630,9 +631,9 @@ $(document).ready(function() {
             const modalidad = $(this).find(".tipoJuego").text();
             const straight = parseFloat($(this).find(".straight").val()) || 0;
             const boxVal = $(this).find(".box").val();
-            const box = boxVal !== "" ? boxVal : "-";
+            const box = boxVal !== "" ? parseFloat(boxVal) : null; // Cambiado a número o null
             const comboVal = $(this).find(".combo").val();
-            const combo = comboVal !== "" ? parseFloat(comboVal) : "-";
+            const combo = comboVal !== "" ? parseFloat(comboVal) : null; // Cambiado a número o null
             const total = parseFloat($(this).find(".total").text()) || 0;
             const filaHTML = `
                 <tr>
@@ -640,8 +641,8 @@ $(document).ready(function() {
                     <td>${num}</td>
                     <td>${modalidad}</td>
                     <td>${straight.toFixed(2)}</td>
-                    <td>${box !== "-" ? box : "-"}</td>
-                    <td>${combo !== "-" ? combo.toFixed(2) : "-"}</td>
+                    <td>${box !== null ? box.toFixed(2) : "-"}</td>
+                    <td>${combo !== null ? combo.toFixed(2) : "-"}</td>
                     <td>${total.toFixed(2)}</td>
                 </tr>
             `;
@@ -671,8 +672,6 @@ $(document).ready(function() {
             tracks: tracks,
             jugadas: jugadasArrayFinal,
             totalAmount: totalJugadasGlobal,
-            ticketTracks: tracksTexto,
-            ticketFecha: fechasArray.join(", "), // Para visualización, puede permanecer como cadena
             selectedDays: selectedDays,
             selectedTracks: selectedTracks
         };
