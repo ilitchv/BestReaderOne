@@ -4,7 +4,7 @@ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api'; // Ajustado para reflejar las rutas del backend
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api'; // Ruta del backend
 
     // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
@@ -500,8 +500,9 @@ $(document).ready(function() {
             return;
         }
 
-        // Obtener las fechas seleccionadas como array
+        // Obtener las fechas seleccionadas como array y convertir a formato ISO
         const fechasArray = fecha.split(", ");
+        const fechasArrayISO = fechasArray.map(dateStr => dayjs(dateStr, "MM-DD-YYYY").format("YYYY-MM-DD"));
         const fechaActual = new Date();
         const yearActual = fechaActual.getFullYear();
         const monthActual = fechaActual.getMonth();
@@ -623,7 +624,7 @@ $(document).ready(function() {
         const tracksTexto = tracks.join(", ");
         $("#ticketTracks").text(tracksTexto);
         $("#ticketJugadas").empty();
-        const jugadasArray = [];
+        const jugadasArrayFinal = [];
         $("#tablaJugadas tr").each(function() {
             const num = $(this).find(".numeroApostado").val();
             const modalidad = $(this).find(".tipoJuego").text();
@@ -646,7 +647,7 @@ $(document).ready(function() {
             `;
             $("#ticketJugadas").append(filaHTML);
 
-            jugadasArray.push({
+            jugadasArrayFinal.push({
                 numero: num,
                 modalidad: modalidad,
                 straight: straight,
@@ -666,19 +667,22 @@ $(document).ready(function() {
 
         // Almacenar datos necesarios en ticketData
         ticketData = {
-            fecha: fechasArray, // Convertir a arreglo
+            fecha: fechasArrayISO, // Convertir a arreglo ISO
             tracks: tracks,
-            jugadas: jugadasArray,
+            jugadas: jugadasArrayFinal,
             totalAmount: totalJugadasGlobal,
-            ticketJugadasHTML: $("#ticketJugadas").html(),
             ticketTracks: tracksTexto,
             ticketFecha: fechasArray.join(", "), // Para visualización, puede permanecer como cadena
             selectedDays: selectedDays,
             selectedTracks: selectedTracks
         };
 
+        // Depuración: Mostrar los datos que se enviarán al backend
+        console.log("Datos del Ticket a Enviar:", JSON.stringify(ticketData, null, 2));
+
         // Obtener el token de localStorage
         const token = localStorage.getItem('token'); // Asegúrate de que el token esté almacenado con la clave 'token'
+        console.log("Token de Autenticación:", token);
 
         // Enviar ticketData al backend para almacenarlo y obtener ticketId
         $.ajax({
@@ -691,6 +695,7 @@ $(document).ready(function() {
             },
             data: JSON.stringify(ticketData),
             success: function(response) {
+                console.log("Respuesta del Backend:", response);
                 if (response.ticketId) {
                     ticketId = response.ticketId;
 
@@ -708,10 +713,14 @@ $(document).ready(function() {
                     showAlert('Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.', 'danger');
                 }
             },
-            error: function(error) {
-                console.error('Error al almacenar los datos del ticket:', error);
-                // Mostrar el mensaje de error detallado del backend si está disponible
-                const errorMsg = error.responseJSON && error.responseJSON.error ? error.responseJSON.error : 'Error al almacenar los datos del ticket. Por favor, inténtalo de nuevo.';
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error al almacenar los datos del ticket:', jqXHR);
+                let errorMsg = "Hubo un problema al enviar los datos. Por favor, inténtalo de nuevo.";
+                if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                    errorMsg = jqXHR.responseJSON.error;
+                } else if (jqXHR.responseText) {
+                    errorMsg = jqXHR.responseText;
+                }
                 showAlert(errorMsg, "danger");
             }
         });
@@ -730,6 +739,7 @@ $(document).ready(function() {
                 contentType: 'application/json',
                 data: JSON.stringify({ ticketId: ticketId }),
                 success: function(response) {
+                    console.log("Respuesta al recuperar el ticket:", response);
                     if (response.ticketData) {
                         ticketData = response.ticketData;
 
@@ -750,8 +760,8 @@ $(document).ready(function() {
                         localStorage.removeItem('ticketId');
                     }
                 },
-                error: function(error) {
-                    console.error('Error al recuperar los datos del ticket:', error);
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('Error al recuperar los datos del ticket:', jqXHR);
                     showAlert('Error al recuperar los datos del ticket. Por favor, inténtalo de nuevo.', 'danger');
                     // Limpiar ticketId de localStorage
                     localStorage.removeItem('ticketId');
