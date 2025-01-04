@@ -8,7 +8,7 @@ $(document).ready(function() {
 
     // Define las URLs de tus APIs
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api'; // Tu ruta del backend
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/tickets'; // Ruta actualizada del backend
 
     // Inicializar Flatpickr con selección de múltiples fechas
     flatpickr("#fecha", {
@@ -646,7 +646,7 @@ $(document).ready(function() {
 
         // Enviar al backend como JSON
         $.ajax({
-            url: `${BACKEND_API_URL}/store-ticket`,
+            url: `${BACKEND_API_URL}/store-ticket`, // URL actualizada
             method: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -688,7 +688,7 @@ $(document).ready(function() {
         ticketId = localStorage.getItem('ticketId');
         if (ticketId) {
             $.ajax({
-                url: `${BACKEND_API_URL}/retrieve-ticket`,
+                url: `${BACKEND_API_URL}/retrieve-ticket`, // URL actualizada
                 method: 'POST',
                 dataType: 'json',
                 contentType: 'application/json',
@@ -766,7 +766,7 @@ $(document).ready(function() {
 
         // 2) Enviar al backend /save-jugadas
         const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/save-jugadas`,
+            url: `${BACKEND_API_URL}/save-jugadas`, // URL actualizada
             method: "POST",
             dataType: "json",
             contentType: "application/json",
