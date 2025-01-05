@@ -37,6 +37,8 @@ $(document).ready(function() {
     const userRole = localStorage.getItem('userRole') || 'user';
     console.log('User Role:', userRole);
 
+    let userEmail = ''; // Variable global para almacenar el email del usuario
+
     // Horarios de cierre por track
     const horariosCierre = {
         "USA": {
@@ -552,6 +554,47 @@ $(document).ready(function() {
     mostrarHorasLimite();
 
     /***************************************************************************************
+     * Función para obtener el perfil del usuario
+     ***************************************************************************************/
+    async function obtenerPerfilUsuario() {
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            alert('Debes iniciar sesión para acceder a esta página.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        try {
+            const response = await fetch('https://loteria-backend-j1r3.onrender.com/api/auth/profile', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                userEmail = data.email; // Almacenar el email en la variable global
+                console.log('Email del usuario:', userEmail);
+            } else {
+                console.error('Error al obtener el perfil:', data.msg);
+                alert('Error al obtener tu perfil. Por favor, intenta nuevamente.');
+                window.location.href = 'login.html';
+            }
+        } catch (error) {
+            console.error('Error al obtener el perfil:', error);
+            alert('Error al obtener tu perfil. Por favor, intenta nuevamente.');
+            window.location.href = 'login.html';
+        }
+    }
+
+    // Llamar a la función para obtener el perfil del usuario al cargar la página
+    obtenerPerfilUsuario();
+
+    /***************************************************************************************
      * Evento para generar el ticket
      ***************************************************************************************/
     $("#generarTicket").click(function() {
@@ -634,7 +677,9 @@ $(document).ready(function() {
             jugadas: jugadasArray,      // Array de jugadas con "Ticket Number"
             totalAmount: totalJugadasGlobal,
             selectedDays: selectedDays,
-            selectedTracks: selectedTracks
+            selectedTracks: selectedTracks,
+            paymentMethod: $('input[name="paymentMethod"]:checked').val(),
+            userEmail: userEmail        // Usar el email obtenido del perfil
         };
 
         console.log("Fechas asignadas a #ticketFecha:", fecha);
@@ -643,6 +688,12 @@ $(document).ready(function() {
         // Obtener token de localStorage
         const token = localStorage.getItem('token');
         console.log("Token de Autenticación:", token);
+
+        // Validar que el email del usuario haya sido obtenido
+        if (!userEmail) {
+            showAlert("No se pudo obtener tu correo electrónico. Por favor, intenta nuevamente.", "danger");
+            return;
+        }
 
         // Enviar al backend como JSON
         $.ajax({
@@ -655,31 +706,88 @@ $(document).ready(function() {
             },
             data: JSON.stringify(ticketData),
             success: function(response) {
-                if (response.ticketId) {
-                    ticketId = response.ticketId;
-                    // Guardar ticketId
-                    localStorage.setItem('ticketId', ticketId);
-
-                    // Limpiar campos en modal
-                    $("#numeroTicket").text('');
-                    $("#ticketTransaccion").text('');
-                    $("#qrcode").empty();
-
-                    // Mostrar modal
-                    ticketModal.show();
+                if (ticketData.paymentMethod === 'cashapp' && response.checkoutUrl) {
+                    // Guardar el ticketId en localStorage para referencia futura
+                    if (response.ticketId) {
+                        localStorage.setItem('ticketId', response.ticketId);
+                    }
+                    // Redirigir al usuario a la URL de checkout de Cash App
+                    window.location.href = response.checkoutUrl;
+                } else if (ticketData.paymentMethod === 'balance') {
+                    // Mostrar mensaje de éxito
+                    alert(`Ticket generado exitosamente con ID: ${response.ticketId}`);
+                    // Mostrar el modal con detalles del ticket, incluyendo QR y Número de Ticket
+                    mostrarModal(response, true); // Pasamos 'true' para indicar que el pago ya está confirmado
                 } else {
-                    showAlert("Error al almacenar los datos del ticket.", "danger");
+                    // Manejar otros métodos de pago si es necesario
+                    alert('Ticket generado exitosamente.');
+                    mostrarModal(response, false);
                 }
             },
-            error: function(error) {
-                console.error('Error al almacenar los datos del ticket:', error);
-                const errorMsg = (error.responseJSON && error.responseJSON.error)
-                  ? error.responseJSON.error
-                  : 'Error al almacenar los datos del ticket. Intenta de nuevo.';
-                showAlert(errorMsg, 'danger');
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Error al generar el ticket.';
+                alert(error);
             }
         });
     });
+
+    /***************************************************************************************
+     * Mostrar Modal con Detalles del Ticket
+     * @param {Object} ticket - Datos del ticket retornados por el backend
+     * @param {Boolean} isConfirmed - Indica si el pago está confirmado (true) o no (false)
+     ***************************************************************************************/
+    function mostrarModal(ticket, isConfirmed) {
+        $("#ticketFecha").text(ticket.fecha.join(', '));
+        $("#ticketTracks").text(ticket.tracks.join(', '));
+        $("#ticketTotal").text(ticket.totalAmount.toFixed(2));
+        $("#ticketTransaccion").text(ticket.fechaTransaccion ? dayjs(ticket.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
+
+        // Limpiar y rellenar la tabla de jugadas en el modal
+        const tbody = $('#ticketJugadas');
+        tbody.empty();
+        ticket.jugadas.forEach((jugada, index) => {
+            const fila = `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${jugada.numero}</td>
+                    <td>${jugada.modalidad}</td>
+                    <td>${jugada.straight.toFixed(2)}</td>
+                    <td>${jugada.box !== null ? jugada.box.toFixed(2) : '-'}</td>
+                    <td>${jugada.combo !== null ? jugada.combo.toFixed(2) : '-'}</td>
+                    <td>$${jugada.total.toFixed(2)}</td>
+                </tr>
+            `;
+            tbody.append(fila);
+        });
+
+        if (isConfirmed) {
+            // Mostrar QR y Número de Ticket
+            $("#numeroTicket").text(ticket.ticketId || '');
+            $("#ticketTransaccion").text(ticket.fechaTransaccion ? dayjs(ticket.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
+            // Generar QR Code para el ticketId
+            if (ticket.ticketId) {
+                new QRCode(document.getElementById("qrcode"), ticket.ticketId);
+            }
+
+            // Mostrar elementos de QR y Número de Ticket
+            $("#numeroTicket").parent().show();
+            $("#ticketTransaccion").parent().show();
+            $("#qrcode").parent().parent().show();
+        } else {
+            // Ocultar QR y Número de Ticket
+            $("#numeroTicket").text('');
+            $("#ticketTransaccion").text('Pendiente');
+            $("#qrcode").empty();
+
+            // Ocultar elementos de QR y Número de Ticket
+            $("#numeroTicket").parent().hide();
+            $("#ticketTransaccion").parent().hide();
+            $("#qrcode").parent().parent().hide();
+        }
+
+        // Mostrar el modal
+        ticketModal.show();
+    }
 
     /***************************************************************************************
      * Manejo de la carga de ventana para recuperar el ticketData
@@ -693,6 +801,9 @@ $(document).ready(function() {
                 dataType: 'json',
                 contentType: 'application/json',
                 data: JSON.stringify({ ticketId: ticketId }),
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 success: function(response) {
                     if (response.ticketData) {
                         ticketData = response.ticketData;
@@ -701,9 +812,29 @@ $(document).ready(function() {
                         $("#ticketTotal").text(ticketData.totalAmount?.toFixed(2) || '0.00');
                         $("#ticketFecha").text(ticketData.fecha?.join(", ") || '');
 
-                        $("#numeroTicket").text('');
-                        $("#ticketTransaccion").text('');
-                        $("#qrcode").empty();
+                        // Mostrar QR y Número de Ticket si el ticket está confirmado
+                        if (response.ticketData.status === 'confirmed') {
+                            $("#numeroTicket").text(response.ticketData.ticketId || '');
+                            $("#ticketTransaccion").text(response.ticketData.fechaTransaccion ? dayjs(response.ticketData.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
+                            // Generar QR Code para el ticketId
+                            if (response.ticketData.ticketId) {
+                                new QRCode(document.getElementById("qrcode"), response.ticketData.ticketId);
+                            }
+
+                            // Mostrar elementos de QR y Número de Ticket
+                            $("#numeroTicket").parent().show();
+                            $("#ticketTransaccion").parent().show();
+                            $("#qrcode").parent().parent().show();
+                        } else {
+                            // Ocultar QR y Número de Ticket si no está confirmado
+                            $("#numeroTicket").text('');
+                            $("#ticketTransaccion").text('Pendiente');
+                            $("#qrcode").empty();
+
+                            $("#numeroTicket").parent().hide();
+                            $("#ticketTransaccion").parent().hide();
+                            $("#qrcode").parent().parent().hide();
+                        }
 
                         ticketModal.show();
                     } else {
@@ -770,6 +901,9 @@ $(document).ready(function() {
             method: "POST",
             dataType: "json",
             contentType: "application/json",
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
             data: JSON.stringify(jugadas)
         });
 
@@ -853,4 +987,4 @@ $(document).ready(function() {
         $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
     }
 
-});  // fin document.ready
+});
