@@ -94,6 +94,14 @@
                                     <span class="cutoff-time" data-track="New York Mid Day"></span>
                                 </div>
                                 <!-- Agrega más tracks según sea necesario -->
+                                <!-- Ejemplo adicional de Tracks -->
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Los Angeles Evening" id="trackLAEvening">
+                                        <label class="form-check-label" for="trackLAEvening">Los Angeles Evening</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Los Angeles Evening"></span>
+                                </div>
                                 <!-- ... -->
                             </div>
                         </div>
@@ -117,6 +125,14 @@
                                     <span class="cutoff-time" data-track="Real"></span>
                                 </div>
                                 <!-- Agrega más tracks según sea necesario -->
+                                <!-- Ejemplo adicional de Tracks -->
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Dominican Republic Classic" id="trackDominicanClassic">
+                                        <label class="form-check-label" for="trackDominicanClassic">Dominican Republic Classic</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Dominican Republic Classic"></span>
+                                </div>
                                 <!-- ... -->
                             </div>
                         </div>
@@ -137,7 +153,7 @@
                             </tr>
                         </thead>
                         <tbody id="tablaJugadas">
-                            <!-- Filas de jugadas se agregarán dinámicamente -->
+                            <!-- Filas de jugadas se agregarán dinámicamente por scripts.js -->
                         </tbody>
                     </table>
                 </div>
@@ -173,7 +189,7 @@
                     </div>
                 </div>
 
-                <!-- Botón para Generar Ticket -->
+                <!-- Botón para Generar Ticket y Resetear Formulario -->
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-success btn-lg" id="generarTicket">
                         <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
@@ -183,7 +199,7 @@
                      <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
                  </button>
                 </div>
-                </form>
+            </form>
             <!-- Modal para Previsualizar Ticket -->
             <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
@@ -212,7 +228,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="ticketJugadas">
-                                        <!-- Jugadas -->
+                                        <!-- Jugadas serán agregadas dinámicamente por scripts.js -->
                                     </tbody>
                                 </table>
                                 <div class="total-section">
@@ -235,7 +251,7 @@
                             </div>
                             <!-- Contenedor para el Botón de Cash App Pay -->
                             <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
-                                <!-- Aquí se insertará el botón de Cash App Pay -->
+                                <!-- Aquí se insertará el botón de Cash App Pay por scripts.js -->
                                 <div id="cash-app-pay"></div>
                             </div>
                             <!-- Botón para Confirmar e Imprimir (visible para roles distintos a 'user') -->
@@ -291,239 +307,11 @@
         <!-- Tu archivo JavaScript principal -->
         <script src="scripts.js"></script>
 
-        <!-- Script para Manejar el Pago y Generar el Ticket -->
+        <!-- Elimina el Script Inline para Manejar el Pago y Generar el Ticket -->
+        <!--
         <script>
-            $(document).ready(function() {
-                // Inicializar Flatpickr para la selección de fechas
-                flatpickr("#fecha", {
-                    mode: "multiple",
-                    dateFormat: "Y-m-d",
-                });
-
-                let jugadas = [];
-
-                // Agregar Jugada
-                $('#agregarJugada').click(function() {
-                    const jugada = {
-                        numeroApostado: '',
-                        tipoJuego: '',
-                        straight: 0,
-                        box: 0,
-                        combo: 0,
-                        total: 0
-                    };
-                    jugadas.push(jugada);
-                    actualizarTablaJugadas();
-                });
-
-                // Eliminar Jugada
-                $('#eliminarJugada').click(function() {
-                    if (jugadas.length > 0) {
-                        jugadas.pop();
-                        actualizarTablaJugadas();
-                    }
-                });
-
-                // Actualizar Tabla de Jugadas
-                function actualizarTablaJugadas() {
-                    const tbody = $('#tablaJugadas');
-                    tbody.empty();
-                    jugadas.forEach((jugada, index) => {
-                        const fila = `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td><input type="number" class="form-control numeroApostado" value="${jugada.numeroApostado}" required></td>
-                                <td>
-                                    <select class="form-select tipoJuego" required>
-                                        <option value="">Selecciona</option>
-                                        <option value="Straight" ${jugada.tipoJuego === 'Straight' ? 'selected' : ''}>Straight</option>
-                                        <option value="Box" ${jugada.tipoJuego === 'Box' ? 'selected' : ''}>Box</option>
-                                        <option value="Combo" ${jugada.tipoJuego === 'Combo' ? 'selected' : ''}>Combo</option>
-                                    </select>
-                                </td>
-                                <td><input type="number" class="form-control straight" value="${jugada.straight}" min="0" required></td>
-                                <td><input type="number" class="form-control box" value="${jugada.box}" min="0" required></td>
-                                <td><input type="number" class="form-control combo" value="${jugada.combo}" min="0" required></td>
-                                <td>$<span class="totalJugada">0.00</span></td>
-                            </tr>
-                        `;
-                        tbody.append(fila);
-                    });
-
-                    calcularTotales();
-
-                    // Añadir eventos para actualizar jugadas
-                    $('.numeroApostado, .tipoJuego, .straight, .box, .combo').on('input change', function() {
-                        const row = $(this).closest('tr');
-                        const numeroApostado = row.find('.numeroApostado').val();
-                        const tipoJuego = row.find('.tipoJuego').val();
-                        const straight = parseFloat(row.find('.straight').val()) || 0;
-                        const box = parseFloat(row.find('.box').val()) || 0;
-                        const combo = parseFloat(row.find('.combo').val()) || 0;
-                        const total = straight + box + combo;
-
-                        row.find('.totalJugada').text(total.toFixed(2));
-
-                        // Actualizar jugadas array
-                        const index = row.index();
-                        jugadas[index] = {
-                            numeroApostado,
-                            tipoJuego,
-                            straight,
-                            box,
-                            combo,
-                            total
-                        };
-
-                        calcularTotales();
-                    });
-                }
-
-                // Calcular Totales
-                function calcularTotales() {
-                    let totalJugadas = 0;
-                    jugadas.forEach(jugada => {
-                        totalJugadas += jugada.total;
-                    });
-                    $('#totalJugadas').text(totalJugadas.toFixed(2));
-                }
-
-                // Resetear Formulario
-                $('#resetForm').click(function() {
-                    $('#lotteryForm')[0].reset();
-                    jugadas = [];
-                    actualizarTablaJugadas();
-                });
-
-                // Generar Ticket
-                $('#generarTicket').click(function() {
-                    // Validar el formulario
-                    if (!$('#lotteryForm')[0].checkValidity()) {
-                        $('#lotteryForm')[0].reportValidity();
-                        return;
-                    }
-
-                    // Obtener datos del formulario
-                    const fecha = $('#fecha').val().split(',');
-                    const tracks = [];
-                    $('.track-checkbox:checked').each(function() {
-                        tracks.push($(this).val());
-                    });
-
-                    if (tracks.length === 0) {
-                        alert('Debes seleccionar al menos un track.');
-                        return;
-                    }
-
-                    const totalAmount = parseFloat($('#totalJugadas').text());
-
-                    // Obtener método de pago seleccionado
-                    const paymentMethod = $('input[name="paymentMethod"]:checked').val();
-                    if (!paymentMethod) {
-                        alert('Debes seleccionar un método de pago.');
-                        return;
-                    }
-
-                    // Obtener email del usuario (puedes obtenerlo desde el token o almacenamiento local)
-                    const userEmail = localStorage.getItem('userEmail') || 'usuario@example.com'; // Reemplaza con la lógica adecuada
-
-                    // Crear objeto de jugadas
-                    const jugadasData = jugadas.map(jugada => ({
-                        numeroApostado: jugada.numeroApostado,
-                        tipoJuego: jugada.tipoJuego,
-                        straight: jugada.straight,
-                        box: jugada.box,
-                        combo: jugada.combo,
-                        total: jugada.total
-                    }));
-
-                    // Preparar datos para enviar al backend
-                    const data = {
-                        fecha,
-                        tracks,
-                        jugadas: jugadasData,
-                        totalAmount,
-                        paymentMethod,
-                        userEmail
-                    };
-
-                    // Enviar solicitud al backend
-                    $.ajax({
-                        url: 'https://loteria-backend-j1r3.onrender.com/api/store-ticket',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        },
-                        data: JSON.stringify(data),
-                        success: function(response) {
-                            if (paymentMethod === 'cashapp' && response.checkoutUrl) {
-                                // Redirigir al usuario a la URL de checkout de Cash App
-                                window.location.href = response.checkoutUrl;
-                            } else if (paymentMethod === 'balance') {
-                                // Mostrar mensaje de éxito
-                                alert(`Ticket generado exitosamente con ID: ${response.ticketId}`);
-                                // Opcional: Mostrar el modal con detalles del ticket
-                                mostrarModal(response);
-                            } else {
-                                // Manejar otros métodos de pago si es necesario
-                                alert('Ticket generado exitosamente.');
-                                mostrarModal(response);
-                            }
-                        },
-                        error: function(xhr) {
-                            const error = xhr.responseJSON?.error || 'Error al generar el ticket.';
-                            alert(error);
-                        }
-                    });
-                });
-
-                // Mostrar Modal con Detalles del Ticket
-                function mostrarModal(ticket) {
-                    $('#numeroTicket').text(ticket.ticketId);
-                    $('#ticketFecha').text(ticket.fecha.join(', '));
-                    $('#ticketTracks').text(ticket.tracks.join(', '));
-                    $('#ticketTotal').text(ticket.totalAmount.toFixed(2));
-                    $('#ticketTransaccion').text(ticket.fechaTransaccion ? dayjs(ticket.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
-
-                    // Limpiar y rellenar la tabla de jugadas en el modal
-                    const tbody = $('#ticketJugadas');
-                    tbody.empty();
-                    jugadas.forEach((jugada, index) => {
-                        const fila = `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${jugada.numeroApostado}</td>
-                                <td>${jugada.tipoJuego}</td>
-                                <td>${jugada.straight.toFixed(2)}</td>
-                                <td>${jugada.box.toFixed(2)}</td>
-                                <td>${jugada.combo.toFixed(2)}</td>
-                                <td>$${jugada.total.toFixed(2)}</td>
-                            </tr>
-                        `;
-                        tbody.append(fila);
-                    });
-
-                    // Generar QR Code para el ticketId
-                    $('#qrcode').empty();
-                    new QRCode(document.getElementById("qrcode"), ticket.ticketId);
-
-                    // Mostrar el modal
-                    const ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'), {
-                        keyboard: false
-                    });
-                    ticketModal.show();
-                }
-
-                // Confirmar e Imprimir (sólo para roles distintos a 'user')
-                $('#confirmarTicket').click(function() {
-                    // Aquí puedes implementar la lógica para confirmar e imprimir el ticket
-                    alert('Ticket confirmado e impreso.');
-                    // Opcional: Redirigir al usuario o realizar otras acciones
-                });
-
-            });
+            // ... contenido del script inline que manejaba jugadas y generación de tickets ...
         </script>
-
+        -->
     </body>
 </html>
