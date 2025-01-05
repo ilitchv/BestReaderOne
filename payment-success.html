@@ -1,0 +1,43 @@
+<!-- payment-success.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pago Exitoso</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  <h1>Pago Exitoso</h1>
+  <p id="mensaje">Verificando el estado de tu pago...</p>
+
+  <script>
+    $(document).ready(function() {
+      // Obtener ticketId de los parámetros de la URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const ticketId = urlParams.get('ticketId');
+
+      if (ticketId) {
+        // Verificar el estado del ticket en el backend
+        $.ajax({
+          url: 'https://loteria-backend-j1r3.onrender.com/api/validate-ticket',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ ticketId: ticketId, userRole: 'user' }),
+          success: function(response) {
+            if (response.valid) {
+              $('#mensaje').text('Tu pago ha sido confirmado y tu ticket está activo.');
+            } else {
+              $('#mensaje').text('Tu pago aún está pendiente o no se pudo confirmar.');
+            }
+          },
+          error: function() {
+            $('#mensaje').text('Hubo un error al verificar tu pago. Por favor, contacta al soporte.');
+          }
+        });
+      } else {
+        $('#mensaje').text('No se encontró el ID del ticket en la URL.');
+      }
+    });
+  </script>
+</body>
+</html>
