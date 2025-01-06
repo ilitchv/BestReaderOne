@@ -1,317 +1,297 @@
  <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Beast Reader (Cricket) East New York</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Flatpickr CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link href="styles.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Beast Reader (Cricket) East New York</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Flatpickr CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link href="styles.css" rel="stylesheet">
 
-    <!-- Verificación de Autenticación y Rol del Usuario -->
-    <script>
-        // Ocultar el contenido hasta que se verifique la autenticación
-        document.documentElement.style.display = 'none';
+  <!-- Verificación de Autenticación y Rol del Usuario -->
+  <script>
+    document.documentElement.style.display = 'none';
+    document.addEventListener('DOMContentLoaded', () => {
+      const token = localStorage.getItem('token');
+      const userRole = localStorage.getItem('userRole');
+      window.userRole = userRole;
+      if (!token) {
+        alert('Debes iniciar sesión para acceder a esta página.');
+        window.location.href = 'login.html';
+      } else {
+        document.documentElement.style.display = '';
+        const cashAppContainer = document.getElementById('cashAppPayContainer');
+        const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
+        if (cashAppContainer && confirmarTicketContainer) {
+          if (userRole === 'user') {
+            cashAppContainer.style.display = 'block';
+            confirmarTicketContainer.style.display = 'none';
+          } else {
+            cashAppContainer.style.display = 'none';
+            confirmarTicketContainer.style.display = 'block';
+          }
+        }
+      }
+    });
+  </script>
 
-        // Verificar si el usuario está autenticado y obtener su rol
-        document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('token');
-            const userRole = localStorage.getItem('userRole'); // Asegúrate de almacenar el rol del usuario en localStorage
-
-            // Asignar userRole a una variable global para que scripts.js pueda acceder a ella
-            window.userRole = userRole;
-
-            if (!token) {
-                alert('Debes iniciar sesión para acceder a esta página.');
-                window.location.href = 'login.html';
-            } else {
-                // Mostrar el contenido una vez verificado
-                document.documentElement.style.display = '';
-
-                // Hacer visible o no el botón de Cash App Pay según el rol
-                const cashAppContainer = document.getElementById('cashAppPayContainer');
-                const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
-                if (cashAppContainer) {
-                    if (userRole === 'user') {
-                        cashAppContainer.style.display = 'block';
-                        confirmarTicketContainer.style.display = 'none';
-                    } else {
-                        cashAppContainer.style.display = 'none';
-                        confirmarTicketContainer.style.display = 'block';
-                    }
-                }
-            }
-        });
-    </script>
-    
-    <!-- SDK de Square Web Payments (Producción) -->
-    <script src="https://web.squarecdn.com/v1/square.js"></script>
+  <!-- SDK de Square Web Payments (Producción) -->
+  <script src="https://web.squarecdn.com/v1/square.js"></script>
 </head>
 <body>
-    <div class="container my-5">
-        <h2 class="text-center mb-4">Beast Reader (Cricket) East New York</h2>
-        <form id="lotteryForm">
-            <!-- Selección de Fecha y Botón para Volver al Dashboard -->
-            <div class="row mb-3">
-                <!-- Calendario de Fechas de Apuesta -->
-                <div class="col-md-6 col-sm-12 mb-3 mb-md-0">
-                    <label for="fecha" class="form-label">Fechas de Apuesta:</label>
-                    <input type="text" id="fecha" class="form-control glow-input" placeholder="Selecciona fecha" required>
-                </div>
-                <!-- Botón para Volver al Dashboard -->
-                <div class="col-md-6 col-sm-12 text-md-end">
-                    <button type="button" class="btn btn-secondary mt-3 mt-md-0" onclick="window.location.href='dashboard.html'">
-                        <i class="bi bi-arrow-left-circle"></i> Volver al Dashboard
-                    </button>
-                </div>
-            </div>
-            <!-- Selección de Tracks -->
-            <div class="mb-4">
-                <label class="form-label">Selecciona los Tracks:</label>
-                <div class="accordion" id="tracksAccordion">
-                    <!-- USA Tracks -->
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingUSA">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUSA" aria-expanded="false" aria-controls="collapseUSA">
-                                USA
-                            </button>
-                        </h2>
-                        <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
-                            <div class="accordion-body">
-                                <!-- Repetir las opciones de tracks aquí -->
-                                <!-- Ejemplo de Track -->
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYMidDay">
-                                        <label class="form-check-label" for="trackNYMidDay">New York Mid Day</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="New York Mid Day"></span>
-                                </div>
-                                <!-- Agrega más tracks según sea necesario -->
-                                <!-- Ejemplo adicional de Tracks -->
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Los Angeles Evening" id="trackLAEvening">
-                                        <label class="form-check-label" for="trackLAEvening">Los Angeles Evening</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Los Angeles Evening"></span>
-                                </div>
-                                <!-- ... -->
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Santo Domingo Tracks -->
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingSD">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSD" aria-expanded="false" aria-controls="collapseSD">
-                                Santo Domingo
-                            </button>
-                        </h2>
-                        <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
-                            <div class="accordion-body">
-                                <!-- Repetir las opciones de tracks aquí -->
-                                <!-- Ejemplo de Track -->
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
-                                        <label class="form-check-label" for="trackReal">Real</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Real"></span>
-                                </div>
-                                <!-- Agrega más tracks según sea necesario -->
-                                <!-- Ejemplo adicional de Tracks -->
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Dominican Republic Classic" id="trackDominicanClassic">
-                                        <label class="form-check-label" for="trackDominicanClassic">Dominican Republic Classic</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Dominican Republic Classic"></span>
-                                </div>
-                                <!-- ... -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Tabla de Jugadas -->
-                <div class="table-responsive mb-4">
-                    <table class="table table-dark table-bordered glow-table" id="jugadasTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Número Apostado</th>
-                                <th>Tipo de Juego</th>
-                                <th>Straight ($)</th>
-                                <th>Box ($)</th>
-                                <th>Combo ($)</th>
-                                <th>Total ($)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaJugadas">
-                            <!-- Filas de jugadas se agregarán dinámicamente por scripts.js -->
-                        </tbody>
-                    </table>
-                </div>
-                <!-- Botones para Agregar y Eliminar Jugada -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="button-group">
-                        <button type="button" class="btn btn-primary" id="agregarJugada">
-                            <i class="bi bi-plus-circle"></i> Agregar Jugada
-                        </button>
-                        <button type="button" class="btn btn-danger" id="eliminarJugada">
-                            <i class="bi bi-dash-circle"></i> Eliminar Jugada
-                        </button>
-                    </div>
-                    <div class="total-section">
-                        Total de Jugadas: $<span id="totalJugadas">0.00</span>
-                    </div>
-                </div>
-                
-                <!-- Selección de Método de Pago -->
-                <div class="mb-4">
-                    <label class="form-label">Selecciona el Método de Pago:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethod" id="paymentCashApp" value="cashapp" required>
-                        <label class="form-check-label" for="paymentCashApp">
-                            Cash App
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethod" id="paymentBalance" value="balance" required>
-                        <label class="form-check-label" for="paymentBalance">
-                            Saldo (Créditos)
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Botón para Generar Ticket y Resetear Formulario -->
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-success btn-lg" id="generarTicket">
-                        <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
-                    </button>
-                 <!-- Botón para Resetear el Formulario -->
-                 <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
-                     <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
-                 </button>
-                </div>
-            </form>
-            <!-- Modal para Previsualizar Ticket -->
-            <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content bg-dark text-white">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                        </div>
-                        <div class="modal-body">
-                            <!-- Sección de Alertas -->
-                            <div id="ticketAlerts"></div>
-                            <div id="preTicket" class="p-3">
-                                <h4 class="text-center mb-3">East New York Cricket</h4>
-                                <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
-                                <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
-                                <table class="table table-dark table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Número Apostado</th>
-                                            <th>Tipo de Juego</th>
-                                            <th>Straight ($)</th>
-                                            <th>Box ($)</th>
-                                            <th>Combo ($)</th>
-                                            <th>Total ($)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="ticketJugadas">
-                                        <!-- Jugadas serán agregadas dinámicamente por scripts.js -->
-                                    </tbody>
-                                </table>
-                                <div class="total-section">
-                                    Total de Jugadas: $<span id="ticketTotal">0.00</span>
-                                </div>
-                                <div class="ticket-number my-3">
-                                    Número de Ticket: <span id="numeroTicket"></span>
-                                </div>
-                                <div class="transaction-date my-3">
-                                    Fecha y Hora de Transacción: <span id="ticketTransaccion"></span>
-                                </div>
-                                <div class="barcode text-center">
-                                    <div id="qrcode"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer flex-column">
-                            <div class="w-100 mb-2">
-                                <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
-                            </div>
-                            <!-- Contenedor para el Botón de Cash App Pay -->
-                            <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
-                                <!-- Aquí se insertará el botón de Cash App Pay por scripts.js -->
-                                <div id="cash-app-pay"></div>
-                            </div>
-                            <!-- Botón para Confirmar e Imprimir (visible para roles distintos a 'user') -->
-                            <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
-                                <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
-                                    <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+  <div class="container my-5">
+    <h2 class="text-center mb-4">Beast Reader (Cricket) East New York</h2>
+    <form id="lotteryForm">
+      <!-- Selección de Fecha y Botón para Volver -->
+      <div class="row mb-3">
+        <div class="col-md-6 col-sm-12 mb-3 mb-md-0">
+          <label for="fecha" class="form-label">Fechas de Apuesta:</label>
+          <input type="text" id="fecha" class="form-control glow-input" placeholder="Selecciona fecha" required>
         </div>
+        <div class="col-md-6 col-sm-12 text-md-end">
+          <button type="button" class="btn btn-secondary mt-3 mt-md-0" onclick="window.location.href='dashboard.html'">
+            <i class="bi bi-arrow-left-circle"></i> Volver al Dashboard
+          </button>
+        </div>
+      </div>
 
-        <!-- Librerías JavaScript -->
-        <!-- jQuery -->
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <!-- Popper.js -->
-        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-        <!-- Bootstrap JS -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
-        <!-- Flatpickr JS -->
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-        <!-- QRCode.js -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-        <!-- Day.js -->
-        <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-        <!-- Day.js Plugins -->
-        <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/arraySupport.js"></script>
-        <script>
-            // Registrar plugins de Day.js
-            dayjs.extend(dayjs_plugin_customParseFormat);
-            dayjs.extend(dayjs_plugin_arraySupport);
-        </script>
-        <!-- html2canvas -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-        <!-- Supabase JS -->
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+      <!-- Selección de Tracks -->
+      <div class="mb-4">
+        <label class="form-label">Selecciona los Tracks:</label>
+        <div class="accordion" id="tracksAccordion">
+          <!-- USA Tracks -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="headingUSA">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#collapseUSA" aria-expanded="false" aria-controls="collapseUSA">
+                USA
+              </button>
+            </h2>
+            <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
+              <div class="accordion-body">
+                <!-- Ejemplos (añade todos los que necesites) -->
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYMidDay">
+                    <label class="form-check-label" for="trackNYMidDay">New York Mid Day</label>
+                  </div>
+                  <span class="cutoff-time" data-track="New York Mid Day"></span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="New York Evening" id="trackNYEvening">
+                    <label class="form-check-label" for="trackNYEvening">New York Evening</label>
+                  </div>
+                  <span class="cutoff-time" data-track="New York Evening"></span>
+                </div>
+                <!-- Agrega más tracks de USA según tu código original -->
+              </div>
+            </div>
+          </div>
 
-        <!-- Verificar si el SDK de Square se ha cargado -->
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                if (window.Square) {
-                    console.log('Square SDK cargado correctamente.');
-                } else {
-                    console.error('Square SDK no se cargó.');
-                }
-            });
-        </script>
+          <!-- Santo Domingo Tracks -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="headingSD">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#collapseSD" aria-expanded="false" aria-controls="collapseSD">
+                Santo Domingo
+              </button>
+            </h2>
+            <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
+              <div class="accordion-body">
+                <!-- Ejemplos (añade todos los que necesites) -->
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
+                    <label class="form-check-label" for="trackReal">Real</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Real"></span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Gana mas" id="trackGanamas">
+                    <label class="form-check-label" for="trackGanamas">Gana más</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Gana mas"></span>
+                </div>
+                <!-- Agrega más tracks de Santo Domingo según tu código original -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Tu archivo JavaScript principal -->
-        <script src="scripts.js"></script>
+      <!-- Tabla de Jugadas -->
+      <div class="table-responsive mb-4">
+        <table class="table table-dark table-bordered glow-table" id="jugadasTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Número Apostado</th>
+              <th>Tipo de Juego</th>
+              <th>Straight ($)</th>
+              <th>Box ($)</th>
+              <th>Combo ($)</th>
+              <th>Total ($)</th>
+            </tr>
+          </thead>
+          <tbody id="tablaJugadas">
+            <!-- Filas dinámicas de jugadas -->
+          </tbody>
+        </table>
+      </div>
 
-        <!-- Elimina el Script Inline para Manejar el Pago y Generar el Ticket -->
-        <!--
-        <script>
-            // ... contenido del script inline que manejaba jugadas y generación de tickets ...
-        </script>
-        -->
-    </body>
+      <!-- Botones para Agregar y Eliminar Jugada -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="button-group">
+          <button type="button" class="btn btn-primary" id="agregarJugada">
+            <i class="bi bi-plus-circle"></i> Agregar Jugada
+          </button>
+          <button type="button" class="btn btn-danger" id="eliminarJugada">
+            <i class="bi bi-dash-circle"></i> Eliminar Jugada
+          </button>
+        </div>
+        <div class="total-section">
+          Total de Jugadas: $<span id="totalJugadas">0.00</span>
+        </div>
+      </div>
+
+      <!-- Selección de Método de Pago -->
+      <div class="mb-4">
+        <label class="form-label">Selecciona el Método de Pago:</label>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="paymentMethod" id="paymentCashApp" value="cashapp" required>
+          <label class="form-check-label" for="paymentCashApp">Cash App</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="paymentMethod" id="paymentBalance" value="balance" required>
+          <label class="form-check-label" for="paymentBalance">Saldo (Créditos)</label>
+        </div>
+      </div>
+
+      <!-- Botón Generar Ticket -->
+      <div class="d-grid gap-2">
+        <button type="button" class="btn btn-success btn-lg" id="generarTicket">
+          <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
+        </button>
+        <!-- Botón Resetear Formulario -->
+        <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
+          <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
+        </button>
+      </div>
+    </form>
+
+    <!-- Modal de Previsualización de Ticket -->
+    <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-white">
+          <div class="modal-header">
+            <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Alertas dentro del modal -->
+            <div id="ticketAlerts"></div>
+            <div id="preTicket" class="p-3">
+              <h4 class="text-center mb-3">East New York Cricket</h4>
+              <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
+              <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
+              <table class="table table-dark table-bordered">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Número Apostado</th>
+                    <th>Tipo de Juego</th>
+                    <th>Straight ($)</th>
+                    <th>Box ($)</th>
+                    <th>Combo ($)</th>
+                    <th>Total ($)</th>
+                  </tr>
+                </thead>
+                <tbody id="ticketJugadas">
+                  <!-- Jugadas dinámicas en el modal -->
+                </tbody>
+              </table>
+              <div class="total-section">
+                Total de Jugadas: $<span id="ticketTotal">0.00</span>
+              </div>
+              <div class="ticket-number my-3">
+                Número de Ticket: <span id="numeroTicket"></span>
+              </div>
+              <div class="transaction-date my-3">
+                Fecha y Hora de Transacción: <span id="ticketTransaccion"></span>
+              </div>
+              <div class="barcode text-center">
+                <div id="qrcode"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer flex-column">
+            <div class="w-100 mb-2">
+              <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
+            </div>
+            <!-- Botón Cash App Pay -->
+            <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
+              <div id="cash-app-pay"></div>
+            </div>
+            <!-- Botón Confirmar e Imprimir (para roles != 'user') -->
+            <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
+              <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
+                <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Librerías JavaScript -->
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Popper.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Day.js -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <!-- Day.js Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/arraySupport.js"></script>
+  <script>
+    dayjs.extend(dayjs_plugin_customParseFormat);
+    dayjs.extend(dayjs_plugin_arraySupport);
+  </script>
+  <!-- html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <!-- Verificar si el SDK de Square se cargó -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.Square) {
+        console.log('Square SDK cargado correctamente.');
+      } else {
+        console.error('Square SDK no se cargó.');
+      }
+    });
+  </script>
+
+  <!-- Archivo JavaScript principal -->
+  <script src="scripts.js"></script>
+
+  <!-- (Elimina cualquier script inline duplicado) -->
+</body>
 </html>
