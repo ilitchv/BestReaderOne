@@ -37,7 +37,7 @@
                 // Hacer visible o no el botón de Cash App Pay según el rol
                 const cashAppContainer = document.getElementById('cashAppPayContainer');
                 const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
-                if (cashAppContainer && confirmarTicketContainer) {
+                if (cashAppContainer) {
                     if (userRole === 'user') {
                         cashAppContainer.style.display = 'block';
                         confirmarTicketContainer.style.display = 'none';
@@ -84,43 +84,24 @@
                         </h2>
                         <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
                             <div class="accordion-body">
-                                <!-- Lista completa de Tracks USA -->
+                                <!-- Repetir las opciones de tracks aquí -->
+                                <!-- Ejemplo de Track -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYMidDay">
                                         <label class="form-check-label" for="trackNYMidDay">New York Mid Day</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="New York Mid Day">Corte: 12:00 PM</span>
+                                    <span class="cutoff-time" data-track="New York Mid Day"></span>
                                 </div>
+                                <!-- Agrega más tracks según sea necesario -->
+                                <!-- Ejemplo adicional de Tracks -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Los Angeles Evening" id="trackLAEvening">
                                         <label class="form-check-label" for="trackLAEvening">Los Angeles Evening</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Los Angeles Evening">Corte: 6:00 PM</span>
+                                    <span class="cutoff-time" data-track="Los Angeles Evening"></span>
                                 </div>
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Chicago Morning" id="trackChicagoMorning">
-                                        <label class="form-check-label" for="trackChicagoMorning">Chicago Morning</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Chicago Morning">Corte: 10:00 AM</span>
-                                </div>
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Houston Night" id="trackHoustonNight">
-                                        <label class="form-check-label" for="trackHoustonNight">Houston Night</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Houston Night">Corte: 8:00 PM</span>
-                                </div>
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Miami Afternoon" id="trackMiamiAfternoon">
-                                        <label class="form-check-label" for="trackMiamiAfternoon">Miami Afternoon</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Miami Afternoon">Corte: 3:00 PM</span>
-                                </div>
-                                <!-- Agrega más tracks según sea necesario -->
                                 <!-- ... -->
                             </div>
                         </div>
@@ -134,43 +115,24 @@
                         </h2>
                         <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
                             <div class="accordion-body">
-                                <!-- Lista completa de Tracks Santo Domingo -->
+                                <!-- Repetir las opciones de tracks aquí -->
+                                <!-- Ejemplo de Track -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
                                         <label class="form-check-label" for="trackReal">Real</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Real">Corte: 11:00 AM</span>
+                                    <span class="cutoff-time" data-track="Real"></span>
                                 </div>
+                                <!-- Agrega más tracks según sea necesario -->
+                                <!-- Ejemplo adicional de Tracks -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Dominican Republic Classic" id="trackDominicanClassic">
                                         <label class="form-check-label" for="trackDominicanClassic">Dominican Republic Classic</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Dominican Republic Classic">Corte: 5:00 PM</span>
+                                    <span class="cutoff-time" data-track="Dominican Republic Classic"></span>
                                 </div>
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Santo Domingo Evening" id="trackSDEvening">
-                                        <label class="form-check-label" for="trackSDEvening">Santo Domingo Evening</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Santo Domingo Evening">Corte: 7:00 PM</span>
-                                </div>
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Santo Domingo Morning" id="trackSDMorning">
-                                        <label class="form-check-label" for="trackSDMorning">Santo Domingo Morning</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Santo Domingo Morning">Corte: 9:00 AM</span>
-                                </div>
-                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <input class="form-check-input track-checkbox" type="checkbox" value="Santo Domingo Afternoon" id="trackSDAfternoon">
-                                        <label class="form-check-label" for="trackSDAfternoon">Santo Domingo Afternoon</label>
-                                    </div>
-                                    <span class="cutoff-time" data-track="Santo Domingo Afternoon">Corte: 4:00 PM</span>
-                                </div>
-                                <!-- Agrega más tracks según sea necesario -->
                                 <!-- ... -->
                             </div>
                         </div>
@@ -232,10 +194,10 @@
                     <button type="button" class="btn btn-success btn-lg" id="generarTicket">
                         <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
                     </button>
-                    <!-- Botón para Resetear el Formulario -->
-                    <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
-                        <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
-                    </button>
+                 <!-- Botón para Resetear el Formulario -->
+                 <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
+                     <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
+                 </button>
                 </div>
             </form>
             <!-- Modal para Previsualizar Ticket -->
