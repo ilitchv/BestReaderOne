@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Beast Reader (Cricket) East New York</title>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Flatpickr CSS -->
@@ -19,22 +20,21 @@
         // Ocultar el contenido hasta que se verifique la autenticación
         document.documentElement.style.display = 'none';
 
-        // Verificar si el usuario está autenticado y obtener su rol
         document.addEventListener('DOMContentLoaded', () => {
             const token = localStorage.getItem('token');
-            const userRole = localStorage.getItem('userRole'); // Asegúrate de almacenar el rol del usuario en localStorage
+            const userRole = localStorage.getItem('userRole'); // Rol del usuario
 
-            // Asignar userRole a una variable global para que scripts.js pueda acceder a ella
+            // Exponer userRole a scripts.js
             window.userRole = userRole;
 
             if (!token) {
                 alert('Debes iniciar sesión para acceder a esta página.');
                 window.location.href = 'login.html';
             } else {
-                // Mostrar el contenido una vez verificado
+                // Mostrar el contenido al verificar
                 document.documentElement.style.display = '';
 
-                // Lógica para mostrar/ocultar el botón de Cash App Pay o el de "Confirmar e Imprimir"
+                // Mostrar/ocultar Cash App Pay o Confirmar/Imprimir según el rol
                 const cashAppContainer = document.getElementById('cashAppPayContainer');
                 const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
                 if (cashAppContainer && confirmarTicketContainer) {
@@ -57,16 +57,13 @@
     <div class="container my-5">
         <h2 class="text-center mb-4">Beast Reader (Cricket) East New York</h2>
 
-        <!-- INICIO DEL FORMULARIO PRINCIPAL -->
         <form id="lotteryForm">
-            <!-- Sección de Fechas y Botón Dashboard -->
+            <!-- Selección de Fecha y Botón para Volver al Dashboard -->
             <div class="row mb-3">
-                <!-- Calendario de Fechas de Apuesta -->
                 <div class="col-md-6 col-sm-12 mb-3 mb-md-0">
                     <label for="fecha" class="form-label">Fechas de Apuesta:</label>
                     <input type="text" id="fecha" class="form-control glow-input" placeholder="Selecciona fecha" required>
                 </div>
-                <!-- Botón para Volver al Dashboard -->
                 <div class="col-md-6 col-sm-12 text-md-end">
                     <button type="button" class="btn btn-secondary mt-3 mt-md-0" onclick="window.location.href='dashboard.html'">
                         <i class="bi bi-arrow-left-circle"></i> Volver al Dashboard
@@ -74,12 +71,12 @@
                 </div>
             </div>
 
-            <!-- Selección de Tracks (USA, Santo Domingo, etc.) -->
+            <!-- Selección de Tracks -->
             <div class="mb-4">
                 <label class="form-label">Selecciona los Tracks:</label>
                 <div class="accordion" id="tracksAccordion">
 
-                    <!-- USA Tracks -->
+                    <!-- Sección: USA -->
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="headingUSA">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUSA" aria-expanded="false" aria-controls="collapseUSA">
@@ -88,71 +85,75 @@
                         </h2>
                         <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
                             <div class="accordion-body">
-
-                                <!-- EJEMPLOS ORIGINALES DE USA -->
+                                <!-- Ejemplo: New York Mid Day -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYMidDay">
                                         <label class="form-check-label" for="trackNYMidDay">New York Mid Day</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="New York Mid Day">14:25</span>
+                                    <span class="cutoff-time" data-track="New York Mid Day">Hora límite: 14:20</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="New York Evening" id="trackNYEvening">
                                         <label class="form-check-label" for="trackNYEvening">New York Evening</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="New York Evening">22:25</span>
+                                    <span class="cutoff-time" data-track="New York Evening">Hora límite: 22:20</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Mid Day" id="trackGeorgiaMidDay">
                                         <label class="form-check-label" for="trackGeorgiaMidDay">Georgia Mid Day</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Georgia Mid Day">12:20</span>
+                                    <span class="cutoff-time" data-track="Georgia Mid Day">Hora límite: 12:15</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Evening" id="trackGeorgiaEvening">
                                         <label class="form-check-label" for="trackGeorgiaEvening">Georgia Evening</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Georgia Evening">18:45</span>
+                                    <span class="cutoff-time" data-track="Georgia Evening">Hora límite: 18:40</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Florida Mid Day" id="trackFloridaMidDay">
                                         <label class="form-check-label" for="trackFloridaMidDay">Florida Mid Day</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Florida Mid Day">13:25</span>
+                                    <span class="cutoff-time" data-track="Florida Mid Day">Hora límite: 13:20</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Florida Evening" id="trackFloridaEvening">
                                         <label class="form-check-label" for="trackFloridaEvening">Florida Evening</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Florida Evening">21:30</span>
+                                    <span class="cutoff-time" data-track="Florida Evening">Hora límite: 21:25</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Mid Day" id="trackConnecticutMidDay">
                                         <label class="form-check-label" for="trackConnecticutMidDay">Connecticut Mid Day</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Connecticut Mid Day">13:35</span>
+                                    <span class="cutoff-time" data-track="Connecticut Mid Day">Hora límite: 13:30</span>
                                 </div>
+
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Evening" id="trackConnecticutEvening">
                                         <label class="form-check-label" for="trackConnecticutEvening">Connecticut Evening</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Connecticut Evening">22:20</span>
+                                    <span class="cutoff-time" data-track="Connecticut Evening">Hora límite: 22:15</span>
                                 </div>
-
-                                <!-- ... (Completa con TODOS los tracks que desees de USA) ... -->
                             </div>
                         </div>
                     </div>
 
-                    <!-- Santo Domingo Tracks -->
+                    <!-- Sección: Santo Domingo -->
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="headingSD">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSD" aria-expanded="false" aria-controls="collapseSD">
@@ -161,123 +162,193 @@
                         </h2>
                         <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
                             <div class="accordion-body">
-
-                                <!-- EJEMPLOS ORIGINALES DE SANTO DOMINGO -->
+                                <!-- Ejemplos: Real, Gana más, etc. -->
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
                                         <label class="form-check-label" for="trackReal">Real</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Real">12:45</span>
+                                    <span class="cutoff-time" data-track="Real">Hora límite: 12:40</span>
                                 </div>
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Gana mas" id="trackGanaMas">
-                                        <label class="form-check-label" for="trackGanaMas">Gana mas</label>
+                                        <label class="form-check-label" for="trackGanaMas">Gana más</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Gana mas">14:25</span>
+                                    <span class="cutoff-time" data-track="Gana mas">Hora límite: 14:20</span>
                                 </div>
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Loteka" id="trackLoteka">
                                         <label class="form-check-label" for="trackLoteka">Loteka</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Loteka">19:30</span>
+                                    <span class="cutoff-time" data-track="Loteka">Hora límite: 19:25</span>
                                 </div>
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Nacional" id="trackNacional">
                                         <label class="form-check-label" for="trackNacional">Nacional</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Nacional">20:30</span>
+                                    <span class="cutoff-time" data-track="Nacional">Hora límite: 20:25</span>
                                 </div>
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela Pale" id="trackQuinielaPale">
                                         <label class="form-check-label" for="trackQuinielaPale">Quiniela Pale</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Quiniela Pale">20:30</span>
+                                    <span class="cutoff-time" data-track="Quiniela Pale">Hora límite: 20:25</span>
                                 </div>
                                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                                     <div>
                                         <input class="form-check-input track-checkbox" type="checkbox" value="Primera Día" id="trackPrimeraDia">
                                         <label class="form-check-label" for="trackPrimeraDia">Primera Día</label>
                                     </div>
-                                    <span class="cutoff-time" data-track="Primera Día">11:50</span>
+                                    <span class="cutoff-time" data-track="Primera Día">Hora límite: 11:45</span>
                                 </div>
-                                <!-- ... (Suerte Día, Lotería Real, Suerte Tarde, etc.) ... -->
-
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Día" id="trackSuerteDia">
+                                        <label class="form-check-label" for="trackSuerteDia">Suerte Día</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Suerte Día">Hora límite: 12:20</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Lotería Real" id="trackLoteriaReal">
+                                        <label class="form-check-label" for="trackLoteriaReal">Lotería Real</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Lotería Real">Hora límite: 12:50</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Tarde" id="trackSuerteTarde">
+                                        <label class="form-check-label" for="trackSuerteTarde">Suerte Tarde</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Suerte Tarde">Hora límite: 17:50</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Lotedom" id="trackLotedom">
+                                        <label class="form-check-label" for="trackLotedom">Lotedom</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Lotedom">Hora límite: 17:50</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Primera Noche" id="trackPrimeraNoche">
+                                        <label class="form-check-label" for="trackPrimeraNoche">Primera Noche</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Primera Noche">Hora límite: 19:50</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Panama" id="trackPanama">
+                                        <label class="form-check-label" for="trackPanama">Panama</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Panama">Hora límite: 16:00</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela Pale Domingo" id="trackQuinielaPaleDomingo">
+                                        <label class="form-check-label" for="trackQuinielaPaleDomingo">Quiniela Pale Domingo</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Quiniela Pale Domingo">Hora límite: 15:30</span>
+                                </div>
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Nacional Domingo" id="trackNacionalDomingo">
+                                        <label class="form-check-label" for="trackNacionalDomingo">Nacional Domingo</label>
+                                    </div>
+                                    <span class="cutoff-time" data-track="Nacional Domingo">Hora límite: 17:50</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Opcional: Sección de Venezuela (si la tuvieras) -->
-                    <!-- ... -->
-
-                </div> <!-- fin .accordion -->
-
-                <!-- Tabla de Jugadas -->
-                <div class="table-responsive mb-4">
-                    <table class="table table-dark table-bordered glow-table" id="jugadasTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Número Apostado</th>
-                                <th>Tipo de Juego</th>
-                                <th>Straight ($)</th>
-                                <th>Box ($)</th>
-                                <th>Combo ($)</th>
-                                <th>Total ($)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaJugadas">
-                            <!-- Se llenará dinámicamente desde scripts.js -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Botones Agregar/Eliminar Jugada y Total -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="button-group">
-                        <button type="button" class="btn btn-primary" id="agregarJugada">
-                            <i class="bi bi-plus-circle"></i> Agregar Jugada
-                        </button>
-                        <button type="button" class="btn btn-danger" id="eliminarJugada">
-                            <i class="bi bi-dash-circle"></i> Eliminar Jugada
-                        </button>
+                    <!-- Sección: Venezuela (sin hora de cierre) -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingVE">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVE" aria-expanded="false" aria-controls="collapseVE">
+                                Venezuela
+                            </button>
+                        </h2>
+                        <div id="collapseVE" class="accordion-collapse collapse" aria-labelledby="headingVE" data-bs-parent="#tracksAccordion">
+                            <div class="accordion-body">
+                                <!-- Venezuela sin hora de cierre -->
+                                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <input class="form-check-input track-checkbox" type="checkbox" value="Venezuela" id="trackVenezuela">
+                                        <label class="form-check-label" for="trackVenezuela">Venezuela (sin hora de cierre)</label>
+                                    </div>
+                                    <!-- No se muestra cutoff-time ni límite -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="total-section">
-                        Total de Jugadas: $<span id="totalJugadas">0.00</span>
-                    </div>
-                </div>
 
-                <!-- Selección de Método de Pago -->
-                <div class="mb-4">
-                    <label class="form-label">Selecciona el Método de Pago:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethod" id="paymentCashApp" value="cashapp" required>
-                        <label class="form-check-label" for="paymentCashApp">Cash App</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethod" id="paymentBalance" value="balance" required>
-                        <label class="form-check-label" for="paymentBalance">Saldo (Créditos)</label>
-                    </div>
-                </div>
+                </div> <!-- Fin acordeón -->
+            </div> <!-- Fin Selección de Tracks -->
 
-                <!-- Botones para Generar Ticket y Resetear -->
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-success btn-lg" id="generarTicket">
-                        <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
+            <!-- Tabla de Jugadas -->
+            <div class="table-responsive mb-4">
+                <table class="table table-dark table-bordered glow-table" id="jugadasTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Número Apostado</th>
+                            <th>Tipo de Juego</th>
+                            <th>Straight ($)</th>
+                            <th>Box ($)</th>
+                            <th>Combo ($)</th>
+                            <th>Total ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaJugadas">
+                        <!-- Filas generadas por scripts.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Botones para Agregar y Eliminar Jugada -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="button-group">
+                    <button type="button" class="btn btn-primary" id="agregarJugada">
+                        <i class="bi bi-plus-circle"></i> Agregar Jugada
                     </button>
-                    <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
-                        <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
+                    <button type="button" class="btn btn-danger" id="eliminarJugada">
+                        <i class="bi bi-dash-circle"></i> Eliminar Jugada
                     </button>
+                </div>
+                <div class="total-section">
+                    Total de Jugadas: $<span id="totalJugadas">0.00</span>
                 </div>
             </div>
-        </form>
-        <!-- FIN DEL FORMULARIO PRINCIPAL -->
 
-        <!-- MODAL PARA PREVISUALIZAR TICKET -->
+            <!-- Selección de Método de Pago -->
+            <div class="mb-4">
+                <label class="form-label">Selecciona el Método de Pago:</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="paymentCashApp" value="cashapp" required>
+                    <label class="form-check-label" for="paymentCashApp">Cash App</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="paymentBalance" value="balance" required>
+                    <label class="form-check-label" for="paymentBalance">Saldo (Créditos)</label>
+                </div>
+            </div>
+
+            <!-- Botones para Generar Ticket y Resetear Formulario -->
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-success btn-lg" id="generarTicket">
+                    <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
+                </button>
+                <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
+                    <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
+                </button>
+            </div>
+        </form>
+
+        <!-- Modal para Previsualizar Ticket -->
         <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content bg-dark text-white">
@@ -286,7 +357,7 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
                     <div class="modal-body">
-                        <!-- Sección de Alertas en el Modal -->
+                        <!-- Sección de Alertas -->
                         <div id="ticketAlerts"></div>
                         <div id="preTicket" class="p-3">
                             <h4 class="text-center mb-3">East New York Cricket</h4>
@@ -305,7 +376,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="ticketJugadas">
-                                    <!-- Jugadas (scripts.js) -->
+                                    <!-- Jugadas generadas dinámicamente -->
                                 </tbody>
                             </table>
                             <div class="total-section">
@@ -328,10 +399,9 @@
                         </div>
                         <!-- Contenedor para el Botón de Cash App Pay -->
                         <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
-                            <!-- Aquí se insertará el botón de Cash App Pay -->
                             <div id="cash-app-pay"></div>
                         </div>
-                        <!-- Botón para Confirmar e Imprimir (roles distintos a 'user') -->
+                        <!-- Botón para Confirmar e Imprimir (roles != 'user') -->
                         <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
                             <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
                                 <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
@@ -341,11 +411,10 @@
                 </div>
             </div>
         </div>
-        <!-- FIN MODAL TICKET -->
 
-    </div> <!-- fin container -->
+    </div> <!-- Fin container principal -->
 
-    <!-- LIBRERÍAS JAVASCRIPT -->
+    <!-- Librerías JavaScript -->
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Popper.js -->
@@ -358,10 +427,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Day.js -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-    <!-- Plugins de Day.js -->
+    <!-- Day.js Plugins -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/arraySupport.js"></script>
     <script>
+        // Registrar plugins de Day.js
         dayjs.extend(dayjs_plugin_customParseFormat);
         dayjs.extend(dayjs_plugin_arraySupport);
     </script>
@@ -381,16 +451,10 @@
         });
     </script>
 
-    <!-- Tu archivo scripts.js con toda la lógica de jugadas/tickets -->
+    <!-- scripts.js principal -->
     <script src="scripts.js"></script>
 
-    <!-- AQUÍ SE COMENTA EL SCRIPT INLINE ORIGINAL PARA EVITAR CONFLICTO -->
-    <!--
-    <script>
-        //  ~Aquí estaba toda tu lógica inline de jugadas y Ajax.
-        //  Se deja comentado para que la maneje scripts.js.
-    </script>
-    -->
+    <!-- Si tenías un script inline previo, se elimina para evitar conflictos -->
 
 </body>
 </html>
