@@ -1,12 +1,15 @@
  /***************************************************************************************
  * scripts.js
- * Versión ajustada para recibir/enviar JSON al backend (en lugar de multipart/form-data),
- * manteniendo todo el flujo de la app como ya lo tienes (jugadas, tracks, etc.).
+ * Versión enfocada en guardar jugadas sin procesar pagos (Cash App, Shopify, etc.)
+ * Mantiene toda la lógica de jugadas, pero ignora/dispara automáticamente
+ * la confirmación del ticket sin ningún método de pago.
  ***************************************************************************************/
 
 $(document).ready(function() {
 
     // Define las URLs de tus APIs
+    // (NOTA) Se mantiene la referencia a SheetDB y BACKEND_API_URL,
+    //        pero ignoramos la lógica de pagos.
     const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
     const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/tickets'; // Ruta actualizada del backend
 
@@ -39,7 +42,7 @@ $(document).ready(function() {
 
     let userEmail = ''; // Variable global para almacenar el email del usuario
 
-    // Horarios de cierre por track
+    // Horarios de cierre por track (parte de la lógica original)
     const horariosCierre = {
         "USA": {
             "New York Mid Day": "14:25",
@@ -595,7 +598,7 @@ $(document).ready(function() {
     obtenerPerfilUsuario();
 
     /***************************************************************************************
-     * Evento para generar el ticket
+     * Evento para generar el ticket (SIN PROCESO DE PAGO)
      ***************************************************************************************/
     $("#generarTicket").click(function() {
         // Limpiar alertas
@@ -670,7 +673,8 @@ $(document).ready(function() {
             return `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
         });
 
-        // Construir ticketData
+        // Construir ticketData (IGNORANDO método de pago)
+        // (NOTA) Dejamos userEmail por si el backend lo requiere.
         ticketData = {
             fecha: fechasSeleccionadas, // Array de "YYYY-MM-DD"
             tracks: tracks,             // Array de tracks
@@ -678,24 +682,19 @@ $(document).ready(function() {
             totalAmount: totalJugadasGlobal,
             selectedDays: selectedDays,
             selectedTracks: selectedTracks,
-            paymentMethod: $('input[name="paymentMethod"]:checked').val(),
-            userEmail: userEmail        // Usar el email obtenido del perfil
+            // DESHABILITAMOS cualquier sistema de pago:
+            // paymentMethod: $('input[name="paymentMethod"]:checked').val() || 'disabled',
+            // userEmail: userEmail
         };
 
         console.log("Fechas asignadas a #ticketFecha:", fecha);
-        console.log("Datos del Ticket a Enviar:", ticketData);
+        console.log("Datos del Ticket a Enviar (sin pago):", ticketData);
 
         // Obtener token de localStorage
         const token = localStorage.getItem('token');
         console.log("Token de Autenticación:", token);
 
-        // Validar que el email del usuario haya sido obtenido
-        if (!userEmail) {
-            showAlert("No se pudo obtener tu correo electrónico. Por favor, intenta nuevamente.", "danger");
-            return;
-        }
-
-        // Enviar al backend como JSON
+        // Enviar al backend como JSON, asumiendo que el backend ya está forzado a 'confirmed'
         $.ajax({
             url: `${BACKEND_API_URL}/store-ticket`, // URL actualizada
             method: 'POST',
@@ -706,23 +705,10 @@ $(document).ready(function() {
             },
             data: JSON.stringify(ticketData),
             success: function(response) {
-                if (ticketData.paymentMethod === 'cashapp' && response.checkoutUrl) {
-                    // Guardar el ticketId en localStorage para referencia futura
-                    if (response.ticketId) {
-                        localStorage.setItem('ticketId', response.ticketId);
-                    }
-                    // Redirigir al usuario a la URL de checkout de Cash App
-                    window.location.href = response.checkoutUrl;
-                } else if (ticketData.paymentMethod === 'balance') {
-                    // Mostrar mensaje de éxito
-                    alert(`Ticket generado exitosamente con ID: ${response.ticketId}`);
-                    // Mostrar el modal con detalles del ticket, incluyendo QR y Número de Ticket
-                    mostrarModal(response, true); // Pasamos 'true' para indicar que el pago ya está confirmado
-                } else {
-                    // Manejar otros métodos de pago si es necesario
-                    alert('Ticket generado exitosamente.');
-                    mostrarModal(response, false);
-                }
+                // Asumimos que el backend retorna { ticketId, status, ... } sin procesar pagos
+                alert(`Ticket generado exitosamente con ID: ${response.ticketId}`);
+                // Mostrar el modal con detalles del ticket, con "confirmado"
+                mostrarModal(response, true /*isConfirmed*/);
             },
             error: function(xhr) {
                 const error = xhr.responseJSON?.error || 'Error al generar el ticket.';
@@ -734,38 +720,52 @@ $(document).ready(function() {
     /***************************************************************************************
      * Mostrar Modal con Detalles del Ticket
      * @param {Object} ticket - Datos del ticket retornados por el backend
-     * @param {Boolean} isConfirmed - Indica si el pago está confirmado (true) o no (false)
+     * @param {Boolean} isConfirmed - Forzamos true (no hay pagos)
      ***************************************************************************************/
     function mostrarModal(ticket, isConfirmed) {
-        $("#ticketFecha").text(ticket.fecha.join(', '));
-        $("#ticketTracks").text(ticket.tracks.join(', '));
-        $("#ticketTotal").text(ticket.totalAmount.toFixed(2));
+        // Suponemos que el backend nos retorna las jugadas, tracks, etc.
+        // Si no, ajusta según la respuesta real.
+        // Forzamos que sea "confirmed" para probar guardado en DB.
+
+        // SIMULACIÓN de que el ticket tiene jugadas en 'ticket.jugadas'
+        $("#ticketFecha").text(ticket.fecha ? ticket.fecha.join(', ') : '');
+        $("#ticketTracks").text(ticket.tracks ? ticket.tracks.join(', ') : '');
+        $("#ticketTotal").text(ticket.totalAmount?.toFixed(2) || '0.00');
         $("#ticketTransaccion").text(ticket.fechaTransaccion ? dayjs(ticket.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
 
         // Limpiar y rellenar la tabla de jugadas en el modal
         const tbody = $('#ticketJugadas');
         tbody.empty();
-        ticket.jugadas.forEach((jugada, index) => {
-            const fila = `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${jugada.numero}</td>
-                    <td>${jugada.modalidad}</td>
-                    <td>${jugada.straight.toFixed(2)}</td>
-                    <td>${jugada.box !== null ? jugada.box.toFixed(2) : '-'}</td>
-                    <td>${jugada.combo !== null ? jugada.combo.toFixed(2) : '-'}</td>
-                    <td>$${jugada.total.toFixed(2)}</td>
-                </tr>
-            `;
-            tbody.append(fila);
-        });
+
+        // Suponemos que 'ticket.jugadas' existe:
+        if (ticket.jugadas && ticket.jugadas.length > 0) {
+            ticket.jugadas.forEach((jugada, index) => {
+                const fila = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${jugada.numero || ''}</td>
+                        <td>${jugada.modalidad || ''}</td>
+                        <td>${(jugada.straight || 0).toFixed(2)}</td>
+                        <td>${jugada.box !== null ? jugada.box.toFixed(2) : '-'}</td>
+                        <td>${jugada.combo !== null ? jugada.combo.toFixed(2) : '-'}</td>
+                        <td>$${(jugada.total || 0).toFixed(2)}</td>
+                    </tr>
+                `;
+                tbody.append(fila);
+            });
+        }
 
         if (isConfirmed) {
             // Mostrar QR y Número de Ticket
             $("#numeroTicket").text(ticket.ticketId || '');
-            $("#ticketTransaccion").text(ticket.fechaTransaccion ? dayjs(ticket.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
+            $("#ticketTransaccion").text(
+                ticket.fechaTransaccion
+                  ? dayjs(ticket.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss')
+                  : 'Pendiente'
+            );
             // Generar QR Code para el ticketId
             if (ticket.ticketId) {
+                $("#qrcode").empty();
                 new QRCode(document.getElementById("qrcode"), ticket.ticketId);
             }
 
@@ -779,7 +779,6 @@ $(document).ready(function() {
             $("#ticketTransaccion").text('Pendiente');
             $("#qrcode").empty();
 
-            // Ocultar elementos de QR y Número de Ticket
             $("#numeroTicket").parent().hide();
             $("#ticketTransaccion").parent().hide();
             $("#qrcode").parent().parent().hide();
@@ -790,11 +789,14 @@ $(document).ready(function() {
     }
 
     /***************************************************************************************
-     * Manejo de la carga de ventana para recuperar el ticketData
+     * Manejo de la carga de ventana para recuperar el ticketData (opcional)
+     * - Puedes comentarlo si no lo usas
      ***************************************************************************************/
     $(window).on('load', function() {
         ticketId = localStorage.getItem('ticketId');
         if (ticketId) {
+            // Para no romper flujo, puedes comentar totalmente esta parte
+            // si no estás usando "retrieve-ticket" en el backend.
             $.ajax({
                 url: `${BACKEND_API_URL}/retrieve-ticket`, // URL actualizada
                 method: 'POST',
@@ -806,37 +808,8 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     if (response.ticketData) {
-                        ticketData = response.ticketData;
-                        $("#ticketTracks").text(ticketData.tracks.join(", "));
-                        $("#ticketJugadas").html(ticketData.ticketJugadasHTML || '');
-                        $("#ticketTotal").text(ticketData.totalAmount?.toFixed(2) || '0.00');
-                        $("#ticketFecha").text(ticketData.fecha?.join(", ") || '');
-
-                        // Mostrar QR y Número de Ticket si el ticket está confirmado
-                        if (response.ticketData.status === 'confirmed') {
-                            $("#numeroTicket").text(response.ticketData.ticketId || '');
-                            $("#ticketTransaccion").text(response.ticketData.fechaTransaccion ? dayjs(response.ticketData.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss') : 'Pendiente');
-                            // Generar QR Code para el ticketId
-                            if (response.ticketData.ticketId) {
-                                new QRCode(document.getElementById("qrcode"), response.ticketData.ticketId);
-                            }
-
-                            // Mostrar elementos de QR y Número de Ticket
-                            $("#numeroTicket").parent().show();
-                            $("#ticketTransaccion").parent().show();
-                            $("#qrcode").parent().parent().show();
-                        } else {
-                            // Ocultar QR y Número de Ticket si no está confirmado
-                            $("#numeroTicket").text('');
-                            $("#ticketTransaccion").text('Pendiente');
-                            $("#qrcode").empty();
-
-                            $("#numeroTicket").parent().hide();
-                            $("#ticketTransaccion").parent().hide();
-                            $("#qrcode").parent().parent().hide();
-                        }
-
-                        ticketModal.show();
+                        // ... Manejar datos del ticket si se recupera
+                        showAlert('Se recuperó el ticket. (Deshabilita si no se usa)', 'info');
                     } else {
                         showAlert('Error al recuperar los datos del ticket.', 'danger');
                         localStorage.removeItem('ticketId');
@@ -852,11 +825,14 @@ $(document).ready(function() {
     });
 
     /***************************************************************************************
-     * Confirmar e imprimir ticket (aquí se añade "Ticket Number" real a cada jugada)
+     * Confirmar e imprimir ticket
+     * NOTA: Este era el botón para roles admin/dealer. Podemos dejarlo para simular
+     * que una vez confirmamos, se suba a SheetDB, etc.
      ***************************************************************************************/
     $("#confirmarTicket").click(function() {
         $("#ticketAlerts").empty();
 
+        // Generar un número interno de ticket
         const numeroTicket = generarNumeroUnico();
         $("#numeroTicket").text(numeroTicket);
 
@@ -871,7 +847,7 @@ $(document).ready(function() {
             height: 128,
         });
 
-        // Actualizar jugadas con "Ticket Number" real
+        // Actualizar jugadas en ticketData con "Ticket Number" real
         if (ticketData.jugadas) {
             ticketData.jugadas.forEach(j => {
                 j["Ticket Number"] = numeroTicket;
@@ -896,8 +872,10 @@ $(document).ready(function() {
         });
 
         // 2) Enviar al backend /save-jugadas
+        // Asumiendo que existe, aunque hayas deshabilitado pagos,
+        // podemos seguir usando /save-jugadas para actualizar el ticket.
         const backendRequest = $.ajax({
-            url: `${BACKEND_API_URL}/save-jugadas`, // URL actualizada
+            url: `${BACKEND_API_URL}/save-jugadas`,
             method: "POST",
             dataType: "json",
             contentType: "application/json",
