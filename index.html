@@ -36,14 +36,21 @@
         // Manejo de visibilidad de Cash App Pay / Confirmar
         const cashAppContainer = document.getElementById('cashAppPayContainer');
         const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
+
+        // Asegurarnos de ocultar ambos contenedores para deshabilitar pagos
         if (cashAppContainer && confirmarTicketContainer) {
-          if (userRole === 'user') {
-            cashAppContainer.style.display = 'block';
-            confirmarTicketContainer.style.display = 'none';
-          } else {
-            cashAppContainer.style.display = 'none';
-            confirmarTicketContainer.style.display = 'block';
-          }
+          // Opción A: Ocultar siempre ambos (nadie ve botones de pago/confirmar)
+          cashAppContainer.style.display = 'none';
+          confirmarTicketContainer.style.display = 'none';
+
+          // Opción B (si prefieres que admin vea "confirmar"): 
+          // if (userRole === 'user') {
+          //   cashAppContainer.style.display = 'none';
+          //   confirmarTicketContainer.style.display = 'none';
+          // } else {
+          //   cashAppContainer.style.display = 'none';
+          //   confirmarTicketContainer.style.display = 'block';
+          // }
         }
       }
     });
@@ -357,7 +364,8 @@
         </div>
       </div>
 
-      <!-- Método de Pago -->
+      <!-- Bloque de método de pago DESHABILITADO -->
+      <!-- 
       <div class="mb-4">
         <label class="form-label">Selecciona el Método de Pago:</label>
         <div class="form-check">
@@ -373,6 +381,7 @@
           </label>
         </div>
       </div>
+      -->
 
       <!-- Botones Generar Ticket y Reset -->
       <div class="d-grid gap-2">
@@ -433,11 +442,11 @@
             <div class="w-100 mb-2">
               <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
             </div>
-            <!-- Contenedor Cash App Pay (user) -->
+            <!-- Contenedor Cash App Pay (user) - SE FORZÓ A display:none ARRIBA -->
             <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
               <div id="cash-app-pay"></div>
             </div>
-            <!-- Confirmar/Imprimir (admin/dealer) -->
+            <!-- Confirmar/Imprimir (admin/dealer) - SE FORZÓ A display:none ARRIBA -->
             <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
               <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
                 <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
