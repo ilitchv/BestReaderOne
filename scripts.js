@@ -1,11 +1,10 @@
  /***************************************************************************************
  * scripts.js
  * 
- * - Elimina la lógica de obtención de perfil para evitar mensajes de error de autenticación.
  * - Asegura que todos los tracks se manejen correctamente.
  * - Corrige la previsualización del ticket en el modal.
  * - Ajusta el envío de datos a SheetDB para evitar errores de formato.
- * - Asegura el guardado correcto en MongoDB.
+ * - Agrega logs detallados para facilitar la depuración.
  ***************************************************************************************/
 
 $(document).ready(function() {
@@ -106,7 +105,7 @@ $(document).ready(function() {
         const fila = `
           <tr>
             <td>${jugadaCount}</td>
-            <td><input type="number" class="form-control numeroApostado" min="0" max="9999"></td>
+            <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
             <td class="tipoJuego">-</td>
             <td><input type="number" class="form-control straight" step="1" min="0" placeholder="Ej: 5"></td>
             <td><input type="number" class="form-control box" step="1" placeholder="Ej: 2"></td>
@@ -460,7 +459,8 @@ $(document).ready(function() {
             const comboNum = comboVal && !isNaN(comboVal) ? parseFloat(comboVal) : null;
             jugadasArray.push({
                 numero, modalidad, straight, box: boxNum, combo: comboNum,
-                total: totalFila
+                total: totalFila,
+                jugadaNumber: jugadaCount // Asignar número de jugada
             });
         });
 
@@ -555,18 +555,23 @@ $(document).ready(function() {
 
             // 2. Enviar a SheetDB
             //    Construimos un array de objetos para tu sheet:
-            //    Ajusta los campos que quieras. Aquí de ejemplo:
             const sheetPayload = data.jugadas.map(j => ({
-                ticketId: data.ticketId,
-                fecha: data.fecha.join(', '),
-                tracks: data.tracks.join(', '),
-                numero: j.numero,
-                modalidad: j.modalidad,
-                straight: j.straight,
-                box: j.box !== null ? j.box : '',
-                combo: j.combo !== null ? j.combo : '',
-                total: j.total
+                "Ticket Number": data.ticketId,
+                "Transaction DateTime": dayjs(data.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss'),
+                "Bet Dates": data.fecha.join(', '),
+                "Tracks": data.tracks.join(', '),
+                "Bet Number": j.numero,
+                "Game Mode": j.modalidad,
+                "Straight ($)": j.straight,
+                "Box ($)": j.box !== null ? j.box : '',
+                "Combo ($)": j.combo !== null ? j.combo : '',
+                "Total ($)": j.total,
+                "Jugada Number": j.jugadaNumber || 1,
+                "Timestamp": new Date().toISOString(),
+                "User": "user@example.com" // Reemplaza con el email real del usuario si está disponible
             }));
+
+            console.log("Payload para SheetDB:", sheetPayload);
 
             try {
                 const sheetRes = await fetch(SHEETDB_API_URL, {
@@ -582,7 +587,7 @@ $(document).ready(function() {
                 console.log("SheetDB response:", sheetJson);
             } catch (sheetErr) {
                 console.error("Error al enviar a SheetDB:", sheetErr);
-                showAlert("No se pudo enviar a Google Sheets. Revisa consola.", "warning");
+                showAlert("No se pudo enviar a Google Sheets. Revisa la consola.", "warning");
             }
 
             // 3. Actualizar modal con los datos "confirmados"
@@ -590,7 +595,7 @@ $(document).ready(function() {
                 $("#numeroTicket").text(data.ticketId);
             }
             if (data.fechaTransaccion) {
-                // Usa dayjs si quieres formatear
+                // Usa dayjs para formatear la fecha si es necesario
                 $("#ticketTransaccion").text(dayjs(data.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss'));
             }
             // Generar QR
