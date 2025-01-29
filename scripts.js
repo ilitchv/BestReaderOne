@@ -1,22 +1,21 @@
  /***************************************************************************************
  * scripts.js
  * 
- * - Mantiene la lógica de jugadas y tracks (USA, Santo Domingo, Venezuela),
- *   tal como la tenías antes.
- * - Al hacer clic en "Generar Ticket", se muestra un modal de previsualización.
- * - Al hacer clic en "Confirmar e Imprimir", se guarda en MongoDB (store-ticket),
- *   luego se envía la data a SheetDB, se muestra y descarga un ticket con QR.
- * - Se eliminan referencias a Square/Cash App.
+ * - Elimina la lógica de obtención de perfil para evitar mensajes de error de autenticación.
+ * - Asegura que todos los tracks se manejen correctamente.
+ * - Corrige la previsualización del ticket en el modal.
+ * - Ajusta el envío de datos a SheetDB para evitar errores de formato.
+ * - Asegura el guardado correcto en MongoDB.
  ***************************************************************************************/
 
 $(document).ready(function() {
-    // =================== URLs y Config ===================== //
-    const SHEETDB_API_URL   = 'https://sheetdb.io/api/v1/gect4lbs5bwvr';  // Tu URL real de SheetDB
+
+    // =================== Configuraciones Generales =================== //
+    const SHEETDB_API_URL   = 'https://sheetdb.io/api/v1/gect4lbs5bwvr';  // URL real de SheetDB
     const BACKEND_BASE_URL  = 'https://loteria-backend-j1r3.onrender.com';
     const BACKEND_TICKETS   = `${BACKEND_BASE_URL}/api/tickets`;
     const token             = localStorage.getItem('token');
     const userRole          = localStorage.getItem('userRole') || 'user';
-    let userEmail           = '';
 
     if (!token) {
         alert('Debes iniciar sesión para acceder a esta página.');
@@ -26,41 +25,14 @@ $(document).ready(function() {
 
     console.log('User Role:', userRole);
 
-    // =================== Obtener perfil de usuario (para email, etc.) =================== //
-    async function obtenerPerfilUsuario() {
-        try {
-            const response = await fetch(`${BACKEND_BASE_URL}/api/auth/profile`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
-            if (response.ok) {
-                userEmail = data.email || '';
-                console.log('Email del usuario:', userEmail);
-            } else {
-                console.error('Error al obtener el perfil:', data.msg);
-                alert('No se pudo obtener el perfil. Inicia sesión nuevamente.');
-                window.location.href = 'login.html';
-            }
-        } catch (error) {
-            console.error('Error al obtener el perfil:', error);
-            alert('Error de conexión al obtener el perfil. Inicia sesión nuevamente.');
-            window.location.href = 'login.html';
-        }
-    }
-    obtenerPerfilUsuario();
-
-    // =================== Variables globales para jugadas =================== //
+    // =================== Variables Globales =================== //
     let jugadaCount         = 0;
     let selectedDays        = 0;
     let selectedTracksCount = 0;  // Excluyendo “Venezuela” del conteo
     let totalJugadasGlobal  = 0;
     let ticketData          = {};
 
-    // =================== Horarios de cierre y límites =================== //
+    // =================== Horarios de Cierre y Límites =================== //
     const horariosCierre = {
         "USA": {
             "New York Mid Day": "14:25",
@@ -166,7 +138,7 @@ $(document).ready(function() {
     // Iniciar con una jugada
     agregarJugada();
 
-    // Al cambiar un checkbox de track
+    // =================== Al cambiar un checkbox de track =================== //
     $(".track-checkbox").change(function() {
         const tracksSel = $(".track-checkbox:checked")
             .map(function() { return $(this).val(); }).get();
@@ -175,7 +147,7 @@ $(document).ready(function() {
         calcularTotal();
     });
 
-    // Detectar cambios en la tabla
+    // =================== Detectar cambios en la tabla =================== //
     $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box, .combo", function() {
         const fila     = $(this).closest("tr");
         const numero   = fila.find(".numeroApostado").val();
@@ -188,7 +160,7 @@ $(document).ready(function() {
         calcularTotal();
     });
 
-    // =================== Determinar modalidad =================== //
+    // =================== Determinar Modalidad =================== //
     function determinarModalidad(tracks, numero, fila) {
         if (!numero) return "-";
 
@@ -236,7 +208,7 @@ $(document).ready(function() {
         }
     }
 
-    // =================== Calcular total de una jugada =================== //
+    // =================== Calcular Total de una Jugada =================== //
     function calcularTotalJugada(fila) {
         const modalidad = fila.find(".tipoJuego").text();
         const numero    = fila.find(".numeroApostado").val();
@@ -273,7 +245,9 @@ $(document).ready(function() {
         } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
             total = straight;
         } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
-            total = straight + boxNum + comboNum * combinaciones;
+            total = straight + boxNum + (comboNum * combinaciones);
+        } else if (modalidad === "Combo") {
+            total = comboNum;
         } else {
             // Caso general
             total = straight + boxNum + comboNum;
@@ -297,7 +271,7 @@ $(document).ready(function() {
         return factorial(totalDigits) / denominator;
     }
 
-    // =================== Calcular total global =================== //
+    // =================== Calcular Total Global =================== //
     function calcularTotal() {
         let total = 0;
         $(".total").each(function() {
@@ -316,7 +290,7 @@ $(document).ready(function() {
         $("#totalJugadas").text(total.toFixed(2));
     }
 
-    // =================== Resaltar duplicados =================== //
+    // =================== Resaltar Duplicados =================== //
     function resaltarDuplicados() {
         const campos = document.querySelectorAll('.numeroApostado');
         const valores = {};
@@ -349,7 +323,7 @@ $(document).ready(function() {
         });
     }
 
-    // =================== Actualizar Tracks según hora de cierre =================== //
+    // =================== Actualizar Tracks según Hora de Cierre =================== //
     function actualizarEstadoTracks() {
         const fechaVal = $("#fecha").val().split(", ")[0];
         if (!fechaVal) return;
@@ -385,7 +359,7 @@ $(document).ready(function() {
     }
     actualizarEstadoTracks();
 
-    // Refrescar cada 1 min si es hoy
+    // Refrescar cada 1 minuto si es hoy
     setInterval(() => {
         const fechaVal = $("#fecha").val().split(", ")[0];
         if (!fechaVal) return;
@@ -397,7 +371,7 @@ $(document).ready(function() {
         }
     }, 60000);
 
-    // =================== Mostrar horas límite en la UI =================== //
+    // =================== Mostrar Horas Límite en la UI =================== //
     function mostrarHorasLimite() {
         $(".cutoff-time").each(function() {
             const track = $(this).data("track");
@@ -425,7 +399,7 @@ $(document).ready(function() {
     }
     mostrarHorasLimite();
 
-    // =================== Función para mostrar alertas =================== //
+    // =================== Función para Mostrar Alertas =================== //
     function showAlert(message, type) {
         const alertHTML = `
           <div class="alert alert-${type} alert-dismissible fade show" role="alert">
@@ -439,7 +413,7 @@ $(document).ready(function() {
     // =================== Modal Bootstrap 5 =================== //
     const ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
-    // =================== "Generar Ticket" -> Muestra Modal Previsualización =================== //
+    // =================== "Generar Ticket" -> Mostrar Modal Previsualización =================== //
     $("#generarTicket").click(function() {
         $("#ticketAlerts").empty();
 
@@ -510,12 +484,14 @@ $(document).ready(function() {
             // userEmail: userEmail, (si necesitas enviarlo al backend)
         };
 
-        // Muestra la previsualización en el modal (sin ticketId todavía)
+        console.log("Datos del Ticket (pre-confirmación):", ticketData);
+
+        // Mostrar en el modal (sin ticketId todavía)
         mostrarPreTicketModal(ticketData, false /* isConfirmed */);
         ticketModal.show();
     });
 
-    // =================== Mostrar datos en el modal de "Pre Ticket" =================== //
+    // =================== Mostrar Datos en el Modal de "Pre Ticket" =================== //
     function mostrarPreTicketModal(tData, isConfirmed) {
         $("#ticketAlerts").empty();
         // Fechas
@@ -582,8 +558,13 @@ $(document).ready(function() {
             //    Ajusta los campos que quieras. Aquí de ejemplo:
             const sheetPayload = data.jugadas.map(j => ({
                 ticketId: data.ticketId,
+                fecha: data.fecha.join(', '),
+                tracks: data.tracks.join(', '),
                 numero: j.numero,
                 modalidad: j.modalidad,
+                straight: j.straight,
+                box: j.box !== null ? j.box : '',
+                combo: j.combo !== null ? j.combo : '',
                 total: j.total
             }));
 
@@ -593,11 +574,12 @@ $(document).ready(function() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ data: sheetPayload })
                 });
+                if (!sheetRes.ok) {
+                    const sheetError = await sheetRes.text();
+                    throw new Error(`SheetDB Error: ${sheetError}`);
+                }
                 const sheetJson = await sheetRes.json();
                 console.log("SheetDB response:", sheetJson);
-                if (!sheetRes.ok) {
-                    showAlert("SheetDB rechazó la solicitud. Verifica formato.", "warning");
-                }
             } catch (sheetErr) {
                 console.error("Error al enviar a SheetDB:", sheetErr);
                 showAlert("No se pudo enviar a Google Sheets. Revisa consola.", "warning");
@@ -609,7 +591,7 @@ $(document).ready(function() {
             }
             if (data.fechaTransaccion) {
                 // Usa dayjs si quieres formatear
-                $("#ticketTransaccion").text(data.fechaTransaccion);
+                $("#ticketTransaccion").text(dayjs(data.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss'));
             }
             // Generar QR
             if (data.ticketId) {
@@ -617,10 +599,11 @@ $(document).ready(function() {
                 new QRCode(document.getElementById("qrcode"), data.ticketId);
             }
 
+            // Actualizar el modal para mostrar datos confirmados
             mostrarPreTicketModal(data, true);
 
             // 4. Descargar/Imprimir
-            //    - O usar window.print(), o usar html2canvas + descarga automática
+            //    - Usar html2canvas + descarga automática
             await new Promise(resolve => setTimeout(resolve, 500)); // Pequeña pausa
 
             html2canvas(document.querySelector("#preTicket")).then(canvas => {
@@ -633,10 +616,7 @@ $(document).ready(function() {
                 document.body.removeChild(link);
             });
 
-            // (Opcional) window.print() en lugar de html2canvas
-            // window.print();
-
-            // 5. Cerrar modal y resetear
+            // 5. Cerrar modal y resetear formulario
             setTimeout(() => {
                 ticketModal.hide();
                 resetForm();
