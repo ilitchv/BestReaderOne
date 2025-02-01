@@ -13,45 +13,35 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
   <!-- Custom CSS -->
   <link href="styles.css" rel="stylesheet">
-
+  
   <!-- Verificación de Autenticación y Rol del Usuario -->
   <script>
     // Ocultar el contenido hasta que se verifique la autenticación
     document.documentElement.style.display = 'none';
-
     document.addEventListener('DOMContentLoaded', () => {
       const token = localStorage.getItem('token');
       const userRole = localStorage.getItem('userRole');
-
-      // Hacer que scripts.js pueda leer userRole
+      // Hacer que scripts.js pueda leer el rol
       window.userRole = userRole;
-
       if (!token) {
         alert('Debes iniciar sesión para acceder a esta página.');
         window.location.href = 'login.html';
       } else {
         // Mostrar contenido
         document.documentElement.style.display = '';
-
-        // Manejo de visibilidad de Cash App Pay / Confirmar
+        // Para este ejemplo, se ocultan los botones de pago (si existieran) y se muestra el botón de Confirmar e Imprimir
         const cashAppContainer = document.getElementById('cashAppPayContainer');
         const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
-
-        // Asegurarnos de ocultar ambos contenedores para deshabilitar pagos
-        if (cashAppContainer && confirmarTicketContainer) {
-          // Ocultar siempre ambos (nadie ve botones de pago/confirmar)
-          cashAppContainer.style.display = 'none';
-          confirmarTicketContainer.style.display = 'block'; // Mostrar Confirmar Ticket para todos
-        }
+        if (cashAppContainer) cashAppContainer.style.display = 'none';
+        if (confirmarTicketContainer) confirmarTicketContainer.style.display = 'block';
       }
     });
   </script>
+  <!-- Nota: Se omite el SDK de Square ya que no se usa -->
 </head>
-
 <body>
   <div class="container my-5">
     <h2 class="text-center mb-4">Beast Reader (Cricket) East New York</h2>
-
     <form id="lotteryForm">
       <!-- Fila con Calendario y Botón de Volver -->
       <div class="row mb-3">
@@ -79,7 +69,7 @@
             </h2>
             <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
-                <!-- Lista Completa de Tracks de USA -->
+                <!-- Ejemplos de Tracks de USA (completa según tu configuración) -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYMidDay">
@@ -94,13 +84,10 @@
                   </div>
                   <span class="cutoff-time" data-track="New York Evening">Hora límite: 22:20</span>
                 </div>
-                <!-- Añade todos los demás tracks de USA de la misma manera -->
-                <!-- ... -->
-                <!-- Aquí deberías incluir todos los tracks de USA según tu configuración original -->
+                <!-- Agrega aquí el resto de los tracks de USA -->
               </div>
             </div>
           </div>
-          
           <!-- Sección Santo Domingo -->
           <div class="accordion-item">
             <h2 class="accordion-header" id="headingSD">
@@ -110,7 +97,7 @@
             </h2>
             <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
-                <!-- Lista Completa de Tracks de Santo Domingo -->
+                <!-- Ejemplos de Tracks de Santo Domingo (completa según tu configuración) -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal">
@@ -125,13 +112,10 @@
                   </div>
                   <span class="cutoff-time" data-track="Gana mas">Hora límite: 14:20</span>
                 </div>
-                <!-- Añade todos los demás tracks de Santo Domingo de la misma manera -->
-                <!-- ... -->
-                <!-- Aquí deberías incluir todos los tracks de Santo Domingo según tu configuración original -->
+                <!-- Agrega aquí el resto de los tracks de Santo Domingo -->
               </div>
             </div>
           </div>
-
           <!-- Sección Venezuela -->
           <div class="accordion-item">
             <h2 class="accordion-header" id="headingVenezuela">
@@ -141,21 +125,20 @@
             </h2>
             <div id="collapseVenezuela" class="accordion-collapse collapse" aria-labelledby="headingVenezuela" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
-                <!-- Venezuela sin límite de cierre -->
+                <!-- Ejemplo de Track de Venezuela -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="Venezuela" id="trackVenezuela">
                     <label class="form-check-label" for="trackVenezuela">Venezuela (sin hora de cierre)</label>
                   </div>
-                  <!-- Sin hora de cierre -->
                   <span class="cutoff-time" data-track="Venezuela" style="display: none;">No cierra</span>
                 </div>
-                <!-- Si tienes más tracks en Venezuela, añádelos aquí de la misma manera -->
+                <!-- Agrega aquí más tracks de Venezuela si los tienes -->
               </div>
             </div>
           </div>
-        </div> <!-- Fin .accordion -->
-      </div> <!-- Fin .mb-4 -->
+        </div> <!-- Fin del Accordion -->
+      </div> <!-- Fin Sección Tracks -->
 
       <!-- TABLA DE JUGADAS -->
       <div class="table-responsive mb-4">
@@ -172,7 +155,7 @@
             </tr>
           </thead>
           <tbody id="tablaJugadas">
-            <!-- Filas dinámicas via scripts.js -->
+            <!-- Filas se generan dinámicamente con scripts.js -->
           </tbody>
         </table>
       </div>
@@ -251,7 +234,7 @@
             <div class="w-100 mb-2">
               <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
             </div>
-            <!-- Confirmar/Imprimir (Visible para todos los usuarios) -->
+            <!-- Contenedor para "Confirmar e Imprimir" -->
             <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: block;">
               <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
                 <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
@@ -260,8 +243,7 @@
           </div>
         </div>
       </div>
-    </div> <!-- Fin Modal -->
-
+    </div>
   </div> <!-- Fin container -->
 
   <!-- Librerías JavaScript -->
@@ -279,8 +261,7 @@
     dayjs.extend(dayjs_plugin_arraySupport);
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-  <!-- scripts.js principal -->
+  <!-- Archivo scripts.js principal -->
   <script src="scripts.js"></script>
 </body>
 </html>
