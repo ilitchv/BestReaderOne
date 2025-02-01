@@ -4,23 +4,18 @@
  * - Asegura que todos los tracks se manejen correctamente.
  * - Corrige la previsualización del ticket en el modal.
  * - Ajusta el envío de datos a SheetDB para evitar errores de formato.
+ * - Maneja correctamente la autenticación y el token para evitar "Token expirado".
  * - Agrega logs detallados para facilitar la depuración.
  ***************************************************************************************/
 
 $(document).ready(function() {
 
     // =================== Configuraciones Generales =================== //
-    const SHEETDB_API_URL   = 'https://sheetdb.io/api/v1/gect4lbs5bwvr';  // URL real de SheetDB
-    const BACKEND_BASE_URL  = 'https://loteria-backend-j1r3.onrender.com';
+    const SHEETDB_API_URL   = 'https://sheetdb.io/api/v1/gect4lbs5bwvr';  // Reemplaza con tu URL real de SheetDB
+    const BACKEND_BASE_URL  = 'https://loteria-backend-j1r3.onrender.com'; // Reemplaza con tu URL real del backend
     const BACKEND_TICKETS   = `${BACKEND_BASE_URL}/api/tickets`;
     const token             = localStorage.getItem('token');
-    const userRole          = localStorage.getItem('userRole') || 'user';
-
-    if (!token) {
-        alert('Debes iniciar sesión para acceder a esta página.');
-        window.location.href = 'login.html';
-        return;
-    }
+    const userRole          = window.userRole || 'user'; // Obtenido desde el script en el HTML
 
     console.log('User Role:', userRole);
 
@@ -333,6 +328,21 @@ $(document).ready(function() {
 
         if (!esMismoDia) {
             $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
+            $(".cutoff-time").show().text(function() {
+                const track = $(this).data("track");
+                const horaCierre = horariosCierre[getRegion(track)][track];
+                if (horaCierre) {
+                    const [hh, mm] = horaCierre.split(":").map(Number);
+                    const cutoff = new Date();
+                    cutoff.setHours(hh, mm, 0, 0);
+                    // Mostrar hora límite 5 minutos antes
+                    cutoff.setMinutes(cutoff.getMinutes() - 5);
+                    const horas   = cutoff.getHours().toString().padStart(2,'0');
+                    const minutos = cutoff.getMinutes().toString().padStart(2,'0');
+                    return `Hora límite: ${horas}:${minutos}`;
+                }
+                return '';
+            });
             return;
         }
 
@@ -348,14 +358,32 @@ $(document).ready(function() {
                       .prop('disabled', true)
                       .prop('checked', false)
                       .closest('label').addClass('closed-track');
+                    $(`.cutoff-time[data-track="${track}"]`).text('Cerrado').hide();
                 } else {
                     $(`.track-checkbox[value="${track}"]`)
                       .prop('disabled', false)
                       .closest('label').removeClass('closed-track');
+                    const cutoffTime = horariosCierre[region][track];
+                    if (cutoffTime) {
+                        const [hh, mm] = cutoffTime.split(":").map(Number);
+                        const displayCutoff = new Date();
+                        displayCutoff.setHours(hh, mm - 5, 0, 0); // 5 minutos antes
+                        const horas   = displayCutoff.getHours().toString().padStart(2,'0');
+                        const minutos = displayCutoff.getMinutes().toString().padStart(2,'0');
+                        $(`.cutoff-time[data-track="${track}"]`).text(`Hora límite: ${horas}:${minutos}`).show();
+                    }
                 }
             }
         }
     }
+
+    function getRegion(track) {
+        if (horariosCierre.USA.hasOwnProperty(track)) return "USA";
+        if (horariosCierre["Santo Domingo"].hasOwnProperty(track)) return "Santo Domingo";
+        if (horariosCierre.Venezuela.hasOwnProperty(track)) return "Venezuela";
+        return "";
+    }
+
     actualizarEstadoTracks();
 
     // Refrescar cada 1 minuto si es hoy
@@ -388,8 +416,8 @@ $(document).ready(function() {
             }
             if (cierreStr) {
                 const [hh, mm] = cierreStr.split(":").map(Number);
-                const cutoff = new Date(`1970-01-01T${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}:00`);
-                cutoff.setMinutes(cutoff.getMinutes() - 5);
+                const cutoff = new Date();
+                cutoff.setHours(hh, mm - 5, 0, 0); // 5 minutos antes
                 const horas   = cutoff.getHours().toString().padStart(2,'0');
                 const minutos = cutoff.getMinutes().toString().padStart(2,'0');
                 $(this).text(`Hora límite: ${horas}:${minutos}`);
@@ -431,7 +459,7 @@ $(document).ready(function() {
         let jugadasArray = [];
         let jugadasValidas = true;
 
-        $("#tablaJugadas tr").each(function() {
+        $("#tablaJugadas tr").each(function(index) {
             const numero    = $(this).find(".numeroApostado").val();
             const modalidad = $(this).find(".tipoJuego").text();
             const straight  = parseFloat($(this).find(".straight").val()) || 0;
@@ -460,7 +488,7 @@ $(document).ready(function() {
             jugadasArray.push({
                 numero, modalidad, straight, box: boxNum, combo: comboNum,
                 total: totalFila,
-                jugadaNumber: jugadaCount // Asignar número de jugada
+                jugadaNumber: index + 1 // Asignar número de jugada
             });
         });
 
@@ -480,8 +508,8 @@ $(document).ready(function() {
             fecha: fechas,
             tracks: tracks,
             jugadas: jugadasArray,
-            totalAmount: totalJugadasGlobal
-            // userEmail: userEmail, (si necesitas enviarlo al backend)
+            totalAmount: totalJugadasGlobal,
+            // Puedes agregar más campos si es necesario
         };
 
         console.log("Datos del Ticket (pre-confirmación):", ticketData);
@@ -536,6 +564,14 @@ $(document).ready(function() {
     $("#confirmarTicket").click(async function() {
         try {
             $("#ticketAlerts").empty();
+
+            // Verificar si el token aún es válido antes de proceder
+            if (!token) {
+                showAlert("Token expirado. Por favor, inicia sesión nuevamente.", "danger");
+                window.location.href = 'login.html';
+                return;
+            }
+
             // 1. Llamar a /store-ticket
             const resp = await fetch(`${BACKEND_TICKETS}/store-ticket`, {
                 method: 'POST',
@@ -568,7 +604,7 @@ $(document).ready(function() {
                 "Total ($)": j.total,
                 "Jugada Number": j.jugadaNumber || 1,
                 "Timestamp": new Date().toISOString(),
-                "User": "user@example.com" // Reemplaza con el email real del usuario si está disponible
+                "User": data.userEmail || "usuario@example.com" // Asegúrate de tener el email del usuario
             }));
 
             console.log("Payload para SheetDB:", sheetPayload);
