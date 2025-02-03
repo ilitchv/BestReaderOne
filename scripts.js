@@ -1,36 +1,38 @@
  /***************************************************************************************
  * scripts.js
  * 
- * Versión actualizada para:
- * - Recopilar la información del ticket (fechas, tracks, jugadas, total).
- * - Mostrar en el modal de previsualización la información preliminar del ticket 
- *   (sin número de ticket, sin fecha de transacción y sin código QR).
- * - Hacer visible el botón “Confirmar e Imprimir” para continuar el flujo.
- * - Se han eliminado las verificaciones y el envío de token en las llamadas AJAX,
- *   para evitar errores de “Token expirado” y cortar el flujo.
+ * Versión actualizada para eliminar la validación de token y evitar que el flujo se
+ * interrumpa con errores de “No token, autorización denegada.”
+ * 
+ * Esta versión recopila la información del ticket (fechas, tracks, jugadas, total), 
+ * muestra en el modal de previsualización la información preliminar (sin número de ticket,
+ * sin fecha de transacción y sin código QR) y, al presionar “Confirmar e Imprimir”, genera
+ * el número de ticket, la fecha de transacción y el QR; luego, envía los datos al backend 
+ * y a SheetDB, descarga el ticket y reinicia el formulario.
  ***************************************************************************************/
 
 $(document).ready(function() {
 
     // -------------------- Configuraciones Generales --------------------
-    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr'; // Tu URL de SheetDB
-    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/tickets'; // Ruta del backend
-    // Para efectos de este flujo, se ignoran los tokens. (No se usa la cabecera Authorization)
-    // const token = localStorage.getItem('token'); // Comentado para evitar validación
+    // Se mantienen las URLs de SheetDB y del backend.
+    const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/gect4lbs5bwvr';
+    const BACKEND_API_URL = 'https://loteria-backend-j1r3.onrender.com/api/tickets';
+    // Se ignoran los tokens en este flujo.
+    // const token = localStorage.getItem('token'); // Eliminado para evitar 401
     const userRole = localStorage.getItem('userRole') || 'user';
     console.log('User Role:', userRole);
-
-    // Se asigna un valor predeterminado para el email, ya que no se obtiene desde el perfil
+    
+    // Se asigna un email por defecto; ya no se recupera el perfil.
     let userEmail = "usuario@example.com";
-
+    
     // -------------------- Variables Globales --------------------
     let jugadaCount = 0;
     let selectedDays = 0;
     let selectedTracks = 0; // Número de tracks seleccionados
     let totalJugadasGlobal = 0;
-    let ticketData = {};   // Datos que se enviarán al backend
+    let ticketData = {};   // Datos a enviar al backend
     let ticketId = null;
-
+    
     // -------------------- Horarios de Cierre y Límites --------------------
     const horariosCierre = {
         "USA": {
@@ -118,7 +120,7 @@ $(document).ready(function() {
         resaltarDuplicados();
         $("#tablaJugadas tr:last .numeroApostado").focus();
     }
-    // Jugada inicial
+    // Agregar la jugada inicial
     agregarJugada();
 
     // -------------------- Eventos para Agregar/Eliminar Jugadas --------------------
@@ -228,7 +230,8 @@ $(document).ready(function() {
         let comboNum = comboVal ? parseFloat(comboVal) : 0;
         if (limitesApuesta[modalidad]) {
             straight = Math.min(straight, limitesApuesta[modalidad].straight);
-            if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
+            if (limitesApuesta[modalidad].box !== undefined &&
+                modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
                 boxNum = Math.min(boxNum, limitesApuesta[modalidad].box);
             }
             if (limitesApuesta[modalidad].combo !== undefined) {
@@ -359,7 +362,7 @@ $(document).ready(function() {
         }
     }, 60000);
 
-    // -------------------- Función para Mostrar Horas Límite en la UI --------------------
+    // -------------------- Función para Mostrar Horas Límite --------------------
     function mostrarHorasLimite() {
         $(".cutoff-time").each(function() {
             const track = $(this).data("track");
@@ -425,11 +428,11 @@ $(document).ready(function() {
             `;
             tbody.append(row);
         });
-        // Para la previsualización preliminar, ocultamos el número de ticket, la fecha de transacción y el QR.
+        // En previsualización preliminar, ocultamos número, fecha y QR.
         $("#numeroTicket").text('').parent().hide();
         $("#ticketTransaccion").text('').parent().hide();
         $("#qrcode").empty().parent().parent().hide();
-        // Aseguramos que el contenedor del botón "Confirmar e Imprimir" se muestre:
+        // Mostrar el contenedor del botón "Confirmar e Imprimir"
         $("#confirmarTicketContainer").show();
     }
 
@@ -480,7 +483,7 @@ $(document).ready(function() {
                 box: boxNum,
                 combo: comboNum,
                 total: totalFila,
-                jugadaNumber: jugadaCount // O asigna según corresponda
+                jugadaNumber: jugadaCount // Se asigna el número de jugada
             };
             jugadasArray.push(jugadaObj);
         });
@@ -499,7 +502,7 @@ $(document).ready(function() {
             selectedTracks: selectedTracks
         };
         console.log("Datos del Ticket (pre-confirmación):", ticketData);
-        // Mostrar previsualización sin confirmar (sin ticketId, sin fechaTransacción, sin QR)
+        // Mostrar la previsualización en el modal sin confirmar (sin ticketId, fechaTransacción, QR)
         mostrarPreTicketModal(ticketData, false);
         ticketModal.show();
     });
@@ -522,19 +525,18 @@ $(document).ready(function() {
                     j["Ticket Number"] = numeroTicket;
                 });
             }
-            // Agregar campos adicionales
+            // Agregar campos adicionales al ticketData
             ticketData.ticketId = numeroTicket;
             ticketData.fechaTransaccion = fechaTransaccion;
             ticketData.userEmail = userEmail;
             console.log("Ticket a confirmar:", ticketData);
-
+            
             // Enviar al backend para almacenar el ticket en MongoDB
-            // Se elimina la cabecera Authorization para evitar validación del token.
+            // Se remueven las cabeceras de autorización para evitar errores de token.
             const resp = await fetch(`${BACKEND_API_URL}/store-ticket`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                    // No se envía token
                 },
                 body: JSON.stringify(ticketData)
             });
@@ -545,8 +547,8 @@ $(document).ready(function() {
                 return;
             }
             console.log("Ticket almacenado en backend:", data);
-
-            // Preparar payload para SheetDB
+            
+            // Preparar payload para SheetDB, mapeando a las columnas requeridas
             const sheetPayload = data.jugadas.map(j => ({
                 "Ticket Number": data.ticketId,
                 "Transaction DateTime": dayjs(data.fechaTransaccion).format('YYYY-MM-DD HH:mm:ss'),
@@ -579,7 +581,7 @@ $(document).ready(function() {
                 console.error("Error al enviar a SheetDB:", sheetErr);
                 showAlert("No se pudo enviar a Google Sheets. Revisa la consola.", "warning");
             }
-            // Actualizar el modal con los datos confirmados
+            // Actualizar el modal con los datos confirmados (ahora incluye número de ticket, fecha y QR)
             mostrarPreTicketModal(data, true);
             // Descargar e imprimir el ticket (captura del modal)
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -635,7 +637,6 @@ $(document).ready(function() {
                 dataType: 'json',
                 contentType: 'application/json',
                 data: JSON.stringify({ ticketId: ticketId })
-                // No se envía token para evitar errores de validación
             }).done(function(response) {
                 if (response.ticketData) {
                     showAlert('Se recuperó el ticket.', 'info');
