@@ -1,17 +1,3 @@
- /* scripts.js final update code here. Will replicate the code from the last message from the assistant. The user wants the code in a canvas. */
-
-/***************************************************************************************
- * scripts.js
- * 
- * Versión actualizada para:
- * - Recopilar la información del ticket (fechas, tracks, jugadas, total).
- * - Mostrar en el modal de previsualización la información preliminar (sin número de ticket,
- *   sin fecha de transacción y sin código QR).
- * - Asegurarse de que el botón “Confirmar e Imprimir” sea visible en el modal para continuar el flujo.
- * 
- * Nota: Esta versión asume que la autenticación (token en localStorage) se gestiona correctamente
- * y que el backend no devuelve "Token expirado" durante este flujo.
- ***************************************************************************************/
 
 $(document).ready(function() {
 
