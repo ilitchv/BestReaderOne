@@ -1,13 +1,10 @@
- // scripts.js – Long version (restored) + fix only on the modal
-// This version aims to replicate the previously large file (700+ lines)
-// but only fix the modal so that it is not minimized and it shows the data.
-
-/***************************************************************************************
- * scripts.js
- * 
- * Versión anterior restaurada que abarcaba ~700+ líneas, con la corrección centrada
- * únicamente en el modal de previsualización (para que no aparezca "minimizado" o vacío).
- * No se cambia la lógica de descarga de la imagen ni la de guardado en Mongo/SheetDB.
+ /***************************************************************************************
+ * scripts.js - Versión extendida con correcciones en el modal de previsualización
+ * y en la descarga de imagen (html2canvas con setTimeout, scale:3).
+ *
+ * - Se conserva la lógica de guardado en MongoDB y SheetDB (Ticket).
+ * - Se evita ocultar o vaciar #preTicket tras rellenarlo.
+ * - Al confirmar e imprimir, se esperan 500ms antes de capturar la imagen, con scale:3.
  ***************************************************************************************/
 
 $(document).ready(function() {
@@ -27,7 +24,7 @@ $(document).ready(function() {
   // -------------------- Variables Globales -------------------- //
   let jugadaCount = 0;
   let selectedDays = 0;
-  let selectedTracks = 0; // se usa para calcular total
+  let selectedTracks = 0; // se usa para calcular el total
   let totalJugadasGlobal = 0;
   let ticketData = {};
   let ticketId = null;
@@ -98,7 +95,7 @@ $(document).ready(function() {
     }
   });
 
-  // =================== Obtener Perfil del Usuario =================== //
+  // =================== Obtener Perfil del Usuario (para userEmail) =================== //
   async function obtenerPerfilUsuario() {
     try {
       const response = await fetch("https://loteria-backend-j1r3.onrender.com/api/auth/profile", {
@@ -121,21 +118,31 @@ $(document).ready(function() {
   }
   obtenerPerfilUsuario();
 
-  // =================== Variables y Funciones de Jugadas =================== //
+  // =================== Manejo de Jugadas =================== //
   function agregarJugada() {
     if (jugadaCount >= 100) {
       alert("Has alcanzado el máximo de 100 jugadas.");
       return;
     }
     jugadaCount++;
-    const fila = `\n      <tr>\n        <td>${jugadaCount}</td>\n        <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>\n        <td class="tipoJuego">-</td>\n        <td><input type="number" class="form-control straight" step="1" min="0" placeholder="Ej: 5"></td>\n        <td><input type="number" class="form-control box" step="1" placeholder="Ej: 2"></td>\n        <td><input type="number" class="form-control combo" step="0.10" placeholder="Ej: 3.00"></td>\n        <td class="total">0.00</td>\n      </tr>\n    `;
+    const fila = `
+      <tr>
+        <td>${jugadaCount}</td>
+        <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required></td>
+        <td class="tipoJuego">-</td>
+        <td><input type="number" class="form-control straight" step="1" min="0" placeholder="Ej: 5"></td>
+        <td><input type="number" class="form-control box" step="1" placeholder="Ej: 2"></td>
+        <td><input type="number" class="form-control combo" step="0.10" placeholder="Ej: 3.00"></td>
+        <td class="total">0.00</td>
+      </tr>
+    `;
     $("#tablaJugadas").append(fila);
     agregarListenersNumeroApostado();
     resaltarDuplicados();
     $("#tablaJugadas tr:last .numeroApostado").focus();
   }
 
-  // Agregar la primera jugada
+  // Agregar jugada inicial al cargar
   agregarJugada();
 
   $("#agregarJugada").click(agregarJugada);
@@ -147,7 +154,7 @@ $(document).ready(function() {
     }
     $("#tablaJugadas tr:last").remove();
     jugadaCount--;
-    // Recontar IDs
+    // Recalcular IDs
     $("#tablaJugadas tr").each(function(index) {
       $(this).find("td:first").text(index + 1);
     });
@@ -156,31 +163,34 @@ $(document).ready(function() {
 
   // =================== Manejo de Tracks =================== //
   $(".track-checkbox").change(function() {
-    const tracks = $(".track-checkbox:checked").map(function() {
-      return $(this).val();
-    }).get();
-    selectedTracks = tracks.length || 1;
+    const tracksSeleccionados = $(".track-checkbox:checked")
+      .map(function() { return $(this).val(); })
+      .get();
+    selectedTracks = tracksSeleccionados.length || 1;
     calcularTotal();
   });
 
-  // =================== Eventos en la Tabla =================== //
+  // =================== Detectar cambios en celdas de Jugadas =================== //
   $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box, .combo", function() {
     const fila = $(this).closest("tr");
     const num = fila.find(".numeroApostado").val();
     const tracks = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
     const modalidad = determinarModalidad(tracks, num, fila);
+
     fila.find(".tipoJuego").text(modalidad);
     actualizarPlaceholders(modalidad, fila);
     calcularTotalJugada(fila);
     calcularTotal();
   });
 
-  // =================== Determinar Modalidad (versión larga) =================== //
+  // =================== Determinar Modalidad =================== //
   function determinarModalidad(tracks, numero, fila) {
     if (!numero) return "-";
+
     const esUSA = tracks.some(track => Object.keys(horariosCierre.USA).includes(track));
-    const esSD = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
+    const esSD  = tracks.some(track => Object.keys(horariosCierre["Santo Domingo"]).includes(track));
     const incluyeVenezuela = tracks.includes("Venezuela");
+
     const longitud = numero.length;
     const boxValue = fila.find(".box").val().trim();
     const acceptableBoxValues = ["1", "2", "3"];
@@ -191,8 +201,8 @@ $(document).ready(function() {
       else if (longitud === 4) return "Venezuela-Pale";
     } else if (esUSA && !esSD) {
       if (longitud === 4) return "Win 4";
-      else if (longitud === 3) return "Peak 3";
-      else if (longitud === 2) {
+      if (longitud === 3) return "Peak 3";
+      if (longitud === 2) {
         if (acceptableBoxValues.includes(boxValue)) return "Pulito";
         if (acceptableBoxCombinations.includes(boxValue)) return "Pulito-Combinado";
       }
@@ -203,7 +213,7 @@ $(document).ready(function() {
     return "-";
   }
 
-  // =================== Actualizar Placeholders (versión larga) =================== //
+  // =================== Actualizar Placeholders =================== //
   function actualizarPlaceholders(modalidad, fila) {
     if (limitesApuesta[modalidad]) {
       fila.find(".straight")
@@ -252,15 +262,17 @@ $(document).ready(function() {
   function calcularTotalJugada(fila) {
     const modalidad = fila.find(".tipoJuego").text();
     const numero = fila.find(".numeroApostado").val();
+
     if (!numero || numero.length < 2 || numero.length > 4) {
       fila.find(".total").text("0.00");
       return;
     }
+
     const combinaciones = calcularCombinaciones(numero);
 
     let straight = parseFloat(fila.find(".straight").val()) || 0;
-    let boxVal = fila.find(".box").val().trim();
-    let boxNum = boxVal ? parseFloat(boxVal) : 0;
+    let boxVal   = fila.find(".box").val().trim();
+    let boxNum   = boxVal ? parseFloat(boxVal) : 0;
     let comboVal = fila.find(".combo").val().trim();
     let comboNum = comboVal ? parseFloat(comboVal) : 0;
 
@@ -300,7 +312,9 @@ $(document).ready(function() {
     for (let char of numero) {
       counts[char] = (counts[char] || 0) + 1;
     }
-    const factorial = n => (n <= 1 ? 1 : n * factorial(n - 1));
+    function factorial(n) {
+      return (n <= 1 ? 1 : n * factorial(n - 1));
+    }
     let totalDigits = numero.length;
     let denominator = 1;
     for (let digit in counts) {
@@ -315,25 +329,28 @@ $(document).ready(function() {
     $(".total").each(function() {
       total += parseFloat($(this).text()) || 0;
     });
+
     console.log("Total de jugadas antes de multiplicar:", total);
     console.log("Tracks seleccionados:", selectedTracks);
     console.log("Días seleccionados:", selectedDays);
+
     if (selectedDays === 0) {
       total = 0;
     } else {
       total = total * selectedTracks * selectedDays;
     }
+
     console.log("Total después de multiplicar:", total.toFixed(2));
     $("#totalJugadas").text(total.toFixed(2));
   }
 
-  // =================== ResaltarDuplicados =================== //
+  // =================== Resaltar Duplicados =================== //
   function resaltarDuplicados() {
-    const campos = document.querySelectorAll(".numeroApostado");
+    const camposNumeros = document.querySelectorAll(".numeroApostado");
     const valores = {};
     const duplicados = new Set();
 
-    campos.forEach(campo => {
+    camposNumeros.forEach(campo => {
       const valor = campo.value.trim();
       if (valor) {
         if (valores[valor]) {
@@ -344,7 +361,7 @@ $(document).ready(function() {
       }
     });
 
-    campos.forEach(campo => {
+    camposNumeros.forEach(campo => {
       if (duplicados.has(campo.value.trim())) {
         campo.classList.add("duplicado");
       } else {
@@ -365,6 +382,7 @@ $(document).ready(function() {
   function actualizarEstadoTracks() {
     const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
     if (!fechaSeleccionadaStr) return;
+
     const [m, d, y] = fechaSeleccionadaStr.split("-").map(Number);
     const fechaSeleccionada = new Date(y, m - 1, d);
     const fechaActual = new Date();
@@ -374,6 +392,7 @@ $(document).ready(function() {
       $(".track-checkbox").prop("disabled", false).closest("label").removeClass("closed-track");
       return;
     }
+
     const ahora = new Date();
     const ahoraMins = ahora.getHours() * 60 + ahora.getMinutes();
 
@@ -381,6 +400,7 @@ $(document).ready(function() {
       for (let track in horariosCierre[region]) {
         const [hC, mC] = horariosCierre[region][track].split(":").map(Number);
         const horaCierre = hC * 60 + mC;
+
         if (ahoraMins >= horaCierre) {
           $(`.track-checkbox[value="${track}"]`)
             .prop("disabled", true)
@@ -396,18 +416,21 @@ $(document).ready(function() {
   }
   actualizarEstadoTracks();
 
+  // Re-evaluar tracks cada minuto si la fecha es hoy
   setInterval(() => {
     const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
     if (!fechaSeleccionadaStr) return;
+
     const [mm, dd, yy] = fechaSeleccionadaStr.split("-").map(Number);
     const fechaSeleccionada = new Date(yy, mm - 1, dd);
     const fechaActual = new Date();
+
     if (fechaSeleccionada.toDateString() === fechaActual.toDateString()) {
       actualizarEstadoTracks();
     }
   }, 60000);
 
-  // =================== Mostrar Horas Límite =================== //
+  // =================== Mostrar Horas Límite en UI =================== //
   function mostrarHorasLimite() {
     $(".cutoff-time").each(function() {
       const track = $(this).data("track");
@@ -427,35 +450,53 @@ $(document).ready(function() {
         const [hh, mm] = cierreStr.split(":").map(Number);
         const cutoff = new Date();
         cutoff.setHours(hh, mm - 5, 0, 0);
-        const horas = cutoff.getHours().toString().padStart(2, '0');
-        const minutos = cutoff.getMinutes().toString().padStart(2, '0');
+        const horas = cutoff.getHours().toString().padStart(2, "0");
+        const minutos = cutoff.getMinutes().toString().padStart(2, "0");
         $(this).text("Hora límite: " + horas + ":" + minutos);
       }
     });
   }
   mostrarHorasLimite();
 
-  // =================== Función para Mostrar Alertas =================== //
+  // =================== Mostrar Alertas =================== //
   function showAlert(message, type) {
-    const alertHTML = `\n      <div class="alert alert-${type} alert-dismissible fade show" role="alert">\n        ${message}\n        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>\n      </div>\n    `;
+    const alertHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+      </div>
+    `;
     $("#ticketAlerts").append(alertHTML);
   }
 
-  // =================== Modal Bootstrap =================== //
+  // =================== Modal de Bootstrap =================== //
   const ticketModal = new bootstrap.Modal(document.getElementById("ticketModal"));
 
   // =================== mostrarPreTicketModal =================== //
-  // Ajuste: Se asegure que no esté "minimizado", pintamos los datos.
+  // (Ajuste) Nos aseguramos de rellenar #preTicket y NO ocultarlo
   function mostrarPreTicketModal(tData, isConfirmed) {
     $("#ticketAlerts").empty();
+
+    // Rellenar datos en #preTicket
     $("#ticketFecha").text(tData.fecha.join(", "));
     $("#ticketTracks").text(tData.tracks.join(", "));
     $("#ticketTotal").text(tData.totalAmount.toFixed(2));
+
     const tbody = $("#ticketJugadas");
     tbody.empty();
 
     tData.jugadas.forEach((jug, index) => {
-      const row = `\n        <tr>\n          <td>${index + 1}</td>\n          <td>${jug.numero}</td>\n          <td>${jug.modalidad}</td>\n          <td>${(jug.straight || 0).toFixed(2)}</td>\n          <td>${jug.box !== null ? jug.box.toFixed(2) : '-'}</td>\n          <td>${jug.combo !== null ? jug.combo.toFixed(2) : '-'}</td>\n          <td>$${(jug.total || 0).toFixed(2)}</td>\n        </tr>\n      `;
+      const row = `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${jug.numero}</td>
+          <td>${jug.modalidad}</td>
+          <td>${(jug.straight || 0).toFixed(2)}</td>
+          <td>${jug.box !== null && jug.box !== undefined ? jug.box.toFixed(2) : "-"}</td>
+          <td>${jug.combo !== null && jug.combo !== undefined ? jug.combo.toFixed(2) : "-"}</td>
+          <td>$${(jug.total || 0).toFixed(2)}</td>
+        </tr>
+      `;
       tbody.append(row);
     });
 
@@ -463,8 +504,14 @@ $(document).ready(function() {
       $("#numeroTicket").text("").parent().hide();
       $("#ticketTransaccion").text("").parent().hide();
       $("#qrcode").empty().parent().parent().hide();
+    } else {
+      // Si ya está confirmado, mostramos los datos extra (QR, ticketId, etc.)
+      $("#numeroTicket").parent().show();
+      $("#ticketTransaccion").parent().show();
+      $("#qrcode").parent().parent().show();
     }
 
+    // Forzar que el contenedor de Confirmar se muestre
     $("#confirmarTicketContainer").show();
   }
 
@@ -476,25 +523,32 @@ $(document).ready(function() {
       showAlert("Por favor, selecciona una fecha.", "warning");
       return;
     }
-    const tracks = $(".track-checkbox:checked").map(function() {return $(this).val();}).get();
+
+    const tracks = $(".track-checkbox:checked").map(function() {
+      return $(this).val();
+    }).get();
+
     if (!tracks || tracks.length === 0) {
       showAlert("Por favor, selecciona al menos un track.", "warning");
       return;
     }
+
+    // Validar jugadas
     let jugadasValidas = true;
     const jugadasArray = [];
+
     $("#tablaJugadas tr").each(function() {
-      const numero = $(this).find(".numeroApostado").val();
-      const modalidad = $(this).find(".tipoJuego").text();
-      const straight = parseFloat($(this).find(".straight").val()) || 0;
-      const boxVal = $(this).find(".box").val();
-      const comboVal = $(this).find(".combo").val();
-      const totalFila = parseFloat($(this).find(".total").text()) || 0;
+      const numero     = $(this).find(".numeroApostado").val();
+      const modalidad  = $(this).find(".tipoJuego").text();
+      const straight   = parseFloat($(this).find(".straight").val()) || 0;
+      const boxVal     = $(this).find(".box").val();
+      const comboVal   = $(this).find(".combo").val();
+      const totalFila  = parseFloat($(this).find(".total").text()) || 0;
 
       if (!numero || numero.length < 2 || numero.length > 4) {
         jugadasValidas = false;
         showAlert("Ingresa números válidos (2, 3 o 4 dígitos).", "danger");
-        return false;
+        return false; // break each
       }
       if (modalidad === "-") {
         jugadasValidas = false;
@@ -507,11 +561,11 @@ $(document).ready(function() {
         return false;
       }
 
-      let boxNum = (boxVal && !isNaN(boxVal)) ? parseFloat(boxVal) : null;
+      let boxNum   = (boxVal && !isNaN(boxVal)) ? parseFloat(boxVal) : null;
       let comboNum = (comboVal && !isNaN(comboVal)) ? parseFloat(comboVal) : null;
 
       const jugadaObj = {
-        "Ticket Number": "PEND-XXXX",
+        "Ticket Number": "PEND-XXXX", 
         numero: numero,
         modalidad: modalidad,
         straight: straight,
@@ -521,15 +575,19 @@ $(document).ready(function() {
       };
       jugadasArray.push(jugadaObj);
     });
+
     if (!jugadasValidas) return;
 
+    // Calcular total global
     totalJugadasGlobal = parseFloat($("#totalJugadas").text());
 
+    // Transformar fechas
     const fechasSeleccionadas = fecha.split(", ").map(fStr => {
       const [mm, dd, yy] = fStr.split("-").map(Number);
       return `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
     });
 
+    // Armar ticketData preliminar
     ticketData = {
       fecha: fechasSeleccionadas,
       tracks: tracks,
@@ -541,8 +599,11 @@ $(document).ready(function() {
 
     console.log("Datos del Ticket (pre-confirmación):", ticketData);
 
+    // Llenar modal
     mostrarPreTicketModal(ticketData, false);
-    ticketModal.show(); // <-- MUESTRA EL MODAL
+
+    // (Ajuste) .show() => Abrir modal
+    ticketModal.show();
   });
 
   // =================== Confirmar e Imprimir Ticket =================== //
@@ -550,29 +611,31 @@ $(document).ready(function() {
     try {
       $("#ticketAlerts").empty();
 
-      // Generar ticketId y fechaTransaccion
+      // Generar ticketId único y fecha de transacción
       const numeroTicket = generarNumeroUnico();
       const fechaTransaccion = dayjs().format("YYYY-MM-DD HH:mm:ss");
 
       // Actualizar modal con esos datos
-      $("#numeroTicket").text(numeroTicket).parent().show();
-      $("#ticketTransaccion").text(fechaTransaccion).parent().show();
-      $("#qrcode").empty();
+      $("#numeroTicket").text(numeroTicket);
+      $("#ticketTransaccion").text(fechaTransaccion);
+
+      // Generar QR
+      $("#qrcode").empty().parent().parent().show();
       new QRCode(document.getElementById("qrcode"), numeroTicket);
 
+      // Actualizar ticketData con info final
       if (ticketData.jugadas) {
         ticketData.jugadas.forEach(j => {
           j["Ticket Number"] = numeroTicket;
         });
       }
-
       ticketData.ticketId = numeroTicket;
       ticketData.fechaTransaccion = fechaTransaccion;
       ticketData.userEmail = userEmail;
 
       console.log("Ticket a confirmar:", ticketData);
 
-      // Enviar al backend
+      // Enviar al backend para guardarlo en DB
       const resp = await fetch(`${BACKEND_API_URL}/store-ticket`, {
         method: "POST",
         headers: {
@@ -582,11 +645,13 @@ $(document).ready(function() {
         body: JSON.stringify(ticketData)
       });
       const data = await resp.json();
+
       if (!resp.ok) {
         const msg = data.error || "Error al guardar el ticket en backend.";
         showAlert(msg, "danger");
         return;
       }
+
       console.log("Ticket almacenado en backend:", data);
 
       // Construir payload para SheetDB
@@ -604,6 +669,7 @@ $(document).ready(function() {
         "Timestamp": new Date().toISOString(),
         "User": data.userEmail || "usuario@example.com"
       }));
+
       console.log("Payload para SheetDB:", sheetPayload);
 
       try {
@@ -623,22 +689,27 @@ $(document).ready(function() {
         showAlert("No se pudo enviar a Google Sheets. Revisa la consola.", "warning");
       }
 
-      // Volver a pintar modal con isConfirmed=true si quieres
+      // Actualizar modal con isConfirmed=true (pintar QR, ticketId, etc.)
       mostrarPreTicketModal(data, true);
 
-      // Esperar un poco y descargar con html2canvas -> toDataURL
-      await new Promise(resolve => setTimeout(resolve, 500));
-      html2canvas(document.querySelector("#preTicket")).then(canvas => {
+      // (Ajuste) Esperar un poco y descargar la imagen con mayor calidad
+      await new Promise(resolve => setTimeout(resolve, 500));  // (Ajuste) setTimeout 500ms
+
+      const preTicketElement = document.querySelector("#preTicket");
+
+      // (Ajuste) Captura con scale:3
+      html2canvas(preTicketElement, { scale: 3 }).then(canvas => {
         const imgData = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         link.href = imgData;
         link.download = `ticket_${data.ticketId || 'sinID'}.png`;
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       });
 
-      // Cerrar el modal y resetear form
+      // (Ajuste) Cerrar modal y reset formulario tras un segundo
       setTimeout(() => {
         ticketModal.hide();
         resetForm();
@@ -664,10 +735,12 @@ $(document).ready(function() {
     selectedDays = 0;
     agregarJugada();
     $("#totalJugadas").text("0.00");
+
     $("#ticketAlerts").empty();
     ticketData = {};
     ticketId = null;
     localStorage.removeItem("ticketId");
+
     $(".track-checkbox").prop("disabled", false).closest("label").removeClass("closed-track");
     console.log("Formulario reseteado.");
   }
@@ -677,7 +750,7 @@ $(document).ready(function() {
     ticketId = localStorage.getItem("ticketId");
     if (ticketId) {
       $.ajax({
-        url: BACKEND_API_URL + "/retrieve-ticket",
+        url: `${BACKEND_API_URL}/retrieve-ticket`,
         method: "POST",
         dataType: "json",
         contentType: "application/json",
