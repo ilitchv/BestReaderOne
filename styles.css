@@ -285,6 +285,7 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     }
 }
 
+/* Estilos para el contenedor del ticket */
 #preTicket {
     background-color: #0a0a0a; /* Fondo oscuro */
     color: #ffffff; /* Texto blanco */
@@ -325,4 +326,10 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     border: 1px solid #ddd;
     padding: 5px;
     border-radius: 5px;
+}
+
+/* FORZAR el modal a usar ~95% ancho y centrado */
+#ticketModal .modal-dialog {
+    max-width: 95% !important;
+    margin: auto !important;
 }
