@@ -16,7 +16,6 @@
 
   <style>
     /* Estilos para responsividad y visualización del ticket */
-
     @media (max-width: 576px) {
       .modal-dialog {
         max-width: 100%;
@@ -63,24 +62,20 @@
     /* Ajuste de la tabla interna del preTicket */
     #preTicket table {
       font-size: 1rem;
-      /* Ajuste: permitir layout fijo */
       table-layout: fixed; /* Para evitar que se descuadre con muchas columnas */
-      width: 100%;         /* Ocupar ancho completo */
+      width: 100%;
     }
-
     #preTicket th, #preTicket td {
       border: 1px solid #00ffff;
       color: #ffffff;
       padding: 8px;
       word-wrap: break-word;
       font-size: 1rem;
-      /* Evitar overflow en celdas */
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;
     }
 
-    /* Ajuste en impresión */
     @media print {
       #preTicket table {
         font-size: 0.9rem;
@@ -115,10 +110,9 @@
     #preTicket {
       max-width: 100%;
       overflow-x: auto;
-      /* Ajuste: forzar “height auto” y “max-height” para que no aparezca “minimizado” */
       height: auto;
       max-height: 80vh; /* Ajustable, deja un 80% del viewport */
-      overflow-y: auto; /* Para scroll vertical */
+      overflow-y: auto;
     }
   </style>
 
@@ -126,10 +120,10 @@
   <script>
     // Ocultar el contenido hasta que se verifique la autenticación
     document.documentElement.style.display = 'none';
+
     document.addEventListener('DOMContentLoaded', () => {
       const token = localStorage.getItem('token');
       const userRole = localStorage.getItem('userRole');
-      // Hacer que scripts.js pueda leer userRole
       window.userRole = userRole;
 
       if (!token) {
@@ -138,7 +132,8 @@
       } else {
         // Mostrar contenido
         document.documentElement.style.display = '';
-        // Manejo de visibilidad de los contenedores de pago (en este caso se desactivan)
+
+        // Manejo de visibilidad de los contenedores de pago (se desactivan en este flujo)
         const cashAppContainer = document.getElementById('cashAppPayContainer');
         const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
         if (cashAppContainer) cashAppContainer.style.display = 'none';
@@ -147,7 +142,7 @@
     });
   </script>
 
-  <!-- SDK de Square Web Payments (Se mantiene solo si se requiere en otro flujo) -->
+  <!-- SDK de Square Web Payments (solo si lo requieres) -->
   <script src="https://web.squarecdn.com/v1/square.js"></script>
 </head>
 
@@ -173,6 +168,7 @@
       <div class="mb-4">
         <label class="form-label">Selecciona los Tracks:</label>
         <div class="accordion" id="tracksAccordion">
+
           <!-- Sección USA -->
           <div class="accordion-item">
             <h2 class="accordion-header" id="headingUSA">
@@ -183,7 +179,6 @@
             <div id="collapseUSA" class="accordion-collapse collapse" aria-labelledby="headingUSA" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
                 <!-- Lista completa de tracks USA -->
-                <!-- (sin cambios, mantén la misma lista) -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="New York Mid Day" id="trackNYMidDay">
@@ -191,12 +186,95 @@
                   </div>
                   <span class="cutoff-time" data-track="New York Mid Day">Hora límite: 14:20</span>
                 </div>
-                <!-- ... resto de tracks USA ... -->
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="New York Evening" id="trackNYEvening">
+                    <label class="form-check-label" for="trackNYEvening">New York Evening</label>
+                  </div>
+                  <span class="cutoff-time" data-track="New York Evening">Hora límite: 22:20</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Mid Day" id="trackGeorgiaMidDay">
+                    <label class="form-check-label" for="trackGeorgiaMidDay">Georgia Mid Day</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Georgia Mid Day">Hora límite: 12:20</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Evening" id="trackGeorgiaEvening">
+                    <label class="form-check-label" for="trackGeorgiaEvening">Georgia Evening</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Georgia Evening">Hora límite: 18:45</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="New Jersey Mid Day" id="trackNJMidDay">
+                    <label class="form-check-label" for="trackNJMidDay">New Jersey Mid Day</label>
+                  </div>
+                  <span class="cutoff-time" data-track="New Jersey Mid Day">Hora límite: 12:54</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="New Jersey Evening" id="trackNJEvening">
+                    <label class="form-check-label" for="trackNJEvening">New Jersey Evening</label>
+                  </div>
+                  <span class="cutoff-time" data-track="New Jersey Evening">Hora límite: 22:50</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Florida Mid Day" id="trackFloridaMidDay">
+                    <label class="form-check-label" for="trackFloridaMidDay">Florida Mid Day</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Florida Mid Day">Hora límite: 13:25</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Florida Evening" id="trackFloridaEvening">
+                    <label class="form-check-label" for="trackFloridaEvening">Florida Evening</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Florida Evening">Hora límite: 21:30</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Mid Day" id="trackConnecticutMidDay">
+                    <label class="form-check-label" for="trackConnecticutMidDay">Connecticut Mid Day</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Connecticut Mid Day">Hora límite: 13:35</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Connecticut Evening" id="trackConnecticutEvening">
+                    <label class="form-check-label" for="trackConnecticutEvening">Connecticut Evening</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Connecticut Evening">Hora límite: 22:20</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Georgia Night" id="trackGeorgiaNight">
+                    <label class="form-check-label" for="trackGeorgiaNight">Georgia Night</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Georgia Night">Hora límite: 23:20</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania AM" id="trackPensilvaniaAM">
+                    <label class="form-check-label" for="trackPensilvaniaAM">Pensilvania AM</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Pensilvania AM">Hora límite: 12:55</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Pensilvania PM" id="trackPensilvaniaPM">
+                    <label class="form-check-label" for="trackPensilvaniaPM">Pensilvania PM</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Pensilvania PM">Hora límite: 18:20</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Sección Santo Domingo (segunda lista, etc.) -->
+          <!-- Sección Santo Domingo -->
           <div class="accordion-item">
             <h2 class="accordion-header" id="headingSD2">
               <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSD2" aria-expanded="false" aria-controls="collapseSD2">
@@ -205,7 +283,7 @@
             </h2>
             <div id="collapseSD2" class="accordion-collapse collapse" aria-labelledby="headingSD2" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
-                <!-- Lista de tracks Santo Domingo (igual a tu versión) -->
+                <!-- Lista de tracks Santo Domingo -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="Real" id="trackReal_SD">
@@ -213,7 +291,97 @@
                   </div>
                   <span class="cutoff-time" data-track="Real">Hora límite: 12:40</span>
                 </div>
-                <!-- ... resto de tracks RD ... -->
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Gana mas" id="trackGanamas_SD">
+                    <label class="form-check-label" for="trackGanamas_SD">Gana más</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Gana mas">Hora límite: 14:20</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Loteka" id="trackLoteka_SD">
+                    <label class="form-check-label" for="trackLoteka_SD">Loteka</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Loteka">Hora límite: 19:30</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Nacional" id="trackNacional_SD">
+                    <label class="form-check-label" for="trackNacional_SD">Nacional</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Nacional">Hora límite: 20:30</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela Pale" id="trackQuinielaPale_SD">
+                    <label class="form-check-label" for="trackQuinielaPale_SD">Quiniela Pale</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Quiniela Pale">Hora límite: 20:30</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Primera Día" id="trackPrimeraDia_SD">
+                    <label class="form-check-label" for="trackPrimeraDia_SD">Primera Día</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Primera Día">Hora límite: 11:50</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Día" id="trackSuerteDia_SD">
+                    <label class="form-check-label" for="trackSuerteDia_SD">Suerte Día</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Suerte Día">Hora límite: 12:20</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Lotería Real" id="trackLoteriaReal_SD">
+                    <label class="form-check-label" for="trackLoteriaReal_SD">Lotería Real</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Lotería Real">Hora límite: 12:50</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Suerte Tarde" id="trackSuerteTarde_SD">
+                    <label class="form-check-label" for="trackSuerteTarde_SD">Suerte Tarde</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Suerte Tarde">Hora límite: 17:50</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Lotedom" id="trackLotedom_SD">
+                    <label class="form-check-label" for="trackLotedom_SD">Lotedom</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Lotedom">Hora límite: 17:50</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Primera Noche" id="trackPrimeraNoche_SD">
+                    <label class="form-check-label" for="trackPrimeraNoche_SD">Primera Noche</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Primera Noche">Hora límite: 19:50</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Panama" id="trackPanama_SD">
+                    <label class="form-check-label" for="trackPanama_SD">Panama</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Panama">Hora límite: 16:00</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Quiniela Pale Domingo" id="trackQuinielaPaleDomingo_SD">
+                    <label class="form-check-label" for="trackQuinielaPaleDomingo_SD">Quiniela Pale Domingo</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Quiniela Pale Domingo">Hora límite: 15:30</span>
+                </div>
+                <div class="form-check d-flex justify-content-between align-items-center mb-2">
+                  <div>
+                    <input class="form-check-input track-checkbox" type="checkbox" value="Nacional Domingo" id="trackNacionalDomingo_SD">
+                    <label class="form-check-label" for="trackNacionalDomingo_SD">Nacional Domingo</label>
+                  </div>
+                  <span class="cutoff-time" data-track="Nacional Domingo">Hora límite: 17:50</span>
+                </div>
               </div>
             </div>
           </div>
@@ -227,7 +395,6 @@
             </h2>
             <div id="collapseVenezuela" class="accordion-collapse collapse" aria-labelledby="headingVenezuela" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
-                <!-- Pistas de Venezuela -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="Venezuela" id="trackVenezuela_VE">
@@ -238,6 +405,7 @@
               </div>
             </div>
           </div>
+
         </div> <!-- Fin del Accordion -->
       
         <!-- TABLA DE JUGADAS -->
@@ -288,9 +456,8 @@
   </div> <!-- Fin container -->
 
   <!-- MODAL PARA PREVISUALIZAR TICKET -->
-  <!-- Ajuste: forzamos modal-xl en vez de modal-lg; centrado. -->
   <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered"> <!-- Ajuste: modal-xl -->
+    <div class="modal-dialog modal-xl modal-dialog-centered"><!-- forzamos modal-xl -->
       <div class="modal-content bg-dark text-white">
         <div class="modal-header">
           <h5 class="modal-title" id="ticketModalLabel">Previsualización del Ticket</h5>
@@ -302,7 +469,6 @@
             <h4 class="text-center mb-3">East New York Cricket</h4>
             <p><strong>Fechas de Apuesta:</strong> <span id="ticketFecha"></span></p>
             <p><strong>Tracks Seleccionados:</strong> <span id="ticketTracks"></span></p>
-            <!-- Ajuste: .table-responsive para la tabla interna -->
             <div class="table-responsive">
               <table class="table table-dark table-bordered" style="table-layout: fixed; width: 100%;">
                 <thead>
@@ -339,7 +505,7 @@
           <div class="w-100 mb-2">
             <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
           </div>
-          <!-- Contenedor para botones de pago se oculta; en este flujo se confirma sin pago -->
+          <!-- Contenedor para pagos (no se usa en este flujo) -->
           <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
             <div id="cash-app-pay"></div>
           </div>
