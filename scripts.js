@@ -1,22 +1,21 @@
  /***************************************************************************************
  * scripts.js
- *
+ * 
  * Flujo:
- *   1) Al hacer clic en "Generar Ticket", se abre un modal de previsualización que muestra
- *      las jugadas, fechas, tracks y el total (sin ticketId, fecha de transacción ni QR).
- *   2) El modal presenta dos botones: "Editar" (para volver al formulario) y "Confirmar e Imprimir".
- *   3) Al confirmar, se genera el ticketId, se crea el QR (120x120), se envían las jugadas al
- *      backend (guardándose en la colección "jugadas"), se envían a Google Sheets, se descarga
- *      la imagen del ticket y el modal permanece abierto para que el usuario pueda compartir la imagen.
+ *   1) "Generar Ticket" => Se abre un modal de previsualización que muestra la info de las
+ *      jugadas, fechas y tracks, sin ticketId/QR.
+ *   2) "Confirmar e Imprimir" => Se genera ticketId + QR, se envían las jugadas al backend
+ *      (guardándose en la colección "jugadas" de MongoDB), se envían a Google Sheets, y se descarga
+ *      la imagen PNG del ticket.
  ***************************************************************************************/
 
 $(document).ready(function() {
   // ================= Configuraciones Generales ================= //
-  // Asegúrate de que BACKEND_API_URL incluya la ruta correcta (por ejemplo, "/api/tickets")
-  const SHEETDB_API_URL = "https://sheetdb.io/api/v1/gect4lbs5bwvr";  
-  const BACKEND_API_URL = "https://loteria-backend-j1r3.onrender.com/api/tickets";
-  const token = localStorage.getItem("token");
-  const userRole = localStorage.getItem("userRole") || "user";
+  const SHEETDB_API_URL  = "https://sheetdb.io/api/v1/gect4lbs5bwvr";  
+  // Asegúrate de que BACKEND_API_URL incluya "/api/tickets" para que las rutas sean correctas.
+  const BACKEND_API_URL  = "https://loteria-backend-j1r3.onrender.com/api/tickets";
+  const token            = localStorage.getItem("token");
+  const userRole         = localStorage.getItem("userRole") || "user";
   console.log("User Role:", userRole);
 
   if (!token) {
@@ -26,12 +25,12 @@ $(document).ready(function() {
   }
 
   // ================= Variables Globales ================= //
-  let jugadaCount = 0;
-  let selectedDays = 0;
+  let jugadaCount    = 0;
+  let selectedDays   = 0;
   let selectedTracks = 0;
-  let totalJugadas = 0;
-  let ticketData = {}; // Objeto que contendrá la info del ticket (pre-confirmación)
-  let userEmail = "";  // Se obtendrá del perfil
+  let totalJugadas   = 0;
+  let ticketData     = {}; // Objeto que contendrá la info del ticket (pre-confirmación)
+  let userEmail      = "";  // Se obtendrá del perfil
 
   // ================= Horarios y Límites ================= //
   const horariosCierre = {
@@ -72,8 +71,8 @@ $(document).ready(function() {
   };
 
   const limitesApuesta = {
-    "Win 4": { straight: 6, box: 30, combo: 50 },
-    "Peak 3": { straight: 35, box: 50, combo: 70 },
+    "Win 4": { straight: 6,   box: 30, combo: 50 },
+    "Peak 3": { straight: 35,  box: 50, combo: 70 },
     "Venezuela": { straight: 100 },
     "Venezuela-Pale": { straight: 20 },
     "Pulito": { straight: 100 },
@@ -100,7 +99,8 @@ $(document).ready(function() {
   // ================= Obtener Perfil del Usuario ================= //
   async function obtenerPerfil() {
     try {
-      const resp = await fetch(`${BACKEND_API_URL.replace('/tickets','')}/auth/profile`, {
+      // Asumiendo que el endpoint de perfil es /auth/profile (ajústalo si es necesario)
+      const resp = await fetch(`${BACKEND_API_URL.replace("/tickets","")}/auth/profile`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -151,6 +151,7 @@ $(document).ready(function() {
     }
     $("#tablaJugadas tr:last").remove();
     jugadaCount--;
+    // Renumerar filas
     $("#tablaJugadas tr").each(function(index) {
       $(this).find("td:first").text(index + 1);
     });
@@ -181,7 +182,7 @@ $(document).ready(function() {
   function determinarModalidad(tracks, numero, fila) {
     if (!numero) return "-";
     const esUSA = tracks.some(t => Object.keys(horariosCierre.USA).includes(t));
-    const esSD = tracks.some(t => Object.keys(horariosCierre["Santo Domingo"]).includes(t));
+    const esSD  = tracks.some(t => Object.keys(horariosCierre["Santo Domingo"]).includes(t));
     const incluyeVenezuela = tracks.includes("Venezuela");
     const len = numero.length;
     const boxVal = fila.find(".box").val().trim();
@@ -211,12 +212,12 @@ $(document).ready(function() {
     if (limitesApuesta[modalidad]) {
       const stMax = limitesApuesta[modalidad].straight || "";
       fila.find(".straight")
-        .attr("placeholder", `Máx $${stMax}`)
-        .prop("disabled", false);
+          .attr("placeholder", `Máx $${stMax}`)
+          .prop("disabled", false);
     } else {
       fila.find(".straight")
-        .attr("placeholder", "Ej: 5")
-        .prop("disabled", false);
+          .attr("placeholder", "Ej: 5")
+          .prop("disabled", false);
     }
 
     if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
@@ -261,7 +262,8 @@ $(document).ready(function() {
 
     if (limitesApuesta[modalidad]) {
       stVal = Math.min(stVal, limitesApuesta[modalidad].straight);
-      if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
+      if (limitesApuesta[modalidad].box !== undefined &&
+          modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
         boxNum = Math.min(boxNum, limitesApuesta[modalidad].box);
       }
       if (limitesApuesta[modalidad].combo !== undefined) {
@@ -447,11 +449,11 @@ $(document).ready(function() {
       `;
       tBody.append(row);
     });
-    // En la previsualización inicial, ocultamos ticketId, transacción y QR.
+    // En previsualización sin confirmación, ocultamos ticketId, fecha de transacción y QR.
     $("#numeroTicket").text("").parent().hide();
     $("#ticketTransaccion").text("").parent().hide();
     $("#qrcode").empty().parent().parent().hide();
-    // Aseguramos que el botón "Confirmar e Imprimir" se muestre.
+    // Aseguramos que el contenedor de "Confirmar e Imprimir" se muestre.
     $("#confirmarTicketContainer").show();
   }
 
@@ -468,7 +470,6 @@ $(document).ready(function() {
       showAlert("Selecciona al menos un track.", "warning");
       return;
     }
-
     let jugadasValidas = true;
     const jugadasArr = [];
     $("#tablaJugadas tr").each(function() {
@@ -542,15 +543,15 @@ $(document).ready(function() {
       ticketData.fechaTransaccion = fechaTrans;
       ticketData.userEmail = userEmail;
 
-      // Insertar ticketId en cada jugada (si es necesario para referencia)
+      // Insertar ticketId en cada jugada (para referencia)
       ticketData.jugadas.forEach(j => {
         j["Ticket Number"] = ticketId;
       });
 
-      // Previsualizar con ticketId, fecha y QR
+      // Previsualizar con ticketId, fecha de transacción y QR
       previsualizarConConfirm(ticketData);
 
-      // Enviar las jugadas al backend para guardarlas en la colección "jugadas"
+      // Construir payload para enviar al backend; se envía como objeto con { ticketId, jugadas: [...] }
       const jugadasPayload = ticketData.jugadas.map(j => ({
         ticketNumber: ticketId,
         transactionDateTime: fechaTrans,
@@ -571,7 +572,7 @@ $(document).ready(function() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ jugadas: jugadasPayload })
+        body: JSON.stringify({ ticketId: ticketData.ticketId, jugadas: jugadasPayload })
       });
       const saveJson = await saveResp.json();
       if (!saveResp.ok) {
@@ -614,9 +615,10 @@ $(document).ready(function() {
         showAlert("No se pudo guardar en Google Sheets.", "warning");
       }
 
-      // Esperar brevemente para que se actualicen los estilos y capturar el modal en imagen
+      // Generar imagen del ticket usando html2canvas (scale 2 para buena resolución)
       await new Promise(resolve => setTimeout(resolve, 300));
-      html2canvas(document.querySelector("#preTicket"), { scale: 2 }).then(canvas => {
+      html2canvas(document.querySelector("#preTicket"), { scale: 2 })
+      .then(canvas => {
         const imgData = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         link.href = imgData;
@@ -628,17 +630,14 @@ $(document).ready(function() {
         console.error("Error al capturar el ticket:", err);
         showAlert("Error al generar la imagen del ticket.", "danger");
       });
-
-      // No se cierra automáticamente el modal; el usuario puede revisarlo y compartir la imagen.
-      // Puedes, si lo deseas, habilitar una opción para cerrar y resetear el formulario.
-
+      // El modal permanece abierto para que el usuario pueda visualizar y compartir la imagen.
     } catch (error) {
       console.error("Error en Confirmar e Imprimir:", error);
       showAlert("Ocurrió un error al confirmar el ticket.", "danger");
     }
   });
 
-  // ================= Previsualizar con Confirmación ================= //
+  // ================= Previsualizar con Confirmación (Modal) ================= //
   function previsualizarConConfirm(data) {
     $("#ticketFecha").text(data.fecha.join(", "));
     $("#ticketTracks").text(data.tracks.join(", "));
