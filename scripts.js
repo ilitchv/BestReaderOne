@@ -2,18 +2,16 @@
  * scripts.js
  * 
  * Flujo:
- *   1) "Generar Ticket" => Se abre un modal de previsualización que muestra la info de las
- *      jugadas, fechas y tracks, sin ticketId/QR.
- *   2) "Confirmar e Imprimir" => Se genera ticketId + QR, se envían las jugadas al backend
- *      (guardándose en la colección "jugadas" de MongoDB), se envían a Google Sheets, y se descarga
- *      la imagen PNG del ticket.
+ *   1) "Generar Ticket" => Modal con previsualización SIN ticketId/QR.
+ *   2) "Confirmar e Imprimir" => Se complementa el objeto ticket, se crea el ticket en MongoDB
+ *      (usando /store-ticket) y se insertan las jugadas en la colección "jugadas" (usando /save-jugadas),
+ *      se genera el código QR, se descarga el ticket como imagen y se deja el modal visible.
  ***************************************************************************************/
 
 $(document).ready(function() {
   // ================= Configuraciones Generales ================= //
-  const SHEETDB_API_URL  = "https://sheetdb.io/api/v1/gect4lbs5bwvr";  
-  // Asegúrate de que BACKEND_API_URL incluya "/api/tickets" para que las rutas sean correctas.
-  const BACKEND_API_URL  = "https://loteria-backend-j1r3.onrender.com/api/tickets";
+  const SHEETDB_API_URL  = "https://sheetdb.io/api/v1/gect4lbs5bwvr";  // Tu URL de SheetDB
+  const BACKEND_API_URL  = "https://loteria-backend-j1r3.onrender.com/api"; // Ruta base de tu backend
   const token            = localStorage.getItem("token");
   const userRole         = localStorage.getItem("userRole") || "user";
   console.log("User Role:", userRole);
@@ -29,41 +27,41 @@ $(document).ready(function() {
   let selectedDays   = 0;
   let selectedTracks = 0;
   let totalJugadas   = 0;
-  let ticketData     = {}; // Objeto que contendrá la info del ticket (pre-confirmación)
+  let ticketData     = {}; // Objeto que contendrá todos los datos del ticket previsualizado
   let userEmail      = "";  // Se obtendrá del perfil
 
   // ================= Horarios y Límites ================= //
   const horariosCierre = {
     "USA": {
-      "New York Mid Day": "14:25",
-      "New York Evening": "22:25",
-      "Georgia Mid Day": "12:20",
-      "Georgia Evening": "18:45",
-      "New Jersey Mid Day": "12:54",
-      "New Jersey Evening": "22:50",
-      "Florida Mid Day": "13:25",
-      "Florida Evening": "21:30",
+      "New York Mid Day":    "14:25",
+      "New York Evening":    "22:25",
+      "Georgia Mid Day":     "12:20",
+      "Georgia Evening":     "18:45",
+      "New Jersey Mid Day":  "12:54",
+      "New Jersey Evening":  "22:50",
+      "Florida Mid Day":     "13:25",
+      "Florida Evening":     "21:30",
       "Connecticut Mid Day": "13:35",
       "Connecticut Evening": "22:20",
-      "Georgia Night": "23:20",
-      "Pensilvania AM": "12:55",
-      "Pensilvania PM": "18:20"
+      "Georgia Night":       "23:20",
+      "Pensilvania AM":      "12:55",
+      "Pensilvania PM":      "18:20"
     },
     "Santo Domingo": {
-      "Real": "12:45",
-      "Gana mas": "14:25",
-      "Loteka": "19:30",
-      "Nacional": "20:30",
-      "Quiniela Pale": "20:30",
-      "Primera Día": "11:50",
-      "Suerte Día": "12:20",
-      "Lotería Real": "12:50",
-      "Suerte Tarde": "17:50",
-      "Lotedom": "17:50",
-      "Primera Noche": "19:50",
-      "Panama": "16:00",
+      "Real":                  "12:45",
+      "Gana mas":              "14:25",
+      "Loteka":                "19:30",
+      "Nacional":              "20:30",
+      "Quiniela Pale":         "20:30",
+      "Primera Día":           "11:50",
+      "Suerte Día":            "12:20",
+      "Lotería Real":          "12:50",
+      "Suerte Tarde":          "17:50",
+      "Lotedom":               "17:50",
+      "Primera Noche":         "19:50",
+      "Panama":                "16:00",
       "Quiniela Pale Domingo": "15:30",
-      "Nacional Domingo": "17:50"
+      "Nacional Domingo":      "17:50"
     },
     "Venezuela": {
       "Venezuela": "19:00"
@@ -71,18 +69,18 @@ $(document).ready(function() {
   };
 
   const limitesApuesta = {
-    "Win 4": { straight: 6,   box: 30, combo: 50 },
-    "Peak 3": { straight: 35,  box: 50, combo: 70 },
-    "Venezuela": { straight: 100 },
-    "Venezuela-Pale": { straight: 20 },
-    "Pulito": { straight: 100 },
-    "Pulito-Combinado": { straight: 100 },
-    "RD-Quiniela": { straight: 100 },
-    "RD-Pale": { straight: 20 },
-    "Combo": { combo: 50 }
+    "Win 4":             { straight: 6,  box: 30, combo: 50 },
+    "Peak 3":            { straight: 35, box: 50, combo: 70 },
+    "Venezuela":         { straight: 100 },
+    "Venezuela-Pale":    { straight: 20 },
+    "Pulito":            { straight: 100 },
+    "Pulito-Combinado":  { straight: 100 },
+    "RD-Quiniela":       { straight: 100 },
+    "RD-Pale":           { straight: 20 },
+    "Combo":             { combo: 50 }
   };
 
-  // ================= Inicializar Calendario (Flatpickr) ================= //
+  // ================= Inicializar Flatpickr ================= //
   flatpickr("#fecha", {
     mode: "multiple",
     dateFormat: "m-d-Y",
@@ -99,8 +97,7 @@ $(document).ready(function() {
   // ================= Obtener Perfil del Usuario ================= //
   async function obtenerPerfil() {
     try {
-      // Asumiendo que el endpoint de perfil es /auth/profile (ajústalo si es necesario)
-      const resp = await fetch(`${BACKEND_API_URL.replace("/tickets","")}/auth/profile`, {
+      const resp = await fetch(`${BACKEND_API_URL}/auth/profile`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -111,6 +108,8 @@ $(document).ready(function() {
       if (resp.ok) {
         userEmail = data.email;
         console.log("Email del usuario:", userEmail);
+      } else {
+        console.error("Error al obtener el perfil:", data.msg);
       }
     } catch (err) {
       console.error("Error al obtener perfil:", err);
@@ -140,7 +139,7 @@ $(document).ready(function() {
     agregarListenersNumeroApostado();
     resaltarDuplicados();
   }
-  // Agregar la jugada inicial
+  // Agregar jugada inicial
   agregarJugada();
 
   $("#agregarJugada").click(() => agregarJugada());
@@ -151,46 +150,42 @@ $(document).ready(function() {
     }
     $("#tablaJugadas tr:last").remove();
     jugadaCount--;
-    // Renumerar filas
     $("#tablaJugadas tr").each(function(index) {
       $(this).find("td:first").text(index + 1);
     });
     calcularTotal();
   });
 
-  // ================= Manejo de Tracks ================= //
+  // ================= Tracks Seleccionados ================= //
   $(".track-checkbox").change(function() {
     const tracks = $(".track-checkbox:checked").map((_, el) => el.value).get();
     selectedTracks = tracks.length || 1;
     calcularTotal();
   });
 
-  // ================= Eventos en la Tabla de Jugadas ================= //
+  // ================= Detectar cambios en la Tabla de Jugadas ================= //
   $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box, .combo", function() {
     const fila = $(this).closest("tr");
     const numero = fila.find(".numeroApostado").val();
-    const tracks = $(".track-checkbox:checked").map((_, el) => el.value).get();
+    const tracks = $(".track-checkbox:checked").map((_,el)=> el.value).get();
     const modalidad = determinarModalidad(tracks, numero, fila);
     fila.find(".tipoJuego").text(modalidad);
     actualizarPlaceholders(modalidad, fila);
     calcularTotalJugada(fila);
     calcularTotal();
-    resaltarDuplicados();
   });
 
   // ================= Determinar Modalidad ================= //
   function determinarModalidad(tracks, numero, fila) {
     if (!numero) return "-";
     const esUSA = tracks.some(t => Object.keys(horariosCierre.USA).includes(t));
-    const esSD  = tracks.some(t => Object.keys(horariosCierre["Santo Domingo"]).includes(t));
-    const incluyeVenezuela = tracks.includes("Venezuela");
+    const esSD = tracks.some(t => Object.keys(horariosCierre["Santo Domingo"]).includes(t));
+    const veneOn = tracks.includes("Venezuela");
     const len = numero.length;
     const boxVal = fila.find(".box").val().trim();
-
-    const boxValues = ["1", "2", "3"];
-    const boxCombos = ["1,2", "2,3", "1,3", "1,2,3"];
-
-    if (incluyeVenezuela && esUSA) {
+    const boxValues = ["1","2","3"];
+    const boxCombos = ["1,2","2,3","1,3","1,2,3"];
+    if (veneOn && esUSA) {
       if (len === 2) return "Venezuela";
       if (len === 4) return "Venezuela-Pale";
     } else if (esUSA && !esSD) {
@@ -210,42 +205,40 @@ $(document).ready(function() {
   // ================= Actualizar Placeholders ================= //
   function actualizarPlaceholders(modalidad, fila) {
     if (limitesApuesta[modalidad]) {
-      const stMax = limitesApuesta[modalidad].straight || "";
       fila.find(".straight")
-          .attr("placeholder", `Máx $${stMax}`)
-          .prop("disabled", false);
+        .attr("placeholder", `Máx $${limitesApuesta[modalidad].straight ?? "?"}`)
+        .prop("disabled", false);
     } else {
       fila.find(".straight")
-          .attr("placeholder", "Ej: 5")
-          .prop("disabled", false);
+        .attr("placeholder", "Ej: 5")
+        .prop("disabled", false);
     }
-
     if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-      fila.find(".box").attr("placeholder", "1,2,3").prop("disabled", false);
-      fila.find(".combo").attr("placeholder", "No aplica").prop("disabled", true).val("");
+      fila.find(".box").attr("placeholder","1,2,3").prop("disabled",false);
+      fila.find(".combo").attr("placeholder","No aplica").prop("disabled",true).val("");
     } else if (modalidad === "Venezuela" || modalidad === "Venezuela-Pale" || modalidad.startsWith("RD-")) {
-      fila.find(".box").attr("placeholder", "No aplica").prop("disabled", true).val("");
-      fila.find(".combo").attr("placeholder", "No aplica").prop("disabled", true).val("");
+      fila.find(".box").attr("placeholder","No aplica").prop("disabled",true).val("");
+      fila.find(".combo").attr("placeholder","No aplica").prop("disabled",true).val("");
     } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
       fila.find(".box")
-          .attr("placeholder", `Máx $${limitesApuesta[modalidad].box || "?"}`)
+          .attr("placeholder", `Máx $${limitesApuesta[modalidad].box ?? "?"}`)
           .prop("disabled", false);
       fila.find(".combo")
-          .attr("placeholder", `Máx $${limitesApuesta[modalidad].combo || "?"}`)
+          .attr("placeholder",`Máx $${limitesApuesta[modalidad].combo ?? "?"}`)
           .prop("disabled", false);
     } else if (modalidad === "Combo") {
-      fila.find(".straight").attr("placeholder", "No aplica").prop("disabled", true).val("");
-      fila.find(".box").attr("placeholder", "No aplica").prop("disabled", true).val("");
+      fila.find(".straight").attr("placeholder","No aplica").prop("disabled",true).val("");
+      fila.find(".box").attr("placeholder","No aplica").prop("disabled",true).val("");
       fila.find(".combo")
-          .attr("placeholder", `Máx $${limitesApuesta.Combo.combo}`)
+          .attr("placeholder",`Máx $${limitesApuesta.Combo.combo}`)
           .prop("disabled", false);
     } else {
-      fila.find(".box").attr("placeholder", "Ej: 2.00").prop("disabled", false);
-      fila.find(".combo").attr("placeholder", "Ej: 3.00").prop("disabled", false);
+      fila.find(".box").attr("placeholder","Ej: 2.00").prop("disabled",false);
+      fila.find(".combo").attr("placeholder","Ej: 3.00").prop("disabled",false);
     }
   }
 
-  // ================= Calcular Total de Jugada ================= //
+  // ================= Calcular Total de una Jugada ================= //
   function calcularTotalJugada(fila) {
     const modalidad = fila.find(".tipoJuego").text();
     const numero = fila.find(".numeroApostado").val();
@@ -259,22 +252,21 @@ $(document).ready(function() {
     let boxNum = boxVal ? parseFloat(boxVal) : 0;
     let coVal = fila.find(".combo").val().trim();
     let comboNum = coVal ? parseFloat(coVal) : 0;
-
     if (limitesApuesta[modalidad]) {
-      stVal = Math.min(stVal, limitesApuesta[modalidad].straight);
-      if (limitesApuesta[modalidad].box !== undefined &&
-          modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
+      if (limitesApuesta[modalidad].straight !== undefined) {
+        stVal = Math.min(stVal, limitesApuesta[modalidad].straight);
+      }
+      if (limitesApuesta[modalidad].box !== undefined && modalidad !== "Pulito" && modalidad !== "Pulito-Combinado") {
         boxNum = Math.min(boxNum, limitesApuesta[modalidad].box);
       }
       if (limitesApuesta[modalidad].combo !== undefined) {
         comboNum = Math.min(comboNum, limitesApuesta[modalidad].combo);
       }
     }
-
     let total = 0;
     if (modalidad === "Pulito" || modalidad === "Pulito-Combinado") {
-      const values = boxVal.split(",").filter(v => v !== "");
-      total = stVal * values.length;
+      const boxValues = boxVal.split(",").filter(v => v !== "");
+      total = stVal * boxValues.length;
     } else if (modalidad === "Venezuela" || modalidad.startsWith("RD-")) {
       total = stVal;
     } else if (modalidad === "Win 4" || modalidad === "Peak 3") {
@@ -284,7 +276,6 @@ $(document).ready(function() {
     } else {
       total = stVal + boxNum + comboNum;
     }
-
     fila.find(".total").text(total.toFixed(2));
   }
 
@@ -296,8 +287,8 @@ $(document).ready(function() {
     const factorial = n => (n <= 1 ? 1 : n * factorial(n - 1));
     let totalDigits = numero.length;
     let denom = 1;
-    for (let d in counts) {
-      denom *= factorial(counts[d]);
+    for (let digit in counts) {
+      denom *= factorial(counts[digit]);
     }
     return factorial(totalDigits) / denom;
   }
@@ -310,8 +301,11 @@ $(document).ready(function() {
     });
     console.log("Total antes:", t);
     console.log("Tracks:", selectedTracks, "Days:", selectedDays);
-    if (selectedDays === 0) t = 0;
-    else t = t * selectedTracks * selectedDays;
+    if (selectedDays === 0) {
+      t = 0;
+    } else {
+      t = t * selectedTracks * selectedDays;
+    }
     $("#totalJugadas").text(t.toFixed(2));
     totalJugadas = t;
   }
@@ -320,20 +314,22 @@ $(document).ready(function() {
   function resaltarDuplicados() {
     const campos = document.querySelectorAll(".numeroApostado");
     const valores = {};
-    const duplicados = new Set();
+    const dups = new Set();
     campos.forEach(c => {
       const v = c.value.trim();
       if (v) {
-        if (valores[v]) duplicados.add(v);
+        if (valores[v]) dups.add(v);
         else valores[v] = true;
       }
     });
     campos.forEach(c => {
-      if (duplicados.has(c.value.trim())) c.classList.add("duplicado");
-      else c.classList.remove("duplicado");
+      if (dups.has(c.value.trim())) {
+        c.classList.add("duplicado");
+      } else {
+        c.classList.remove("duplicado");
+      }
     });
   }
-
   function agregarListenersNumeroApostado() {
     const campos = document.querySelectorAll(".numeroApostado");
     campos.forEach(c => {
@@ -342,12 +338,12 @@ $(document).ready(function() {
     });
   }
 
-  // ================= Actualizar Estado de Tracks ================= //
+  // ================= Actualizar Estado de los Tracks ================= //
   function actualizarEstadoTracks() {
     const fechaStr = $("#fecha").val().split(", ")[0];
     if (!fechaStr) return;
-    const [m, d, y] = fechaStr.split("-").map(Number);
-    const fSel = new Date(y, m - 1, d);
+    const [mm, dd, yy] = fechaStr.split("-").map(Number);
+    const fSel = new Date(yy, mm - 1, dd);
     const hoy = new Date();
     const esHoy = fSel.toDateString() === hoy.toDateString();
     if (!esHoy) {
@@ -378,9 +374,9 @@ $(document).ready(function() {
     const fStr = $("#fecha").val().split(", ")[0];
     if (!fStr) return;
     const [m, d, y] = fStr.split("-").map(Number);
-    const sel = new Date(y, m - 1, d);
+    const fSel = new Date(y, m - 1, d);
     const now = new Date();
-    if (sel.toDateString() === now.toDateString()) {
+    if (fSel.toDateString() === now.toDateString()) {
       actualizarEstadoTracks();
     }
   }, 60000);
@@ -419,45 +415,43 @@ $(document).ready(function() {
       <div class="alert alert-${type} alert-dismissible fade show" role="alert">
         ${msg}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    `;
+      </div>`;
     $("#ticketAlerts").append(html);
   }
 
-  // ================= Modal Bootstrap ================= //
+  // ================= Modal de Previsualización ================= //
   const ticketModal = new bootstrap.Modal(document.getElementById("ticketModal"), {});
 
-  // ================= Previsualizar sin Confirmar (Modal) ================= //
+  // Función para previsualizar el ticket sin ticketId/QR
   function previsualizarSinConfirm(data) {
     $("#ticketAlerts").empty();
     $("#ticketFecha").text(data.fecha.join(", "));
     $("#ticketTracks").text(data.tracks.join(", "));
     $("#ticketTotal").text(data.totalAmount.toFixed(2));
-    const tBody = $("#ticketJugadas");
-    tBody.empty();
+    const tbody = $("#ticketJugadas");
+    tbody.empty();
     data.jugadas.forEach((j, idx) => {
       const row = `
         <tr>
           <td>${idx + 1}</td>
           <td>${j.numero}</td>
           <td>${j.modalidad}</td>
-          <td>${j.straight.toFixed(2)}</td>
-          <td>${(j.box != null) ? j.box.toFixed(2) : "-"}</td>
+          <td>${(j.straight || 0).toFixed(2)}</td>
+          <td>${(j.box != null) ? j.box : "-"}</td>
           <td>${(j.combo != null) ? j.combo.toFixed(2) : "-"}</td>
-          <td>$${j.total.toFixed(2)}</td>
-        </tr>
-      `;
-      tBody.append(row);
+          <td>$${(j.total || 0).toFixed(2)}</td>
+        </tr>`;
+      tbody.append(row);
     });
-    // En previsualización sin confirmación, ocultamos ticketId, fecha de transacción y QR.
+    // Ocultar campos de ticketId, transacción y QR en previsualización
     $("#numeroTicket").text("").parent().hide();
     $("#ticketTransaccion").text("").parent().hide();
     $("#qrcode").empty().parent().parent().hide();
-    // Aseguramos que el contenedor de "Confirmar e Imprimir" se muestre.
+    // Forzar mostrar el botón de Confirmar e Imprimir
     $("#confirmarTicketContainer").show();
   }
 
-  // ================= Generar Ticket (Previsualización) ================= //
+  // ================= Generar Previsualización ================= //
   $("#generarTicket").click(function() {
     $("#ticketAlerts").empty();
     const fechaVal = $("#fecha").val();
@@ -479,7 +473,6 @@ $(document).ready(function() {
       const boxVal = $(this).find(".box").val();
       const comboVal = $(this).find(".combo").val();
       const filaTotal = parseFloat($(this).find(".total").text()) || 0;
-
       if (!numero || numero.length < 2 || numero.length > 4) {
         showAlert("Ingresa un número válido (2-4 dígitos).", "danger");
         jugadasValidas = false;
@@ -495,10 +488,8 @@ $(document).ready(function() {
         jugadasValidas = false;
         return false;
       }
-
       let boxNum = (boxVal && !isNaN(boxVal)) ? parseFloat(boxVal) : null;
       let comboNum = (comboVal && !isNaN(comboVal)) ? parseFloat(comboVal) : null;
-
       jugadasArr.push({
         numero,
         modalidad,
@@ -509,22 +500,20 @@ $(document).ready(function() {
       });
     });
     if (!jugadasValidas) return;
-
     const totalFinal = parseFloat($("#totalJugadas").text()) || 0;
-    const fechasArray = fechaVal.split(", ").map(fStr => {
-      const [m, d, y] = fStr.split("-").map(Number);
+    const fechasArr = fechaVal.split(", ").map(str => {
+      const [m, d, y] = str.split("-").map(Number);
       return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     });
-
+    // Guardar en ticketData (sin ticketId ni QR)
     ticketData = {
-      fecha: fechasArray,
+      fecha: fechasArr,
       tracks,
       jugadas: jugadasArr,
       totalAmount: totalFinal,
       selectedDays,
       selectedTracks
     };
-
     console.log("Datos del Ticket (previsualización):", ticketData);
     previsualizarSinConfirm(ticketData);
     ticketModal.show();
@@ -535,94 +524,58 @@ $(document).ready(function() {
     try {
       $("#ticketAlerts").empty();
       // Generar ticketId y fechaTransaccion
-      const ticketId = generarTicketId();
+      const nuevoTicketId = generarTicketId();
       const fechaTrans = dayjs().format("YYYY-MM-DD HH:mm:ss");
-
-      // Actualizar ticketData con estos campos
-      ticketData.ticketId = ticketId;
+      // Complementar ticketData con nuevos campos
+      ticketData.ticketId = nuevoTicketId;
       ticketData.fechaTransaccion = fechaTrans;
       ticketData.userEmail = userEmail;
-
-      // Insertar ticketId en cada jugada (para referencia)
-      ticketData.jugadas.forEach(j => {
-        j["Ticket Number"] = ticketId;
-      });
-
-      // Previsualizar con ticketId, fecha de transacción y QR
-      previsualizarConConfirm(ticketData);
-
-      // Construir payload para enviar al backend; se envía como objeto con { ticketId, jugadas: [...] }
-      const jugadasPayload = ticketData.jugadas.map(j => ({
-        ticketNumber: ticketId,
-        transactionDateTime: fechaTrans,
-        betDates: ticketData.fecha.join(", "),
-        tracks: ticketData.tracks.join(", "),
-        betNumber: j.numero,
-        gameMode: j.modalidad,
-        straight: j.straight,
-        box: j.box,
-        combo: j.combo,
-        total: j.total,
-        userEmail: userEmail
-      }));
-
-      const saveResp = await fetch(`${BACKEND_API_URL}/save-jugadas`, {
+      // Insertar ticket en la colección Ticket mediante store-ticket
+      const storeResp = await fetch(`${BACKEND_API_URL}/tickets/store-ticket`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ ticketId: ticketData.ticketId, jugadas: jugadasPayload })
+        body: JSON.stringify(ticketData)
       });
-      const saveJson = await saveResp.json();
-      if (!saveResp.ok) {
-        console.error("Error en /save-jugadas:", saveJson);
-        showAlert("Error al guardar en la colección 'jugadas'.", "danger");
+      const storeData = await storeResp.json();
+      if (!storeResp.ok) {
+        showAlert(storeData.error || "Error al crear el ticket.", "danger");
         return;
       }
-      console.log("Jugadas guardadas en Mongo (colección jugadas):", saveJson);
-
-      // Guardar en Google Sheets
-      const sheetPayload = jugadasPayload.map(j => ({
-        "Ticket Number": j.ticketNumber,
-        "Transaction DateTime": j.transactionDateTime,
-        "Bet Dates": j.betDates,
-        "Tracks": j.tracks,
-        "Bet Number": j.betNumber,
-        "Game Mode": j.gameMode,
-        "Straight ($)": j.straight,
-        "Box ($)": (j.box != null) ? j.box : "",
-        "Combo ($)": (j.combo != null) ? j.combo : "",
-        "Total ($)": j.total,
-        "Timestamp": new Date().toISOString(),
-        "User": j.userEmail || "usuario@example.com"
-      }));
-      console.log("Payload para SheetDB:", sheetPayload);
-      try {
-        const sheetResp = await fetch(SHEETDB_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: sheetPayload })
-        });
-        if (!sheetResp.ok) {
-          const sheetErr = await sheetResp.text();
-          throw new Error("SheetDB Error: " + sheetErr);
-        }
-        const sheetJson = await sheetResp.json();
-        console.log("SheetDB response:", sheetJson);
-      } catch (sheetError) {
-        console.error("Error al guardar en SheetDB:", sheetError);
-        showAlert("No se pudo guardar en Google Sheets.", "warning");
+      console.log("Ticket creado:", storeData);
+      // Ahora, guardar las jugadas en la colección "jugadas" mediante save-jugadas
+      const payloadJugadas = {
+        ticketId: storeData.ticketId,
+        jugadas: ticketData.jugadas
+      };
+      const saveResp = await fetch(`${BACKEND_API_URL}/tickets/save-jugadas`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payloadJugadas)
+      });
+      const saveData = await saveResp.json();
+      if (!saveResp.ok) {
+        showAlert(saveData.error || "Error al guardar jugadas.", "danger");
+        return;
       }
-
-      // Generar imagen del ticket usando html2canvas (scale 2 para buena resolución)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log("Jugadas guardadas:", saveData);
+      
+      // Actualizar el modal para mostrar ticketId, fecha y generar QR
+      previsualizarConConfirm(storeData);
+      
+      // Descargar imagen del ticket
+      await new Promise(r => setTimeout(r, 300));
       html2canvas(document.querySelector("#preTicket"), { scale: 2 })
       .then(canvas => {
         const imgData = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         link.href = imgData;
-        link.download = `ticket_${ticketId}.png`;
+        link.download = `ticket_${storeData.ticketId}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -630,14 +583,14 @@ $(document).ready(function() {
         console.error("Error al capturar el ticket:", err);
         showAlert("Error al generar la imagen del ticket.", "danger");
       });
-      // El modal permanece abierto para que el usuario pueda visualizar y compartir la imagen.
+      // NOTA: Se deja el modal abierto para que el usuario lo pueda revisar y compartir.
     } catch (error) {
-      console.error("Error en Confirmar e Imprimir:", error);
-      showAlert("Ocurrió un error al confirmar el ticket.", "danger");
+      console.error("Error confirmTicket:", error);
+      showAlert("Error al confirmar el ticket. Revisa la consola.", "danger");
     }
   });
 
-  // ================= Previsualizar con Confirmación (Modal) ================= //
+  // Función para previsualizar el ticket ya confirmado (con ticketId, fecha y QR)
   function previsualizarConConfirm(data) {
     $("#ticketFecha").text(data.fecha.join(", "));
     $("#ticketTracks").text(data.tracks.join(", "));
@@ -651,11 +604,10 @@ $(document).ready(function() {
           <td>${j.numero}</td>
           <td>${j.modalidad}</td>
           <td>${(j.straight || 0).toFixed(2)}</td>
-          <td>${(j.box != null) ? j.box.toFixed(2) : "-"}</td>
+          <td>${(j.box != null) ? j.box : "-"}</td>
           <td>${(j.combo != null) ? j.combo.toFixed(2) : "-"}</td>
           <td>$${(j.total || 0).toFixed(2)}</td>
-        </tr>
-      `;
+        </tr>`;
       tBody.append(row);
     });
     $("#numeroTicket").text(data.ticketId).parent().show();
@@ -668,7 +620,7 @@ $(document).ready(function() {
     });
   }
 
-  // ================= Generar un Número Único ================= //
+  // ================= Helper: Generar un TicketId ================= //
   function generarTicketId() {
     return Math.floor(10000000 + Math.random() * 90000000).toString();
   }
@@ -680,24 +632,27 @@ $(document).ready(function() {
     jugadaCount = 0;
     selectedTracks = 0;
     selectedDays = 0;
-    totalJugadas = 0;
-    ticketData = {};
-    $("#totalJugadas").text("0.00");
-    $(".track-checkbox").prop("disabled", false).closest("label").removeClass("closed-track");
     agregarJugada();
+    $("#totalJugadas").text("0.00");
+    $("#ticketAlerts").empty();
+    ticketData = {};
+    // Reiniciar estado de tracks
+    $(".track-checkbox").prop("disabled", false).closest("label").removeClass("closed-track");
   }
 
   // ================= (Opcional) Recuperar Ticket Previo ================= //
   $(window).on("load", function() {
-    const savedTicketId = localStorage.getItem("ticketId");
-    if (savedTicketId) {
+    const storedTicketId = localStorage.getItem("ticketId");
+    if (storedTicketId) {
       $.ajax({
-        url: `${BACKEND_API_URL}/retrieve-ticket`,
+        url: `${BACKEND_API_URL}/tickets/retrieve-ticket`,
         method: "POST",
         dataType: "json",
         contentType: "application/json",
-        data: JSON.stringify({ ticketId: savedTicketId }),
-        headers: { "Authorization": `Bearer ${token}` },
+        data: JSON.stringify({ ticketId: storedTicketId }),
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         success: function(response) {
           if (response.ticketData) {
             showAlert("Se recuperó el ticket.", "info");
@@ -706,12 +661,13 @@ $(document).ready(function() {
             localStorage.removeItem("ticketId");
           }
         },
-        error: function(err) {
-          console.error("Error al recuperar ticket:", err);
-          showAlert("Error al recuperar el ticket.", "danger");
+        error: function(error) {
+          console.error("Error al recuperar datos del ticket:", error);
+          showAlert("Error al recuperar datos del ticket.", "danger");
           localStorage.removeItem("ticketId");
         }
       });
     }
   });
+
 });
