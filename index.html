@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -53,7 +53,7 @@
       height: 128px;
       margin: 0 auto;
     }
-    /* La tabla dentro del modal se fuerza a ocupar todo el ancho y un layout fijo */
+    /* La tabla interna del modal: forzamos layout fijo y ancho completo */
     #preTicket table {
       font-size: 1rem;
       table-layout: fixed;
@@ -63,8 +63,6 @@
       border: 1px solid #00ffff;
       color: #ffffff;
       padding: 8px;
-      word-wrap: break-word;
-      font-size: 1rem;
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;
@@ -96,10 +94,10 @@
         height: 100px;
       }
     }
+    /* Forzamos que el modal de previsualización se muestre completo (no minimizado) */
     #preTicket {
       max-width: 100%;
       overflow-x: auto;
-      /* Forzamos que el modal se muestre completo (no minimizado) */
       height: auto;
       max-height: 80vh;
       overflow-y: auto;
@@ -119,7 +117,7 @@
         window.location.href = 'login.html';
       } else {
         document.documentElement.style.display = '';
-        // En este flujo, los contenedores de pago se ocultan
+        // Se ocultan contenedores de pago (en este flujo no se usan)
         const cashAppContainer = document.getElementById('cashAppPayContainer');
         const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
         if (cashAppContainer) cashAppContainer.style.display = 'none';
@@ -386,7 +384,7 @@
                   </div>
                   <span class="cutoff-time" data-track="Venezuela" style="display: none;">No cierra</span>
                 </div>
-                <!-- Agrega más pistas de Venezuela si las tienes -->
+                <!-- Puedes agregar más pistas de Venezuela aquí si lo deseas -->
               </div>
             </div>
           </div>
@@ -412,7 +410,7 @@
           </table>
         </div>
       
-        <!-- Botones para Agregar/Eliminar Jugada + Totales -->
+        <!-- Botones para Agregar/Eliminar Jugada y Total -->
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div class="button-group">
             <button type="button" class="btn btn-primary" id="agregarJugada">
@@ -489,7 +487,7 @@
             <div class="w-100 mb-2">
               <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
             </div>
-            <!-- (En este flujo se confirma sin pago; se muestra el botón Confirmar e Imprimir) -->
+            <!-- Botón para Confirmar e Imprimir (visible en el flujo de confirmación) -->
             <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
               <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
                 <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
@@ -514,7 +512,6 @@
       dayjs.extend(dayjs_plugin_arraySupport);
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Supabase (opcional) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -528,4 +525,4 @@
     <!-- scripts.js principal -->
     <script src="scripts.js"></script>
 </body>
-</html>   
+</html>
