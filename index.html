@@ -14,7 +14,7 @@
   <!-- Custom CSS -->
   <link href="styles.css" rel="stylesheet">
   <style>
-    /* Estilos para responsividad y visualización del ticket */
+    /* ------------------ Estilos específicos para el modal de previsualización ------------------ */
     @media (max-width: 576px) {
       .modal-dialog {
         max-width: 100%;
@@ -117,7 +117,7 @@
         window.location.href = 'login.html';
       } else {
         document.documentElement.style.display = '';
-        // Se ocultan contenedores de pago (en este flujo no se usan)
+        // En este flujo se ocultan contenedores de pago
         const cashAppContainer = document.getElementById('cashAppPayContainer');
         const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
         if (cashAppContainer) cashAppContainer.style.display = 'none';
@@ -384,7 +384,6 @@
                   </div>
                   <span class="cutoff-time" data-track="Venezuela" style="display: none;">No cierra</span>
                 </div>
-                <!-- Puedes agregar más pistas de Venezuela aquí si lo deseas -->
               </div>
             </div>
           </div>
@@ -483,16 +482,9 @@
               </div>
             </div> <!-- Fin #preTicket -->
           </div>
-          <div class="modal-footer flex-column">
-            <div class="w-100 mb-2">
-              <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
-            </div>
-            <!-- Botón para Confirmar e Imprimir (visible en el flujo de confirmación) -->
-            <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
-              <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
-                <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
-              </button>
-            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Editar</button>
+            <button type="button" class="btn btn-primary" id="confirmarTicket">Confirmar e Imprimir</button>
           </div>
         </div>
       </div>
@@ -512,6 +504,7 @@
       dayjs.extend(dayjs_plugin_arraySupport);
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Supabase (opcional) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
