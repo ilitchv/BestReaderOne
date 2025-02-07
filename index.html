@@ -53,6 +53,7 @@
       height: 128px;
       margin: 0 auto;
     }
+    /* La tabla dentro del modal se fuerza a ocupar todo el ancho y un layout fijo */
     #preTicket table {
       font-size: 1rem;
       table-layout: fixed;
@@ -95,16 +96,16 @@
         height: 100px;
       }
     }
-    /* Forzar scroll horizontal si la tabla excede el ancho y asegurar que el modal se muestre en tamaño adecuado */
     #preTicket {
       max-width: 100%;
       overflow-x: auto;
+      /* Forzamos que el modal se muestre completo (no minimizado) */
       height: auto;
       max-height: 80vh;
       overflow-y: auto;
     }
   </style>
-
+  
   <!-- Verificación de Autenticación y Rol del Usuario -->
   <script>
     // Ocultar el contenido hasta que se verifique la autenticación
@@ -118,7 +119,7 @@
         window.location.href = 'login.html';
       } else {
         document.documentElement.style.display = '';
-        // En este flujo se desactivan los contenedores de pago
+        // En este flujo, los contenedores de pago se ocultan
         const cashAppContainer = document.getElementById('cashAppPayContainer');
         const confirmarTicketContainer = document.getElementById('confirmarTicketContainer');
         if (cashAppContainer) cashAppContainer.style.display = 'none';
@@ -127,7 +128,7 @@
     });
   </script>
   
-  <!-- SDK de Square Web Payments (opcional) -->
+  <!-- SDK de Square Web Payments (opcional, no se usa en este flujo) -->
   <script src="https://web.squarecdn.com/v1/square.js"></script>
 </head>
 <body>
@@ -256,14 +257,14 @@
             </div>
           </div>
           
-          <!-- Sección Santo Domingo (lista completa) -->
+          <!-- Sección Santo Domingo -->
           <div class="accordion-item">
-            <h2 class="accordion-header" id="headingSD2">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSD2" aria-expanded="false" aria-controls="collapseSD2">
+            <h2 class="accordion-header" id="headingSD">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSD" aria-expanded="false" aria-controls="collapseSD">
                 Santo Domingo
               </button>
             </h2>
-            <div id="collapseSD2" class="accordion-collapse collapse" aria-labelledby="headingSD2" data-bs-parent="#tracksAccordion">
+            <div id="collapseSD" class="accordion-collapse collapse" aria-labelledby="headingSD" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
                 <!-- Lista completa de tracks de Santo Domingo -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
@@ -346,7 +347,7 @@
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="Panama" id="trackPanama_SD">
-                    <label class="form-check-label" for="trackPanama_SD">Panamá</label>
+                    <label class="form-check-label" for="trackPanama_SD">Panama</label>
                   </div>
                   <span class="cutoff-time" data-track="Panama">Hora límite: 16:00</span>
                 </div>
@@ -377,7 +378,7 @@
             </h2>
             <div id="collapseVenezuela" class="accordion-collapse collapse" aria-labelledby="headingVenezuela" data-bs-parent="#tracksAccordion">
               <div class="accordion-body">
-                <!-- Lista de pistas de Venezuela -->
+                <!-- Lista de pistas para Venezuela -->
                 <div class="form-check d-flex justify-content-between align-items-center mb-2">
                   <div>
                     <input class="form-check-input track-checkbox" type="checkbox" value="Venezuela" id="trackVenezuela_VE">
@@ -385,6 +386,7 @@
                   </div>
                   <span class="cutoff-time" data-track="Venezuela" style="display: none;">No cierra</span>
                 </div>
+                <!-- Agrega más pistas de Venezuela si las tienes -->
               </div>
             </div>
           </div>
@@ -487,11 +489,7 @@
             <div class="w-100 mb-2">
               <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Editar</button>
             </div>
-            <!-- Contenedor para botones de pago se oculta; en este flujo se confirma sin pago -->
-            <div id="cashAppPayContainer" class="w-100 mb-2" style="display: none;">
-              <div id="cash-app-pay"></div>
-            </div>
-            <!-- Botón para Confirmar e Imprimir -->
+            <!-- (En este flujo se confirma sin pago; se muestra el botón Confirmar e Imprimir) -->
             <div class="w-100 mb-2" id="confirmarTicketContainer" style="display: none;">
               <button type="button" class="btn btn-primary w-100" id="confirmarTicket">
                 <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
@@ -512,14 +510,12 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/arraySupport.js"></script>
     <script>
-      // Registrar plugins de Day.js
       dayjs.extend(dayjs_plugin_customParseFormat);
       dayjs.extend(dayjs_plugin_arraySupport);
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Supabase (si lo necesitas) -->
+    <!-- Supabase (opcional) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <!-- Verificar SDK de Square (opcional) -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         if (window.Square) {
