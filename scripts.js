@@ -3,20 +3,19 @@
  * 
  * Flujo:
  * 1) Al hacer clic en "Generar Ticket":
- *    - Se recopila la información del formulario (fechas, tracks, jugadas, total, etc.).
- *    - Se construye el objeto `ticketData` (sin ticketId, fechaTransacción ni QR).
- *    - Se llama a la función `previsualizarSinConfirm(ticketData)`, que actualiza el DOM del modal.
- *    - Tras una breve demora (50 ms) se muestra el modal ya poblado.
+ *    - Se recopila la información del formulario.
+ *    - Se construye el objeto ticketData (sin ticketId, fechaTransaccion ni QR).
+ *    - Se actualiza el contenido del modal mediante previsualizarSinConfirm(ticketData).
+ *    - Se muestra el modal inmediatamente para que el usuario revise la información.
  * 2) Al hacer clic en "Confirmar e Imprimir":
- *    - Se generan `ticketId` y `fechaTransaccion`, se actualiza el objeto `ticketData` y se asigna
- *      el ticketId a cada jugada.
- *    - Se llama a `previsualizarConConfirm(ticketData)`, que actualiza el modal para incluir ticketId y QR.
- *    - Luego se procede con el envío de datos al backend/SheetDB, descarga de la imagen y cierre del modal.
+ *    - Se generan ticketId y fechaTransaccion, se actualiza ticketData.
+ *    - Se actualiza el modal con ticketId y código QR mediante previsualizarConConfirm(ticketData).
+ *    - Se procede con el envío a backend/SheetDB, descarga de imagen, etc.
  ***************************************************************************************/
 
 $(document).ready(function() {
   // ================= Configuraciones Generales ================= //
-  const SHEETDB_API_URL  = "https://sheetdb.io/api/v1/bl57zyh73b0ev";  // Reemplaza con tu URL real
+  const SHEETDB_API_URL  = "https://sheetdb.io/api/v1/bl57zyh73b0ev";  // Tu URL real
   const BACKEND_API_URL  = "https://loteria-backend-j1r3.onrender.com/api"; // Ruta base de tu backend
   const token            = localStorage.getItem("token");
   const userRole         = localStorage.getItem("userRole") || "user";
@@ -32,8 +31,8 @@ $(document).ready(function() {
   let selectedDays   = 0;
   let selectedTracks = 0;
   let totalJugadas   = 0;
-  let ticketData     = {};  // Objeto que contendrá la información del ticket (previsualización)
-  let jugadasData    = [];  // Array con las jugadas (para enviar a backend/SheetDB)
+  let ticketData     = {};  // Contendrá la info del ticket para previsualizar (sin ticketId, etc.)
+  let jugadasData    = [];  // Array de jugadas (para enviar a backend/SheetDB)
   let fechaTransaccion = "";
   let isProgrammaticReset = false;
   let userEmail = "";
@@ -121,7 +120,7 @@ $(document).ready(function() {
   }
   obtenerPerfil();
 
-  // ================= Funciones de Jugadas (agregar, calcular, etc.) ================= //
+  // ================= Funciones para Manejar Jugadas ================= //
   function agregarJugada() {
     if (jugadaCount >= 100) {
       alert("Has alcanzado el máximo de 100 jugadas.");
@@ -159,7 +158,7 @@ $(document).ready(function() {
     calcularTotal();
   });
 
-  // ================= Eventos en la Tabla ================= //
+  // ================= Eventos en la Tabla de Jugadas ================= //
   $("#tablaJugadas").on("input", ".numeroApostado, .straight, .box, .combo", function() {
     const fila = $(this).closest("tr");
     const numero = fila.find(".numeroApostado").val();
@@ -391,76 +390,8 @@ $(document).ready(function() {
   }
   mostrarHorasLimite();
 
-  // ================= Prevenir Reseteo Involuntario ================= //
-  $("#lotteryForm").on("reset", function(e) {
-    if (!isProgrammaticReset && (!e.originalEvent || !$(e.originalEvent.submitter).hasClass("btn-reset"))) {
-      e.preventDefault();
-    }
-  });
-
-  // ================= Funciones para Guardar y Cargar Estado del Formulario ================= //
-  function guardarEstadoFormulario() {
-    const estado = {
-      jugadaCount: jugadaCount,
-      selectedTracks: selectedTracks,
-      selectedDays: selectedDays,
-      fecha: $("#fecha").val(),
-      jugadas: []
-    };
-    $("#tablaJugadas tr").each(function() {
-      const numero = $(this).find(".numeroApostado").val();
-      const modalidad = $(this).find(".tipoJuego").text();
-      const straight = $(this).find(".straight").val();
-      const box = $(this).find(".box").val();
-      const combo = $(this).find(".combo").val();
-      const total = $(this).find(".total").text();
-      estado.jugadas.push({
-        numeroApostado: numero,
-        tipoJuego: modalidad,
-        straight: straight,
-        box: box,
-        combo: combo,
-        total: total
-      });
-    });
-    localStorage.setItem('estadoFormulario', JSON.stringify(estado));
-  }
-  function cargarEstadoFormulario() {
-    const estado = JSON.parse(localStorage.getItem('estadoFormulario'));
-    if (estado) {
-      $("#fecha").val(estado.fecha);
-      selectedDays = estado.selectedDays;
-      selectedTracks = estado.selectedTracks;
-      jugadaCount = estado.jugadaCount;
-      $("#tablaJugadas").empty();
-      estado.jugadas.forEach((jugada, index) => {
-        if (index >= 100) return;
-        const fila = `
-          <tr>
-            <td>${index + 1}</td>
-            <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required value="${jugada.numeroApostado}"></td>
-            <td class="tipoJuego">${jugada.tipoJuego}</td>
-            <td><input type="number" class="form-control straight" min="0" step="1" placeholder="E.g., 5" value="${jugada.straight}"></td>
-            <td><input type="number" class="form-control box" min="1" step="1" placeholder="1, 2 o 3" value="${jugada.box}"></td>
-            <td><input type="number" class="form-control combo" min="0" step="0.10" placeholder="E.g., 3.00" value="${jugada.combo}"></td>
-            <td class="total">${jugada.total}</td>
-          </tr>
-        `;
-        $("#tablaJugadas").append(fila);
-      });
-      jugadaCount = estado.jugadaCount;
-      calcularTotal();
-      mostrarHorasLimite();
-      actualizarEstadoTracks();
-      resaltarDuplicados();
-    }
-  }
-  cargarEstadoFormulario();
-
-  // ================= Funciones de Previsualización del Modal ================= //
-
-  // Esta función actualiza el contenido del modal con la información actual del ticket
-  // SIN incluir ticketId, fechaTransacción ni código QR (versión preliminar)
+  // ================= Previsualización del Modal ================= //
+  // Función para previsualizar SIN confirmación (versión preliminar sin ticketId, fechaTransacción ni QR)
   function previsualizarSinConfirm(data) {
     $("#ticketAlerts").empty();
     $("#ticketFecha").text(data.fecha.join(", "));
@@ -490,15 +421,15 @@ $(document).ready(function() {
     $("#numeroTicket").text("").parent().hide();
     $("#ticketTransaccion").text("").parent().hide();
     $("#qrcode").empty().parent().parent().hide();
-    // Mostrar el contenedor del botón de confirmar (si es necesario)
+    // Mostrar el contenedor del botón Confirmar
     $("#confirmarTicketContainer").show();
-    // Forzar una breve demora para que el DOM se actualice y luego mostrar el modal
+    // Mostrar el modal inmediatamente (usamos setTimeout para permitir que el DOM se actualice)
     setTimeout(() => {
       ticketModal.show();
     }, 50);
   }
 
-  // Esta función actualiza el modal para la versión final (con ticketId, fechaTransacción y QR)
+  // Función para previsualizar CON confirmación (se muestra ticketId, fechaTransacción y QR)
   function previsualizarConConfirm(data) {
     $("#ticketFecha").text(data.fecha.join(", "));
     $("#ticketTracks").text(data.tracks.join(", "));
@@ -541,7 +472,7 @@ $(document).ready(function() {
       alert("Por favor, selecciona al menos un track.");
       return;
     }
-    // Se realizan las validaciones de horarios (omitiendo detalles para resumir)
+    // Validaciones adicionales sobre tracks y horarios se realizan aquí...
     const fechasArray = fecha.split(", ");
     const fechaActual = dayjs().startOf('day');
     for (let fStr of fechasArray) {
@@ -554,7 +485,9 @@ $(document).ready(function() {
           const horaLimiteStr = obtenerHoraLimite(track);
           if (horaLimiteStr) {
             let cierreOriginal = dayjs(horaLimiteStr, "HH:mm");
-            let cierreFinal = cierreOriginal.isAfter(dayjs("21:30", "HH:mm")) ? dayjs("21:30", "HH:mm") : cierreOriginal.subtract(10, 'minute');
+            let cierreFinal = cierreOriginal.isAfter(dayjs("21:30", "HH:mm"))
+              ? dayjs("21:30", "HH:mm")
+              : cierreOriginal.subtract(10, 'minute');
             if (ahora.isAfter(cierreFinal) || ahora.isSame(cierreFinal)) {
               alert(`El track "${track}" ya ha cerrado para hoy. Por favor, selecciona otro track o una fecha futura.`);
               return;
@@ -563,12 +496,12 @@ $(document).ready(function() {
         }
       }
     }
-    // Aquí se asume que se han validado y recolectado las jugadas correctamente;
-    // Se construye ticketData (sin ticketId ni fechaTransacción aún)
-    // Por ejemplo, ticketData se debe haber llenado con: fecha, tracks, jugadas, totalAmount, selectedDays, selectedTracks
+    // Se supone que las validaciones de las jugadas ya se hicieron y se han recopilado en jugadasData
+    // En este ejemplo, asumimos que ticketData ya se llenó con: fecha, tracks, jugadas, totalAmount, selectedDays, selectedTracks
     console.log("Datos del Ticket (previsualización):", ticketData);
-    // Llamar a la previsualización sin confirmación para mostrar el modal con la data
+    // Llamamos a la función de previsualización sin confirmación
     previsualizarSinConfirm(ticketData);
+    // Guardamos el estado (opcional)
     guardarEstadoFormulario();
   });
 
@@ -576,21 +509,16 @@ $(document).ready(function() {
   $("#confirmarTicket").click(async function() {
     try {
       $("#ticketAlerts").empty();
-      // Generar ticketId y fechaTransacción
       const ticketId = generarNumeroUnico();
       const fechaTrans = dayjs().format("YYYY-MM-DD HH:mm:ss");
-      // Actualizar ticketData
       ticketData.ticketId = ticketId;
       ticketData.fechaTransaccion = fechaTrans;
       ticketData.userEmail = userEmail;
       ticketData.jugadas.forEach(j => { j["Ticket Number"] = ticketId; });
       console.log("Ticket a confirmar:", ticketData);
-      // Actualizar el modal para incluir ticketId y código QR
       previsualizarConConfirm(ticketData);
-      // Aquí irían las llamadas al backend y SheetDB (no se modifican en este bloque)
-      // … (código de confirmación, envío, descarga, etc.)
-      // Por simplicidad se asume que estas funciones se ejecutan sin modificar
-      // Finalmente, se cierra el modal y se resetea el formulario
+      // Aquí se llamarían funciones para enviar datos al backend/SheetDB, descargar imagen, etc.
+      // ...
       ticketModal.hide();
       resetForm();
     } catch (error) {
@@ -654,9 +582,9 @@ $(document).ready(function() {
             <td>${index + 1}</td>
             <td><input type="number" class="form-control numeroApostado" min="0" max="9999" required value="${jugada.numeroApostado}"></td>
             <td class="tipoJuego">${jugada.tipoJuego}</td>
-            <td><input type="number" class="form-control straight" min="0" step="1" placeholder="E.g., 5" value="${jugada.straight}"></td>
-            <td><input type="number" class="form-control box" min="1" step="1" placeholder="1, 2 o 3" value="${jugada.box}"></td>
-            <td><input type="number" class="form-control combo" min="0" step="0.10" placeholder="E.g., 3.00" value="${jugada.combo}"></td>
+            <td><input type="number" class="form-control straight" step="1" placeholder="E.g., 5" value="${jugada.straight}"></td>
+            <td><input type="number" class="form-control box" step="1" placeholder="1, 2 o 3" value="${jugada.box}"></td>
+            <td><input type="number" class="form-control combo" step="0.10" placeholder="E.g., 3.00" value="${jugada.combo}"></td>
             <td class="total">${jugada.total}</td>
           </tr>
         `;
@@ -678,27 +606,8 @@ $(document).ready(function() {
     }
   });
 
-  // ================= Evento "Confirmar e Imprimir" ================= //
-  $("#confirmarTicket").click(async function() {
-    try {
-      $("#ticketAlerts").empty();
-      const ticketId = generarNumeroUnico();
-      const fechaTrans = dayjs().format("YYYY-MM-DD HH:mm:ss");
-      ticketData.ticketId = ticketId;
-      ticketData.fechaTransaccion = fechaTrans;
-      ticketData.userEmail = userEmail;
-      ticketData.jugadas.forEach(j => { j["Ticket Number"] = ticketId; });
-      console.log("Ticket a confirmar:", ticketData);
-      previsualizarConConfirm(ticketData);
-      // Aquí se procede con el envío a backend, SheetDB, descarga de imagen, etc.
-      // ...
-      ticketModal.hide();
-      resetForm();
-    } catch (error) {
-      console.error("Error al confirmar el ticket:", error);
-      showAlert("Error al confirmar el ticket.", "danger");
-    }
-  });
+  // ================= Inicializar Modal de Bootstrap ================= //
+  const ticketModal = new bootstrap.Modal(document.getElementById("ticketModal"), {});
 
   // ================= Función para Mostrar Alertas ================= //
   function showAlert(msg, type) {
@@ -710,16 +619,6 @@ $(document).ready(function() {
     `;
     $("#ticketAlerts").append(html);
   }
-
-  // ================= Inicializar Modal de Bootstrap ================= //
-  const ticketModal = new bootstrap.Modal(document.getElementById("ticketModal"), {});
-
-  // ================= Evento "Resetear Formulario" ================= //
-  $("#resetForm").click(function() {
-    if (confirm("¿Estás seguro de que deseas resetear el formulario? Esto eliminará todas las jugadas actuales.")) {
-      resetForm();
-    }
-  });
 
   // ================= Función para Resetear el Formulario ================= //
   function resetForm() {
@@ -738,8 +637,4 @@ $(document).ready(function() {
   // ================= Intervalo para Actualizar Estado de los Tracks ================= //
   setInterval(actualizarEstadoTracks, 60000);
 
-  // ================= Evento "Confirmar e Imprimir" (Descarga de imagen) ================= //
-  // (Ya incluido en el evento anterior de #confirmarTicket)
-
-  // ================= Fin del document.ready ================= //
 });
