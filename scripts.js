@@ -84,7 +84,10 @@
         "Combo": { "combo": 50 }
     };
 
-    // =============== DETERMINAR MODALIDAD ===============
+    // MOSTRAR/HIDING COMPARTIR: Al iniciar, ocultar sección de compartir
+    $("#finalShareSection").hide();
+
+    // ================== DETERMINAR MODALIDAD ==================
     function determinarModalidad(tracks, numero, fila) {
         let modalidad = "-";
 
@@ -126,7 +129,7 @@
         return modalidad;
     }
 
-    // =============== AGREGAR / ELIMINAR JUGADA ===============
+    // ================== AGREGAR / ELIMINAR JUGADA ==================
     function agregarJugada() {
         if (jugadaCount >= 100) {
             showAlert("Has alcanzado el máximo de 100 jugadas.", "danger");
@@ -150,9 +153,9 @@
         $("#tablaJugadas tr:last .numeroApostado").focus();
     }
 
-    // Agrega una jugada inicial al cargar
+    // Agregar jugada inicial
     agregarJugada();
-    $("#agregarJugada").click(function() { agregarJugada(); });
+    $("#agregarJugada").click(() => agregarJugada());
     $("#eliminarJugada").click(function() {
         if (jugadaCount === 0) {
             showAlert("No hay jugadas para eliminar.", "warning");
@@ -166,10 +169,9 @@
         calcularTotal();
     });
 
-    // =============== EVENTOS EN INPUTS DE JUGADAS ===============
+    // ================== EVENTOS EN JUGADAS ==================
     $(".track-checkbox").change(function() {
         const tracksSeleccionados = $(".track-checkbox:checked").map(function() { return $(this).val(); }).get();
-        // Excluir "Venezuela" del conteo
         selectedTracks = tracksSeleccionados.filter(track => track !== "Venezuela").length || 1;
         calcularTotal();
     });
@@ -185,7 +187,7 @@
         calcularTotal();
     });
 
-    // =============== PLACEHOLDERS SEGÚN MODALIDAD ===============
+    // ================== PLACEHOLDERS SEGÚN MODALIDAD ==================
     function actualizarPlaceholders(modalidad, fila) {
         if (limitesApuesta[modalidad]) {
             fila.find(".straight").attr("placeholder", `Máximo $${limitesApuesta[modalidad].straight || 100}`).prop('disabled', false);
@@ -212,7 +214,7 @@
         }
     }
 
-    // =============== CALCULAR TOTALES ===============
+    // ================== CÁLCULOS DE TOTALES ==================
     function calcularTotalJugada(fila) {
         const modalidad = fila.find(".tipoJuego").text();
         const numero = fila.find(".numeroApostado").val();
@@ -249,7 +251,6 @@
         } else {
             total = straight + box + combo;
         }
-
         fila.find(".total").text(total.toFixed(2));
     }
 
@@ -280,10 +281,10 @@
         $("#totalJugadas").text(total);
     }
 
-    // =============== MODAL BOOTSTRAP ===============
-    var ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
+    // ================== MODAL BOOTSTRAP ==================
+    const ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
 
-    // =============== UTILS Y ALERTAS ===============
+    // ================== ALERTAS Y UTILS ==================
     function isMobileDevice() {
         return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
@@ -302,7 +303,7 @@
         return Math.floor(10000000 + Math.random() * 90000000).toString();
     }
 
-    // =============== GENERAR TICKET ===============
+    // ================== GENERAR TICKET ==================
     $("#generarTicket").click(function() {
         $("#ticketAlerts").empty();
 
@@ -340,7 +341,6 @@
         for (let fechaSeleccionadaStr of fechasArray) {
             const [monthSel, daySel, yearSel] = fechaSeleccionadaStr.split('-').map(Number);
             const fechaSeleccionada = new Date(yearSel, monthSel - 1, daySel);
-
             if (fechaSeleccionada.getTime() === fechaActualSinHora.getTime()) {
                 const horaActual = new Date();
                 for (let track of tracks) {
@@ -375,7 +375,7 @@
                 return false;
             }
 
-            // Validar tracks requeridos para la modalidad
+            // Validar tracks requeridos
             let tracksRequeridos = [];
             if (["Win 4", "Peak 3", "Pulito", "Pulito-Combinado", "Venezuela"].includes(modalidad)) {
                 tracksRequeridos = Object.keys(horariosCierre.USA);
@@ -419,6 +419,7 @@
                     return false;
                 }
             }
+
             // Validar límites
             if (limitesApuesta[modalidad]) {
                 if (parseFloat($(this).find(".straight").val()) > (limitesApuesta[modalidad].straight || Infinity)) {
@@ -444,7 +445,7 @@
             return;
         }
 
-        // Preparar datos para el ticket
+        // Preparar ticket
         const tracksTexto = tracks.join(", ");
         $("#ticketTracks").text(tracksTexto);
         $("#ticketJugadas").empty();
@@ -500,7 +501,7 @@
             selectedTracks: selectedTracks
         };
 
-        // Guardar ticket en el backend (store-ticket)
+        // Guardar ticket en backend
         $.ajax({
             url: `${BACKEND_API_URL}/store-ticket`,
             method: 'POST',
@@ -544,7 +545,7 @@
         });
     });
 
-    // =============== CASH APP PAY ===============
+    // ================== CASH APP PAY ==================
     async function initializeCashAppPay(totalAmount) {
         console.log('Inicializando Cash App Pay con total:', totalAmount);
         if (!window.Square) {
@@ -592,7 +593,7 @@
                         showAlert('Error al procesar pago: ' + paymentResult.error, "danger");
                     }
                 } else {
-                    // Manejo de errores/cancel
+                    // Manejo de error/cancel
                     if (tokenResult.status === 'CANCEL') {
                         showAlert('Pago cancelado por el usuario.', "warning");
                     } else if (tokenResult.errors) {
@@ -641,7 +642,7 @@
         }
     }
 
-    // =============== RECUPERAR TICKET AL CARGAR PÁGINA ===============
+    // ================== RECUPERAR TICKET AL CARGAR ==================
     $(window).on('load', function() {
         ticketId = localStorage.getItem('ticketId');
         const urlParams = new URLSearchParams(window.location.search);
@@ -704,7 +705,7 @@
         }
     });
 
-    // =============== CONFIRMAR TICKET ===============
+    // ================== CONFIRMAR TICKET ==================
     $("#confirmarTicket").click(function() {
         $("#ticketAlerts").empty();
         if (userRole === 'user') {
@@ -779,7 +780,7 @@
         });
     }
 
-    // =============== ENVIAR FORMULARIO Y DESCARGAR ===============
+    // ================== ENVIAR FORMULARIO Y DESCARGAR ==================
     function enviarFormulario(datos) {
         const sheetDBRequest = $.ajax({
             url: SHEETDB_API_URL,
@@ -802,12 +803,11 @@
             console.log("Backend:", backendResponse);
             showAlert("Ticket guardado y enviado exitosamente.", "success");
 
-            // 1) Quitar impresión:
-            //    window.print(); <-- COMENTADO/REMOVIDO
+            // 1) Removemos la impresión
+            // window.print(); // borrado
 
-            // 2) Descargar el ticket como imagen con alta resolución
+            // 2) Descargar ticket en alta resolución
             descargarTicketComoImagen(() => {
-                // Al terminar la descarga, cerrar modal y resetear todo
                 ticketModal.hide();
                 resetForm();
                 ticketData = {};
@@ -827,6 +827,9 @@
                 // Limpiar los parámetros de la URL
                 const newURL = window.location.origin + window.location.pathname;
                 window.history.replaceState({}, document.title, newURL);
+
+                // MOSTRAR el botón de compartir al final
+                $('#finalShareSection').show();
             });
 
         }).fail(function(jqXHR, textStatus, errorThrown) {
@@ -888,15 +891,13 @@
     }
 
     // =============== COMPARTIR TICKET (WEB SHARE API) ===============
-    // Llamar esto desde un botón (que agregaremos en index.html) con id="shareTicketBtn"
+    // Botón en #finalShareSection
     $("#shareTicketBtn").click(function() {
         compartirTicket();
     });
 
     function compartirTicket() {
-        // Si deseas capturar la misma vista que descargas, repetimos la lógica:
         capturarTicketComoArchivo().then(file => {
-            // Verificamos soporte de Web Share con archivos
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
                     files: [file],
@@ -908,13 +909,11 @@
                 })
                 .catch(err => {
                     console.error('Error al compartir:', err);
-                    showAlert('No se pudo compartir el ticket. Te lo descargaremos.', 'warning');
-                    // Fallback: descargar
+                    showAlert('No se pudo compartir el ticket. Te lo descargamos.', 'warning');
                     descargarArchivo(file, 'ticket.png');
                 });
             } else {
-                // Fallback: descargar
-                showAlert('Este navegador no soporta compartir archivos. Descargando ticket...', 'warning');
+                showAlert('Este navegador no soporta Web Share con archivos. Descargando...', 'warning');
                 descargarArchivo(file, 'ticket.png');
             }
         }).catch(err => {
@@ -923,7 +922,6 @@
         });
     }
 
-    // Captura #preTicket como File (con scale=3) para usar en Web Share
     function capturarTicketComoArchivo() {
         return new Promise((resolve, reject) => {
             const ticketElement = document.getElementById("preTicket");
@@ -959,7 +957,6 @@
         });
     }
 
-    // Función auxiliar para descargar un File
     function descargarArchivo(file, filename) {
         const blobURL = URL.createObjectURL(file);
         const link = document.createElement('a');
@@ -971,7 +968,7 @@
         URL.revokeObjectURL(blobURL);
     }
 
-    // =============== RESET FORM ===============
+    // =============== RESET FORM ==================
     $("#resetForm").click(function() {
         resetForm();
     });
@@ -1006,10 +1003,15 @@
         }
         localStorage.removeItem('ticketId');
         $("#ticketAlerts").empty();
+
+        // Ocultar sección de compartir en cada reset
+        $('#finalShareSection').hide();
+
+        // Habilitar tracks
         $(".track-checkbox").prop('disabled', false).closest('label').removeClass('closed-track');
     }
 
-    // =============== DESHABILITAR TRACKS HORARIOS ===============
+    // =============== DESHABILITAR TRACKS POR HORA ==================
     function actualizarEstadoTracks() {
         const fechaSeleccionadaStr = $("#fecha").val().split(", ")[0];
         if (!fechaSeleccionadaStr) return;
@@ -1123,7 +1125,7 @@
         });
     }
 
-    // Agregar listeners al cargar la página
+    // Al cargar la página
     agregarListenersNumeroApostado();
     resaltarDuplicados();
     mostrarHorasLimite();
