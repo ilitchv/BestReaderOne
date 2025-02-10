@@ -277,34 +277,47 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     #preTicket {
         background-color: #0a0a0a; /* Fondo oscuro */
         color: #ffffff; /* Texto blanco */
-    }
-
-    /* Opcional: Ajustar tamaño de fuente si es necesario */
-    #preTicket {
-        font-size: 12pt;
+        font-size: 12pt; /* Ajustar si requieres otro tamaño de fuente */
     }
 }
 
+/* ============================= */
+/*         Sección Ticket        */
+/* ============================= */
+
 #preTicket {
-    background-color: #0a0a0a; /* Fondo oscuro */
-    color: #ffffff; /* Texto blanco */
+    background-color: #0a0a0a; 
+    color: #ffffff;
     padding: 20px;
     border-radius: 10px;
-    /* Otros estilos necesarios */
+    /* NUEVO: Aseguramos que no se corte en pantallas pequeñas ni en la captura */
+    max-width: 100%; /* NUEVO */
+    overflow-x: auto; /* NUEVO */
+    overflow-y: visible; /* NUEVO */
 }
 
 #preTicket h4 {
-    color: #00ffff; /* Color de título */
+    color: #00ffff;
     text-shadow: 0 0 5px #00ffff;
 }
 
+/* NUEVO: Asegurar tabla responsiva y evitar recortes */
 #preTicket table {
     background-color: #1e1e1e;
+    width: 100%;        /* NUEVO: que ocupe todo el ancho */
+    table-layout: fixed;/* NUEVO: para controlar el overflow de celdas */
+    word-wrap: break-word; /* NUEVO */
 }
 
-#preTicket th, #preTicket td {
+/* Ajustar celdas del ticket para evitar desbordes */
+#preTicket th, 
+#preTicket td {
     border: 1px solid #00ffff;
     color: #ffffff;
+    padding: 8px;        /* NUEVO: un poco más de espacio */
+    white-space: nowrap; /* NUEVO: si quieres elipsis en lugar de “salto de línea” */
+    overflow: hidden;    /* NUEVO: ocultar texto que exceda el ancho */
+    text-overflow: ellipsis; /* NUEVO: mostrar “...” si no cabe */
 }
 
 /* Clase para resaltar campos duplicados */
@@ -313,7 +326,22 @@ input::-ms-input-placeholder { /* Microsoft Edge */
     border: 2px solid #ffeb3b; /* Borde amarillo más oscuro */
 }
 
-/* Ocultar la hora límite para el track "Venezuela" cambiando el color del texto */
+/* Ocultar la hora límite para el track "Venezuela" */
 .cutoff-time[data-track='Venezuela'] {
     color: var(--color-fondo);
 }
+
+/* Mejora en móviles muy pequeños (<= 600px) para #preTicket */
+@media (max-width: 600px) {
+    #preTicket table {
+        font-size: 0.85rem;
+    }
+    #preTicket th, #preTicket td {
+        padding: 6px;
+    }
+    #qrcode {
+        width: 100px;
+        height: 100px;
+    }
+}
+
