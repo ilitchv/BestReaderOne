@@ -363,13 +363,13 @@
                     <button type="button" class="btn btn-success btn-lg" id="generarTicket">
                         <i class="bi bi-ticket-detailed-fill"></i> Generar Ticket
                     </button>
-                 <!-- Botón para Resetear el Formulario -->
-                 <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
-                     <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
-                 </button>
+                    <!-- Botón para Resetear el Formulario -->
+                    <button type="button" class="btn btn-secondary btn-lg" id="resetForm">
+                        <i class="bi bi-arrow-counterclockwise"></i> Resetear Formulario
+                    </button>
                 </div>
         </form>
-        
+
         <!-- Modal para Previsualizar Ticket -->
         <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
@@ -430,20 +430,21 @@
                                 <i class="bi bi-check-circle-fill"></i> Confirmar e Imprimir
                             </button>
                         </div>
-
-                        <!-- AÑADIDO: Botón para Compartir Ticket -->
-                        <div class="w-100 mb-2" id="shareTicketContainer" style="display: block;">
-                            <button type="button" class="btn btn-info w-100" id="shareTicketBtn">
-                                <i class="bi bi-share-fill"></i> Compartir Ticket
-                            </button>
-                        </div>
-                        <!-- FIN AÑADIDO -->
-                        
+                        <!-- NOTA: Ya no agregamos el botón de compartir aquí; 
+                             se mostrará al final tras el pago -->
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- AÑADIDO: Botón para Compartir Ticket al final, por defecto oculto -->
+        <div id="finalShareSection" class="text-center mt-4" style="display: none;">
+            <button type="button" class="btn btn-info btn-lg" id="shareTicketBtn">
+                <i class="bi bi-share-fill"></i> Compartir Ticket Final
+            </button>
+        </div>
+
+    </div> <!-- Fin del container -->
 
     <!-- Librerías JavaScript -->
     <!-- jQuery -->
@@ -484,6 +485,5 @@
 
     <!-- Tu archivo JavaScript principal -->
     <script src="scripts.js"></script>
-
 </body>
 </html>
