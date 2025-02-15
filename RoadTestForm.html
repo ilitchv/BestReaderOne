@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road Test Evaluation System</title>
     <style>
-        /* (Mantener mismo CSS anterior) */
+        /* Mantener mismo CSS anterior */
         :root {
             --primary: #2563eb;
             --danger: #dc2626;
@@ -77,6 +77,11 @@
             cursor: pointer;
         }
 
+        .sub-item {
+            margin-left: 2rem;
+            opacity: 0.9;
+        }
+
         .checkbox-label:hover {
             background: rgba(255, 255, 255, 0.05);
         }
@@ -105,7 +110,7 @@
             backdrop-filter: blur(10px);
         }
 
-        select {
+        select, textarea {
             background: rgba(0, 0, 0, 0.3);
             color: white;
             padding: 0.5rem;
@@ -113,6 +118,12 @@
             border: 1px solid var(--primary);
             width: 100%;
             margin-top: 0.5rem;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            margin-top: 1rem;
         }
 
         .failed {
@@ -162,6 +173,7 @@
                     <option value="Serious Violation">Serious Violation</option>
                     <option value="Additional Training Needed">Additional Training Needed</option>
                 </select>
+                <textarea id="comments" placeholder="Additional comments..."></textarea>
             </div>
         </div>
     </div>
@@ -179,11 +191,19 @@
             turningIntersections: {
                 title: "B. TURNING/INTERSECTIONS",
                 items: [
-                    { text: "Poor judgment approaching or at intersections", points: 10 },
+                    { 
+                        text: "Poor judgment approaching or at intersections", 
+                        points: 10,
+                        subItems: ["Speed", "Turning", "Right of Way", "Following Distance", "Other"]
+                    },
                     { text: "Fails to stop near center of intersection when waiting to make left turn", points: 10 },
                     { text: "Turns wide - short right", points: 5 },
                     { text: "Turns wide - short left", points: 5 },
-                    { text: "Inattentive to traffic", points: 10 }
+                    { 
+                        text: "Inattentive to traffic", 
+                        points: 10,
+                        subItems: ["Signs", "Signals", "Lane Markings"]
+                    }
                 ]
             },
             parkingBacking: {
@@ -194,7 +214,11 @@
                     { text: "Unable to park properly", points: 15 },
                     { text: "Unable to make a 3-point turn", points: 15 },
                     { text: "Excessive space for parking/too far from curb", points: 5 },
-                    { text: "Excessive maneuvers in 3-point turn or parking", points: 5 }
+                    { 
+                        text: "Excessive maneuvers in 3-point turn or parking", 
+                        points: 5,
+                        subItems: ["Steering", "Control", "Positioning"]
+                    }
                 ]
             },
             drivingInTraffic: {
@@ -203,12 +227,28 @@
                     { text: "Fails to keep right", points: 10 },
                     { text: "Improper lane of traffic", points: 10 },
                     { text: "Follows too closely", points: 10 },
-                    { text: "Speed excessive for conditions", points: 15 },
+                    { 
+                        text: "Speed excessive for conditions", 
+                        points: 15,
+                        subItems: ["Residential", "Highway", "School Zone", "Other"]
+                    },
                     { text: "Too slow/impedes traffic flow", points: 15 },
-                    { text: "Fails to yield right-of-way to pedestrian", points: 15 },
+                    { 
+                        text: "Fails to yield right-of-way to pedestrian", 
+                        points: 15,
+                        subItems: ["Crosswalk", "Intersection", "School Zone", "Other"]
+                    },
                     { text: "Poor judgment in traffic", points: 10 },
-                    { text: "When changing lanes, fails to observe, signal, or use caution", points: 10 },
-                    { text: "Fails to anticipate actions of pedestrians or other vehicles", points: 10 },
+                    { 
+                        text: "When changing lanes, fails to observe, signal, or use caution", 
+                        points: 10,
+                        subItems: ["Observation", "Signaling", "Timing"]
+                    },
+                    { 
+                        text: "Fails to anticipate actions of pedestrians or other vehicles", 
+                        points: 10,
+                        subItems: ["Pedestrians", "Cyclists", "Other Vehicles"]
+                    },
                     { text: "Fails to anticipate potential hazards", points: 10 }
                 ]
             },
@@ -217,9 +257,17 @@
                 items: [
                     { text: "Repeated stalling", points: 10 },
                     { text: "Poor engine control/acceleration", points: 10 },
-                    { text: "Poor steering control", points: 15 },
+                    { 
+                        text: "Poor steering control", 
+                        points: 15,
+                        subItems: ["Oversteering", "Understeering", "Wheel Positioning"]
+                    },
                     { text: "Delayed braking/abrupt braking", points: 10 },
-                    { text: "Poor use of gears", points: 10 },
+                    { 
+                        text: "Poor use of gears", 
+                        points: 10,
+                        subItems: ["Incorrect Shifting", "Gear Selection", "RPM Control"]
+                    },
                     { text: "Poor clutch control", points: 5 },
                     { text: "Poor reactions to emergencies", points: 10 }
                 ]
@@ -234,11 +282,23 @@
                     <h2>${category.title}</h2>
                     <div class="checkbox-group">
                         ${category.items.map(item => `
-                            <label class="checkbox-label">
-                                <input type="checkbox" data-points="${item.points}">
-                                <span>${item.text}</span>
-                                <span class="points-badge">-${item.points}</span>
-                            </label>
+                            <div>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" data-points="${item.points}">
+                                    <span>${item.text}</span>
+                                    ${item.points ? `<span class="points-badge">-${item.points}</span>` : ''}
+                                </label>
+                                ${item.subItems ? `
+                                    <div class="sub-item">
+                                        ${item.subItems.map(sub => `
+                                            <label class="checkbox-label">
+                                                <input type="checkbox">
+                                                <span>${sub}</span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
                         `).join('')}
                     </div>
                 </div>
@@ -250,7 +310,10 @@
         let totalPoints = 0;
         const updatePoints = () => {
             totalPoints = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
-                .reduce((sum, checkbox) => sum + parseInt(checkbox.dataset.points), 0);
+                .reduce((sum, checkbox) => {
+                    const points = parseInt(checkbox.dataset.points) || 0;
+                    return sum + points;
+                }, 0);
 
             document.getElementById('totalPoints').textContent = totalPoints;
             const resultStatus = document.getElementById('resultStatus');
