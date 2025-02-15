@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road Test Evaluation System</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        /* Mantener mismo CSS anterior */
         :root {
             --primary: #2563eb;
             --danger: #dc2626;
@@ -39,116 +39,78 @@
             padding: 2rem;
         }
 
-        .grid {
+        .header-section {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
             margin-bottom: 2rem;
         }
 
-        .category {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .category h2 {
-            color: #93c5fd;
-            margin-bottom: 1rem;
-            font-size: 1.25rem;
-            border-bottom: 2px solid var(--primary);
-            padding-bottom: 0.5rem;
-        }
-
-        .checkbox-group {
+        .input-group {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
 
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .sub-item {
-            margin-left: 2rem;
-            opacity: 0.9;
-        }
-
-        .checkbox-label:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .checkbox-label input {
-            width: 1.25rem;
-            height: 1.25rem;
-            accent-color: var(--primary);
-        }
-
-        .points-badge {
-            margin-left: auto;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            background: rgba(255, 255, 255, 0.1);
-            font-weight: 600;
-        }
-
-        .results-panel {
-            position: sticky;
-            bottom: 2rem;
-            background: var(--glass);
-            padding: 1.5rem;
+        .input-group input, .input-group select {
+            padding: 0.75rem;
             border-radius: 0.5rem;
-            margin-top: 2rem;
-            backdrop-filter: blur(10px);
-        }
-
-        select, textarea {
+            border: 1px solid var(--primary);
             background: rgba(0, 0, 0, 0.3);
             color: white;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            border: 1px solid var(--primary);
-            width: 100%;
-            margin-top: 0.5rem;
         }
 
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-            margin-top: 1rem;
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
         }
 
-        .failed {
-            color: #f87171;
-            animation: pulse 1.5s infinite;
+        .button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background: var(--primary);
+            color: white;
         }
 
-        .passed {
-            color: #4ade80;
+        .button:hover {
+            transform: translateY(-2px);
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .button.reset {
+            background: var(--danger);
         }
 
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-            }
-            
-            .container {
-                padding: 1rem;
-            }
+        .button.report {
+            background: var(--success);
+        }
+
+        /* Mantener demás estilos anteriores... */
+
+        #reportSection {
+            position: absolute;
+            left: -9999px;
+            width: 210mm;
+            padding: 2cm;
+            background: white;
+            color: black;
+            border-radius: 0.5rem;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 1rem;
+        }
+
+        .report-item {
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            border-left: 3px solid var(--primary);
         }
     </style>
 </head>
@@ -156,182 +118,128 @@
     <div class="container">
         <h1 style="text-align: center; margin-bottom: 2rem;">🚗 Road Test Evaluation System</h1>
         
+        <div class="header-section">
+            <div class="input-group">
+                <label>Student Name:</label>
+                <input type="text" id="studentName">
+            </div>
+            <div class="input-group">
+                <label>Inspector Name:</label>
+                <input type="text" id="inspectorName">
+            </div>
+            <div class="input-group">
+                <label>Exam Date:</label>
+                <input type="date" id="examDate">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="button" class="button reset" onclick="resetForm()">Reset Form</button>
+            <button type="button" class="button report" onclick="generateReport()">Download Report</button>
+        </div>
+
         <div class="grid" id="evaluationForm">
-            <!-- Categories will be inserted here -->
+            <!-- Categories inserted by JavaScript -->
         </div>
 
         <div class="results-panel">
-            <h2 style="margin-bottom: 1rem;">
-                Total Points: <span id="totalPoints">0</span>
-                <span id="resultStatus"></span>
-            </h2>
-            <div id="disqualificationSection" style="display: none;">
-                <select id="disqualificationReason">
-                    <option value="">Select disqualification reason</option>
-                    <option value="Accident">Accident</option>
-                    <option value="Dangerous Action">Dangerous Action</option>
-                    <option value="Serious Violation">Serious Violation</option>
-                    <option value="Additional Training Needed">Additional Training Needed</option>
-                </select>
-                <textarea id="comments" placeholder="Additional comments..."></textarea>
+            <!-- Previous results panel content -->
+        </div>
+
+        <div id="reportSection">
+            <div class="report-header">
+                <h2>Road Test Evaluation Report</h2>
+                <p>Student: <span id="reportStudentName"></span></p>
+                <p>Inspector: <span id="reportInspectorName"></span></p>
+                <p>Date: <span id="reportExamDate"></span></p>
+            </div>
+            <div id="reportContent"></div>
+            <div class="report-footer">
+                <p>Total Points: <span id="reportTotalPoints"></span></p>
+                <p>Result: <span id="reportResult"></span></p>
             </div>
         </div>
     </div>
 
     <script>
-        const categories = {
-            leavingCurb: {
-                title: "A. LEAVING CURB",
-                items: [
-                    { text: "Fails to observe", points: 10 },
-                    { text: "Fails to signal", points: 5 },
-                    { text: "Uses mirror only/fails to check blind spot", points: 5 }
-                ]
-            },
-            turningIntersections: {
-                title: "B. TURNING/INTERSECTIONS",
-                items: [
-                    { 
-                        text: "Poor judgment approaching or at intersections", 
-                        points: 10,
-                        subItems: ["Speed", "Turning", "Right of Way", "Following Distance", "Other"]
-                    },
-                    { text: "Fails to stop near center of intersection when waiting to make left turn", points: 10 },
-                    { text: "Turns wide - short right", points: 5 },
-                    { text: "Turns wide - short left", points: 5 },
-                    { 
-                        text: "Inattentive to traffic", 
-                        points: 10,
-                        subItems: ["Signs", "Signals", "Lane Markings"]
-                    }
-                ]
-            },
-            parkingBacking: {
-                title: "C. PARKING/BACKING/U-TURN",
-                items: [
-                    { text: "Fails to signal", points: 5 },
-                    { text: "Fails to adequately observe/use caution", points: 10 },
-                    { text: "Unable to park properly", points: 15 },
-                    { text: "Unable to make a 3-point turn", points: 15 },
-                    { text: "Excessive space for parking/too far from curb", points: 5 },
-                    { 
-                        text: "Excessive maneuvers in 3-point turn or parking", 
-                        points: 5,
-                        subItems: ["Steering", "Control", "Positioning"]
-                    }
-                ]
-            },
-            drivingInTraffic: {
-                title: "D. DRIVING IN TRAFFIC",
-                items: [
-                    { text: "Fails to keep right", points: 10 },
-                    { text: "Improper lane of traffic", points: 10 },
-                    { text: "Follows too closely", points: 10 },
-                    { 
-                        text: "Speed excessive for conditions", 
-                        points: 15,
-                        subItems: ["Residential", "Highway", "School Zone", "Other"]
-                    },
-                    { text: "Too slow/impedes traffic flow", points: 15 },
-                    { 
-                        text: "Fails to yield right-of-way to pedestrian", 
-                        points: 15,
-                        subItems: ["Crosswalk", "Intersection", "School Zone", "Other"]
-                    },
-                    { text: "Poor judgment in traffic", points: 10 },
-                    { 
-                        text: "When changing lanes, fails to observe, signal, or use caution", 
-                        points: 10,
-                        subItems: ["Observation", "Signaling", "Timing"]
-                    },
-                    { 
-                        text: "Fails to anticipate actions of pedestrians or other vehicles", 
-                        points: 10,
-                        subItems: ["Pedestrians", "Cyclists", "Other Vehicles"]
-                    },
-                    { text: "Fails to anticipate potential hazards", points: 10 }
-                ]
-            },
-            vehicleControl: {
-                title: "E. VEHICLE CONTROL",
-                items: [
-                    { text: "Repeated stalling", points: 10 },
-                    { text: "Poor engine control/acceleration", points: 10 },
-                    { 
-                        text: "Poor steering control", 
-                        points: 15,
-                        subItems: ["Oversteering", "Understeering", "Wheel Positioning"]
-                    },
-                    { text: "Delayed braking/abrupt braking", points: 10 },
-                    { 
-                        text: "Poor use of gears", 
-                        points: 10,
-                        subItems: ["Incorrect Shifting", "Gear Selection", "RPM Control"]
-                    },
-                    { text: "Poor clutch control", points: 5 },
-                    { text: "Poor reactions to emergencies", points: 10 }
-                ]
-            }
-        };
+        // Mantener código anterior de categorías y generación de formulario...
 
-        // Generate form
-        const form = document.getElementById('evaluationForm');
-        Object.entries(categories).forEach(([key, category]) => {
-            const categoryHTML = `
-                <div class="category">
-                    <h2>${category.title}</h2>
-                    <div class="checkbox-group">
-                        ${category.items.map(item => `
-                            <div>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" data-points="${item.points}">
-                                    <span>${item.text}</span>
-                                    ${item.points ? `<span class="points-badge">-${item.points}</span>` : ''}
-                                </label>
-                                ${item.subItems ? `
-                                    <div class="sub-item">
-                                        ${item.subItems.map(sub => `
-                                            <label class="checkbox-label">
-                                                <input type="checkbox">
-                                                <span>${sub}</span>
-                                            </label>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            form.insertAdjacentHTML('beforeend', categoryHTML);
-        });
+        // New functions
+        function resetForm() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.getElementById('studentName').value = '';
+            document.getElementById('inspectorName').value = '';
+            document.getElementById('examDate').value = '';
+            document.getElementById('disqualificationReason').value = '';
+            document.getElementById('comments').value = '';
+            totalPoints = 0;
+            updatePoints();
+        }
 
-        // Handle changes
-        let totalPoints = 0;
-        const updatePoints = () => {
-            totalPoints = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
-                .reduce((sum, checkbox) => {
-                    const points = parseInt(checkbox.dataset.points) || 0;
-                    return sum + points;
-                }, 0);
-
-            document.getElementById('totalPoints').textContent = totalPoints;
-            const resultStatus = document.getElementById('resultStatus');
+        async function generateReport() {
+            // Populate report data
+            document.getElementById('reportStudentName').textContent = 
+                document.getElementById('studentName').value || 'N/A';
+            document.getElementById('reportInspectorName').textContent = 
+                document.getElementById('inspectorName').value || 'N/A';
+            document.getElementById('reportExamDate').textContent = 
+                document.getElementById('examDate').value || 'N/A';
             
-            if(totalPoints >= 30) {
-                resultStatus.textContent = "(FAILED)";
-                resultStatus.className = "failed";
-                document.getElementById('disqualificationSection').style.display = 'block';
-            } else {
-                resultStatus.textContent = "(PASSED)";
-                resultStatus.className = "passed";
-                document.getElementById('disqualificationSection').style.display = 'none';
-            }
-        };
+            const reportContent = document.getElementById('reportContent');
+            reportContent.innerHTML = '';
+            
+            document.querySelectorAll('.category').forEach(category => {
+                const categoryTitle = category.querySelector('h2').textContent;
+                const section = document.createElement('div');
+                section.innerHTML = `<h3>${categoryTitle}</h3>`;
+                
+                category.querySelectorAll('.checkbox-label input:checked').forEach(checkbox => {
+                    const itemText = checkbox.parentElement.querySelector('span:not(.points-badge)').textContent;
+                    const points = checkbox.dataset.points || '0';
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'report-item';
+                    itemDiv.innerHTML = `
+                        <strong>${itemText}</strong> (${points} points)
+                    `;
 
-        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', updatePoints);
-        });
+                    // Add subitems if any
+                    const subItems = checkbox.closest('div').querySelectorAll('.sub-item input:checked');
+                    if(subItems.length > 0) {
+                        const subList = document.createElement('ul');
+                        subItems.forEach(sub => {
+                            const li = document.createElement('li');
+                            li.textContent = sub.parentElement.querySelector('span').textContent;
+                            subList.appendChild(li);
+                        });
+                        itemDiv.appendChild(subList);
+                    }
+
+                    section.appendChild(itemDiv);
+                });
+                
+                reportContent.appendChild(section);
+            });
+
+            document.getElementById('reportTotalPoints').textContent = totalPoints;
+            document.getElementById('reportResult').textContent = 
+                totalPoints >= 30 ? 'FAILED' : 'PASSED';
+
+            // Generate image
+            const reportElement = document.getElementById('reportSection');
+            const canvas = await html2canvas(reportElement);
+            const image = canvas.toDataURL('image/png');
+
+            // Trigger download
+            const link = document.createElement('a');
+            link.download = `RoadTestReport-${Date.now()}.png`;
+            link.href = image;
+            link.click();
+        }
+
+        // Rest of previous JavaScript code...
     </script>
 </body>
 </html>
