@@ -1,341 +1,1181 @@
  <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NYC Road Test Evaluation System</title>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --danger: #dc2626;
-            --success: #16a34a;
-            --background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-            --glass: rgba(255, 255, 255, 0.05);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Road Test Evaluation System</title>
+  <!-- Include html2canvas from CDN -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      --glass: rgba(255, 255, 255, 0.05);
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', sans-serif;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
 
-        body {
-            min-height: 100vh;
-            background: var(--background);
-            color: white;
-            padding: 2rem;
-        }
+    body {
+      min-height: 100vh;
+      background: var(--background);
+      color: white;
+      padding: 2rem;
+    }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            backdrop-filter: blur(16px) saturate(180%);
-            -webkit-backdrop-filter: blur(16px) saturate(180%);
-            background-color: var(--glass);
-            border-radius: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.125);
-            padding: 2rem;
-        }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      background-color: var(--glass);
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.125);
+      padding: 2rem;
+      position: relative;
+    }
 
-        .header-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
 
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
+    .header-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
 
-        .input-group input, .input-group select {
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--primary);
-            background: rgba(0, 0, 0, 0.3);
-            color: white;
-        }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
 
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
+    .input-group label {
+      font-weight: bold;
+    }
 
-        .button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.2s;
-            background: var(--primary);
-            color: white;
-        }
+    .input-group input[type="text"],
+    .input-group input[type="date"],
+    .input-group input[type="time"] {
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--primary);
+      background: rgba(0, 0, 0, 0.3);
+      color: white;
+    }
 
-        .button:hover {
-            transform: translateY(-2px);
-        }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
 
-        .button.reset {
-            background: var(--danger);
-        }
+    .button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
 
-        .button.report {
-            background: var(--success);
-        }
+    .button:hover {
+      transform: translateY(-2px);
+    }
 
-        .timer {
-            font-size: 1.2rem;
-            text-align: center;
-            margin: 1rem 0;
-        }
+    .button.reset {
+      background: var(--danger);
+    }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-        }
+    .button.report {
+      background: var(--success);
+    }
 
-        .modal-content {
-            position: relative;
-            background: white;
-            color: black;
-            margin: 5% auto;
-            padding: 2rem;
-            width: 80%;
-            max-width: 600px;
-            border-radius: 0.5rem;
-        }
+    .lang-toggle {
+      background: #4b5563; /* A neutral shade */
+    }
 
-        .close-modal {
-            position: absolute;
-            right: 1rem;
-            top: 1rem;
-            cursor: pointer;
-            font-size: 1.5rem;
-        }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
 
-        #reportSection {
-            position: absolute;
-            left: -9999px;
-            width: 210mm;
-            padding: 2cm;
-            background: white;
-            color: black;
-            border-radius: 0.5rem;
-        }
+    .category {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-        .item-number {
-            display: inline-block;
-            width: 30px;
-            font-weight: bold;
-            color: var(--primary);
-        }
-    </style>
+    .category h2 {
+      color: #93c5fd;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 0.5rem;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .item-number {
+      font-weight: bold;
+      font-size: 1.2rem; /* Will scale up in JS for the double size effect */
+      cursor: pointer;
+      margin-right: 0.25rem;
+      min-width: 2.5rem;
+      text-align: center;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.4rem;
+      border-radius: 0.25rem;
+      transition: background 0.3s ease;
+      cursor: pointer;
+      flex-wrap: wrap;
+    }
+
+    .checkbox-label:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .points-badge {
+      margin-left: auto;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      background: rgba(255, 255, 255, 0.1);
+      font-weight: 600;
+    }
+
+    .sub-item-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-left: 2.2rem; 
+      margin-top: 0.25rem;
+    }
+
+    .sub-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .results-panel {
+      background: var(--glass);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-top: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .results-panel h2 {
+      margin-bottom: 0.5rem;
+    }
+
+    .failed {
+      color: #f87171;
+      animation: pulse 1.5s infinite;
+    }
+
+    .passed {
+      color: #4ade80;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    select, textarea {
+      background: rgba(0, 0, 0, 0.3);
+      color: white;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      border: 1px solid var(--primary);
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+      margin-top: 0.5rem;
+    }
+
+    /* Timer display */
+    .timer-display {
+      margin-top: 0.5rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Hidden container for the report generation */
+    #reportSection {
+      position: absolute;
+      left: -9999px;
+      width: 210mm; /* A4 width if you want standard PDF sizing */
+      padding: 2cm;
+      background: white;
+      color: black;
+      border-radius: 0.5rem;
+    }
+    .report-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 1rem;
+    }
+    .report-item {
+      margin: 0.5rem 0;
+      padding-left: 1rem;
+      border-left: 3px solid #999;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: white;
+      color: black;
+      padding: 1rem 1.5rem;
+      max-width: 600px;
+      border-radius: 0.5rem;
+      position: relative;
+    }
+    .modal-content h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .modal-content p {
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1 style="text-align: center; margin-bottom: 2rem;">🚗 NYC Road Test Evaluation System</h1>
-        
-        <div class="header-section">
-            <div class="input-group">
-                <label>Student Name:</label>
-                <input type="text" id="studentName" onblur="startTimer()">
-            </div>
-            <div class="input-group">
-                <label>Inspector Name:</label>
-                <input type="text" id="inspectorName">
-            </div>
-            <div class="input-group">
-                <label>Exam Date:</label>
-                <input type="date" id="examDate">
-            </div>
-            <div class="input-group">
-                <label>Start Time:</label>
-                <input type="time" id="examTime" readonly>
-            </div>
-        </div>
+  <div class="container" id="mainContainer">
+    <h1 id="titleText">🚗 Road Test Evaluation System</h1>
 
-        <div class="timer" id="examTimer">Elapsed Time: 00:00:00</div>
-
-        <div class="button-group">
-            <button type="button" class="button reset" onclick="resetForm()">Reset Form</button>
-            <button type="button" class="button report" onclick="generateReport()">Download Report</button>
-        </div>
-
-        <div class="grid" id="evaluationForm">
-            <!-- Categories inserted by JavaScript -->
-        </div>
-
-        <div class="modal" id="infoModal">
-            <div class="modal-content">
-                <span class="close-modal" onclick="closeModal()">&times;</span>
-                <div id="modalContent"></div>
-            </div>
-        </div>
-
-        <div id="reportSection">
-            <div class="report-header">
-                <h2>NYC Road Test Evaluation Report</h2>
-                <p>Student: <span id="reportStudentName"></span></p>
-                <p>Inspector: <span id="reportInspectorName"></span></p>
-                <p>Date: <span id="reportExamDate"></span></p>
-                <p>Start Time: <span id="reportExamTime"></span></p>
-                <p>Test Duration: <span id="reportExamDuration"></span></p>
-            </div>
-            <div id="reportContent"></div>
-            <div class="report-footer">
-                <p>Total Points: <span id="reportTotalPoints"></span></p>
-                <p>Result: <span id="reportResult"></span></p>
-            </div>
-        </div>
+    <!-- Header: Student, Inspector, Date, Time, Timer -->
+    <div class="header-section">
+      <div class="input-group">
+        <label id="lblStudentName">Student Name:</label>
+        <input type="text" id="studentName" placeholder="Enter student name"/>
+      </div>
+      <div class="input-group">
+        <label id="lblInspectorName">Inspector Name:</label>
+        <input type="text" id="inspectorName" placeholder="Enter inspector name"/>
+      </div>
+      <div class="input-group">
+        <label id="lblExamDate">Exam Date:</label>
+        <input type="date" id="examDate"/>
+      </div>
+      <div class="input-group">
+        <label id="lblExamTime">Exam Start Time:</label>
+        <input type="time" id="examTime" disabled/>
+        <div class="timer-display" id="timerDisplay"></div>
+      </div>
     </div>
 
-    <script>
-        // Configuración inicial
-        let startTime = null;
-        let timerInterval = null;
-        const explanations = {
-            1: "Proper observation includes checking mirrors, blind spots, and surrounding traffic. (NYC Driver's Manual, Section 5.2)",
-            2: "Signal must be activated at least 100 feet before turning. (NYC Traffic Rules §4-03)",
-            // Agrega todas las explicaciones necesarias...
-        };
+    <!-- Buttons: Reset, Download, Toggle Language -->
+    <div class="button-group">
+      <button type="button" class="button reset" id="resetFormBtn">Reset Form</button>
+      <button type="button" class="button report" id="downloadReportBtn">Download Report</button>
+      <button type="button" class="button lang-toggle" id="toggleLangBtn">Toggle Language</button>
+    </div>
 
-        // Datos completos del examen
-        const categories = [
-            {
-                title: "A. LEAVING CURB",
-                items: [
-                    { number: 1, text: "Fails to observe", points: 10, subItems: [] },
-                    { number: 2, text: "Fails to signal", points: 5, subItems: [] },
-                    { number: 3, text: "Uses mirror only/fails to check blind spot", points: 5, subItems: [] }
-                ]
-            },
-            {
-                title: "B. TURNING/INTERSECTIONS",
-                items: [
-                    { number: 4, text: "Poor judgment approaching or at intersections", points: 10, 
-                      subItems: ["Speed", "Turning", "Right of Way", "Following Distance", "Other"] },
-                    { number: 5, text: "Fails to stop near center of intersection when waiting to make left turn", points: 10, subItems: [] },
-                    { number: 6, text: "Turns wide - short right", points: 5, subItems: [] },
-                    { number: 7, text: "Turns wide - short left", points: 5, subItems: [] },
-                    { number: 8, text: "Inattentive to traffic", points: 10, 
-                      subItems: ["Signs", "Signals", "Lane Markings"] }
-                ]
-            },
-            // Continúa con las demás categorías...
-        ];
+    <!-- The main grid for all items -->
+    <div class="grid" id="evaluationForm"><!-- dynamically inserted --></div>
 
-        // Generar formulario
-        function generateForm() {
-            const form = document.getElementById('evaluationForm');
-            categories.forEach(category => {
-                const categoryHTML = `
-                    <div class="category">
-                        <h2>${category.title}</h2>
-                        <div class="checkbox-group">
-                            ${category.items.map(item => `
-                                <div>
-                                    <label class="checkbox-label" onclick="showExplanation(${item.number})">
-                                        <span class="item-number">${item.number}</span>
-                                        <input type="checkbox" data-points="${item.points}">
-                                        <span>${item.text}</span>
-                                        <span class="points-badge">-${item.points}</span>
-                                    </label>
-                                    ${item.subItems.length > 0 ? `
-                                        <div class="sub-item">
-                                            ${item.subItems.map(sub => `
-                                                <label class="checkbox-label">
-                                                    <input type="checkbox">
-                                                    <span>${sub}</span>
-                                                </label>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-                form.insertAdjacentHTML('beforeend', categoryHTML);
+    <!-- Results Panel -->
+    <div class="results-panel">
+      <h2 id="lblTotalPoints">
+        <span id="lblTotalPointsText">Total Points:</span>
+        <span id="totalPoints">0</span>
+        <span id="resultStatus"></span>
+      </h2>
+      <div id="disqualificationSection" style="display: none;">
+        <label id="lblDisqualReason">Disqualification Reason:</label>
+        <select id="disqualificationReason">
+          <option value="">--Select reason--</option>
+          <option value="Accident">Accident</option>
+          <option value="Dangerous Action">Dangerous Action</option>
+          <option value="Serious Violation">Serious Violation</option>
+          <option value="Additional Training Needed">Additional Training Needed</option>
+        </select>
+        <textarea id="comments" placeholder="Additional comments..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Report Section for PNG generation -->
+  <div id="reportSection">
+    <div class="report-header">
+      <h2 id="reportTitle">Road Test Evaluation Report</h2>
+      <p><span id="reportStudentLabel">Student:</span> <span id="reportStudentName"></span></p>
+      <p><span id="reportInspectorLabel">Inspector:</span> <span id="reportInspectorName"></span></p>
+      <p><span id="reportDateLabel">Date:</span> <span id="reportExamDate"></span></p>
+      <p><span id="reportTimeLabel">Start Time:</span> <span id="reportExamTime"></span></p>
+      <p><span id="reportDurationLabel">Duration:</span> <span id="reportExamDuration"></span></p>
+    </div>
+    <div id="reportContent"></div>
+    <div class="report-footer">
+      <p><span id="reportTotalLabel">Total Points:</span> <span id="reportTotalPoints"></span></p>
+      <p><span id="reportResultLabel">Result:</span> <span id="reportResult"></span></p>
+      <p><span id="reportDisqLabel">Disqualification Reason:</span> <span id="reportDisqReason"></span></p>
+      <p><span id="reportCommentsLabel">Comments:</span> <span id="reportComments"></span></p>
+    </div>
+  </div>
+
+  <!-- Modal for item explanations -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content" id="modalContent">
+      <button class="modal-close-btn" id="modalCloseBtn">X</button>
+      <h3 id="modalItemTitle"></h3>
+      <p id="modalItemExplanation"></p>
+      <p id="modalItemReference" style="font-size:0.9rem; color:#444;"></p>
+    </div>
+  </div>
+
+  <script>
+    /******************************************************
+     * 1) DATA STRUCTURE FOR ITEMS
+     ******************************************************/
+    // We store each item with its official #, text in EN/ES, points, sub-items, and explanation reference
+    const itemsData = [
+      {
+        number: 1,
+        category: "A. LEAVING CURB",
+        text_en: "Fails to observe",
+        text_es: "No observa",
+        points: 10,
+        explanation_en: "The driver must carefully check mirrors and surroundings before leaving the curb. Reference: NYC Driver’s Manual, Ch. 5, p. 45",
+        explanation_es: "El conductor debe revisar cuidadosamente los espejos y el entorno antes de salir de la acera. Referencia: Manual del Conductor de NYC, cap. 5, pág. 45",
+        subItems: []
+      },
+      {
+        number: 2,
+        category: "A. LEAVING CURB",
+        text_en: "Fails to signal",
+        text_es: "No usa la señal (luz direccional)",
+        points: 5,
+        explanation_en: "The driver is required to use the proper turn signal at least 100 feet before pulling out. Reference: NYC Driver’s Manual, Ch. 5, p. 46",
+        explanation_es: "El conductor debe usar la luz direccional apropiada por lo menos 100 pies antes de salir. Referencia: Manual del Conductor de NYC, cap. 5, pág. 46",
+        subItems: []
+      },
+      {
+        number: 3,
+        category: "A. LEAVING CURB",
+        text_en: "Uses mirror only/fails to check blind spot",
+        text_es: "Sólo usa el espejo y no revisa el punto ciego",
+        points: 5,
+        explanation_en: "Always turn your head to check blind spots in addition to mirrors. Reference: NYC Driver’s Manual, Ch. 6, p. 50",
+        explanation_es: "Siempre mire sobre su hombro para revisar los puntos ciegos, además de usar los espejos. Referencia: Manual del Conductor de NYC, cap. 6, pág. 50",
+        subItems: []
+      },
+      {
+        number: 4,
+        category: "B. TURNING & INTERSECTIONS",
+        text_en: "Poor judgment approaching/intersections",
+        text_es: "Mal criterio al acercarse a intersecciones",
+        points: 10,
+        explanation_en: "Driver must evaluate speed, gaps, traffic signals, and right-of-way properly. Reference: NYC Driver’s Manual, Ch. 5, p. 47",
+        explanation_es: "El conductor debe evaluar la velocidad, espacios, señales de tráfico y el derecho de paso correctamente. Referencia: Manual del Conductor de NYC, cap. 5, pág. 47",
+        subItems: [
+          { text_en: "Speed", text_es: "Velocidad" },
+          { text_en: "Turning", text_es: "Giro" },
+          { text_en: "Stopping", text_es: "Frenado" },
+          { text_en: "Observing", text_es: "Observación" },
+          { text_en: "Signal", text_es: "Señalización" }
+        ]
+      },
+      {
+        number: 5,
+        category: "B. TURNING & INTERSECTIONS",
+        text_en: "Fails to stop near center of intersection (left turn)",
+        text_es: "No se detiene cerca del centro de la intersección (giro a la izquierda)",
+        points: 10,
+        explanation_en: "When turning left, move into the intersection center area to allow through traffic flow. Ref: NYC Driver’s Manual, Ch. 5, p. 48",
+        explanation_es: "Al girar a la izquierda, avance al centro de la intersección para permitir el paso del tráfico. Ref: Manual NYC, cap. 5, pág. 48",
+        subItems: []
+      },
+      {
+        number: 6,
+        category: "B. TURNING & INTERSECTIONS",
+        text_en: "Turns wide - short right",
+        text_es: "Gira muy amplio - corto a la derecha",
+        points: 5,
+        explanation_en: "Turn into the correct lane and avoid over/under turning. Reference: NYC Driver’s Manual, Ch. 5, p. 48",
+        explanation_es: "Haga el giro al carril correcto y evite girar demasiado o muy corto. Ref: Manual NYC, cap. 5, pág. 48",
+        subItems: []
+      },
+      {
+        number: 7,
+        category: "B. TURNING & INTERSECTIONS",
+        text_en: "Turns wide - short left",
+        text_es: "Gira muy amplio - corto a la izquierda",
+        points: 5,
+        explanation_en: "Proper left turns require staying in the correct lane. Reference: NYC Driver’s Manual, Ch. 5, p. 49",
+        explanation_es: "Un giro a la izquierda correcto requiere mantenerse en el carril adecuado. Ref: Manual NYC, cap. 5, pág. 49",
+        subItems: []
+      },
+      {
+        number: 8,
+        category: "B. TURNING & INTERSECTIONS",
+        text_en: "Inattentive to traffic",
+        text_es: "Desatento al tráfico",
+        points: 10,
+        explanation_en: "Driver must observe signs, signals, and lane markings at intersections. Reference: NYC Manual, Ch. 5, p. 49",
+        explanation_es: "El conductor debe observar las señales, semáforos y marcas de carril. Ref: Manual NYC, cap. 5, pág. 49",
+        subItems: [
+          { text_en: "Signs", text_es: "Señales" },
+          { text_en: "Signals", text_es: "Semáforos" },
+          { text_en: "Lane Markings", text_es: "Marcas de carril" }
+        ]
+      },
+      {
+        number: 9,
+        category: "C. PARKING, BACKING & U-TURN",
+        text_en: "Fails to signal",
+        text_es: "No usa la direccional para estacionar o retroceder",
+        points: 5,
+        explanation_en: "Always signal before pulling into or out of a parking space. Ref: NYC Driver’s Manual, Ch. 7, p. 60",
+        explanation_es: "Siempre use la direccional antes de entrar o salir de un espacio de estacionamiento. Ref: Manual NYC, cap. 7, pág. 60",
+        subItems: []
+      },
+      {
+        number: 10,
+        category: "C. PARKING, BACKING & U-TURN",
+        text_en: "Fails to adequately observe/use caution",
+        text_es: "No observa o no usa precaución suficiente",
+        points: 10,
+        explanation_en: "Constantly check mirrors and surroundings when parking, backing, or turning. Ref: NYC Manual, Ch. 7, p. 61",
+        explanation_es: "Revise constantemente espejos y alrededores al estacionar, retroceder o girar. Ref: Manual NYC, cap. 7, pág. 61",
+        subItems: []
+      },
+      {
+        number: 11,
+        category: "C. PARKING, BACKING & U-TURN",
+        text_en: "Unable to park properly",
+        text_es: "Incapaz de estacionar correctamente",
+        points: 15,
+        explanation_en: "Parallel or angle parking must be done smoothly and within suitable distance from curb. Ref: NYC Manual, Ch. 7, p. 62",
+        explanation_es: "Estacione en paralelo o ángulo adecuadamente, cerca de la acera. Ref: Manual NYC, cap. 7, pág. 62",
+        subItems: []
+      },
+      {
+        number: 12,
+        category: "C. PARKING, BACKING & U-TURN",
+        text_en: "Unable to make a 3-point turn",
+        text_es: "No puede completar una vuelta de 3 puntos",
+        points: 15,
+        explanation_en: "Perform 3-point turns safely, with caution and correct signaling. Reference: NYC Manual, Ch. 7, p. 63",
+        explanation_es: "Haga el giro de 3 puntos con seguridad, precaución y señalización adecuada. Ref: Manual NYC, cap. 7, pág. 63",
+        subItems: []
+      },
+      {
+        number: 13,
+        category: "C. PARKING, BACKING & U-TURN",
+        text_en: "Excessive space for parking/too far from curb",
+        text_es: "Espacio excesivo para estacionar / demasiado lejos de la acera",
+        points: 5,
+        explanation_en: "Vehicle must be reasonably close to the curb. Reference: NYC Manual, Ch. 7, p. 64",
+        explanation_es: "El vehículo debe quedar razonablemente cerca de la acera. Ref: Manual NYC, cap. 7, pág. 64",
+        subItems: []
+      },
+      {
+        number: 14,
+        category: "C. PARKING, BACKING & U-TURN",
+        text_en: "Excessive maneuvers in 3-point turn or parking",
+        text_es: "Maniobras excesivas al hacer la vuelta de 3 puntos o estacionar",
+        points: 5,
+        explanation_en: "Limit the amount of direction changes and corrections. Ref: NYC Manual, Ch. 7, p. 65",
+        explanation_es: "Reduzca la cantidad de cambios de dirección y correcciones. Ref: Manual NYC, cap. 7, pág. 65",
+        subItems: [
+          { text_en: "3-point turn", text_es: "Giro de 3 puntos" },
+          { text_en: "Parking", text_es: "Estacionamiento" }
+        ]
+      },
+      {
+        number: 15,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Fails to keep right",
+        text_es: "No se mantiene a la derecha",
+        points: 10,
+        explanation_en: "Drivers must stay in the right lane unless passing or turning. Reference: NYC Manual, Ch. 8, p. 70",
+        explanation_es: "El conductor debe mantenerse en el carril derecho excepto para adelantar o girar. Ref: Manual NYC, cap. 8, pág. 70",
+        subItems: []
+      },
+      {
+        number: 16,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Improper lane of traffic",
+        text_es: "Carril de tráfico inadecuado",
+        points: 10,
+        explanation_en: "Stay in correct lane for your direction/speed and watch for lane markings. Ref: NYC Manual, Ch. 8, p. 71",
+        explanation_es: "Manténgase en el carril adecuado según dirección/velocidad y respete marcas. Ref: Manual NYC, cap. 8, pág. 71",
+        subItems: []
+      },
+      {
+        number: 17,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Follows too closely",
+        text_es: "Sigue demasiado cerca (tailgating)",
+        points: 10,
+        explanation_en: "Always maintain safe following distance (2+ seconds). Ref: NYC Manual, Ch. 8, p. 72",
+        explanation_es: "Mantenga siempre una distancia segura (2+ segundos). Ref: Manual NYC, cap. 8, pág. 72",
+        subItems: []
+      },
+      {
+        number: 18,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Speed excessive for conditions",
+        text_es: "Velocidad excesiva según las condiciones",
+        points: 15,
+        explanation_en: "Adjust speed for traffic, weather, or road conditions. Reference: NYC Manual, Ch. 8, p. 73",
+        explanation_es: "Ajuste la velocidad según tráfico, clima o condiciones del camino. Ref: Manual NYC, cap. 8, pág. 73",
+        subItems: [
+          { text_en: "Traffic", text_es: "Tráfico" },
+          { text_en: "Weather", text_es: "Clima" },
+          { text_en: "Road", text_es: "Camino" }
+        ]
+      },
+      {
+        number: 19,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Too slow/impedes traffic flow",
+        text_es: "Conduce demasiado lento / obstruye flujo de tráfico",
+        points: 15,
+        explanation_en: "Driving unnecessarily slow can be hazardous; keep with traffic flow. Ref: NYC Manual, Ch. 8, p. 74",
+        explanation_es: "Conducir demasiado lento puede ser peligroso; mantenga el flujo de tráfico. Ref: Manual NYC, cap. 8, pág. 74",
+        subItems: []
+      },
+      {
+        number: 20,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Fails to yield right-of-way",
+        text_es: "No cede el derecho de paso",
+        points: 15,
+        explanation_en: "Yield to pedestrians and other vehicles as required. Reference: NYC Manual, Ch. 5, p. 44",
+        explanation_es: "Ceda el paso a peatones y otros vehículos según corresponda. Ref: Manual NYC, cap. 5, pág. 44",
+        subItems: [
+          { text_en: "Pedestrian", text_es: "Peatón" },
+          { text_en: "Other", text_es: "Otros" }
+        ]
+      },
+      {
+        number: 21,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Poor judgment in traffic",
+        text_es: "Mal criterio en el tráfico",
+        points: 10,
+        explanation_en: "Driver must plan lane changes, merges, and speed control responsibly. Ref: NYC Manual, Ch. 8, p. 75",
+        explanation_es: "El conductor debe planificar cambios de carril, incorporaciones y control de velocidad con responsabilidad. Ref: Manual NYC, cap. 8, pág. 75",
+        subItems: []
+      },
+      {
+        number: 22,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "When changing lanes, fails to observe/signal/use caution",
+        text_es: "Al cambiar de carril, no observa/no usa direccional/no tiene precaución",
+        points: 10,
+        explanation_en: "Check mirrors, blind spots, signal in advance, and change lanes smoothly. Ref: NYC Manual, Ch. 8, p. 76",
+        explanation_es: "Verifique espejos, puntos ciegos, señale con antelación y cambie de carril suavemente. Ref: Manual NYC, cap. 8, pág. 76",
+        subItems: [
+          { text_en: "Observe", text_es: "Observar" },
+          { text_en: "Signal", text_es: "Señalizar" },
+          { text_en: "Use Caution", text_es: "Usar precaución" }
+        ]
+      },
+      {
+        number: 23,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Fails to anticipate actions of others",
+        text_es: "No anticipa las acciones de otros",
+        points: 10,
+        explanation_en: "Stay alert for pedestrians, cyclists, or other vehicles. Ref: NYC Manual, Ch. 8, p. 77",
+        explanation_es: "Permanezca alerta ante peatones, ciclistas u otros vehículos. Ref: Manual NYC, cap. 8, pág. 77",
+        subItems: [
+          { text_en: "Pedestrians", text_es: "Peatones" },
+          { text_en: "Other", text_es: "Otros" }
+        ]
+      },
+      {
+        number: 24,
+        category: "D. DRIVING IN TRAFFIC",
+        text_en: "Fails to anticipate potential hazards",
+        text_es: "No anticipa peligros potenciales",
+        points: 10,
+        explanation_en: "Scan ahead and be prepared for changing conditions. Ref: NYC Manual, Ch. 8, p. 78",
+        explanation_es: "Observe hacia adelante y prepárese para condiciones cambiantes. Ref: Manual NYC, cap. 8, pág. 78",
+        subItems: []
+      },
+      {
+        number: 25,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Repeated stalling",
+        text_es: "Se apaga el motor repetidamente",
+        points: 10,
+        explanation_en: "Driver should be able to operate vehicle smoothly without frequent stalling. Ref: NYC Manual, Ch. 8, p. 79",
+        explanation_es: "El conductor debe poder operar el vehículo sin apagones frecuentes. Ref: Manual NYC, cap. 8, pág. 79",
+        subItems: []
+      },
+      {
+        number: 26,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Poor engine control/acceleration",
+        text_es: "Manejo deficiente del motor/aceleración",
+        points: 10,
+        explanation_en: "Use pedals smoothly; avoid abrupt revving or lugging the engine. Ref: NYC Manual, Ch. 8, p. 80",
+        explanation_es: "Use los pedales suavemente; evite revolucionar bruscamente o forzar el motor. Ref: Manual NYC, cap. 8, pág. 80",
+        subItems: []
+      },
+      {
+        number: 27,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Poor steering control",
+        text_es: "Control deficiente de la dirección",
+        points: 15,
+        explanation_en: "Maintain steady lane position. Avoid oversteering or understeering. Ref: NYC Manual, Ch. 8, p. 80",
+        explanation_es: "Mantenga una posición estable en el carril. Evite girar demasiado o muy poco. Ref: Manual NYC, cap. 8, pág. 80",
+        subItems: [
+          { text_en: "Turning", text_es: "Giros" },
+          { text_en: "Straight driving", text_es: "Conducción recta" },
+          { text_en: "Maneuvers", text_es: "Maniobras" }
+        ]
+      },
+      {
+        number: 28,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Delayed braking/abrupt braking",
+        text_es: "Frenado tardío o brusco",
+        points: 10,
+        explanation_en: "Anticipate stops and slow gradually; avoid sudden stops. Ref: NYC Manual, Ch. 8, p. 81",
+        explanation_es: "Anticipe las paradas y reduzca la velocidad gradualmente; evite frenazos bruscos. Ref: Manual NYC, cap. 8, pág. 81",
+        subItems: []
+      },
+      {
+        number: 29,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Poor use of gears",
+        text_es: "Mal uso de las marchas",
+        points: 10,
+        explanation_en: "Shift correctly (automatic/manual) for smooth acceleration. Ref: NYC Manual, Ch. 8, p. 82",
+        explanation_es: "Cambie correctamente (automático/manual) para acelerar suavemente. Ref: Manual NYC, cap. 8, pág. 82",
+        subItems: [
+          { text_en: "Automatic", text_es: "Automático" },
+          { text_en: "Manual", text_es: "Manual" }
+        ]
+      },
+      {
+        number: 30,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Poor clutch control",
+        text_es: "Deficiente control del embrague",
+        points: 5,
+        explanation_en: "Release and engage the clutch smoothly in a manual transmission. Ref: NYC Manual, Ch. 8, p. 82",
+        explanation_es: "Suelte y accione el embrague de manera suave en un vehículo manual. Ref: Manual NYC, cap. 8, pág. 82",
+        subItems: []
+      },
+      {
+        number: 31,
+        category: "E. VEHICLE CONTROL",
+        text_en: "Poor reactions to emergencies",
+        text_es: "Reacciones deficientes ante emergencias",
+        points: 10,
+        explanation_en: "Stay calm, brake/steer properly when faced with sudden hazards. Ref: NYC Manual, Ch. 8, p. 83",
+        explanation_es: "Mantenga la calma, frene/gire correctamente ante peligros repentinos. Ref: Manual NYC, cap. 8, pág. 83",
+        subItems: []
+      }
+    ];
+
+    /******************************************************
+     * 2) LANGUAGE DICTIONARY
+     ******************************************************/
+    const langText = {
+      en: {
+        examTitle: "🚗 Road Test Evaluation System",
+        lblStudentName: "Student Name:",
+        lblInspectorName: "Inspector Name:",
+        lblExamDate: "Exam Date:",
+        lblExamTime: "Exam Start Time:",
+        totalPointsText: "Total Points:",
+        disqualificationReason: "Disqualification Reason:",
+        disqualificationPlaceholder: "--Select reason--",
+        disqReasons: ["Accident","Dangerous Action","Serious Violation","Additional Training Needed"],
+        placeholderComments: "Additional comments...",
+        resultPassed: "(PASSED)",
+        resultFailed: "(FAILED)",
+        btnReset: "Reset Form",
+        btnDownload: "Download Report",
+        btnToggleLang: "Toggle Language",
+        catTitle: "Category",
+        subItemsTitle: "Sub-Items",
+        reportTitle: "Road Test Evaluation Report",
+        reportStudent: "Student:",
+        reportInspector: "Inspector:",
+        reportDate: "Date:",
+        reportTime: "Start Time:",
+        reportDuration: "Duration:",
+        reportTotal: "Total Points:",
+        reportResult: "Result:",
+        reportDisqReason: "Disqualification Reason:",
+        reportComments: "Comments:",
+        itemPointsPrefix: "points",
+        timeLabel: "Elapsed time: ",
+        minText: "min",
+        secText: "s",
+      },
+      es: {
+        examTitle: "🚗 Sistema de Evaluación de Prueba de Manejo",
+        lblStudentName: "Nombre del Estudiante:",
+        lblInspectorName: "Nombre del Inspector:",
+        lblExamDate: "Fecha del Examen:",
+        lblExamTime: "Hora de Inicio:",
+        totalPointsText: "Puntos Totales:",
+        disqualificationReason: "Razón de Descalificación:",
+        disqualificationPlaceholder: "--Seleccione motivo--",
+        disqReasons: ["Accidente","Acción Peligrosa","Violación Grave","Se Requiere Entrenamiento Adicional"],
+        placeholderComments: "Comentarios adicionales...",
+        resultPassed: "(APROBADO)",
+        resultFailed: "(REPROBADO)",
+        btnReset: "Reiniciar Formulario",
+        btnDownload: "Descargar Reporte",
+        btnToggleLang: "Cambiar Idioma",
+        catTitle: "Categoría",
+        subItemsTitle: "Sub-ítems",
+        reportTitle: "Reporte de Evaluación de Prueba de Manejo",
+        reportStudent: "Estudiante:",
+        reportInspector: "Inspector:",
+        reportDate: "Fecha:",
+        reportTime: "Hora de Inicio:",
+        reportDuration: "Duración:",
+        reportTotal: "Puntos Totales:",
+        reportResult: "Resultado:",
+        reportDisqReason: "Razón de Descalificación:",
+        reportComments: "Comentarios:",
+        itemPointsPrefix: "puntos",
+        timeLabel: "Tiempo transcurrido: ",
+        minText: "min",
+        secText: "s",
+      }
+    };
+
+    let currentLang = "en";
+
+    /******************************************************
+     * 3) RENDER ITEMS
+     ******************************************************/
+    const formContainer = document.getElementById('evaluationForm');
+
+    function renderItems() {
+      formContainer.innerHTML = "";
+
+      // Group by category
+      const categoriesMap = {};
+      itemsData.forEach(item => {
+        if (!categoriesMap[item.category]) {
+          categoriesMap[item.category] = [];
+        }
+        categoriesMap[item.category].push(item);
+      });
+
+      // For each category, build a section
+      Object.keys(categoriesMap).forEach(catKey => {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'category';
+
+        const catTitle = document.createElement('h2');
+        catTitle.textContent = catKey; // e.g. "A. LEAVING CURB"
+        catDiv.appendChild(catTitle);
+
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'checkbox-group';
+
+        categoriesMap[catKey].forEach(item => {
+          // Each item
+          const itemRow = document.createElement('div');
+          itemRow.className = 'item-row';
+
+          // The bold item number (clickable for modal)
+          const numberLabel = document.createElement('span');
+          numberLabel.className = 'item-number';
+          numberLabel.textContent = item.number;
+          // We'll enlarge it to double the normal item text
+          numberLabel.style.fontSize = "1.4rem"; 
+          // On click => show modal
+          numberLabel.onclick = () => showItemModal(item);
+
+          // The label for the item
+          const label = document.createElement('label');
+          label.className = 'checkbox-label';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.dataset.points = item.points;
+
+          const itemText = document.createElement('span');
+          itemText.textContent = (currentLang === 'en') ? item.text_en : item.text_es;
+
+          const pointsBadge = document.createElement('span');
+          pointsBadge.className = 'points-badge';
+          pointsBadge.textContent = `-${item.points}`;
+
+          label.appendChild(checkbox);
+          label.appendChild(itemText);
+          label.appendChild(pointsBadge);
+
+          itemRow.appendChild(numberLabel);
+          itemRow.appendChild(label);
+          groupDiv.appendChild(itemRow);
+
+          // If subItems exist
+          if (item.subItems && item.subItems.length > 0) {
+            const subItemsDiv = document.createElement('div');
+            subItemsDiv.className = 'sub-item-container';
+            item.subItems.forEach(sub => {
+              const subDiv = document.createElement('label');
+              subDiv.className = 'checkbox-label sub-item';
+              const subCheck = document.createElement('input');
+              subCheck.type = 'checkbox';
+              subCheck.disabled = false; // subItems do not add points by themselves (unless specified)
+              const subSpan = document.createElement('span');
+              subSpan.textContent = (currentLang === 'en') ? sub.text_en : sub.text_es;
+              subDiv.appendChild(subCheck);
+              subDiv.appendChild(subSpan);
+              subItemsDiv.appendChild(subDiv);
             });
+            groupDiv.appendChild(subItemsDiv);
+          }
+        });
+
+        catDiv.appendChild(groupDiv);
+        formContainer.appendChild(catDiv);
+      });
+
+      // Re-bind the event listeners for checkboxes
+      document.querySelectorAll('input[type="checkbox"]').forEach(ch => {
+        ch.addEventListener('change', updatePoints);
+      });
+    }
+
+    /******************************************************
+     * 4) POINTS CALCULATION AND LOGIC
+     ******************************************************/
+    let totalPoints = 0;
+
+    function updatePoints() {
+      totalPoints = 0;
+      const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
+      checkedBoxes.forEach(cb => {
+        const pts = parseInt(cb.dataset.points) || 0;
+        totalPoints += pts;
+      });
+      document.getElementById('totalPoints').textContent = totalPoints;
+      const resultStatus = document.getElementById('resultStatus');
+
+      // If 30 or more -> FAIL
+      if (totalPoints >= 30) {
+        resultStatus.textContent = (currentLang === 'en') ? langText.en.resultFailed : langText.es.resultFailed;
+        resultStatus.className = "failed";
+        document.getElementById('disqualificationSection').style.display = 'block';
+      } else {
+        resultStatus.textContent = (currentLang === 'en') ? langText.en.resultPassed : langText.es.resultPassed;
+        resultStatus.className = "passed";
+        document.getElementById('disqualificationSection').style.display = 'none';
+      }
+    }
+
+    /******************************************************
+     * 5) FORM RESET
+     ******************************************************/
+    function resetForm() {
+      // Uncheck all
+      document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      // Clear fields
+      document.getElementById('studentName').value = '';
+      document.getElementById('inspectorName').value = '';
+      document.getElementById('examDate').value = '';
+      document.getElementById('examTime').value = '';
+      document.getElementById('disqualificationReason').value = '';
+      document.getElementById('comments').value = '';
+      // Reset points
+      totalPoints = 0;
+      document.getElementById('totalPoints').textContent = '0';
+      document.getElementById('resultStatus').textContent = '';
+      // Hide disqualification section
+      document.getElementById('disqualificationSection').style.display = 'none';
+
+      // Stop timer
+      clearInterval(timerInterval);
+      examStartTime = null;
+      document.getElementById('timerDisplay').textContent = '';
+    }
+
+    document.getElementById('resetFormBtn').addEventListener('click', resetForm);
+
+    /******************************************************
+     * 6) REPORT GENERATION (html2canvas)
+     ******************************************************/
+    async function generateReport() {
+      // Populate the hidden #reportSection with data
+      document.getElementById('reportStudentName').textContent = 
+        document.getElementById('studentName').value || 'N/A';
+      document.getElementById('reportInspectorName').textContent = 
+        document.getElementById('inspectorName').value || 'N/A';
+      document.getElementById('reportExamDate').textContent =
+        document.getElementById('examDate').value || 'N/A';
+      document.getElementById('reportExamTime').textContent =
+        document.getElementById('examTime').value || 'N/A';
+
+      // Duration
+      const timerText = document.getElementById('timerDisplay').textContent;
+      document.getElementById('reportExamDuration').textContent = timerText || 'N/A';
+
+      // Clear the #reportContent
+      const reportContentDiv = document.getElementById('reportContent');
+      reportContentDiv.innerHTML = '';
+
+      // Gather checked items
+      document.querySelectorAll('.category').forEach(categoryEl => {
+        const catTitle = categoryEl.querySelector('h2').textContent;
+        const catSection = document.createElement('div');
+        catSection.innerHTML = `<h3 style="margin-top:1rem;">${catTitle}</h3>`;
+
+        const checkedBoxes = categoryEl.querySelectorAll('.checkbox-label input[type="checkbox"]:checked');
+        checkedBoxes.forEach(cb => {
+          const points = cb.dataset.points || '0';
+          // The label text is the sibling span
+          const label = cb.parentElement;
+          const itemTextSpan = label.querySelector('span:not(.points-badge)');
+          if (!itemTextSpan) return;
+          const itemText = itemTextSpan.textContent;
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'report-item';
+          itemDiv.textContent = `${itemText} (-${points} pts)`;
+          catSection.appendChild(itemDiv);
+        });
+
+        if (catSection.children.length > 1) { // means at least h3 + one item
+          reportContentDiv.appendChild(catSection);
         }
+      });
 
-        // Funciones del temporizador
-        function startTimer() {
-            if (!startTime) {
-                startTime = new Date();
-                document.getElementById('examTime').value = 
-                    startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                timerInterval = setInterval(updateTimer, 1000);
-            }
-        }
+      document.getElementById('reportTotalPoints').textContent = totalPoints;
+      const resultStatus = document.getElementById('resultStatus').textContent;
+      document.getElementById('reportResult').textContent = resultStatus || 'N/A';
 
-        function updateTimer() {
-            const now = new Date();
-            const diff = Math.floor((now - startTime) / 1000);
-            const hours = Math.floor(diff / 3600);
-            const minutes = Math.floor((diff % 3600) / 60);
-            const seconds = diff % 60;
-            document.getElementById('examTimer').textContent = 
-                `Elapsed Time: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
+      const disqValue = document.getElementById('disqualificationReason').value;
+      document.getElementById('reportDisqReason').textContent = disqValue || '';
+      const commentsVal = document.getElementById('comments').value;
+      document.getElementById('reportComments').textContent = commentsVal || '';
 
-        // Funciones del modal
-        function showExplanation(itemNumber) {
-            document.getElementById('modalContent').innerHTML = `
-                <h3>Item ${itemNumber} Requirements</h3>
-                <p>${explanations[itemNumber]}</p>
-                <small>Reference: NYC Driver's Manual Chapter 5</small>
-            `;
-            document.getElementById('infoModal').style.display = 'block';
-        }
+      const reportElement = document.getElementById('reportSection');
+      const canvas = await html2canvas(reportElement);
+      const image = canvas.toDataURL('image/png');
 
-        function closeModal() {
-            document.getElementById('infoModal').style.display = 'none';
-        }
+      const link = document.createElement('a');
+      link.download = `RoadTestReport-${Date.now()}.png`;
+      link.href = image;
+      link.click();
+    }
 
-        // Generar reporte
-        async function generateReport() {
-            // Capturar datos del formulario
-            const reportData = {
-                student: document.getElementById('studentName').value,
-                inspector: document.getElementById('inspectorName').value,
-                date: document.getElementById('examDate').value,
-                time: document.getElementById('examTime').value,
-                duration: document.getElementById('examTimer').textContent.replace('Elapsed Time: ', '')
-            };
+    document.getElementById('downloadReportBtn').addEventListener('click', generateReport);
 
-            // Configurar datos del reporte
-            document.getElementById('reportStudentName').textContent = reportData.student;
-            document.getElementById('reportInspectorName').textContent = reportData.inspector;
-            document.getElementById('reportExamDate').textContent = reportData.date;
-            document.getElementById('reportExamTime').textContent = reportData.time;
-            document.getElementById('reportExamDuration').textContent = reportData.duration;
+    /******************************************************
+     * 7) MODAL LOGIC FOR ITEM EXPLANATIONS
+     ******************************************************/
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalContent = document.getElementById('modalContent');
+    const modalItemTitle = document.getElementById('modalItemTitle');
+    const modalItemExplanation = document.getElementById('modalItemExplanation');
+    const modalItemReference = document.getElementById('modalItemReference');
 
-            // Generar imagen
-            const reportElement = document.getElementById('reportSection');
-            const canvas = await html2canvas(reportElement);
-            const image = canvas.toDataURL('image/png');
+    function showItemModal(item) {
+      // Show overlay
+      modalOverlay.style.display = 'flex';
+      // Fill content
+      const title = (currentLang === 'en') ? item.text_en : item.text_es;
+      modalItemTitle.textContent = `#${item.number} - ${title}`;
+      const explanation = (currentLang === 'en') ? item.explanation_en : item.explanation_es;
+      modalItemExplanation.textContent = explanation.split(" Reference: ")[0];
+      // Show the reference part
+      const ref = explanation.split(" Reference: ")[1];
+      modalItemReference.textContent = ref ? "Reference: " + ref : "";
+    }
 
-            // Descargar reporte
-            const link = document.createElement('a');
-            link.download = `RoadTestReport-${Date.now()}.png`;
-            link.href = image;
-            link.click();
-        }
+    document.getElementById('modalCloseBtn').addEventListener('click', () => {
+      modalOverlay.style.display = 'none';
+    });
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        modalOverlay.style.display = 'none';
+      }
+    });
 
-        // Inicializar
-        generateForm();
-    </script>
+    /******************************************************
+     * 8) AUTOMATIC TIME AND TIMER LOGIC
+     ******************************************************/
+    let examStartTime = null;
+    let timerInterval = null;
+
+    // Start the timer once Student + Inspector + Date are filled
+    function checkStartExam() {
+      const student = document.getElementById('studentName').value.trim();
+      const inspector = document.getElementById('inspectorName').value.trim();
+      const examDateVal = document.getElementById('examDate').value;
+
+      if (student && inspector && examDateVal && !examStartTime) {
+        // Set the examTime to now
+        const now = new Date();
+        examStartTime = now;
+        const hours = String(now.getHours()).padStart(2,'0');
+        const mins = String(now.getMinutes()).padStart(2,'0');
+        document.getElementById('examTime').value = `${hours}:${mins}`;
+
+        // Start the interval
+        timerInterval = setInterval(updateTimer, 1000);
+      }
+    }
+
+    function updateTimer() {
+      if (!examStartTime) return;
+      const now = new Date();
+      const diffMs = now - examStartTime; // in ms
+      const diffSec = Math.floor(diffMs / 1000);
+      const mm = Math.floor(diffSec / 60);
+      const ss = diffSec % 60;
+      const label = (currentLang === 'en') ? langText.en.timeLabel : langText.es.timeLabel;
+      const minTxt = (currentLang === 'en') ? langText.en.minText : langText.es.minText;
+      const secTxt = (currentLang === 'en') ? langText.en.secText : langText.es.secText;
+      document.getElementById('timerDisplay').textContent = 
+        `${label}${mm}${minTxt} ${ss}${secTxt}`;
+    }
+
+    // Attach listeners to these fields
+    document.getElementById('studentName').addEventListener('input', checkStartExam);
+    document.getElementById('inspectorName').addEventListener('input', checkStartExam);
+    document.getElementById('examDate').addEventListener('change', checkStartExam);
+
+    /******************************************************
+     * 9) LANGUAGE TOGGLE
+     ******************************************************/
+    function toggleLanguage() {
+      currentLang = (currentLang === 'en') ? 'es' : 'en';
+      applyLanguage();
+      renderItems(); // re-render items in new lang
+      updatePoints(); // recalc or re-display points text
+    }
+
+    document.getElementById('toggleLangBtn').addEventListener('click', toggleLanguage);
+
+    function applyLanguage() {
+      const t = langText[currentLang];
+
+      document.getElementById('titleText').textContent = t.examTitle;
+      document.getElementById('lblStudentName').textContent = t.lblStudentName;
+      document.getElementById('lblInspectorName').textContent = t.lblInspectorName;
+      document.getElementById('lblExamDate').textContent = t.lblExamDate;
+      document.getElementById('lblExamTime').textContent = t.lblExamTime;
+      document.getElementById('lblTotalPointsText').textContent = t.totalPointsText;
+      document.getElementById('lblDisqualReason').textContent = t.disqualificationReason;
+      document.getElementById('disqualificationReason').options[0].text = t.disqualificationPlaceholder;
+      const disqSelect = document.getElementById('disqualificationReason');
+      // Refresh the 4 reasons
+      while (disqSelect.options.length > 1) {
+        disqSelect.remove(1);
+      }
+      t.disqReasons.forEach(reason => {
+        const opt = document.createElement('option');
+        opt.value = reason;
+        opt.text = reason;
+        disqSelect.add(opt);
+      });
+      document.getElementById('comments').placeholder = t.placeholderComments;
+
+      // Report fields
+      document.getElementById('reportTitle').textContent = t.reportTitle;
+      document.getElementById('reportStudentLabel').textContent = t.reportStudent;
+      document.getElementById('reportInspectorLabel').textContent = t.reportInspector;
+      document.getElementById('reportDateLabel').textContent = t.reportDate;
+      document.getElementById('reportTimeLabel').textContent = t.reportTime;
+      document.getElementById('reportDurationLabel').textContent = t.reportDuration;
+      document.getElementById('reportTotalLabel').textContent = t.reportTotal;
+      document.getElementById('reportResultLabel').textContent = t.reportResult;
+      document.getElementById('reportDisqLabel').textContent = t.reportDisqReason;
+      document.getElementById('reportCommentsLabel').textContent = t.reportComments;
+
+      // Buttons
+      document.getElementById('resetFormBtn').textContent = t.btnReset;
+      document.getElementById('downloadReportBtn').textContent = t.btnDownload;
+      document.getElementById('toggleLangBtn').textContent = t.btnToggleLang;
+    }
+
+    /******************************************************
+     * INITIALIZE
+     ******************************************************/
+    applyLanguage();
+    renderItems();
+  </script>
 </body>
 </html>
