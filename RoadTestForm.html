@@ -1,10 +1,11 @@
-<!DOCTYPE html>
-<html lang="es">
+ <!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluación de Prueba de Manejo</title>
+    <title>Road Test Evaluation System</title>
     <style>
+        /* (Mantener mismo CSS anterior) */
         :root {
             --primary: #2563eb;
             --danger: #dc2626;
@@ -142,24 +143,24 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 2rem;">🚗 Evaluación de Prueba de Manejo</h1>
+        <h1 style="text-align: center; margin-bottom: 2rem;">🚗 Road Test Evaluation System</h1>
         
         <div class="grid" id="evaluationForm">
-            <!-- Las categorías se generan dinámicamente con JavaScript -->
+            <!-- Categories will be inserted here -->
         </div>
 
         <div class="results-panel">
             <h2 style="margin-bottom: 1rem;">
-                Puntos Totales: <span id="totalPoints">0</span>
+                Total Points: <span id="totalPoints">0</span>
                 <span id="resultStatus"></span>
             </h2>
             <div id="disqualificationSection" style="display: none;">
                 <select id="disqualificationReason">
-                    <option value="">Seleccione razón de descalificación</option>
-                    <option value="Accidente">Accidente</option>
-                    <option value="Acción peligrosa">Acción peligrosa</option>
-                    <option value="Violación grave">Violación grave</option>
-                    <option value="Necesita entrenamiento adicional">Necesita entrenamiento adicional</option>
+                    <option value="">Select disqualification reason</option>
+                    <option value="Accident">Accident</option>
+                    <option value="Dangerous Action">Dangerous Action</option>
+                    <option value="Serious Violation">Serious Violation</option>
+                    <option value="Additional Training Needed">Additional Training Needed</option>
                 </select>
             </div>
         </div>
@@ -168,64 +169,64 @@
     <script>
         const categories = {
             leavingCurb: {
-                title: "Salida del Bordillo",
+                title: "A. LEAVING CURB",
                 items: [
-                    { text: "No observa adecuadamente", points: 10 },
-                    { text: "No señala", points: 5 },
-                    { text: "Solo usa espejo/no revisa punto ciego", points: 5 }
+                    { text: "Fails to observe", points: 10 },
+                    { text: "Fails to signal", points: 5 },
+                    { text: "Uses mirror only/fails to check blind spot", points: 5 }
                 ]
             },
             turningIntersections: {
-                title: "Giros e Intersecciones",
+                title: "B. TURNING/INTERSECTIONS",
                 items: [
-                    { text: "Juicio pobre al aproximarse a intersecciones", points: 10 },
-                    { text: "No se detiene cerca del centro en giros izquierdos", points: 10 },
-                    { text: "Giro amplio (derecha)", points: 5 },
-                    { text: "Giro amplio (izquierda)", points: 5 },
-                    { text: "Inatención al tráfico", points: 10 }
+                    { text: "Poor judgment approaching or at intersections", points: 10 },
+                    { text: "Fails to stop near center of intersection when waiting to make left turn", points: 10 },
+                    { text: "Turns wide - short right", points: 5 },
+                    { text: "Turns wide - short left", points: 5 },
+                    { text: "Inattentive to traffic", points: 10 }
                 ]
             },
             parkingBacking: {
-                title: "Estacionamiento y Marcha Atrás",
+                title: "C. PARKING/BACKING/U-TURN",
                 items: [
-                    { text: "No señala", points: 5 },
-                    { text: "No observa adecuadamente", points: 10 },
-                    { text: "Incapacidad para estacionar", points: 15 },
-                    { text: "Incapacidad para hacer giro en U", points: 15 },
-                    { text: "Espacio excesivo al estacionar", points: 5 },
-                    { text: "Maniobras excesivas", points: 5 }
+                    { text: "Fails to signal", points: 5 },
+                    { text: "Fails to adequately observe/use caution", points: 10 },
+                    { text: "Unable to park properly", points: 15 },
+                    { text: "Unable to make a 3-point turn", points: 15 },
+                    { text: "Excessive space for parking/too far from curb", points: 5 },
+                    { text: "Excessive maneuvers in 3-point turn or parking", points: 5 }
                 ]
             },
             drivingInTraffic: {
-                title: "Conducción en Tráfico",
+                title: "D. DRIVING IN TRAFFIC",
                 items: [
-                    { text: "No mantiene derecha", points: 10 },
-                    { text: "Carril incorrecto", points: 10 },
-                    { text: "Seguir muy cerca", points: 10 },
-                    { text: "Velocidad excesiva", points: 15 },
-                    { text: "Velocidad muy lenta", points: 15 },
-                    { text: "No ceder paso a peatones", points: 15 },
-                    { text: "Juicio pobre en tráfico", points: 10 },
-                    { text: "Cambio de carril inseguro", points: 10 },
-                    { text: "No anticipa acciones", points: 10 },
-                    { text: "No anticipa peligros", points: 10 }
+                    { text: "Fails to keep right", points: 10 },
+                    { text: "Improper lane of traffic", points: 10 },
+                    { text: "Follows too closely", points: 10 },
+                    { text: "Speed excessive for conditions", points: 15 },
+                    { text: "Too slow/impedes traffic flow", points: 15 },
+                    { text: "Fails to yield right-of-way to pedestrian", points: 15 },
+                    { text: "Poor judgment in traffic", points: 10 },
+                    { text: "When changing lanes, fails to observe, signal, or use caution", points: 10 },
+                    { text: "Fails to anticipate actions of pedestrians or other vehicles", points: 10 },
+                    { text: "Fails to anticipate potential hazards", points: 10 }
                 ]
             },
             vehicleControl: {
-                title: "Control del Vehículo",
+                title: "E. VEHICLE CONTROL",
                 items: [
-                    { text: "Calado repetido", points: 10 },
-                    { text: "Control pobre del motor", points: 10 },
-                    { text: "Control pobre de dirección", points: 15 },
-                    { text: "Frenado abrupto/tardío", points: 10 },
-                    { text: "Uso incorrecto de marchas", points: 10 },
-                    { text: "Control pobre del embrague", points: 5 },
-                    { text: "Reacción pobre a emergencias", points: 10 }
+                    { text: "Repeated stalling", points: 10 },
+                    { text: "Poor engine control/acceleration", points: 10 },
+                    { text: "Poor steering control", points: 15 },
+                    { text: "Delayed braking/abrupt braking", points: 10 },
+                    { text: "Poor use of gears", points: 10 },
+                    { text: "Poor clutch control", points: 5 },
+                    { text: "Poor reactions to emergencies", points: 10 }
                 ]
             }
         };
 
-        // Generar el formulario
+        // Generate form
         const form = document.getElementById('evaluationForm');
         Object.entries(categories).forEach(([key, category]) => {
             const categoryHTML = `
@@ -245,7 +246,7 @@
             form.insertAdjacentHTML('beforeend', categoryHTML);
         });
 
-        // Manejar cambios
+        // Handle changes
         let totalPoints = 0;
         const updatePoints = () => {
             totalPoints = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
@@ -255,11 +256,11 @@
             const resultStatus = document.getElementById('resultStatus');
             
             if(totalPoints >= 30) {
-                resultStatus.textContent = "(Reprobado)";
+                resultStatus.textContent = "(FAILED)";
                 resultStatus.className = "failed";
                 document.getElementById('disqualificationSection').style.display = 'block';
             } else {
-                resultStatus.textContent = "(Aprobado)";
+                resultStatus.textContent = "(PASSED)";
                 resultStatus.className = "passed";
                 document.getElementById('disqualificationSection').style.display = 'none';
             }
