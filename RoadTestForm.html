@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación de Prueba de Manejo</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--background);
+            color: white;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            background-color: var(--glass);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.125);
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .category {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .category h2 {
+            color: #93c5fd;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .checkbox-label:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .checkbox-label input {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--primary);
+        }
+
+        .points-badge {
+            margin-left: auto;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+        }
+
+        .results-panel {
+            position: sticky;
+            bottom: 2rem;
+            background: var(--glass);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid var(--primary);
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .failed {
+            color: #f87171;
+            animation: pulse 1.5s infinite;
+        }
+
+        .passed {
+            color: #4ade80;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 2rem;">🚗 Evaluación de Prueba de Manejo</h1>
+        
+        <div class="grid" id="evaluationForm">
+            <!-- Las categorías se generan dinámicamente con JavaScript -->
+        </div>
+
+        <div class="results-panel">
+            <h2 style="margin-bottom: 1rem;">
+                Puntos Totales: <span id="totalPoints">0</span>
+                <span id="resultStatus"></span>
+            </h2>
+            <div id="disqualificationSection" style="display: none;">
+                <select id="disqualificationReason">
+                    <option value="">Seleccione razón de descalificación</option>
+                    <option value="Accidente">Accidente</option>
+                    <option value="Acción peligrosa">Acción peligrosa</option>
+                    <option value="Violación grave">Violación grave</option>
+                    <option value="Necesita entrenamiento adicional">Necesita entrenamiento adicional</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const categories = {
+            leavingCurb: {
+                title: "Salida del Bordillo",
+                items: [
+                    { text: "No observa adecuadamente", points: 10 },
+                    { text: "No señala", points: 5 },
+                    { text: "Solo usa espejo/no revisa punto ciego", points: 5 }
+                ]
+            },
+            turningIntersections: {
+                title: "Giros e Intersecciones",
+                items: [
+                    { text: "Juicio pobre al aproximarse a intersecciones", points: 10 },
+                    { text: "No se detiene cerca del centro en giros izquierdos", points: 10 },
+                    { text: "Giro amplio (derecha)", points: 5 },
+                    { text: "Giro amplio (izquierda)", points: 5 },
+                    { text: "Inatención al tráfico", points: 10 }
+                ]
+            },
+            parkingBacking: {
+                title: "Estacionamiento y Marcha Atrás",
+                items: [
+                    { text: "No señala", points: 5 },
+                    { text: "No observa adecuadamente", points: 10 },
+                    { text: "Incapacidad para estacionar", points: 15 },
+                    { text: "Incapacidad para hacer giro en U", points: 15 },
+                    { text: "Espacio excesivo al estacionar", points: 5 },
+                    { text: "Maniobras excesivas", points: 5 }
+                ]
+            },
+            drivingInTraffic: {
+                title: "Conducción en Tráfico",
+                items: [
+                    { text: "No mantiene derecha", points: 10 },
+                    { text: "Carril incorrecto", points: 10 },
+                    { text: "Seguir muy cerca", points: 10 },
+                    { text: "Velocidad excesiva", points: 15 },
+                    { text: "Velocidad muy lenta", points: 15 },
+                    { text: "No ceder paso a peatones", points: 15 },
+                    { text: "Juicio pobre en tráfico", points: 10 },
+                    { text: "Cambio de carril inseguro", points: 10 },
+                    { text: "No anticipa acciones", points: 10 },
+                    { text: "No anticipa peligros", points: 10 }
+                ]
+            },
+            vehicleControl: {
+                title: "Control del Vehículo",
+                items: [
+                    { text: "Calado repetido", points: 10 },
+                    { text: "Control pobre del motor", points: 10 },
+                    { text: "Control pobre de dirección", points: 15 },
+                    { text: "Frenado abrupto/tardío", points: 10 },
+                    { text: "Uso incorrecto de marchas", points: 10 },
+                    { text: "Control pobre del embrague", points: 5 },
+                    { text: "Reacción pobre a emergencias", points: 10 }
+                ]
+            }
+        };
+
+        // Generar el formulario
+        const form = document.getElementById('evaluationForm');
+        Object.entries(categories).forEach(([key, category]) => {
+            const categoryHTML = `
+                <div class="category">
+                    <h2>${category.title}</h2>
+                    <div class="checkbox-group">
+                        ${category.items.map(item => `
+                            <label class="checkbox-label">
+                                <input type="checkbox" data-points="${item.points}">
+                                <span>${item.text}</span>
+                                <span class="points-badge">-${item.points}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            form.insertAdjacentHTML('beforeend', categoryHTML);
+        });
+
+        // Manejar cambios
+        let totalPoints = 0;
+        const updatePoints = () => {
+            totalPoints = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+                .reduce((sum, checkbox) => sum + parseInt(checkbox.dataset.points), 0);
+
+            document.getElementById('totalPoints').textContent = totalPoints;
+            const resultStatus = document.getElementById('resultStatus');
+            
+            if(totalPoints >= 30) {
+                resultStatus.textContent = "(Reprobado)";
+                resultStatus.className = "failed";
+                document.getElementById('disqualificationSection').style.display = 'block';
+            } else {
+                resultStatus.textContent = "(Aprobado)";
+                resultStatus.className = "passed";
+                document.getElementById('disqualificationSection').style.display = 'none';
+            }
+        };
+
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updatePoints);
+        });
+    </script>
+</body>
+</html>
