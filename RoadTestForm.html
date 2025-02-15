@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Road Test Evaluation System</title>
+    <title>NYC Road Test Evaluation System</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root {
@@ -88,7 +88,41 @@
             background: var(--success);
         }
 
-        /* Mantener demás estilos anteriores... */
+        .timer {
+            font-size: 1.2rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            color: black;
+            margin: 5% auto;
+            padding: 2rem;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 0.5rem;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
 
         #reportSection {
             position: absolute;
@@ -100,28 +134,22 @@
             border-radius: 0.5rem;
         }
 
-        .report-header {
-            text-align: center;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 1rem;
-        }
-
-        .report-item {
-            margin: 0.5rem 0;
-            padding-left: 1rem;
-            border-left: 3px solid var(--primary);
+        .item-number {
+            display: inline-block;
+            width: 30px;
+            font-weight: bold;
+            color: var(--primary);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; margin-bottom: 2rem;">🚗 Road Test Evaluation System</h1>
+        <h1 style="text-align: center; margin-bottom: 2rem;">🚗 NYC Road Test Evaluation System</h1>
         
         <div class="header-section">
             <div class="input-group">
                 <label>Student Name:</label>
-                <input type="text" id="studentName">
+                <input type="text" id="studentName" onblur="startTimer()">
             </div>
             <div class="input-group">
                 <label>Inspector Name:</label>
@@ -131,7 +159,13 @@
                 <label>Exam Date:</label>
                 <input type="date" id="examDate">
             </div>
+            <div class="input-group">
+                <label>Start Time:</label>
+                <input type="time" id="examTime" readonly>
+            </div>
         </div>
+
+        <div class="timer" id="examTimer">Elapsed Time: 00:00:00</div>
 
         <div class="button-group">
             <button type="button" class="button reset" onclick="resetForm()">Reset Form</button>
@@ -142,16 +176,21 @@
             <!-- Categories inserted by JavaScript -->
         </div>
 
-        <div class="results-panel">
-            <!-- Previous results panel content -->
+        <div class="modal" id="infoModal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+                <div id="modalContent"></div>
+            </div>
         </div>
 
         <div id="reportSection">
             <div class="report-header">
-                <h2>Road Test Evaluation Report</h2>
+                <h2>NYC Road Test Evaluation Report</h2>
                 <p>Student: <span id="reportStudentName"></span></p>
                 <p>Inspector: <span id="reportInspectorName"></span></p>
                 <p>Date: <span id="reportExamDate"></span></p>
+                <p>Start Time: <span id="reportExamTime"></span></p>
+                <p>Test Duration: <span id="reportExamDuration"></span></p>
             </div>
             <div id="reportContent"></div>
             <div class="report-footer">
@@ -162,84 +201,141 @@
     </div>
 
     <script>
-        // Mantener código anterior de categorías y generación de formulario...
+        // Configuración inicial
+        let startTime = null;
+        let timerInterval = null;
+        const explanations = {
+            1: "Proper observation includes checking mirrors, blind spots, and surrounding traffic. (NYC Driver's Manual, Section 5.2)",
+            2: "Signal must be activated at least 100 feet before turning. (NYC Traffic Rules §4-03)",
+            // Agrega todas las explicaciones necesarias...
+        };
 
-        // New functions
-        function resetForm() {
-            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                checkbox.checked = false;
+        // Datos completos del examen
+        const categories = [
+            {
+                title: "A. LEAVING CURB",
+                items: [
+                    { number: 1, text: "Fails to observe", points: 10, subItems: [] },
+                    { number: 2, text: "Fails to signal", points: 5, subItems: [] },
+                    { number: 3, text: "Uses mirror only/fails to check blind spot", points: 5, subItems: [] }
+                ]
+            },
+            {
+                title: "B. TURNING/INTERSECTIONS",
+                items: [
+                    { number: 4, text: "Poor judgment approaching or at intersections", points: 10, 
+                      subItems: ["Speed", "Turning", "Right of Way", "Following Distance", "Other"] },
+                    { number: 5, text: "Fails to stop near center of intersection when waiting to make left turn", points: 10, subItems: [] },
+                    { number: 6, text: "Turns wide - short right", points: 5, subItems: [] },
+                    { number: 7, text: "Turns wide - short left", points: 5, subItems: [] },
+                    { number: 8, text: "Inattentive to traffic", points: 10, 
+                      subItems: ["Signs", "Signals", "Lane Markings"] }
+                ]
+            },
+            // Continúa con las demás categorías...
+        ];
+
+        // Generar formulario
+        function generateForm() {
+            const form = document.getElementById('evaluationForm');
+            categories.forEach(category => {
+                const categoryHTML = `
+                    <div class="category">
+                        <h2>${category.title}</h2>
+                        <div class="checkbox-group">
+                            ${category.items.map(item => `
+                                <div>
+                                    <label class="checkbox-label" onclick="showExplanation(${item.number})">
+                                        <span class="item-number">${item.number}</span>
+                                        <input type="checkbox" data-points="${item.points}">
+                                        <span>${item.text}</span>
+                                        <span class="points-badge">-${item.points}</span>
+                                    </label>
+                                    ${item.subItems.length > 0 ? `
+                                        <div class="sub-item">
+                                            ${item.subItems.map(sub => `
+                                                <label class="checkbox-label">
+                                                    <input type="checkbox">
+                                                    <span>${sub}</span>
+                                                </label>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                form.insertAdjacentHTML('beforeend', categoryHTML);
             });
-            document.getElementById('studentName').value = '';
-            document.getElementById('inspectorName').value = '';
-            document.getElementById('examDate').value = '';
-            document.getElementById('disqualificationReason').value = '';
-            document.getElementById('comments').value = '';
-            totalPoints = 0;
-            updatePoints();
         }
 
+        // Funciones del temporizador
+        function startTimer() {
+            if (!startTime) {
+                startTime = new Date();
+                document.getElementById('examTime').value = 
+                    startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+        }
+
+        function updateTimer() {
+            const now = new Date();
+            const diff = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+            document.getElementById('examTimer').textContent = 
+                `Elapsed Time: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Funciones del modal
+        function showExplanation(itemNumber) {
+            document.getElementById('modalContent').innerHTML = `
+                <h3>Item ${itemNumber} Requirements</h3>
+                <p>${explanations[itemNumber]}</p>
+                <small>Reference: NYC Driver's Manual Chapter 5</small>
+            `;
+            document.getElementById('infoModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('infoModal').style.display = 'none';
+        }
+
+        // Generar reporte
         async function generateReport() {
-            // Populate report data
-            document.getElementById('reportStudentName').textContent = 
-                document.getElementById('studentName').value || 'N/A';
-            document.getElementById('reportInspectorName').textContent = 
-                document.getElementById('inspectorName').value || 'N/A';
-            document.getElementById('reportExamDate').textContent = 
-                document.getElementById('examDate').value || 'N/A';
-            
-            const reportContent = document.getElementById('reportContent');
-            reportContent.innerHTML = '';
-            
-            document.querySelectorAll('.category').forEach(category => {
-                const categoryTitle = category.querySelector('h2').textContent;
-                const section = document.createElement('div');
-                section.innerHTML = `<h3>${categoryTitle}</h3>`;
-                
-                category.querySelectorAll('.checkbox-label input:checked').forEach(checkbox => {
-                    const itemText = checkbox.parentElement.querySelector('span:not(.points-badge)').textContent;
-                    const points = checkbox.dataset.points || '0';
-                    
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'report-item';
-                    itemDiv.innerHTML = `
-                        <strong>${itemText}</strong> (${points} points)
-                    `;
+            // Capturar datos del formulario
+            const reportData = {
+                student: document.getElementById('studentName').value,
+                inspector: document.getElementById('inspectorName').value,
+                date: document.getElementById('examDate').value,
+                time: document.getElementById('examTime').value,
+                duration: document.getElementById('examTimer').textContent.replace('Elapsed Time: ', '')
+            };
 
-                    // Add subitems if any
-                    const subItems = checkbox.closest('div').querySelectorAll('.sub-item input:checked');
-                    if(subItems.length > 0) {
-                        const subList = document.createElement('ul');
-                        subItems.forEach(sub => {
-                            const li = document.createElement('li');
-                            li.textContent = sub.parentElement.querySelector('span').textContent;
-                            subList.appendChild(li);
-                        });
-                        itemDiv.appendChild(subList);
-                    }
+            // Configurar datos del reporte
+            document.getElementById('reportStudentName').textContent = reportData.student;
+            document.getElementById('reportInspectorName').textContent = reportData.inspector;
+            document.getElementById('reportExamDate').textContent = reportData.date;
+            document.getElementById('reportExamTime').textContent = reportData.time;
+            document.getElementById('reportExamDuration').textContent = reportData.duration;
 
-                    section.appendChild(itemDiv);
-                });
-                
-                reportContent.appendChild(section);
-            });
-
-            document.getElementById('reportTotalPoints').textContent = totalPoints;
-            document.getElementById('reportResult').textContent = 
-                totalPoints >= 30 ? 'FAILED' : 'PASSED';
-
-            // Generate image
+            // Generar imagen
             const reportElement = document.getElementById('reportSection');
             const canvas = await html2canvas(reportElement);
             const image = canvas.toDataURL('image/png');
 
-            // Trigger download
+            // Descargar reporte
             const link = document.createElement('a');
             link.download = `RoadTestReport-${Date.now()}.png`;
             link.href = image;
             link.click();
         }
 
-        // Rest of previous JavaScript code...
+        // Inicializar
+        generateForm();
     </script>
 </body>
 </html>
