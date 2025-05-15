@@ -108,14 +108,16 @@
       box-shadow: none;
     }
     body.light-mode input[type="number"],
-    body.light-mode input[type="text"] {
+    body.light-mode input[type="text"],
+    body.light-mode input[type="date"] { /* Added date input */
       background: #fff;
       color: #000;
       border: 1px solid #aaa;
       box-shadow: none;
     }
     body.light-mode input[type="number"]:focus,
-    body.light-mode input[type="text"]:focus {
+    body.light-mode input[type="text"]:focus,
+    body.light-mode input[type="date"]:focus { /* Added date input */
       border-color: var(--light-accent);
     }
     body.light-mode .pageBtn {
@@ -229,11 +231,28 @@
       box-shadow: 0 0 8px var(--accent-color);
     }
     .tabContent.active { display: block; }
+    .header-controls { /* For Sucursal and Fecha inputs */
+        display: flex;
+        gap: 1rem; /* Space between Sucursal and Fecha */
+        margin: 0.5rem 0 1rem 0; /* Consistent margin */
+        align-items: center;
+    }
+    .header-controls label {
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    .header-controls input[type="text"],
+    .header-controls input[type="date"] {
+        width: 220px; /* Fixed width for both */
+        padding: 0.4rem;
+        font-size: 1rem; /* Slightly larger for better readability */
+    }
+
 
     /* =================== TABLA PÁGINAS (DIARIO) =================== */
     .report-table {
       width: 100%; border-collapse: collapse; margin-bottom: 1rem;
-      color: var(--main-text); table-layout: fixed; 
+      color: var(--main-text); table-layout: auto; /* Changed to auto for better fit */
     }
     .report-table thead th,
     .report-table tbody td {
@@ -247,37 +266,26 @@
       border-bottom: 2px solid var(--accent-color);
       text-shadow: 0 0 3px var(--accent-color);
     }
-    .report-table thead th.collapsible-header { /* Style for clickable headers */
-        cursor: pointer;
-        user-select: none; /* Prevent text selection on click */
-    }
-    .report-table thead th.collapsible-header:hover {
-        opacity: 0.8;
-    }
-
-    /* Specific column widths for the daily report table (5 columns per side) */
+    /* Column widths for the daily report table (4 columns per side now) */
     .report-table th:nth-child(1), .report-table td:nth-child(1), /* Page # Left */
-    .report-table th:nth-child(6), .report-table td:nth-child(6) { /* Page # Right */
-        width: 8%;
+    .report-table th:nth-child(5), .report-table td:nth-child(5) { /* Page # Right */
+        width: 10%;
     }
     .report-table th:nth-child(2), .report-table td:nth-child(2), /* Centenas Left */
     .report-table th:nth-child(3), .report-table td:nth-child(3), /* Pulitos Left */
-    .report-table th:nth-child(7), .report-table td:nth-child(7), /* Centenas Right */
-    .report-table th:nth-child(8), .report-table td:nth-child(8) { /* Pulitos Right */
-        width: 12%;
+    .report-table th:nth-child(6), .report-table td:nth-child(6), /* Centenas Right */
+    .report-table th:nth-child(7), .report-table td:nth-child(7) { /* Pulitos Right */
+        width: 15%;
     }
     .report-table th:nth-child(4), .report-table td:nth-child(4), /* Salidas Left */
-    .report-table th:nth-child(9), .report-table td:nth-child(9) { /* Salidas Right */
-        width: 10%;
-    }
-    .report-table th:nth-child(5), .report-table td:nth-child(5), /* Total Left */
-    .report-table th:nth-child(10), .report-table td:nth-child(10) { /* Total Right */
-        width: 10%;
+    .report-table th:nth-child(8), .report-table td:nth-child(8) { /* Salidas Right */
+        width: 15%; /* Increased width for Salidas input */
     }
 
 
     input[type="number"], 
-    input[type="text"] {
+    input[type="text"],
+    input[type="date"] { /* Added date input */
       background: #000; color: var(--accent-color); border: 1px solid var(--accent-color);
       border-radius: 4px; text-align: center; box-shadow: inset 0 0 5px var(--accent-color);
       width: 100px; 
@@ -287,8 +295,14 @@
       line-height: 2.5rem !important; 
       margin: 1px 0;
     }
+    input[type="date"] { /* Specific styling for date input text alignment */
+        text-align: left;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
     input[type="number"]:focus, 
-    input[type="text"]:focus { outline: none; border-color: #fff; }
+    input[type="text"]:focus,
+    input[type="date"]:focus { outline: none; border-color: #fff; }
 
     .pageBtn {
       background: var(--danger-color); color: #fff; border: none;
@@ -432,137 +446,172 @@
     </div>
 
     <div class="scroll-area">
-      <div id="tabDay1" class="tabContent active">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay1" style="margin-bottom: 0.5rem;">Reporte Diario - Lunes - 01/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day1')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day1')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day1" onclick="addPageRow('day1')">+ Página</button>
-            <button class="btnLockDay" id="lockDay1Btn" data-day="day1"><i>🔓</i></button>
-          </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal1" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day1Container"></div>
+      <div id="captureContent_day1" class="capture-content-wrapper">
+          <div id="tabDay1" class="tabContent active">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay1" style="margin-bottom: 0.5rem;">Reporte Diario - Lunes - 01/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day1')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day1')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day1" onclick="addPageRow('day1')">+ Página</button>
+                <button class="btnLockDay" id="lockDay1Btn" data-day="day1"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal1">Sucursal:</label>
+                <input type="text" id="sucursalGlobal1" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day1">Fecha:</label>
+                <input type="date" id="fechaInput_day1" class="fechaInput" onchange="updateDateField('day1', this.value)">
+              </div>
+            </div>
+            <div id="day1Container"></div> </div>
       </div>
-
-      <div id="tabDay2" class="tabContent">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay2" style="margin-bottom: 0.5rem;">Reporte Diario - Martes - 02/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day2')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day2')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day2" onclick="addPageRow('day2')">+ Página</button>
-            <button class="btnLockDay" id="lockDay2Btn" data-day="day2"><i>🔓</i></button>
+      <div id="captureContent_day2" class="capture-content-wrapper" style="display:none;">
+          <div id="tabDay2" class="tabContent">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay2" style="margin-bottom: 0.5rem;">Reporte Diario - Martes - 02/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day2')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day2')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day2" onclick="addPageRow('day2')">+ Página</button>
+                <button class="btnLockDay" id="lockDay2Btn" data-day="day2"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal2">Sucursal:</label>
+                <input type="text" id="sucursalGlobal2" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day2">Fecha:</label>
+                <input type="date" id="fechaInput_day2" class="fechaInput" onchange="updateDateField('day2', this.value)">
+              </div>
+            </div>
+            <div id="day2Container"></div>
           </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal2" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day2Container"></div>
       </div>
-      
-      <div id="tabDay3" class="tabContent">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay3" style="margin-bottom: 0.5rem;">Reporte Diario - Miércoles - 03/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day3')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day3')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day3" onclick="addPageRow('day3')">+ Página</button>
-            <button class="btnLockDay" id="lockDay3Btn" data-day="day3"><i>🔓</i></button>
+      <div id="captureContent_day3" class="capture-content-wrapper" style="display:none;">
+          <div id="tabDay3" class="tabContent">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay3" style="margin-bottom: 0.5rem;">Reporte Diario - Miércoles - 03/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day3')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day3')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day3" onclick="addPageRow('day3')">+ Página</button>
+                <button class="btnLockDay" id="lockDay3Btn" data-day="day3"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal3">Sucursal:</label>
+                <input type="text" id="sucursalGlobal3" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day3">Fecha:</label>
+                <input type="date" id="fechaInput_day3" class="fechaInput" onchange="updateDateField('day3', this.value)">
+              </div>
+            </div>
+            <div id="day3Container"></div>
           </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal3" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day3Container"></div>
       </div>
-
-      <div id="tabDay4" class="tabContent">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay4" style="margin-bottom: 0.5rem;">Reporte Diario - Jueves - 04/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day4')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day4')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day4" onclick="addPageRow('day4')">+ Página</button>
-            <button class="btnLockDay" id="lockDay4Btn" data-day="day4"><i>🔓</i></button>
+      <div id="captureContent_day4" class="capture-content-wrapper" style="display:none;">
+          <div id="tabDay4" class="tabContent">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay4" style="margin-bottom: 0.5rem;">Reporte Diario - Jueves - 04/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day4')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day4')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day4" onclick="addPageRow('day4')">+ Página</button>
+                <button class="btnLockDay" id="lockDay4Btn" data-day="day4"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal4">Sucursal:</label>
+                <input type="text" id="sucursalGlobal4" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day4">Fecha:</label>
+                <input type="date" id="fechaInput_day4" class="fechaInput" onchange="updateDateField('day4', this.value)">
+              </div>
+            </div>
+            <div id="day4Container"></div>
           </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal4" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day4Container"></div>
       </div>
-
-      <div id="tabDay5" class="tabContent">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay5" style="margin-bottom: 0.5rem;">Reporte Diario - Viernes - 05/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day5')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day5')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day5" onclick="addPageRow('day5')">+ Página</button>
-            <button class="btnLockDay" id="lockDay5Btn" data-day="day5"><i>🔓</i></button>
+      <div id="captureContent_day5" class="capture-content-wrapper" style="display:none;">
+          <div id="tabDay5" class="tabContent">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay5" style="margin-bottom: 0.5rem;">Reporte Diario - Viernes - 05/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day5')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day5')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day5" onclick="addPageRow('day5')">+ Página</button>
+                <button class="btnLockDay" id="lockDay5Btn" data-day="day5"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal5">Sucursal:</label>
+                <input type="text" id="sucursalGlobal5" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day5">Fecha:</label>
+                <input type="date" id="fechaInput_day5" class="fechaInput" onchange="updateDateField('day5', this.value)">
+              </div>
+            </div>
+            <div id="day5Container"></div>
           </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal5" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day5Container"></div>
       </div>
-
-      <div id="tabDay6" class="tabContent">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay6" style="margin-bottom: 0.5rem;">Reporte Diario - Sábado - 06/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day6')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day6')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day6" onclick="addPageRow('day6')">+ Página</button>
-            <button class="btnLockDay" id="lockDay6Btn" data-day="day6"><i>🔓</i></button>
+      <div id="captureContent_day6" class="capture-content-wrapper" style="display:none;">
+          <div id="tabDay6" class="tabContent">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay6" style="margin-bottom: 0.5rem;">Reporte Diario - Sábado - 06/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day6')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day6')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day6" onclick="addPageRow('day6')">+ Página</button>
+                <button class="btnLockDay" id="lockDay6Btn" data-day="day6"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal6">Sucursal:</label>
+                <input type="text" id="sucursalGlobal6" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day6">Fecha:</label>
+                <input type="date" id="fechaInput_day6" class="fechaInput" onchange="updateDateField('day6', this.value)">
+              </div>
+            </div>
+            <div id="day6Container"></div>
           </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal6" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day6Container"></div>
       </div>
-
-      <div id="tabDay7" class="tabContent">
-        <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
-          <h2 id="titleDay7" style="margin-bottom: 0.5rem;">Reporte Diario - Domingo - 07/Ene</h2>
-          <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
-            <button class="btnNeon" onclick="sendDayToSheets('day7')">Guardar Día</button>
-            <button class="btnNeon" onclick="resetDay('day7')">Reset Día</button>
-            <button class="btnNeon" id="addPageBtn_day7" onclick="addPageRow('day7')">+ Página</button>
-            <button class="btnLockDay" id="lockDay7Btn" data-day="day7"><i>🔓</i></button>
+      <div id="captureContent_day7" class="capture-content-wrapper" style="display:none;">
+          <div id="tabDay7" class="tabContent">
+            <div style="display:flex;align-items:center;justify-content:space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 id="titleDay7" style="margin-bottom: 0.5rem;">Reporte Diario - Domingo - 07/Ene</h2>
+              <div style="display:flex;gap:0.5rem; flex-wrap: wrap;">
+                <button class="btnNeon" onclick="sendDayToSheets('day7')">Guardar Día</button>
+                <button class="btnNeon" onclick="resetDay('day7')">Reset Día</button>
+                <button class="btnNeon" id="addPageBtn_day7" onclick="addPageRow('day7')">+ Página</button>
+                <button class="btnLockDay" id="lockDay7Btn" data-day="day7"><i>🔓</i></button>
+              </div>
+            </div>
+            <div class="header-controls">
+              <div>
+                <label for="sucursalGlobal7">Sucursal:</label>
+                <input type="text" id="sucursalGlobal7" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+              </div>
+              <div>
+                <label for="fechaInput_day7">Fecha:</label>
+                <input type="date" id="fechaInput_day7" class="fechaInput" onchange="updateDateField('day7', this.value)">
+              </div>
+            </div>
+            <div id="day7Container"></div>
           </div>
-        </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobal7" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
-        <div id="day7Container"></div>
       </div>
 
       <div id="tabWeekly" class="tabContent">
@@ -576,12 +625,12 @@
             <button class="btnLockDay" id="unlockAllBtn"><i>🔓</i></button>
           </div>
         </div>
-        <div style="margin: 0.5rem 0;">
-          <label style="font-weight:bold;">Sucursal:</label>
-          <input type="text" id="sucursalGlobalW" class="sucursalGlobalInput"
-                 style="width:250px;padding:0.4rem;"
-                 oninput="updateSucursal(this.value)">
-        </div>
+        <div class="header-controls">
+            <div>
+                <label for="sucursalGlobalW">Sucursal:</label>
+                <input type="text" id="sucursalGlobalW" class="sucursalGlobalInput" oninput="updateSucursal(this.value)">
+            </div>
+            </div>
         <div id="weeklyContainer"></div>
       </div>
 
@@ -645,17 +694,18 @@ let lockedDays = {};
 let lockedAll = false;
 let isDarkMode = true;
 let pinValidated = (localStorage.getItem("pinValidated")==="true");
-let columnVisibility = {}; // For collapsible columns
+// columnVisibility is removed as Total columns are removed
 
 let dataStore = {
   globalSucursal:"",
-  day1:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
-  day2:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
-  day3:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
-  day4:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
-  day5:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
-  day6:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
-  day7:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  // Each day will also have a 'fecha' field
+  day1:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  day2:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  day3:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  day4:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  day5:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  day6:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
+  day7:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
   weekly:{ caidas:0, adelantoOficina:0 }
 };
 
@@ -690,6 +740,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
                 if (!dataStore[dk].pages || !Array.isArray(dataStore[dk].pages)) dataStore[dk].pages = [];
                 let existingPages = dataStore[dk].pages.slice();
                 dataStore[dk].pages = []; 
+                dataStore[dk].fecha = dataStore[dk].fecha || ""; // Ensure fecha exists
 
                 for (let pIdx = 0; pIdx < MAX_PAGES_PER_DAY; pIdx++) {
                     let pageData = existingPages[pIdx] || {};
@@ -719,19 +770,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
     initializeEmptyDataStore(); 
   }
 
-  // Initialize column visibility state
-  let storedColumnVisibility = localStorage.getItem("columnVisibilityState");
-  if (storedColumnVisibility) {
-      columnVisibility = JSON.parse(storedColumnVisibility);
-  } else {
-      for (let i = 1; i <= 7; i++) {
-          let dk = "day" + i;
-          columnVisibility[`${dk}_total_left`] = true; // Default to visible
-          columnVisibility[`${dk}_total_right`] = true;// Default to visible
-      }
-  }
-
-
   for(let i=1;i<=7;i++){ if(lockedDays["day"+i]===undefined) lockedDays["day"+i]= false; }
 
   if(pinValidated){
@@ -745,11 +783,26 @@ window.addEventListener("DOMContentLoaded", ()=>{
   let startOfWeek=findMondayOfCurrentWeek();
   dayMappings.forEach((dm,index)=>{
     let thisDate=new Date(startOfWeek.getTime()); thisDate.setDate(thisDate.getDate()+dm.offset);
-    let dStrTab=formatDateMMDDYYYY(thisDate); let dStrTitle=formatDateDDMMM(thisDate);
+    let dStrTab=formatDateMMDDYYYY(thisDate); 
+    let dStrTitle=formatDateDDMMM(thisDate);
+    let isoDate = thisDate.toISOString().split('T')[0]; // YYYY-MM-DD for date input
+
     let btn=document.querySelector(`.sidebar button[data-tab="tabDay${index+1}"]`);
     if(btn) btn.textContent=`${dm.label} (${dStrTab})`;
     let h2title=document.getElementById(`titleDay${index+1}`);
     if(h2title) h2title.textContent= `Reporte Diario - ${dm.label} - ${dStrTitle}`;
+
+    // Initialize date field for the day
+    const dayKey = `day${index+1}`;
+    const fechaInput = document.getElementById(`fechaInput_${dayKey}`);
+    if (dataStore[dayKey] && !dataStore[dayKey].fecha && fechaInput) { // If no stored date, use current iterated date
+        dataStore[dayKey].fecha = isoDate;
+    }
+    if (fechaInput && dataStore[dayKey] && dataStore[dayKey].fecha) { // Populate if stored or just set
+        fechaInput.value = dataStore[dayKey].fecha;
+    } else if (fechaInput) { // Fallback if dataStore[dayKey] somehow not fully init
+        fechaInput.value = isoDate;
+    }
   });
 
   initPinOverlay(); initTabs(); initLockButtons(); initToggleTheme();
@@ -760,9 +813,14 @@ window.addEventListener("DOMContentLoaded", ()=>{
 });
 
 function initializeEmptyDataStore() {
-    for(let i=1; i<=7; i++){
-        let dk = "day"+i;
-        dataStore[dk] = {
+    const today = new Date();
+    for(let i=0; i<=6; i++){ // Iterate for each day of the week
+        let currentDayDate = new Date(today);
+        currentDayDate.setDate(today.getDate() - today.getDay() + (i === 0 ? (today.getDay() === 0 ? -6 : 1) : i + (today.getDay() === 0 ? -6 : 1) - today.getDay())); // Calculate date for Mon, Tue, etc.
+
+        let dk = "day"+(i+1); // day1 to day7
+         dataStore[dk] = {
+            fecha: currentDayDate.toISOString().split('T')[0], // YYYY-MM-DD
             pages: [], overlook: 0, overlookNote: "", overlookExtra: [],
             cash: 0, sucursal: 0, credito: 0, descuento: 0, tickets: 0,
             creditTracker: { pending: [], paid: [] }
@@ -817,13 +875,38 @@ function initTabs(){
   let tabBtns=document.querySelectorAll(".sidebar .tabBtn");
   tabBtns.forEach(btn=>{
     btn.addEventListener("click",(e)=>{
-      tabBtns.forEach(b=>b.classList.remove("active")); e.currentTarget.classList.add("active");
+      tabBtns.forEach(b=>b.classList.remove("active")); 
+      e.currentTarget.classList.add("active");
       let targetId=e.currentTarget.dataset.tab;
+      
+      // Hide all capture wrappers first
+      document.querySelectorAll(".capture-content-wrapper").forEach(cw => cw.style.display = 'none');
+      // Show the selected tab's capture wrapper (if it's a day tab)
+      const dayKey = targetId.startsWith("tabDay") ? targetId.replace("tab", "").toLowerCase() : null;
+      if (dayKey) {
+          const captureWrapper = document.getElementById(`captureContent_${dayKey}`);
+          if (captureWrapper) captureWrapper.style.display = 'block';
+      }
+
       document.querySelectorAll(".tabContent").forEach(tc=>tc.classList.remove("active"));
-      const targetTab = document.getElementById(targetId);
+      const targetTab = document.getElementById(targetId); // This is the actual tab content div
       if (targetTab) {
         targetTab.classList.add("active");
-        if (targetId === 'tabWeekly') updateWeeklyView();
+        if (targetId === 'tabWeekly') {
+            updateWeeklyView();
+            // Hide day capture wrappers if weekly tab is active
+            document.querySelectorAll(".capture-content-wrapper").forEach(cw => cw.style.display = 'none');
+        } else if (dayKey) {
+            // Ensure other day tabs (not capture wrappers) are hidden
+            document.querySelectorAll(".tabContent").forEach(tc => {
+                if (tc.id !== targetId && tc.id.startsWith("tabDay")) {
+                    tc.classList.remove("active");
+                }
+            });
+        } else { // For non-day tabs like manual, premios
+             document.querySelectorAll(".capture-content-wrapper").forEach(cw => cw.style.display = 'none');
+        }
+
         dayMappings.forEach(dm => {
             const addBtn = document.getElementById(`addPageBtn_${dm.key}`);
             if(addBtn) addBtn.disabled = true; 
@@ -836,6 +919,10 @@ function initTabs(){
         const dayKey = activeDayTab.dataset.tab.replace('tab', '').toLowerCase();
         const addBtn = document.getElementById(`addPageBtn_${dayKey}`);
         if (addBtn) addBtn.disabled = true;
+        // Show the active day's capture wrapper on load
+        const activeCaptureWrapper = document.getElementById(`captureContent_${dayKey}`);
+        if(activeCaptureWrapper) activeCaptureWrapper.style.display = 'block';
+
     }
 }
 
@@ -889,12 +976,20 @@ function initToggleTheme(){
 }
 
 /****************************************************
- * 6) Sucursal global
+ * 6) Sucursal global & Fecha
  ****************************************************/
 function updateSucursal(val){ dataStore.globalSucursal=val; storeData(); applySucursalToAllFields(val); }
 function applySucursalToAllFields(val){
   document.querySelectorAll(".sucursalGlobalInput").forEach(inp=>{ if(inp.value!==val) inp.value=val; });
 }
+function updateDateField(dayKey, value) {
+    if (dataStore[dayKey]) {
+        dataStore[dayKey].fecha = value;
+        storeData();
+        // No re-render needed just for date change, unless it affects titles, which it doesn't directly here.
+    }
+}
+
 
 /****************************************************
  * 7) Render Días
@@ -908,19 +1003,20 @@ function renderDay(dayKey){
 
   const addPageButton = document.getElementById(`addPageBtn_${dayKey}`);
   if (addPageButton) addPageButton.disabled = true;
+  
+  // Update date input value for the current day being rendered
+  const fechaInput = document.getElementById(`fechaInput_${dayKey}`);
+  if (fechaInput && dayData.fecha) {
+    fechaInput.value = dayData.fecha;
+  }
 
-  // Determine column visibility for the current day
-  const totalLeftVisible = columnVisibility[`${dayKey}_total_left`] !== false;
-  const totalRightVisible = columnVisibility[`${dayKey}_total_right`] !== false;
 
   let html=`
     <table class="report-table">
       <thead>
         <tr>
           <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th>
-          <th class="collapsible-header" onclick="toggleTotalColumnVisibility('${dayKey}', 'left')" title="Click para ocultar/mostrar">Total ${totalLeftVisible ? '(-)' : '(+)'}</th>
           <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th>
-          <th class="collapsible-header" onclick="toggleTotalColumnVisibility('${dayKey}', 'right')" title="Click para ocultar/mostrar">Total ${totalRightVisible ? '(-)' : '(+)'}</th>
         </tr>
       </thead>
       <tbody>
@@ -936,31 +1032,23 @@ function renderDay(dayKey){
     if (!p_left || !p_right) { console.error("Page data missing for row " + i); continue; }
     
     let cVal_l=(p_left.centenas||""); let pVal_l=(p_left.pulitos||"");
-    let totalInputs_l=(p_left.centenas + p_left.pulitos);
-    let sumPend_l=(p_left.pendingPrizes||[]).reduce((acc,v)=>acc+v,0);
-    let salidasColor_l= (sumPend_l>0)?"var(--purple-color)":"var(--danger-color)";
-    let salidasVal_l= p_left.totalSalidas ? `$${(p_left.totalSalidas||0).toFixed(2)}` : '';
-
+    // Salidas now uses a readonly input, styled like others
+    let salidasVal_l = p_left.totalSalidas || 0;
 
     let cVal_r=(p_right.centenas||""); let pVal_r=(p_right.pulitos||"");
-    let totalInputs_r=(p_right.centenas + p_right.pulitos);
-    let sumPend_r=(p_right.pendingPrizes||[]).reduce((acc,v)=>acc+v,0);
-    let salidasColor_r= (sumPend_r>0)?"var(--purple-color)":"var(--danger-color)";
-    let salidasVal_r= p_right.totalSalidas ? `$${(p_right.totalSalidas||0).toFixed(2)}` : '';
+    let salidasVal_r = p_right.totalSalidas || 0;
 
     html+=`
       <tr>
         <td><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_left_idx})" ${locked?'disabled':''}>${p_left.pageNo}</button></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="centenas" value="${cVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="pulitos"  value="${pVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td style="cursor:pointer;color:${salidasColor_l};" onclick="openPrizesModal('${dayKey}',${page_left_idx})">${salidasVal_l}</td>
-        <td ${!totalLeftVisible ? 'style="display:none;"' : ''}>${totalInputs_l ? '$'+totalInputs_l.toFixed(2) : ''}</td>
+        <td><input type="text" readonly value="${salidasVal_l ? '$'+salidasVal_l.toFixed(2) : ''}" style="color:${(p_left.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_left_idx})"></td>
         
         <td><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_right_idx})" ${locked?'disabled':''}>${p_right.pageNo}</button></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="centenas" value="${cVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="pulitos"  value="${pVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td style="cursor:pointer;color:${salidasColor_r};" onclick="openPrizesModal('${dayKey}',${page_right_idx})">${salidasVal_r}</td>
-        <td ${!totalRightVisible ? 'style="display:none;"' : ''}>${totalInputs_r ? '$'+totalInputs_r.toFixed(2) : ''}</td>
+        <td><input type="text" readonly value="${salidasVal_r ? '$'+salidasVal_r.toFixed(2) : ''}" style="color:${(p_right.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_right_idx})"></td>
       </tr>
     `;
   }
@@ -980,7 +1068,7 @@ function renderDay(dayKey){
   if(netBal<0) nbColor="#0f0"; else if(netBal>0) nbColor="#f33";
 
   let ovVal=(dayData.overlook||""); 
-  let ovNote= dayData.overlookNote||""; // Nota Overlook will be empty if not set
+  let ovNote= dayData.overlookNote||""; 
 
   html+=`
     <div class="totals-section">
@@ -1007,7 +1095,7 @@ function renderDay(dayKey){
   });
   html+=`</div>
       <div class="form-group"><label>Total Salidas (Incl. Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="${t.totalSalidas ? '$'+t.totalSalidas.toFixed(2) : ''}"></div>
-      <div class="form-group"><label>Total Ventas (Bruto)</label><input type="text" readonly value="${t.totalVentas ? '$'+t.totalVentas.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Ventas (Bruto)</label><input type="text" readonly id="totalVentasBruto_${dayKey}" value="${t.totalVentas ? '$'+t.totalVentas.toFixed(2) : ''}"></div>
     </div>`;
 
   let isCuadreOpen=accordionStates[dayKey+"_cuadre"]? "block":"none";
@@ -1279,7 +1367,16 @@ function storeData(){ localStorage.setItem("dailyReportNeonData2", JSON.stringif
 function sendDayToSheets(dayKey){ alert("Guardar Día (placeholder): "+dayKey + ". Función no implementada."); }
 function resetDay(dayKey){
   if(!confirm(`¿Resetear todos los datos para ${dayKey}? Esto no se puede deshacer.`)) return;
-  dataStore[dayKey]={ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] } };
+  const today = new Date();
+  const currentDayOffset = dayMappings.find(dm => dm.key === dayKey)?.offset || 0;
+  let dayDate = new Date(today);
+  dayDate.setDate(today.getDate() - today.getDay() + (currentDayOffset + (today.getDay() === 0 ? -6 : 1)));
+
+
+  dataStore[dayKey]={ 
+    fecha: dayDate.toISOString().split('T')[0], // Reset fecha to current day's specific date
+    pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] } 
+  };
   for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
     dataStore[dayKey].pages.push({ pageNo:r+1, centenas:0, pulitos:0, pendingPrizes:[], paidPrizes:[], totalSalidas:0 });
   }
@@ -1288,8 +1385,16 @@ function resetDay(dayKey){
 function sendWeekToSheets(){ alert("Guardar Semana (placeholder). Función no implementada."); }
 function resetWeek(){
   if(!confirm("¿Resetear TODA LA SEMANA? ¡Esto no se puede deshacer!")) return;
-  for(let i=1;i<=7;i++){ let dk="day"+i;
-    dataStore[dk]={ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{pending:[], paid:[]} };
+  const today = new Date();
+  for(let i=0;i<7;i++){ 
+    let dk="day"+(i+1);
+    let dayDate = new Date(today);
+    dayDate.setDate(today.getDate() - today.getDay() + (i + (today.getDay() === 0 ? -6 : 1)));
+
+    dataStore[dk]={ 
+        fecha: dayDate.toISOString().split('T')[0],
+        pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{pending:[], paid:[]} 
+    };
     for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
         dataStore[dk].pages.push({ pageNo:r+1, centenas:0, pulitos:0, pendingPrizes:[], paidPrizes:[], totalSalidas:0 }); 
     }
@@ -1302,27 +1407,74 @@ function resetWeek(){
  * 16) “Realizar Captura” => html2canvas => PNG
  ****************************************************/
 document.getElementById("btnExportPDF").addEventListener("click",()=>{
-  let activeTab=document.querySelector(".tabContent.active");
-  if(!activeTab){
-    const notification = document.createElement('div'); notification.textContent = "No hay pestaña activa para capturar.";
-    Object.assign(notification.style, { position:'fixed', top:'10px', right:'10px', background:'var(--danger-color)', color:'white', padding:'10px', borderRadius:'5px', zIndex:'1000000'});
-    document.body.appendChild(notification); setTimeout(() => notification.remove(), 3000); return;
+  const activeTabContent = document.querySelector(".tabContent.active");
+  if(!activeTabContent){
+    // Simple alert for now, can be replaced with a nicer notification
+    alert("No hay pestaña activa para capturar.");
+    return;
   }
-  const accordionsInActiveTab = activeTab.querySelectorAll(".accordion-content"); const originalDisplayStyles = [];
-  accordionsInActiveTab.forEach(accContent => { originalDisplayStyles.push(accContent.style.display); accContent.style.display = "block"; });
+
+  // Determine which capture wrapper to use based on the active tab
+  let elementToCapture;
+  if (activeTabContent.id.startsWith("tabDay")) {
+    const dayKey = activeTabContent.id.replace("tab", "").toLowerCase();
+    elementToCapture = document.getElementById(`captureContent_${dayKey}`);
+  } else if (activeTabContent.id === "tabWeekly") {
+    elementToCapture = document.getElementById("weeklyContainer"); // Or a wrapper if you add one for weekly
+     // For weekly, we might not need to hide accordions if they are not part of its direct content for capture.
+  } else {
+     elementToCapture = activeTabContent; // Fallback for other tabs like Manual, Premios
+  }
+  
+  if (!elementToCapture) {
+    alert("No se pudo encontrar el contenido para capturar.");
+    return;
+  }
+
+
+  // Hide accordions within the specific day's container before capture
+  const accordionsToHide = elementToCapture.querySelectorAll(".accordion");
+  const originalAccordionDisplays = [];
+  accordionsToHide.forEach(acc => {
+      originalAccordionDisplays.push(acc.style.display);
+      acc.style.display = "none";
+  });
+
+
   setTimeout(()=>{
-    html2canvas(activeTab,{ scale: window.devicePixelRatio || 1, useCORS: true, logging: false })
-    .then(canvas=>{
-      accordionsInActiveTab.forEach((accContent, index) => { accContent.style.display = originalDisplayStyles[index]; });
-      let link=document.createElement("a"); const activeTabTitleElement = activeTab.querySelector('h2');
-      const activeTabTitle = activeTabTitleElement ? activeTabTitleElement.textContent.split('-')[1]?.trim() || activeTab.id : activeTab.id;
-      const safeFileName = activeTabTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      link.download = `Reporte_${safeFileName||'actual'}.png`; link.href=canvas.toDataURL("image/png"); link.click();
+    html2canvas(elementToCapture,{ 
+        scale: window.devicePixelRatio || 2, // Increased scale for better quality
+        useCORS: true, 
+        logging: false,
+        scrollY: -window.scrollY // Try to capture from the top of the element
+    }).then(canvas=>{
+      // Restore accordion visibility
+      accordionsToHide.forEach((acc, index) => {
+          acc.style.display = originalAccordionDisplays[index];
+      });
+
+      let link=document.createElement("a");
+      const h2Element = activeTabContent.querySelector('h2');
+      let fileNameBase = activeTabContent.id; // Default filename base
+      if (h2Element && h2Element.textContent) {
+          const parts = h2Element.textContent.split(' - ');
+          if (parts.length > 1) {
+              fileNameBase = parts[1].trim(); // Use the day name or "Resumen Semanal"
+          }
+      }
+      const safeFileName = fileNameBase.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      link.download = `Reporte_${safeFileName||'captura'}.png`; 
+      link.href=canvas.toDataURL("image/png"); 
+      link.click();
     }).catch(err=>{
-      console.error("Error en html2canvas:", err); alert("Error al generar la captura.");
-      accordionsInActiveTab.forEach((accContent, index) => { accContent.style.display = originalDisplayStyles[index]; });
+      console.error("Error en html2canvas:", err); 
+      alert("Error al generar la captura.");
+      // Restore accordion visibility even on error
+      accordionsToHide.forEach((acc, index) => {
+          acc.style.display = originalAccordionDisplays[index];
+      });
     });
-  }, 500);
+  }, 300); // Delay to ensure rendering
 });
 
 /****************************************************
@@ -1334,10 +1486,9 @@ document.getElementById("btnExportExcel").addEventListener("click",()=>{
   let dayKey="day"+ tabId.replace("tabDay",""); let dayData=dataStore[dayKey];
   if(!dayData || !dayData.pages || dayData.pages.length === 0){ alert("No hay datos de páginas en "+dayKey + "."); return; }
   let lines=[];
-  lines.push("Página,Centenas,Pulitos,Total Salidas Pagina,Total Fila Entradas");
+  lines.push("Página,Centenas,Pulitos,Total Salidas Pagina"); // Removed "Total Fila Entradas"
   dayData.pages.forEach(p=>{ 
-    const totalRowInputs = (p.centenas||0) + (p.pulitos||0);
-    lines.push(`${p.pageNo},${p.centenas||0},${p.pulitos||0},${p.totalSalidas||0},${totalRowInputs}`);
+    lines.push(`${p.pageNo},${p.centenas||0},${p.pulitos||0},${p.totalSalidas||0}`);
   });
   let csv= lines.join("\n"); let blob= new Blob([csv], { type:"text/csv;charset=utf-8;" });
   let url=URL.createObjectURL(blob); let a=document.createElement("a"); a.href=url;
@@ -1351,10 +1502,15 @@ document.getElementById("btnExportExcel").addEventListener("click",()=>{
 function addTabKeyNavigation(){
   document.addEventListener("keydown",(e)=>{
     if(e.key!=="Tab" && e.key!=="Enter") return; let el=e.target;
-    if(!el.matches("input[type='number'], input[type='text']")) return; 
+    if(!el.matches("input[type='number'], input[type='text'], input[type='date']")) return; // Added date
     if(el.closest('.modal')) return;
     const activeTabContent = document.querySelector('.tabContent.active'); if (!activeTabContent) return;
+    
     let allPossibleInputs = [];
+    // Inputs in header controls (Sucursal, Fecha)
+    const headerControls = activeTabContent.querySelector('.header-controls');
+    if(headerControls) allPossibleInputs.push(...Array.from(headerControls.querySelectorAll("input[type='text']:not([readonly]):not([disabled]), input[type='date']:not([readonly]):not([disabled])")));
+
     const dayContainer = activeTabContent.querySelector('[id$="Container"]'); 
     const totalsSection = activeTabContent.querySelector('.totals-section');
     if (dayContainer) allPossibleInputs.push(...Array.from(dayContainer.querySelectorAll("input[type='number']:not([readonly]):not([disabled]), input[type='text']:not([readonly]):not([disabled])")));
@@ -1372,15 +1528,7 @@ function addTabKeyNavigation(){
   });
 }
 
-/****************************************************
- * 19) COLLAPSIBLE COLUMNS
- ****************************************************/
-function toggleTotalColumnVisibility(dayKey, side) {
-    const key = `${dayKey}_total_${side}`;
-    columnVisibility[key] = !columnVisibility[key]; // Toggle state
-    localStorage.setItem("columnVisibilityState", JSON.stringify(columnVisibility));
-    renderDay(dayKey); // Re-render the specific day's table
-}
+// Removed toggleTotalColumnVisibility and columnVisibility logic as Total columns are gone.
 
 </script>
 </body>
