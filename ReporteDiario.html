@@ -247,6 +247,14 @@
       border-bottom: 2px solid var(--accent-color);
       text-shadow: 0 0 3px var(--accent-color);
     }
+    .report-table thead th.collapsible-header { /* Style for clickable headers */
+        cursor: pointer;
+        user-select: none; /* Prevent text selection on click */
+    }
+    .report-table thead th.collapsible-header:hover {
+        opacity: 0.8;
+    }
+
     /* Specific column widths for the daily report table (5 columns per side) */
     .report-table th:nth-child(1), .report-table td:nth-child(1), /* Page # Left */
     .report-table th:nth-child(6), .report-table td:nth-child(6) { /* Page # Right */
@@ -272,7 +280,7 @@
     input[type="text"] {
       background: #000; color: var(--accent-color); border: 1px solid var(--accent-color);
       border-radius: 4px; text-align: center; box-shadow: inset 0 0 5px var(--accent-color);
-      width: 100px; /* Adjusted width for simpler columns */
+      width: 100px; 
       font-size: 0.9rem; 
       padding: 0.2rem; 
       height: 2.5rem !important; 
@@ -637,8 +645,8 @@ let lockedDays = {};
 let lockedAll = false;
 let isDarkMode = true;
 let pinValidated = (localStorage.getItem("pinValidated")==="true");
+let columnVisibility = {}; // For collapsible columns
 
-// Estructura de datos simplificada para las páginas
 let dataStore = {
   globalSucursal:"",
   day1:{ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
@@ -668,7 +676,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   if(stored){
     try {
         let parsedData = JSON.parse(stored);
-        Object.keys(dataStore).forEach(key => { // Deep merge
+        Object.keys(dataStore).forEach(key => { 
             if (parsedData[key] !== undefined) {
                 if (typeof dataStore[key] === 'object' && dataStore[key] !== null && !Array.isArray(dataStore[key])) {
                     dataStore[key] = {...dataStore[key], ...parsedData[key]};
@@ -676,7 +684,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
             }
         });
 
-        for(let i=1; i<=7; i++){ // Migrate and ensure page structure
+        for(let i=1; i<=7; i++){ 
             let dk = "day"+i;
             if(dataStore[dk]) {
                 if (!dataStore[dk].pages || !Array.isArray(dataStore[dk].pages)) dataStore[dk].pages = [];
@@ -687,14 +695,12 @@ window.addEventListener("DOMContentLoaded", ()=>{
                     let pageData = existingPages[pIdx] || {};
                     dataStore[dk].pages.push({
                         pageNo: pIdx + 1,
-                        // Migration from centenas1/pulitos1 and discarding centenas2/pulitos2
                         centenas: pageData.centenas !== undefined ? pageData.centenas : (pageData.centenas1 || 0),
                         pulitos:  pageData.pulitos  !== undefined ? pageData.pulitos  : (pageData.pulitos1  || 0),
                         pendingPrizes: pageData.pendingPrizes || [],
                         paidPrizes:    pageData.paidPrizes    || [],
                         totalSalidas:  pageData.totalSalidas  || 0
                     });
-                    // Clean up old fields if they existed from previous structures
                     if (pageData.centenas1 !== undefined) delete pageData.centenas1;
                     if (pageData.pulitos1  !== undefined) delete pageData.pulitos1;
                     if (pageData.centenas2 !== undefined) delete pageData.centenas2;
@@ -712,6 +718,19 @@ window.addEventListener("DOMContentLoaded", ()=>{
   } else {
     initializeEmptyDataStore(); 
   }
+
+  // Initialize column visibility state
+  let storedColumnVisibility = localStorage.getItem("columnVisibilityState");
+  if (storedColumnVisibility) {
+      columnVisibility = JSON.parse(storedColumnVisibility);
+  } else {
+      for (let i = 1; i <= 7; i++) {
+          let dk = "day" + i;
+          columnVisibility[`${dk}_total_left`] = true; // Default to visible
+          columnVisibility[`${dk}_total_right`] = true;// Default to visible
+      }
+  }
+
 
   for(let i=1;i<=7;i++){ if(lockedDays["day"+i]===undefined) lockedDays["day"+i]= false; }
 
@@ -751,7 +770,7 @@ function initializeEmptyDataStore() {
         for (let pIdx = 0; pIdx < MAX_PAGES_PER_DAY; pIdx++) {
             dataStore[dk].pages.push({
                 pageNo: pIdx + 1,
-                centenas: 0, pulitos: 0, // Simplified structure
+                centenas: 0, pulitos: 0, 
                 pendingPrizes: [], paidPrizes: [], totalSalidas: 0
             });
         }
@@ -890,12 +909,18 @@ function renderDay(dayKey){
   const addPageButton = document.getElementById(`addPageBtn_${dayKey}`);
   if (addPageButton) addPageButton.disabled = true;
 
+  // Determine column visibility for the current day
+  const totalLeftVisible = columnVisibility[`${dayKey}_total_left`] !== false;
+  const totalRightVisible = columnVisibility[`${dayKey}_total_right`] !== false;
+
   let html=`
     <table class="report-table">
       <thead>
         <tr>
-          <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th><th>Total</th>
-          <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th><th>Total</th>
+          <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th>
+          <th class="collapsible-header" onclick="toggleTotalColumnVisibility('${dayKey}', 'left')" title="Click para ocultar/mostrar">Total ${totalLeftVisible ? '(-)' : '(+)'}</th>
+          <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th>
+          <th class="collapsible-header" onclick="toggleTotalColumnVisibility('${dayKey}', 'right')" title="Click para ocultar/mostrar">Total ${totalRightVisible ? '(-)' : '(+)'}</th>
         </tr>
       </thead>
       <tbody>
@@ -910,33 +935,32 @@ function renderDay(dayKey){
 
     if (!p_left || !p_right) { console.error("Page data missing for row " + i); continue; }
     
-    // Left side data
     let cVal_l=(p_left.centenas||""); let pVal_l=(p_left.pulitos||"");
     let totalInputs_l=(p_left.centenas + p_left.pulitos);
     let sumPend_l=(p_left.pendingPrizes||[]).reduce((acc,v)=>acc+v,0);
     let salidasColor_l= (sumPend_l>0)?"var(--purple-color)":"var(--danger-color)";
-    let salidasVal_l=(p_left.totalSalidas||0).toFixed(2);
+    let salidasVal_l= p_left.totalSalidas ? `$${(p_left.totalSalidas||0).toFixed(2)}` : '';
 
-    // Right side data
+
     let cVal_r=(p_right.centenas||""); let pVal_r=(p_right.pulitos||"");
     let totalInputs_r=(p_right.centenas + p_right.pulitos);
     let sumPend_r=(p_right.pendingPrizes||[]).reduce((acc,v)=>acc+v,0);
     let salidasColor_r= (sumPend_r>0)?"var(--purple-color)":"var(--danger-color)";
-    let salidasVal_r=(p_right.totalSalidas||0).toFixed(2);
+    let salidasVal_r= p_right.totalSalidas ? `$${(p_right.totalSalidas||0).toFixed(2)}` : '';
 
     html+=`
       <tr>
         <td><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_left_idx})" ${locked?'disabled':''}>${p_left.pageNo}</button></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="centenas" value="${cVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="pulitos"  value="${pVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td style="cursor:pointer;color:${salidasColor_l};" onclick="openPrizesModal('${dayKey}',${page_left_idx})">$${salidasVal_l}</td>
-        <td>$${totalInputs_l.toFixed(2)}</td>
+        <td style="cursor:pointer;color:${salidasColor_l};" onclick="openPrizesModal('${dayKey}',${page_left_idx})">${salidasVal_l}</td>
+        <td ${!totalLeftVisible ? 'style="display:none;"' : ''}>${totalInputs_l ? '$'+totalInputs_l.toFixed(2) : ''}</td>
         
         <td><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_right_idx})" ${locked?'disabled':''}>${p_right.pageNo}</button></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="centenas" value="${cVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
         <td><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="pulitos"  value="${pVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td style="cursor:pointer;color:${salidasColor_r};" onclick="openPrizesModal('${dayKey}',${page_right_idx})">$${salidasVal_r}</td>
-        <td>$${totalInputs_r.toFixed(2)}</td>
+        <td style="cursor:pointer;color:${salidasColor_r};" onclick="openPrizesModal('${dayKey}',${page_right_idx})">${salidasVal_r}</td>
+        <td ${!totalRightVisible ? 'style="display:none;"' : ''}>${totalInputs_r ? '$'+totalInputs_r.toFixed(2) : ''}</td>
       </tr>
     `;
   }
@@ -955,16 +979,18 @@ function renderDay(dayKey){
   let nbColor= isDarkMode ? "#eee" : "#000";
   if(netBal<0) nbColor="#0f0"; else if(netBal>0) nbColor="#f33";
 
-  let ovVal=(dayData.overlook||""); let ovNote= dayData.overlookNote||"";
+  let ovVal=(dayData.overlook||""); 
+  let ovNote= dayData.overlookNote||""; // Nota Overlook will be empty if not set
+
   html+=`
     <div class="totals-section">
       <h3>Totales</h3>
-      <div class="form-group"><label>Total Centenas</label><input type="text" readonly value="$${t.totalCentenas.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Pulitos</label><input type="text" readonly value="$${t.totalPulitos.toFixed(2)}"></div>
+      <div class="form-group"><label>Total Centenas</label><input type="text" readonly value="${t.totalCentenas ? '$'+t.totalCentenas.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Pulitos</label><input type="text" readonly value="${t.totalPulitos ? '$'+t.totalPulitos.toFixed(2) : ''}"></div>
       <div class="form-group" style="align-items:center;">
         <label>Overlook</label>
         <input type="number" data-day="${dayKey}" data-field="overlook" max="900000" value="${ovVal}" onchange="updateDayField(this)" ${locked?'disabled':''}>
-        <input type="text" data-day="${dayKey}" data-field="overlookNote" style="margin-left:8px;width:auto; flex-grow:1;" placeholder="Nota Overlook" value="${ovNote}" oninput="updateDayNoteField(this)" ${locked?'disabled':''}>
+        <input type="text" data-day="${dayKey}" data-field="overlookNote" style="margin-left:8px;width:auto; flex-grow:1;" value="${ovNote}" oninput="updateDayNoteField(this)" ${locked?'disabled':''}>
         <button class="pageBtn" style="background:green;margin-left:8px;" onclick="addOverlookRow('${dayKey}')" ${locked?'disabled':''}>Add</button>
         <button class="pageBtn" style="background:red;margin-left:8px;" onclick="clearMainOverlook('${dayKey}')" ${locked?'disabled':''}>Del</button>
       </div>
@@ -980,8 +1006,8 @@ function renderDay(dayKey){
       </div>`;
   });
   html+=`</div>
-      <div class="form-group"><label>Total Salidas (Incl. Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="$${t.totalSalidas.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Ventas (Bruto)</label><input type="text" readonly value="$${t.totalVentas.toFixed(2)}"></div>
+      <div class="form-group"><label>Total Salidas (Incl. Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="${t.totalSalidas ? '$'+t.totalSalidas.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Ventas (Bruto)</label><input type="text" readonly value="${t.totalVentas ? '$'+t.totalVentas.toFixed(2) : ''}"></div>
     </div>`;
 
   let isCuadreOpen=accordionStates[dayKey+"_cuadre"]? "block":"none";
@@ -1002,16 +1028,16 @@ function renderCuadreDia(dayKey, netBal, nbColor, totalPendingPrizesOverall){
   let dayData=dataStore[dayKey]; let t=calcDayTotals(dayKey); let subT=(t.totalVentas-t.totalSalidas);
   return `
     <div class="cuadre-section"><h3>Cuadre del Día</h3>
-      <div class="form-group"><label>Ventas (Bruto)</label><input type="text" readonly value="${t.totalVentas.toFixed(2)}"></div>
-      <div class="form-group"><label>Salidas (Incl. Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="${t.totalSalidas.toFixed(2)}"></div>
-      <div class="form-group"><label>Sub Total (Ventas - Salidas)</label><input type="text" readonly style="color:var(--purple-strong);" value="${subT.toFixed(2)}"></div>
-      <div class="form-group"><label>Prem. Pend. (Páginas)</label><input type="text" readonly style="color:var(--purple-color);" value="${totalPendingPrizesOverall.toFixed(2)}"></div>
+      <div class="form-group"><label>Ventas (Bruto)</label><input type="text" readonly value="${t.totalVentas ? '$'+t.totalVentas.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Salidas (Incl. Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="${t.totalSalidas ? '$'+t.totalSalidas.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Sub Total (Ventas - Salidas)</label><input type="text" readonly style="color:var(--purple-strong);" value="${subT ? '$'+subT.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Prem. Pend. (Páginas)</label><input type="text" readonly style="color:var(--purple-color);" value="${totalPendingPrizesOverall ? '$'+totalPendingPrizesOverall.toFixed(2) : ''}"></div>
       <div class="form-group"><label>Cash</label><input type="number" data-day="${dayKey}" data-field="cash" max="900000" value="${dayData.cash||0}" onchange="updateDayField(this)"></div>
       <div class="form-group"><label>Sucursal</label><input type="number" data-day="${dayKey}" data-field="sucursal" max="900000" value="${dayData.sucursal||0}" onchange="updateDayField(this)"></div>
-      <div class="form-group"><label>Crédito (Otorgado)</label><input type="number" readonly style="color:var(--purple-color);" value="${dayData.credito||0}"></div>
+      <div class="form-group"><label>Crédito (Otorgado)</label><input type="number" readonly style="color:var(--purple-color);" value="${dayData.credito ? '$'+dayData.credito.toFixed(2) : ''}"></div>
       <div class="form-group"><label>Descuento</label><input type="number" data-day="${dayKey}" data-field="descuento" max="900000" value="${dayData.descuento||0}" onchange="updateDayField(this)"></div>
       <div class="form-group"><label>Tickets</label><input type="number" data-day="${dayKey}" data-field="tickets" max="900000" value="${dayData.tickets||0}" onchange="updateDayField(this)"></div>
-      <div class="form-group"><label>NetBalance</label><input type="text" readonly style="color:${nbColor}; font-weight:bold;" value="${netBal.toFixed(2)}"></div>
+      <div class="form-group"><label>NetBalance</label><input type="text" readonly style="color:${nbColor}; font-weight:bold;" value="${netBal ? netBal.toFixed(2) : '0.00'}"></div>
     </div>`;
 }
 
@@ -1020,19 +1046,10 @@ function renderCuadreDia(dayKey, netBal, nbColor, totalPendingPrizesOverall){
  ****************************************************/
 function calcDayTotals(dayKey){
   let d=dataStore[dayKey]; if(!d) return { totalCentenas:0, totalPulitos:0, totalSalidas:0, totalVentas:0 };
-  let tc=0, tp=0, ts=0; // Simplified: tc for total centenas, tp for total pulitos
-  (d.pages || []).forEach(p=>{
-    tc+=(p.centenas||0); 
-    tp+=(p.pulitos||0);
-    ts+=(p.totalSalidas||0);
-  });
+  let tc=0, tp=0, ts=0; 
+  (d.pages || []).forEach(p=>{ tc+=(p.centenas||0); tp+=(p.pulitos||0); ts+=(p.totalSalidas||0); });
   ts += (d.overlook||0); (d.overlookExtra || []).forEach(ov=>{ ts += (ov.amount||0); });
-  return {
-    totalCentenas: tc, 
-    totalPulitos: tp,
-    totalSalidas: ts, 
-    totalVentas: (tc + tp) // Total ventas is sum of all centenas and pulitos
-  };
+  return { totalCentenas: tc, totalPulitos: tp, totalSalidas: ts, totalVentas: (tc + tp) };
 }
 
 /****************************************************
@@ -1058,8 +1075,8 @@ function createCreditSection(dayKey, locked){
   let totalPend=(c.pending || []).reduce((acc,obj)=>acc+(parseFloat(obj.amount)||0),0);
   let totalPaid=(c.paid || []).reduce((acc,obj)=>acc+(parseFloat(obj.amount)||0),0);
   return `<div style="padding:1rem;"><div style="display:flex;gap:2rem;flex-wrap:wrap;">
-        <div style="flex:1; min-width:280px;"><h4 style="color:var(--purple-color);margin-bottom:0.5rem;">Pendientes</h4><table style="width:100%;border-collapse:collapse;"><thead><tr><th>#</th><th>Cliente</th><th>Monto</th><th>Acción</th></tr></thead><tbody>${pendingHTML}</tbody></table><button class="addPrizeBtn" onclick="addCreditItem('${dayKey}','pending')" ${locked?'disabled':''}>+ Pendiente</button><p>Total Pendiente: <span style="color:var(--purple-color);font-weight:bold;">$${totalPend.toFixed(2)}</span></p></div>
-        <div style="flex:1; min-width:280px;"><h4 style="color:var(--danger-color);margin-bottom:0.5rem;">Pagados</h4><table style="width:100%;border-collapse:collapse;"><thead><tr><th>#</th><th>Cliente</th><th>Monto</th><th>Acción</th></tr></thead><tbody>${paidHTML}</tbody></table><button class="addPrizeBtn" style="color:var(--danger-color);border-color:var(--danger-color);" onclick="addCreditItem('${dayKey}','paid')" ${locked?'disabled':''}>+ Pagado</button><p>Total Pagado: <span style="color:var(--danger-color);font-weight:bold;">$${totalPaid.toFixed(2)}</span></p></div>
+        <div style="flex:1; min-width:280px;"><h4 style="color:var(--purple-color);margin-bottom:0.5rem;">Pendientes</h4><table style="width:100%;border-collapse:collapse;"><thead><tr><th>#</th><th>Cliente</th><th>Monto</th><th>Acción</th></tr></thead><tbody>${pendingHTML}</tbody></table><button class="addPrizeBtn" onclick="addCreditItem('${dayKey}','pending')" ${locked?'disabled':''}>+ Pendiente</button><p>Total Pendiente: <span style="color:var(--purple-color);font-weight:bold;">${totalPend ? '$'+totalPend.toFixed(2) : ''}</span></p></div>
+        <div style="flex:1; min-width:280px;"><h4 style="color:var(--danger-color);margin-bottom:0.5rem;">Pagados</h4><table style="width:100%;border-collapse:collapse;"><thead><tr><th>#</th><th>Cliente</th><th>Monto</th><th>Acción</th></tr></thead><tbody>${paidHTML}</tbody></table><button class="addPrizeBtn" style="color:var(--danger-color);border-color:var(--danger-color);" onclick="addCreditItem('${dayKey}','paid')" ${locked?'disabled':''}>+ Pagado</button><p>Total Pagado: <span style="color:var(--danger-color);font-weight:bold;">${totalPaid ? '$'+totalPaid.toFixed(2) : ''}</span></p></div>
       </div></div>`;
 }
 
@@ -1100,13 +1117,13 @@ function clearMainOverlook(dayKey){ dataStore[dayKey].overlook=0; dataStore[dayK
 function deletePageRow(dayKey, idx){ 
   if(!confirm(`¿Limpiar datos de la página ${dataStore[dayKey].pages[idx].pageNo}?`)) return;
   let pageToClear = dataStore[dayKey].pages[idx];
-  pageToClear.centenas = 0; pageToClear.pulitos = 0; // Simplified
+  pageToClear.centenas = 0; pageToClear.pulitos = 0; 
   pageToClear.pendingPrizes = []; pageToClear.paidPrizes = [];
   pageToClear.totalSalidas = 0;
   storeData(); renderDay(dayKey);
 }
 
-function addPageRow(dayKey){ /* Button is disabled, function kept for potential future use */ }
+function addPageRow(dayKey){ /* Button is disabled */ }
 
 function updatePageField(input){
   let dayKey=input.dataset.day; let idx=parseInt(input.dataset.pindex); let field=input.dataset.field;
@@ -1212,28 +1229,40 @@ function updateWeeklyView(){
   let html=`<table class="weekly-table"><thead><tr><th>Día</th><th>Centenas</th><th>Pulitos</th><th>Salidas (Premios+Overlook)</th><th>Ventas (Bruto)</th></tr></thead><tbody>`;
   for(let i=0;i<7;i++){
     const dt = dayTotalsArray[i] || { totalCentenas:0, totalPulitos:0, totalSalidas:0, totalVentas:0 };
-    html+=`<tr><td>${dayNames[i]}</td><td>$${dt.totalCentenas.toFixed(2)}</td><td>$${dt.totalPulitos.toFixed(2)}</td><td style="color:var(--danger-color);">$${dt.totalSalidas.toFixed(2)}</td><td>$${dt.totalVentas.toFixed(2)}</td></tr>`;
+    html+=`<tr>
+             <td>${dayNames[i]}</td>
+             <td>${dt.totalCentenas ? '$'+dt.totalCentenas.toFixed(2) : ''}</td>
+             <td>${dt.totalPulitos ? '$'+dt.totalPulitos.toFixed(2) : ''}</td>
+             <td style="color:var(--danger-color);">${dt.totalSalidas ? '$'+dt.totalSalidas.toFixed(2) : ''}</td>
+             <td>${dt.totalVentas ? '$'+dt.totalVentas.toFixed(2) : ''}</td>
+           </tr>`;
   }
-  html+=`<tr style="font-weight:bold;"><td>Totales Semana</td><td>$${sumCent.toFixed(2)}</td><td>$${sumPul.toFixed(2)}</td><td style="color:var(--danger-color);">$${sumSalNetPrizes.toFixed(2)}</td><td>$${sumVentNet.toFixed(2)}</td></tr></tbody></table>
+  html+=`<tr style="font-weight:bold;">
+           <td>Totales Semana</td>
+           <td>${sumCent ? '$'+sumCent.toFixed(2) : ''}</td>
+           <td>${sumPul ? '$'+sumPul.toFixed(2) : ''}</td>
+           <td style="color:var(--danger-color);">${sumSalNetPrizes ? '$'+sumSalNetPrizes.toFixed(2) : ''}</td>
+           <td>${sumVentNet ? '$'+sumVentNet.toFixed(2) : ''}</td>
+         </tr></tbody></table>
     <div class="cuadre-section"><h3>Resumen Comisión Semanal</h3>
-      <div class="form-group"><label>Total Ventas (Bruto)</label><input type="text" readonly value="$${sumVentNet.toFixed(2)}"></div>
-      <div class="form-group"><label>Centenas 25%</label><input type="text" readonly value="$${c25.toFixed(2)}"></div>
-      <div class="form-group"><label>Pulitos 10%</label><input type="text" readonly value="$${p10.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Comisión</label><input type="text" readonly value="$${totalCom.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Salidas (Premios+Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="$${sumSalNetPrizes.toFixed(2)}"></div>
-      <div class="form-group"><label>Sub Total (Ventas - Salidas - Comisión)</label><input type="text" readonly style="color:var(--purple-strong); font-weight:bold;" value="$${subTotalComision.toFixed(2)}"></div></div>
+      <div class="form-group"><label>Total Ventas (Bruto)</label><input type="text" readonly value="${sumVentNet ? '$'+sumVentNet.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Centenas 25%</label><input type="text" readonly value="${c25 ? '$'+c25.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Pulitos 10%</label><input type="text" readonly value="${p10 ? '$'+p10.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Comisión</label><input type="text" readonly value="${totalCom ? '$'+totalCom.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Salidas (Premios+Overlook)</label><input type="text" readonly style="color:var(--danger-color);" value="${sumSalNetPrizes ? '$'+sumSalNetPrizes.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Sub Total (Ventas - Salidas - Comisión)</label><input type="text" readonly style="color:var(--purple-strong); font-weight:bold;" value="${subTotalComision ? '$'+subTotalComision.toFixed(2) : ''}"></div></div>
     <div class="cuadre-section"><h3>Cuadre Oficina (Semana)</h3>
-      <div class="form-group"><label>Sub Total Anterior</label><input type="text" readonly style="color:var(--purple-strong);" value="$${subTotalComision.toFixed(2)}"></div>
+      <div class="form-group"><label>Sub Total Anterior</label><input type="text" readonly style="color:var(--purple-strong);" value="${subTotalComision ? '$'+subTotalComision.toFixed(2) : ''}"></div>
       <div class="form-group"><label>Caídas (20%)</label><input type="number" max="900000" value="${(dataStore.weekly.caidas||"")}" onchange="updateWeeklyField('caidas',this.value)"></div>
       <div class="form-group"><label>Adelanto Oficina</label><input type="number" max="900000" value="${(dataStore.weekly.adelantoOficina||"")}" onchange="updateWeeklyField('adelantoOficina',this.value)"></div>
-      <div class="form-group"><label>Balance Oficina</label><input type="text" readonly style="color:${boColor}; font-weight:bold;" value="$${balOfic.toFixed(2)}"></div></div>
+      <div class="form-group"><label>Balance Oficina</label><input type="text" readonly style="color:${boColor}; font-weight:bold;" value="${balOfic ? balOfic.toFixed(2) : '0.00'}"></div></div>
     <div class="cuadre-section"><h3>Resumen Financiero Semanal (Informativo)</h3>
-      <div class="form-group"><label>Total Premios Pend. (Páginas)</label><input type="text" readonly style="color:var(--purple-color);" value="$${sumPendAllPrizes.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Cash (Suma Diaria)</label><input type="text" readonly value="$${sumCash.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Sucursal (Suma Diaria)</label><input type="text" readonly value="$${sumSuc.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Crédito Otorgado (Suma Diaria)</label><input type="text" readonly style="color:var(--purple-color);" value="$${sumCred.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Descuento (Suma Diaria)</label><input type="text" readonly value="$${sumDesc.toFixed(2)}"></div>
-      <div class="form-group"><label>Total Tickets (Suma Diaria)</label><input type="text" readonly value="$${sumTic.toFixed(2)}"></div></div>`;
+      <div class="form-group"><label>Total Premios Pend. (Páginas)</label><input type="text" readonly style="color:var(--purple-color);" value="${sumPendAllPrizes ? '$'+sumPendAllPrizes.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Cash (Suma Diaria)</label><input type="text" readonly value="${sumCash ? '$'+sumCash.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Sucursal (Suma Diaria)</label><input type="text" readonly value="${sumSuc ? '$'+sumSuc.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Crédito Otorgado (Suma Diaria)</label><input type="text" readonly style="color:var(--purple-color);" value="${sumCred ? '$'+sumCred.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Descuento (Suma Diaria)</label><input type="text" readonly value="${sumDesc ? '$'+sumDesc.toFixed(2) : ''}"></div>
+      <div class="form-group"><label>Total Tickets (Suma Diaria)</label><input type="text" readonly value="${sumTic ? '$'+sumTic.toFixed(2) : ''}"></div></div>`;
   wCont.innerHTML=html;
 }
 function updateWeeklyField(field, valueStr) {
@@ -1251,7 +1280,7 @@ function sendDayToSheets(dayKey){ alert("Guardar Día (placeholder): "+dayKey + 
 function resetDay(dayKey){
   if(!confirm(`¿Resetear todos los datos para ${dayKey}? Esto no se puede deshacer.`)) return;
   dataStore[dayKey]={ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] } };
-  for(let r=0;r<MAX_PAGES_PER_DAY;r++){ // Initialize with simplified structure
+  for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
     dataStore[dayKey].pages.push({ pageNo:r+1, centenas:0, pulitos:0, pendingPrizes:[], paidPrizes:[], totalSalidas:0 });
   }
   storeData(); renderDay(dayKey); updateWeeklyView();
@@ -1261,7 +1290,7 @@ function resetWeek(){
   if(!confirm("¿Resetear TODA LA SEMANA? ¡Esto no se puede deshacer!")) return;
   for(let i=1;i<=7;i++){ let dk="day"+i;
     dataStore[dk]={ pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{pending:[], paid:[]} };
-    for(let r=0;r<MAX_PAGES_PER_DAY;r++){ // Initialize with simplified structure
+    for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
         dataStore[dk].pages.push({ pageNo:r+1, centenas:0, pulitos:0, pendingPrizes:[], paidPrizes:[], totalSalidas:0 }); 
     }
   }
@@ -1305,11 +1334,9 @@ document.getElementById("btnExportExcel").addEventListener("click",()=>{
   let dayKey="day"+ tabId.replace("tabDay",""); let dayData=dataStore[dayKey];
   if(!dayData || !dayData.pages || dayData.pages.length === 0){ alert("No hay datos de páginas en "+dayKey + "."); return; }
   let lines=[];
-  // Updated CSV Header for simplified structure
   lines.push("Página,Centenas,Pulitos,Total Salidas Pagina,Total Fila Entradas");
   dayData.pages.forEach(p=>{ 
     const totalRowInputs = (p.centenas||0) + (p.pulitos||0);
-    // Updated CSV row data
     lines.push(`${p.pageNo},${p.centenas||0},${p.pulitos||0},${p.totalSalidas||0},${totalRowInputs}`);
   });
   let csv= lines.join("\n"); let blob= new Blob([csv], { type:"text/csv;charset=utf-8;" });
@@ -1328,19 +1355,15 @@ function addTabKeyNavigation(){
     if(el.closest('.modal')) return;
     const activeTabContent = document.querySelector('.tabContent.active'); if (!activeTabContent) return;
     let allPossibleInputs = [];
-    const dayContainer = activeTabContent.querySelector('[id$="Container"]'); // Catches dayXContainer, weeklyContainer etc.
+    const dayContainer = activeTabContent.querySelector('[id$="Container"]'); 
     const totalsSection = activeTabContent.querySelector('.totals-section');
-    // Add inputs from the page grid
     if (dayContainer) allPossibleInputs.push(...Array.from(dayContainer.querySelectorAll("input[type='number']:not([readonly]):not([disabled]), input[type='text']:not([readonly]):not([disabled])")));
-    // Add inputs from the totals section (like overlook)
     if (totalsSection) allPossibleInputs.push(...Array.from(totalsSection.querySelectorAll("input[type='number']:not([readonly]):not([disabled]), input[type='text']:not([readonly]):not([disabled])")));
-    // Add inputs from visible accordions (cuadre, creditos)
     activeTabContent.querySelectorAll('.cuadre-section, .accordion-content[id*="credit_"]').forEach(section => {
-        if (section.offsetParent !== null) { // Check if section is visible
+        if (section.offsetParent !== null) { 
              allPossibleInputs.push(...Array.from(section.querySelectorAll("input[type='number']:not([readonly]):not([disabled]), input[type='text']:not([readonly]):not([disabled])")));
         }
     });
-    // Filter for actually visible and enabled inputs
     let inputs = allPossibleInputs.filter(input => input.offsetParent !== null && !input.disabled);
     if (inputs.length === 0) return; let idx = inputs.indexOf(el); if(idx < 0) return;
     e.preventDefault(); let step = (e.shiftKey && e.key === "Tab") ? -1 : +1;
@@ -1348,6 +1371,17 @@ function addTabKeyNavigation(){
     if(inputs[nextIdx]){ inputs[nextIdx].focus(); if(inputs[nextIdx].select) inputs[nextIdx].select(); }
   });
 }
+
+/****************************************************
+ * 19) COLLAPSIBLE COLUMNS
+ ****************************************************/
+function toggleTotalColumnVisibility(dayKey, side) {
+    const key = `${dayKey}_total_${side}`;
+    columnVisibility[key] = !columnVisibility[key]; // Toggle state
+    localStorage.setItem("columnVisibilityState", JSON.stringify(columnVisibility));
+    renderDay(dayKey); // Re-render the specific day's table
+}
+
 </script>
 </body>
 </html>
