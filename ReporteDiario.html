@@ -107,9 +107,13 @@
       border-color: var(--light-accent);
       box-shadow: none;
     }
+    body.light-mode .totals-section h3 { /* Color del título "Totales" en modo claro */
+        color: #000 !important; /* Negro */
+        text-shadow: none !important;
+    }
     body.light-mode input[type="number"],
     body.light-mode input[type="text"],
-    body.light-mode input[type="date"] { /* Added date input */
+    body.light-mode input[type="date"] { 
       background: #fff;
       color: #000;
       border: 1px solid #aaa;
@@ -117,7 +121,7 @@
     }
     body.light-mode input[type="number"]:focus,
     body.light-mode input[type="text"]:focus,
-    body.light-mode input[type="date"]:focus { /* Added date input */
+    body.light-mode input[type="date"]:focus { 
       border-color: var(--light-accent);
     }
     body.light-mode .pageBtn {
@@ -231,10 +235,10 @@
       box-shadow: 0 0 8px var(--accent-color);
     }
     .tabContent.active { display: block; }
-    .header-controls { /* For Sucursal and Fecha inputs */
+    .header-controls { 
         display: flex;
-        gap: 1rem; /* Space between Sucursal and Fecha */
-        margin: 0.5rem 0 1rem 0; /* Consistent margin */
+        gap: 1rem; 
+        margin: 0.5rem 0 1rem 0; 
         align-items: center;
     }
     .header-controls label {
@@ -243,22 +247,22 @@
     }
     .header-controls input[type="text"],
     .header-controls input[type="date"] {
-        width: 220px; /* Fixed width for both */
+        width: 220px; 
         padding: 0.4rem;
-        font-size: 1rem; /* Slightly larger for better readability */
+        font-size: 1rem; 
     }
 
 
     /* =================== TABLA PÁGINAS (DIARIO) =================== */
     .report-table {
       width: 100%; border-collapse: collapse; margin-bottom: 1rem;
-      color: var(--main-text); table-layout: auto; /* Changed to auto for better fit */
+      color: var(--main-text); 
     }
     .report-table thead th,
     .report-table tbody td {
       font-size: 0.9rem; 
       text-align: center; border-bottom: 1px solid #444;
-      vertical-align: middle; padding: 0.3rem; 
+      vertical-align: middle; padding: 0.2rem; /* Reduced padding for tighter fit */
       word-wrap: break-word; 
     }
     .report-table thead th {
@@ -267,35 +271,33 @@
       text-shadow: 0 0 3px var(--accent-color);
     }
     /* Column widths for the daily report table (4 columns per side now) */
-    .report-table th:nth-child(1), .report-table td:nth-child(1), /* Page # Left */
-    .report-table th:nth-child(5), .report-table td:nth-child(5) { /* Page # Right */
-        width: 10%;
+    .report-table th.col-page, .report-table td.col-page {
+        width: 50px; /* Fixed width for page number column */
+        min-width: 50px;
     }
-    .report-table th:nth-child(2), .report-table td:nth-child(2), /* Centenas Left */
-    .report-table th:nth-child(3), .report-table td:nth-child(3), /* Pulitos Left */
-    .report-table th:nth-child(6), .report-table td:nth-child(6), /* Centenas Right */
-    .report-table th:nth-child(7), .report-table td:nth-child(7) { /* Pulitos Right */
-        width: 15%;
+    .report-table th.col-data, .report-table td.col-data {
+        width: auto; /* Let these columns expand */
     }
-    .report-table th:nth-child(4), .report-table td:nth-child(4), /* Salidas Left */
-    .report-table th:nth-child(8), .report-table td:nth-child(8) { /* Salidas Right */
-        width: 15%; /* Increased width for Salidas input */
+    .report-table td.col-data input[type="number"],
+    .report-table td.col-data input[type="text"] {
+        width: 100%; /* Make inputs fill the cell */
+        min-width: 60px; /* Minimum width for inputs */
     }
 
 
     input[type="number"], 
     input[type="text"],
-    input[type="date"] { /* Added date input */
+    input[type="date"] { 
       background: #000; color: var(--accent-color); border: 1px solid var(--accent-color);
       border-radius: 4px; text-align: center; box-shadow: inset 0 0 5px var(--accent-color);
-      width: 100px; 
+      /* width: 100px; Default width, overridden in table */
       font-size: 0.9rem; 
       padding: 0.2rem; 
       height: 2.5rem !important; 
       line-height: 2.5rem !important; 
       margin: 1px 0;
     }
-    input[type="date"] { /* Specific styling for date input text alignment */
+    input[type="date"] { 
         text-align: left;
         padding-left: 0.5rem;
         padding-right: 0.5rem;
@@ -309,7 +311,8 @@
       border-radius: 6px; padding: 0.2rem 0.4rem; 
       cursor: pointer; font-size: 0.8rem; 
       box-shadow: 0 0 5px var(--danger-color); transition: transform 0.2s;
-      min-width: 30px; 
+      min-width: 35px; /* Adjusted to fit numbers like "50" */
+      line-height: 1.5; /* Ensure text fits */
     }
     .pageBtn:hover { background: #f66; transform: scale(1.05); }
     .pageBtn[disabled] { background: #555; cursor: not-allowed; }
@@ -320,10 +323,17 @@
       padding: 1rem; margin-bottom: 1rem; background: #000;
       box-shadow: 0 0 8px var(--accent-color);
     }
-    .totals-section h3, .cuadre-section h3 {
+    .totals-section h3 { /* Default for dark mode */
+      color: var(--accent-color); 
+      margin-bottom: 1rem;
+      text-shadow: 0 0 3px var(--accent-color); 
+      font-size: 1.2rem;
+    }
+    .cuadre-section h3 {
       color: var(--accent-color); margin-bottom: 1rem;
       text-shadow: 0 0 3px var(--accent-color); font-size: 1.2rem;
     }
+
      .form-group {
         display: flex; justify-content: space-between; align-items: center;
         margin-bottom: 0.5rem;
@@ -694,11 +704,9 @@ let lockedDays = {};
 let lockedAll = false;
 let isDarkMode = true;
 let pinValidated = (localStorage.getItem("pinValidated")==="true");
-// columnVisibility is removed as Total columns are removed
 
 let dataStore = {
   globalSucursal:"",
-  // Each day will also have a 'fecha' field
   day1:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
   day2:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
   day3:{ fecha: "", pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] }},
@@ -785,23 +793,20 @@ window.addEventListener("DOMContentLoaded", ()=>{
     let thisDate=new Date(startOfWeek.getTime()); thisDate.setDate(thisDate.getDate()+dm.offset);
     let dStrTab=formatDateMMDDYYYY(thisDate); 
     let dStrTitle=formatDateDDMMM(thisDate);
-    let isoDate = thisDate.toISOString().split('T')[0]; // YYYY-MM-DD for date input
+    // let isoDate = thisDate.toISOString().split('T')[0]; // Not needed here, done in initializeEmptyDataStore or from stored data
 
     let btn=document.querySelector(`.sidebar button[data-tab="tabDay${index+1}"]`);
     if(btn) btn.textContent=`${dm.label} (${dStrTab})`;
     let h2title=document.getElementById(`titleDay${index+1}`);
     if(h2title) h2title.textContent= `Reporte Diario - ${dm.label} - ${dStrTitle}`;
 
-    // Initialize date field for the day
+    // Populate date field for the day
     const dayKey = `day${index+1}`;
     const fechaInput = document.getElementById(`fechaInput_${dayKey}`);
-    if (dataStore[dayKey] && !dataStore[dayKey].fecha && fechaInput) { // If no stored date, use current iterated date
-        dataStore[dayKey].fecha = isoDate;
-    }
-    if (fechaInput && dataStore[dayKey] && dataStore[dayKey].fecha) { // Populate if stored or just set
+    if (fechaInput && dataStore[dayKey] && dataStore[dayKey].fecha) { 
         fechaInput.value = dataStore[dayKey].fecha;
-    } else if (fechaInput) { // Fallback if dataStore[dayKey] somehow not fully init
-        fechaInput.value = isoDate;
+    } else if (fechaInput && dataStore[dayKey]) { // If fecha is empty string, input remains empty
+        fechaInput.value = ""; 
     }
   });
 
@@ -813,14 +818,10 @@ window.addEventListener("DOMContentLoaded", ()=>{
 });
 
 function initializeEmptyDataStore() {
-    const today = new Date();
-    for(let i=0; i<=6; i++){ // Iterate for each day of the week
-        let currentDayDate = new Date(today);
-        currentDayDate.setDate(today.getDate() - today.getDay() + (i === 0 ? (today.getDay() === 0 ? -6 : 1) : i + (today.getDay() === 0 ? -6 : 1) - today.getDay())); // Calculate date for Mon, Tue, etc.
-
-        let dk = "day"+(i+1); // day1 to day7
+    for(let i=0; i<=6; i++){ 
+        let dk = "day"+(i+1); 
          dataStore[dk] = {
-            fecha: currentDayDate.toISOString().split('T')[0], // YYYY-MM-DD
+            fecha: "", // Initialize fecha as empty string
             pages: [], overlook: 0, overlookNote: "", overlookExtra: [],
             cash: 0, sucursal: 0, credito: 0, descuento: 0, tickets: 0,
             creditTracker: { pending: [], paid: [] }
@@ -986,7 +987,6 @@ function updateDateField(dayKey, value) {
     if (dataStore[dayKey]) {
         dataStore[dayKey].fecha = value;
         storeData();
-        // No re-render needed just for date change, unless it affects titles, which it doesn't directly here.
     }
 }
 
@@ -1004,10 +1004,9 @@ function renderDay(dayKey){
   const addPageButton = document.getElementById(`addPageBtn_${dayKey}`);
   if (addPageButton) addPageButton.disabled = true;
   
-  // Update date input value for the current day being rendered
   const fechaInput = document.getElementById(`fechaInput_${dayKey}`);
-  if (fechaInput && dayData.fecha) {
-    fechaInput.value = dayData.fecha;
+  if (fechaInput) { // Ensure input exists before setting value
+    fechaInput.value = dayData.fecha || ""; // Set to stored date or empty
   }
 
 
@@ -1015,8 +1014,8 @@ function renderDay(dayKey){
     <table class="report-table">
       <thead>
         <tr>
-          <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th>
-          <th>#Pág.</th><th>Centenas</th><th>Pulitos</th><th>Salidas</th>
+          <th class="col-page">#Pág.</th><th class="col-data">Centenas</th><th class="col-data">Pulitos</th><th class="col-data">Salidas</th>
+          <th class="col-page">#Pág.</th><th class="col-data">Centenas</th><th class="col-data">Pulitos</th><th class="col-data">Salidas</th>
         </tr>
       </thead>
       <tbody>
@@ -1032,7 +1031,6 @@ function renderDay(dayKey){
     if (!p_left || !p_right) { console.error("Page data missing for row " + i); continue; }
     
     let cVal_l=(p_left.centenas||""); let pVal_l=(p_left.pulitos||"");
-    // Salidas now uses a readonly input, styled like others
     let salidasVal_l = p_left.totalSalidas || 0;
 
     let cVal_r=(p_right.centenas||""); let pVal_r=(p_right.pulitos||"");
@@ -1040,15 +1038,15 @@ function renderDay(dayKey){
 
     html+=`
       <tr>
-        <td><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_left_idx})" ${locked?'disabled':''}>${p_left.pageNo}</button></td>
-        <td><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="centenas" value="${cVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="pulitos"  value="${pVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td><input type="text" readonly value="${salidasVal_l ? '$'+salidasVal_l.toFixed(2) : ''}" style="color:${(p_left.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_left_idx})"></td>
+        <td class="col-page"><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_left_idx})" ${locked?'disabled':''}>${p_left.pageNo}</button></td>
+        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="centenas" value="${cVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
+        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="pulitos"  value="${pVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
+        <td class="col-data"><input type="text" readonly value="${salidasVal_l ? '$'+salidasVal_l.toFixed(2) : ''}" style="color:${(p_left.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_left_idx})"></td>
         
-        <td><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_right_idx})" ${locked?'disabled':''}>${p_right.pageNo}</button></td>
-        <td><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="centenas" value="${cVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="pulitos"  value="${pVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td><input type="text" readonly value="${salidasVal_r ? '$'+salidasVal_r.toFixed(2) : ''}" style="color:${(p_right.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_right_idx})"></td>
+        <td class="col-page"><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_right_idx})" ${locked?'disabled':''}>${p_right.pageNo}</button></td>
+        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="centenas" value="${cVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
+        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="pulitos"  value="${pVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
+        <td class="col-data"><input type="text" readonly value="${salidasVal_r ? '$'+salidasVal_r.toFixed(2) : ''}" style="color:${(p_right.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_right_idx})"></td>
       </tr>
     `;
   }
@@ -1367,14 +1365,8 @@ function storeData(){ localStorage.setItem("dailyReportNeonData2", JSON.stringif
 function sendDayToSheets(dayKey){ alert("Guardar Día (placeholder): "+dayKey + ". Función no implementada."); }
 function resetDay(dayKey){
   if(!confirm(`¿Resetear todos los datos para ${dayKey}? Esto no se puede deshacer.`)) return;
-  const today = new Date();
-  const currentDayOffset = dayMappings.find(dm => dm.key === dayKey)?.offset || 0;
-  let dayDate = new Date(today);
-  dayDate.setDate(today.getDate() - today.getDay() + (currentDayOffset + (today.getDay() === 0 ? -6 : 1)));
-
-
   dataStore[dayKey]={ 
-    fecha: dayDate.toISOString().split('T')[0], // Reset fecha to current day's specific date
+    fecha: "", // Reset fecha to empty
     pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] } 
   };
   for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
@@ -1385,14 +1377,10 @@ function resetDay(dayKey){
 function sendWeekToSheets(){ alert("Guardar Semana (placeholder). Función no implementada."); }
 function resetWeek(){
   if(!confirm("¿Resetear TODA LA SEMANA? ¡Esto no se puede deshacer!")) return;
-  const today = new Date();
   for(let i=0;i<7;i++){ 
     let dk="day"+(i+1);
-    let dayDate = new Date(today);
-    dayDate.setDate(today.getDate() - today.getDay() + (i + (today.getDay() === 0 ? -6 : 1)));
-
     dataStore[dk]={ 
-        fecha: dayDate.toISOString().split('T')[0],
+        fecha: "", // Reset fecha to empty for all days
         pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{pending:[], paid:[]} 
     };
     for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
@@ -1409,21 +1397,18 @@ function resetWeek(){
 document.getElementById("btnExportPDF").addEventListener("click",()=>{
   const activeTabContent = document.querySelector(".tabContent.active");
   if(!activeTabContent){
-    // Simple alert for now, can be replaced with a nicer notification
     alert("No hay pestaña activa para capturar.");
     return;
   }
 
-  // Determine which capture wrapper to use based on the active tab
   let elementToCapture;
   if (activeTabContent.id.startsWith("tabDay")) {
     const dayKey = activeTabContent.id.replace("tab", "").toLowerCase();
     elementToCapture = document.getElementById(`captureContent_${dayKey}`);
   } else if (activeTabContent.id === "tabWeekly") {
-    elementToCapture = document.getElementById("weeklyContainer"); // Or a wrapper if you add one for weekly
-     // For weekly, we might not need to hide accordions if they are not part of its direct content for capture.
+    elementToCapture = document.getElementById("weeklyContainer"); 
   } else {
-     elementToCapture = activeTabContent; // Fallback for other tabs like Manual, Premios
+     elementToCapture = activeTabContent; 
   }
   
   if (!elementToCapture) {
@@ -1431,8 +1416,6 @@ document.getElementById("btnExportPDF").addEventListener("click",()=>{
     return;
   }
 
-
-  // Hide accordions within the specific day's container before capture
   const accordionsToHide = elementToCapture.querySelectorAll(".accordion");
   const originalAccordionDisplays = [];
   accordionsToHide.forEach(acc => {
@@ -1443,23 +1426,22 @@ document.getElementById("btnExportPDF").addEventListener("click",()=>{
 
   setTimeout(()=>{
     html2canvas(elementToCapture,{ 
-        scale: window.devicePixelRatio || 2, // Increased scale for better quality
+        scale: window.devicePixelRatio || 2, 
         useCORS: true, 
         logging: false,
-        scrollY: -window.scrollY // Try to capture from the top of the element
+        scrollY: -window.scrollY 
     }).then(canvas=>{
-      // Restore accordion visibility
       accordionsToHide.forEach((acc, index) => {
           acc.style.display = originalAccordionDisplays[index];
       });
 
       let link=document.createElement("a");
       const h2Element = activeTabContent.querySelector('h2');
-      let fileNameBase = activeTabContent.id; // Default filename base
+      let fileNameBase = activeTabContent.id; 
       if (h2Element && h2Element.textContent) {
           const parts = h2Element.textContent.split(' - ');
           if (parts.length > 1) {
-              fileNameBase = parts[1].trim(); // Use the day name or "Resumen Semanal"
+              fileNameBase = parts[1].trim(); 
           }
       }
       const safeFileName = fileNameBase.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -1469,12 +1451,11 @@ document.getElementById("btnExportPDF").addEventListener("click",()=>{
     }).catch(err=>{
       console.error("Error en html2canvas:", err); 
       alert("Error al generar la captura.");
-      // Restore accordion visibility even on error
       accordionsToHide.forEach((acc, index) => {
           acc.style.display = originalAccordionDisplays[index];
       });
     });
-  }, 300); // Delay to ensure rendering
+  }, 300); 
 });
 
 /****************************************************
@@ -1486,7 +1467,7 @@ document.getElementById("btnExportExcel").addEventListener("click",()=>{
   let dayKey="day"+ tabId.replace("tabDay",""); let dayData=dataStore[dayKey];
   if(!dayData || !dayData.pages || dayData.pages.length === 0){ alert("No hay datos de páginas en "+dayKey + "."); return; }
   let lines=[];
-  lines.push("Página,Centenas,Pulitos,Total Salidas Pagina"); // Removed "Total Fila Entradas"
+  lines.push("Página,Centenas,Pulitos,Total Salidas Pagina"); 
   dayData.pages.forEach(p=>{ 
     lines.push(`${p.pageNo},${p.centenas||0},${p.pulitos||0},${p.totalSalidas||0}`);
   });
@@ -1502,12 +1483,11 @@ document.getElementById("btnExportExcel").addEventListener("click",()=>{
 function addTabKeyNavigation(){
   document.addEventListener("keydown",(e)=>{
     if(e.key!=="Tab" && e.key!=="Enter") return; let el=e.target;
-    if(!el.matches("input[type='number'], input[type='text'], input[type='date']")) return; // Added date
+    if(!el.matches("input[type='number'], input[type='text'], input[type='date']")) return; 
     if(el.closest('.modal')) return;
     const activeTabContent = document.querySelector('.tabContent.active'); if (!activeTabContent) return;
     
     let allPossibleInputs = [];
-    // Inputs in header controls (Sucursal, Fecha)
     const headerControls = activeTabContent.querySelector('.header-controls');
     if(headerControls) allPossibleInputs.push(...Array.from(headerControls.querySelectorAll("input[type='text']:not([readonly]):not([disabled]), input[type='date']:not([readonly]):not([disabled])")));
 
@@ -1527,8 +1507,6 @@ function addTabKeyNavigation(){
     if(inputs[nextIdx]){ inputs[nextIdx].focus(); if(inputs[nextIdx].select) inputs[nextIdx].select(); }
   });
 }
-
-// Removed toggleTotalColumnVisibility and columnVisibility logic as Total columns are gone.
 
 </script>
 </body>
