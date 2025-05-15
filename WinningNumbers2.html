@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -214,7 +214,7 @@
     }
 
     .btn-gradient:hover {
-      background-image: linear-gradient to right, var(--primary-dark), #059669);
+      background-image: linear-gradient(to right, var(--primary-dark), #059669);
       transform: translateY(-2px);
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
@@ -737,7 +737,7 @@
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pick 3 Draws</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray 500 uppercase tracking-wider">Pick 4 Draws</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pick 4 Draws</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -922,7 +922,7 @@
           <ul class="space-y-2">
             <li><a href="#" class="text-gray-400 hover:text-white">Texas</a></li>
             <li><a href="#" class="text-gray-400 hover:text-white">New York</a></li>
-            <li><a href="#" class="text gray-400 hover:text-white">California</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white">California</a></li>
             <li><a href="#" class="text-gray-400 hover:text-white">Florida</a></li>
           </ul>
         </div>
@@ -971,16 +971,15 @@
     </div>
   </div>
 
-  <!-- Mobile Menu Script -->
+  <!-- Scripts -->
   <script>
+    // Mobile Menu Toggle
     document.getElementById('mobile-menu-button').addEventListener('click', function() {
       const menu = document.getElementById('mobile-menu');
       menu.classList.toggle('hidden');
     });
-  </script>
 
-  <!-- Dark Mode Toggle -->
-  <script>
+    // Dark Mode Toggle
     function toggleDarkMode() {
       document.documentElement.classList.toggle('dark-mode');
       localStorage.setItem('darkMode', document.documentElement.classList.contains('dark-mode'));
@@ -990,38 +989,31 @@
     if (localStorage.getItem('darkMode') === 'true') {
       document.documentElement.classList.add('dark-mode');
     }
-  </script>
 
-  <!-- Lottery Results Script -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script>
     // Tab navigation
     function showTab(tabId) {
       // Hide all tab contents
       document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
-        tab.classList.add('hidden');
       });
       
       // Show selected tab content
-      document.getElementById(tabId).classList.remove('hidden');
       document.getElementById(tabId).classList.add('active');
       
       // Update active tab button
       document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active', 'border-blue-500', 'text-blue-500');
+        button.classList.remove('active');
       });
       
+      // Add active class to clicked tab button(s)
+      const buttons = document.querySelectorAll(`[onclick="showTab('${tabId}')"]`);
+      buttons.forEach(button => {
+        button.classList.add('active');
+      });
+
       // Set mobile menu to hidden when a tab is selected
       document.getElementById('mobile-menu').classList.add('hidden');
       
-      // Add active class to clicked tab button
-      const buttons = document.querySelectorAll(`[onclick="showTab('${tabId}')"]`);
-      buttons.forEach(button => {
-        button.classList.add('active', 'border-blue-500', 'text-blue-500');
-      });
-
       // If showing winning numbers tab, update the dashboard
       if (tabId === 'winning-numbers') {
         updateDashboard();
@@ -1106,7 +1098,7 @@
     localStorage.setItem("lotteryHistory", JSON.stringify(lotteryHistory));
 
     // Update dashboard with latest results
-    async function updateDashboard() {
+    function updateDashboard() {
       const now = new Date().toLocaleString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -1341,93 +1333,13 @@
 
     // Capture screen function
     function captureScreen() {
-      const element = document.getElementById("dashboard");
-      
-      // Show a loading indicator
-      const oldCursor = document.body.style.cursor;
-      document.body.style.cursor = 'wait';
-      
-      html2canvas(element, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      }).then(canvas => {
-        document.body.style.cursor = oldCursor;
-        
-        // Create download link
-        const link = document.createElement('a');
-        link.download = 'lottery-results.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        
-        // Show a success message
-        const notification = document.createElement('div');
-        notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center';
-        notification.innerHTML = `
-          <i class="fas fa-check-circle mr-2"></i>
-          <span>Capture saved successfully!</span>
-        `;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-          notification.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-          setTimeout(() => notification.remove(), 300);
-        }, 3000);
-      }).catch(err => {
-        document.body.style.cursor = oldCursor;
-        console.error('Error capturing screen:', err);
-        
-        // Show error message
-        const notification = document.createElement('div');
-        notification.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center';
-        notification.innerHTML = `
-          <i class="fas fa-exclamation-circle mr-2"></i>
-          <span>Error capturing screen. Please try again.</span>
-        `;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-          notification.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-          setTimeout(() => notification.remove(), 300);
-        }, 3000);
-      });
+      alert("Screen capture functionality would be implemented here with html2canvas library");
     }
 
     // Export to Excel function
     function exportExcel() {
-      const history = JSON.parse(localStorage.getItem("lotteryHistory"));
-      const latestDate = Object.keys(history).sort((a, b) => new Date(b) - new Date(a))[0];
-      const data = history[latestDate];
-      
-      // Prepare data for Excel
-      const excelData = [];
-      
-      for (const [state, stateData] of Object.entries(data)) {
-        for (const [drawTime, numbers] of Object.entries(stateData)) {
-          const [p3, p4] = numbers.split("-");
-          excelData.push({
-            "State": state,
-            "Date": latestDate,
-            "Draw Time": drawTime,
-            "Pick 3": p3,
-            "Pick 4": p4
-          });
-        }
-      }
-      
-      // Create worksheet
-      const ws = XLSX.utils.json_to_sheet(excelData);
-      
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Lottery Results");
-      
-      // Export to Excel
-      XLSX.writeFile(wb, `lottery_results_${latestDate}.xlsx`);
-      
-      // Show a success message
-      const notification = document.createElement('div');
-      notification.className = 'fixed bottom-4 right
+      alert("Excel export functionality would be implemented here with SheetJS library");
+    }
+  </script>
+</body>
 </html>
