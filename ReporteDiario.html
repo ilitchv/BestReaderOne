@@ -11,9 +11,10 @@
       --main-bg: #111;
       --main-text: #eee;
       --accent-color: #0ff;
-      --danger-color: #f33;
+      --danger-color: #f33; 
       --lock-color: #fb0;
-      --purple-color: #a0f;
+      --purple-color: #a0f; 
+      --purple-hover-color: #c0f; 
       --purple-strong: #ff00ff;
       --shared-tab-bg: #222;
 
@@ -25,7 +26,8 @@
       --light-caja: #fbf9f0;
       --light-danger: #cc0033;
       --light-lock: #ccb200;
-      --light-purple: #b57aff;
+      --light-purple-button: #9370DB; 
+      --light-purple-button-hover: #8A2BE2; 
     }
 
     body {
@@ -107,8 +109,8 @@
       border-color: var(--light-accent);
       box-shadow: none;
     }
-    body.light-mode .totals-section h3 { /* Color del título "Totales" en modo claro */
-        color: #000 !important; /* Negro */
+    body.light-mode .totals-section h3 { 
+        color: #000 !important; 
         text-shadow: none !important;
     }
     body.light-mode input[type="number"],
@@ -124,12 +126,12 @@
     body.light-mode input[type="date"]:focus { 
       border-color: var(--light-accent);
     }
-    body.light-mode .pageBtn {
-      background: var(--light-danger);
-      box-shadow: none;
+    body.light-mode .pageBtn { 
+      background: var(--light-purple-button);
+      box-shadow: 0 0 5px var(--light-purple-button);
     }
     body.light-mode .pageBtn:hover {
-      background: #ff6677;
+      background: var(--light-purple-button-hover);
     }
 
     body.light-mode .accordion,
@@ -257,12 +259,13 @@
     .report-table {
       width: 100%; border-collapse: collapse; margin-bottom: 1rem;
       color: var(--main-text); 
+      /* table-layout: fixed; Removed to allow natural column sizing */
     }
     .report-table thead th,
     .report-table tbody td {
       font-size: 0.9rem; 
       text-align: center; border-bottom: 1px solid #444;
-      vertical-align: middle; padding: 0.2rem; /* Reduced padding for tighter fit */
+      vertical-align: middle; padding: 0.2rem; 
       word-wrap: break-word; 
     }
     .report-table thead th {
@@ -270,18 +273,18 @@
       border-bottom: 2px solid var(--accent-color);
       text-shadow: 0 0 3px var(--accent-color);
     }
-    /* Column widths for the daily report table (4 columns per side now) */
     .report-table th.col-page, .report-table td.col-page {
-        width: 50px; /* Fixed width for page number column */
-        min-width: 50px;
+        width: 60px; /* Fixed width for page number column */
+        min-width: 60px;
+        padding: 0.2rem 0.1rem; 
     }
     .report-table th.col-data, .report-table td.col-data {
         width: auto; /* Let these columns expand */
     }
     .report-table td.col-data input[type="number"],
     .report-table td.col-data input[type="text"] {
-        width: 100%; /* Make inputs fill the cell */
-        min-width: 60px; /* Minimum width for inputs */
+        width: 95%; 
+        margin: 0 auto; 
     }
 
 
@@ -290,7 +293,6 @@
     input[type="date"] { 
       background: #000; color: var(--accent-color); border: 1px solid var(--accent-color);
       border-radius: 4px; text-align: center; box-shadow: inset 0 0 5px var(--accent-color);
-      /* width: 100px; Default width, overridden in table */
       font-size: 0.9rem; 
       padding: 0.2rem; 
       height: 2.5rem !important; 
@@ -307,14 +309,19 @@
     input[type="date"]:focus { outline: none; border-color: #fff; }
 
     .pageBtn {
-      background: var(--danger-color); color: #fff; border: none;
+      background: var(--purple-color); 
+      color: #fff; border: none;
       border-radius: 6px; padding: 0.2rem 0.4rem; 
       cursor: pointer; font-size: 0.8rem; 
-      box-shadow: 0 0 5px var(--danger-color); transition: transform 0.2s;
-      min-width: 35px; /* Adjusted to fit numbers like "50" */
-      line-height: 1.5; /* Ensure text fits */
+      box-shadow: 0 0 5px var(--purple-color); 
+      transition: transform 0.2s, background-color 0.2s;
+      min-width: 35px; 
+      line-height: 1.5; 
     }
-    .pageBtn:hover { background: #f66; transform: scale(1.05); }
+    .pageBtn:hover { 
+        background: var(--purple-hover-color); 
+        transform: scale(1.05); 
+    }
     .pageBtn[disabled] { background: #555; cursor: not-allowed; }
 
 
@@ -323,7 +330,7 @@
       padding: 1rem; margin-bottom: 1rem; background: #000;
       box-shadow: 0 0 8px var(--accent-color);
     }
-    .totals-section h3 { /* Default for dark mode */
+    .totals-section h3 { 
       color: var(--accent-color); 
       margin-bottom: 1rem;
       text-shadow: 0 0 3px var(--accent-color); 
@@ -746,25 +753,18 @@ window.addEventListener("DOMContentLoaded", ()=>{
             let dk = "day"+i;
             if(dataStore[dk]) {
                 if (!dataStore[dk].pages || !Array.isArray(dataStore[dk].pages)) dataStore[dk].pages = [];
-                let existingPages = dataStore[dk].pages.slice();
-                dataStore[dk].pages = []; 
-                dataStore[dk].fecha = dataStore[dk].fecha || ""; // Ensure fecha exists
+                // Ensure pages array has pageNo property and other fields
+                dataStore[dk].pages = dataStore[dk].pages.map((page, pIdx) => ({
+                    pageNo: page.pageNo || pIdx + 1, // Ensure pageNo exists
+                    centenas: page.centenas !== undefined ? page.centenas : (page.centenas1 || 0),
+                    pulitos:  page.pulitos  !== undefined ? page.pulitos  : (page.pulitos1  || 0),
+                    pendingPrizes: page.pendingPrizes || [],
+                    paidPrizes:    page.paidPrizes    || [],
+                    totalSalidas:  page.totalSalidas  || 0
+                }));
+                
+                dataStore[dk].fecha = dataStore[dk].fecha || ""; 
 
-                for (let pIdx = 0; pIdx < MAX_PAGES_PER_DAY; pIdx++) {
-                    let pageData = existingPages[pIdx] || {};
-                    dataStore[dk].pages.push({
-                        pageNo: pIdx + 1,
-                        centenas: pageData.centenas !== undefined ? pageData.centenas : (pageData.centenas1 || 0),
-                        pulitos:  pageData.pulitos  !== undefined ? pageData.pulitos  : (pageData.pulitos1  || 0),
-                        pendingPrizes: pageData.pendingPrizes || [],
-                        paidPrizes:    pageData.paidPrizes    || [],
-                        totalSalidas:  pageData.totalSalidas  || 0
-                    });
-                    if (pageData.centenas1 !== undefined) delete pageData.centenas1;
-                    if (pageData.pulitos1  !== undefined) delete pageData.pulitos1;
-                    if (pageData.centenas2 !== undefined) delete pageData.centenas2;
-                    if (pageData.pulitos2  !== undefined) delete pageData.pulitos2;
-                }
                 if (!dataStore[dk].overlookExtra) dataStore[dk].overlookExtra = [];
                 if (!dataStore[dk].creditTracker) dataStore[dk].creditTracker = { pending: [], paid: [] };
             }
@@ -793,19 +793,17 @@ window.addEventListener("DOMContentLoaded", ()=>{
     let thisDate=new Date(startOfWeek.getTime()); thisDate.setDate(thisDate.getDate()+dm.offset);
     let dStrTab=formatDateMMDDYYYY(thisDate); 
     let dStrTitle=formatDateDDMMM(thisDate);
-    // let isoDate = thisDate.toISOString().split('T')[0]; // Not needed here, done in initializeEmptyDataStore or from stored data
-
+    
     let btn=document.querySelector(`.sidebar button[data-tab="tabDay${index+1}"]`);
     if(btn) btn.textContent=`${dm.label} (${dStrTab})`;
     let h2title=document.getElementById(`titleDay${index+1}`);
     if(h2title) h2title.textContent= `Reporte Diario - ${dm.label} - ${dStrTitle}`;
 
-    // Populate date field for the day
     const dayKey = `day${index+1}`;
     const fechaInput = document.getElementById(`fechaInput_${dayKey}`);
     if (fechaInput && dataStore[dayKey] && dataStore[dayKey].fecha) { 
         fechaInput.value = dataStore[dayKey].fecha;
-    } else if (fechaInput && dataStore[dayKey]) { // If fecha is empty string, input remains empty
+    } else if (fechaInput && dataStore[dayKey]) { 
         fechaInput.value = ""; 
     }
   });
@@ -821,18 +819,12 @@ function initializeEmptyDataStore() {
     for(let i=0; i<=6; i++){ 
         let dk = "day"+(i+1); 
          dataStore[dk] = {
-            fecha: "", // Initialize fecha as empty string
-            pages: [], overlook: 0, overlookNote: "", overlookExtra: [],
+            fecha: "", 
+            pages: [], // Start with 0 pages, user will add them
+            overlook: 0, overlookNote: "", overlookExtra: [],
             cash: 0, sucursal: 0, credito: 0, descuento: 0, tickets: 0,
             creditTracker: { pending: [], paid: [] }
         };
-        for (let pIdx = 0; pIdx < MAX_PAGES_PER_DAY; pIdx++) {
-            dataStore[dk].pages.push({
-                pageNo: pIdx + 1,
-                centenas: 0, pulitos: 0, 
-                pendingPrizes: [], paidPrizes: [], totalSalidas: 0
-            });
-        }
     }
     dataStore.weekly = { caidas: 0, adelantoOficina: 0 };
     dataStore.globalSucursal = "";
@@ -880,9 +872,7 @@ function initTabs(){
       e.currentTarget.classList.add("active");
       let targetId=e.currentTarget.dataset.tab;
       
-      // Hide all capture wrappers first
       document.querySelectorAll(".capture-content-wrapper").forEach(cw => cw.style.display = 'none');
-      // Show the selected tab's capture wrapper (if it's a day tab)
       const dayKey = targetId.startsWith("tabDay") ? targetId.replace("tab", "").toLowerCase() : null;
       if (dayKey) {
           const captureWrapper = document.getElementById(`captureContent_${dayKey}`);
@@ -890,42 +880,42 @@ function initTabs(){
       }
 
       document.querySelectorAll(".tabContent").forEach(tc=>tc.classList.remove("active"));
-      const targetTab = document.getElementById(targetId); // This is the actual tab content div
+      const targetTab = document.getElementById(targetId); 
       if (targetTab) {
         targetTab.classList.add("active");
         if (targetId === 'tabWeekly') {
             updateWeeklyView();
-            // Hide day capture wrappers if weekly tab is active
             document.querySelectorAll(".capture-content-wrapper").forEach(cw => cw.style.display = 'none');
         } else if (dayKey) {
-            // Ensure other day tabs (not capture wrappers) are hidden
             document.querySelectorAll(".tabContent").forEach(tc => {
                 if (tc.id !== targetId && tc.id.startsWith("tabDay")) {
                     tc.classList.remove("active");
                 }
             });
-        } else { // For non-day tabs like manual, premios
+        } else { 
              document.querySelectorAll(".capture-content-wrapper").forEach(cw => cw.style.display = 'none');
         }
-
-        dayMappings.forEach(dm => {
-            const addBtn = document.getElementById(`addPageBtn_${dm.key}`);
-            if(addBtn) addBtn.disabled = true; 
-        });
+        updateAddPageButtonState(dayKey); 
       }
     });
   });
    const activeDayTab = document.querySelector('.sidebar .tabBtn.active');
     if (activeDayTab) {
-        const dayKey = activeDayTab.dataset.tab.replace('tab', '').toLowerCase();
-        const addBtn = document.getElementById(`addPageBtn_${dayKey}`);
-        if (addBtn) addBtn.disabled = true;
-        // Show the active day's capture wrapper on load
+        const dayKey = activeDayTab.dataset.tab.replace("tab", "").toLowerCase();
+        updateAddPageButtonState(dayKey);
         const activeCaptureWrapper = document.getElementById(`captureContent_${dayKey}`);
         if(activeCaptureWrapper) activeCaptureWrapper.style.display = 'block';
-
     }
 }
+
+function updateAddPageButtonState(dayKey) {
+    if (!dayKey) return; 
+    const addBtn = document.getElementById(`addPageBtn_${dayKey}`);
+    if (addBtn) {
+        addBtn.disabled = dataStore[dayKey] && dataStore[dayKey].pages.length >= MAX_PAGES_PER_DAY;
+    }
+}
+
 
 /****************************************************
  * 4) initLockButtons
@@ -1001,54 +991,50 @@ function renderDay(dayKey){
   let dayData=dataStore[dayKey]; if (!dayData) { console.error(`Data for ${dayKey} is missing.`); return; }
   let locked=(lockedDays[dayKey]||lockedAll);
 
-  const addPageButton = document.getElementById(`addPageBtn_${dayKey}`);
-  if (addPageButton) addPageButton.disabled = true;
+  updateAddPageButtonState(dayKey); 
   
   const fechaInput = document.getElementById(`fechaInput_${dayKey}`);
-  if (fechaInput) { // Ensure input exists before setting value
-    fechaInput.value = dayData.fecha || ""; // Set to stored date or empty
+  if (fechaInput) { 
+    fechaInput.value = dayData.fecha || ""; 
   }
-
 
   let html=`
     <table class="report-table">
       <thead>
         <tr>
-          <th class="col-page">#Pág.</th><th class="col-data">Centenas</th><th class="col-data">Pulitos</th><th class="col-data">Salidas</th>
-          <th class="col-page">#Pág.</th><th class="col-data">Centenas</th><th class="col-data">Pulitos</th><th class="col-data">Salidas</th>
+          <th class="col-page">#Pág.</th>
+          <th class="col-data">Centenas</th>
+          <th class="col-data">Pulitos</th>
+          <th class="col-data">Salidas</th>
+          <th class="col-data">Ventas</th>
         </tr>
       </thead>
       <tbody>
   `;
-  const pages_per_column = MAX_PAGES_PER_DAY / 2; 
-  for(let i = 0; i < pages_per_column; i++) { 
-    const page_left_idx = i;
-    const page_right_idx = i + pages_per_column;
+  const numPages = dayData.pages.length;
 
-    const p_left = dayData.pages[page_left_idx];
-    const p_right = dayData.pages[page_right_idx];
-
-    if (!p_left || !p_right) { console.error("Page data missing for row " + i); continue; }
+  for(let i = 0; i < numPages; i++) { 
+    const page = dayData.pages[i];
+    if (!page) { console.error("Page data missing for index " + i); continue; }
     
-    let cVal_l=(p_left.centenas||""); let pVal_l=(p_left.pulitos||"");
-    let salidasVal_l = p_left.totalSalidas || 0;
-
-    let cVal_r=(p_right.centenas||""); let pVal_r=(p_right.pulitos||"");
-    let salidasVal_r = p_right.totalSalidas || 0;
+    let cVal=(page.centenas||""); 
+    let pVal=(page.pulitos||"");
+    let salidasVal = page.totalSalidas || 0;
+    let ventasVal = (page.centenas || 0) + (page.pulitos || 0);
 
     html+=`
       <tr>
-        <td class="col-page"><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_left_idx})" ${locked?'disabled':''}>${p_left.pageNo}</button></td>
-        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="centenas" value="${cVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_left_idx}" data-field="pulitos"  value="${pVal_l}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td class="col-data"><input type="text" readonly value="${salidasVal_l ? '$'+salidasVal_l.toFixed(2) : ''}" style="color:${(p_left.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_left_idx})"></td>
-        
-        <td class="col-page"><button class="pageBtn" onclick="deletePageRow('${dayKey}',${page_right_idx})" ${locked?'disabled':''}>${p_right.pageNo}</button></td>
-        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="centenas" value="${cVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${page_right_idx}" data-field="pulitos"  value="${pVal_r}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
-        <td class="col-data"><input type="text" readonly value="${salidasVal_r ? '$'+salidasVal_r.toFixed(2) : ''}" style="color:${(p_right.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${page_right_idx})"></td>
+        <td class="col-page"><button class="pageBtn" onclick="deletePageRow('${dayKey}',${i})" ${locked?'disabled':''}>${page.pageNo}</button></td>
+        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${i}" data-field="centenas" value="${cVal}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
+        <td class="col-data"><input type="number" data-day="${dayKey}" data-pindex="${i}" data-field="pulitos"  value="${pVal}" onchange="updatePageField(this)" ${locked?'disabled':''}></td>
+        <td class="col-data"><input type="text" readonly value="${salidasVal ? '$'+salidasVal.toFixed(2) : ''}" style="color:${(page.pendingPrizes||[]).reduce((a,v)=>a+v,0) > 0 ? 'var(--purple-color)' : 'var(--danger-color)'}; cursor:pointer;" onclick="openPrizesModal('${dayKey}',${i})"></td>
+        <td class="col-data"><input type="text" readonly value="${ventasVal ? '$'+ventasVal.toFixed(2) : ''}"></td>
       </tr>
     `;
+  }
+  // If there are 0 pages, show a message or an empty row structure
+  if (numPages === 0) {
+      html += `<tr><td colspan="5" style="text-align:center; padding:1rem;">No hay páginas. Agregue una usando el botón '+ Página'.</td></tr>`;
   }
   html+="</tbody></table>";
 
@@ -1200,16 +1186,33 @@ function clearMainOverlook(dayKey){ dataStore[dayKey].overlook=0; dataStore[dayK
 /****************************************************
  * 12) Page Rows: add/delete + Field updates
  ****************************************************/
-function deletePageRow(dayKey, idx){ 
-  if(!confirm(`¿Limpiar datos de la página ${dataStore[dayKey].pages[idx].pageNo}?`)) return;
-  let pageToClear = dataStore[dayKey].pages[idx];
-  pageToClear.centenas = 0; pageToClear.pulitos = 0; 
-  pageToClear.pendingPrizes = []; pageToClear.paidPrizes = [];
-  pageToClear.totalSalidas = 0;
-  storeData(); renderDay(dayKey);
+function deletePageRow(dayKey, pageIndexToDelete){ 
+  if(!confirm(`¿Eliminar la página ${dataStore[dayKey].pages[pageIndexToDelete].pageNo}? Esta acción no se puede deshacer.`)) return;
+  
+  dataStore[dayKey].pages.splice(pageIndexToDelete, 1); 
+
+  for(let i = 0; i < dataStore[dayKey].pages.length; i++) {
+    dataStore[dayKey].pages[i].pageNo = i + 1;
+  }
+
+  storeData(); 
+  renderDay(dayKey); 
 }
 
-function addPageRow(dayKey){ /* Button is disabled */ }
+function addPageRow(dayKey){ 
+    if (dataStore[dayKey].pages.length < MAX_PAGES_PER_DAY) {
+        const newPageNo = dataStore[dayKey].pages.length + 1;
+        dataStore[dayKey].pages.push({
+            pageNo: newPageNo,
+            centenas: 0, pulitos: 0, 
+            pendingPrizes: [], paidPrizes: [], totalSalidas: 0
+        });
+        storeData();
+        renderDay(dayKey);
+    } else {
+        alert("Se ha alcanzado el número máximo de páginas (" + MAX_PAGES_PER_DAY + ").");
+    }
+}
 
 function updatePageField(input){
   let dayKey=input.dataset.day; let idx=parseInt(input.dataset.pindex); let field=input.dataset.field;
@@ -1366,12 +1369,9 @@ function sendDayToSheets(dayKey){ alert("Guardar Día (placeholder): "+dayKey + 
 function resetDay(dayKey){
   if(!confirm(`¿Resetear todos los datos para ${dayKey}? Esto no se puede deshacer.`)) return;
   dataStore[dayKey]={ 
-    fecha: "", // Reset fecha to empty
+    fecha: "", 
     pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{ pending:[], paid:[] } 
   };
-  for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
-    dataStore[dayKey].pages.push({ pageNo:r+1, centenas:0, pulitos:0, pendingPrizes:[], paidPrizes:[], totalSalidas:0 });
-  }
   storeData(); renderDay(dayKey); updateWeeklyView();
 }
 function sendWeekToSheets(){ alert("Guardar Semana (placeholder). Función no implementada."); }
@@ -1380,12 +1380,9 @@ function resetWeek(){
   for(let i=0;i<7;i++){ 
     let dk="day"+(i+1);
     dataStore[dk]={ 
-        fecha: "", // Reset fecha to empty for all days
+        fecha: "", 
         pages:[], overlook:0, overlookNote:"", overlookExtra:[], cash:0, sucursal:0, credito:0, descuento:0, tickets:0, creditTracker:{pending:[], paid:[]} 
     };
-    for(let r=0;r<MAX_PAGES_PER_DAY;r++){ 
-        dataStore[dk].pages.push({ pageNo:r+1, centenas:0, pulitos:0, pendingPrizes:[], paidPrizes:[], totalSalidas:0 }); 
-    }
   }
   dataStore.weekly={ caidas:0, adelantoOficina:0 };
   storeData(); renderAllDays(); updateWeeklyView();
@@ -1467,9 +1464,10 @@ document.getElementById("btnExportExcel").addEventListener("click",()=>{
   let dayKey="day"+ tabId.replace("tabDay",""); let dayData=dataStore[dayKey];
   if(!dayData || !dayData.pages || dayData.pages.length === 0){ alert("No hay datos de páginas en "+dayKey + "."); return; }
   let lines=[];
-  lines.push("Página,Centenas,Pulitos,Total Salidas Pagina"); 
+  lines.push("Página,Centenas,Pulitos,Total Salidas Pagina,Ventas Pagina"); 
   dayData.pages.forEach(p=>{ 
-    lines.push(`${p.pageNo},${p.centenas||0},${p.pulitos||0},${p.totalSalidas||0}`);
+    const ventasPagina = (p.centenas||0) + (p.pulitos||0);
+    lines.push(`${p.pageNo},${p.centenas||0},${p.pulitos||0},${p.totalSalidas||0},${ventasPagina}`);
   });
   let csv= lines.join("\n"); let blob= new Blob([csv], { type:"text/csv;charset=utf-8;" });
   let url=URL.createObjectURL(blob); let a=document.createElement("a"); a.href=url;
