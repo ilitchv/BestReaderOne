@@ -56,9 +56,7 @@ import { io } from "https://cdn.socket.io/4.7.2/socket.io.esm.min.js";
 const socket = io("/", { transports:["websocket","polling"] });
 
 /* ========= CONFIG ========= */
-const MONGO_URI = "mongodb+srv://BeastBetTwo:Amiguito2468@beastbet.lleyk.mongodb.net/beastbetdb?retryWrites=true&w=majority&appName=Beastbet";
-const API_BASE = ""; // same origin
-let user = null;
+
 
 /* ========= UTILS ========= */
 const $ = sel => document.querySelector(sel);
