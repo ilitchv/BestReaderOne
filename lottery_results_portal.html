@@ -1,5 +1,12 @@
-# We'll generate the updated single-file HTML with the requested features (v4).
-# The file will be saved to /mnt/data/beast_reader_v4.html
+# Generate improved HTML v5 based on feedback:
+# - Revert to richer OCR UI (multi-line table, raw text preview, Save All) from v3
+# - Move ALL controls (language/theme toggles, search, auto-scroll) into hidden Admin panel
+# - Slow down auto-scroll considerably
+# - Remove left filter panel; main page now only shows sections and tiles
+# - Fix overlap: place status label within meta area (not absolute)
+# - Keep TX Sunday off, TN Sunday Only Evening; include Special "3-5-7"
+# - Keep neon theme and compact square tiles
+# Save to /mnt/data/beast_reader_v5.html
 
 html = r"""<!DOCTYPE html>
 <html lang="es">
@@ -18,8 +25,8 @@ html = r"""<!DOCTYPE html>
     --accent3:#18ffb2;
     --danger:#ff4d6d;
     --ok:#1be7a8;
-    --shadow: 0 0 22px rgba(93,246,255,.35), 0 0 55px rgba(138,93,255,.25);
-    --tile: 160px;
+    --tile:160px;
+    --ring:0 0 12px rgba(93,246,255,.28), 0 0 24px rgba(138,93,255,.18);
   }
   [data-theme="light"]{
     --bg:#f7f8ff;
@@ -29,7 +36,8 @@ html = r"""<!DOCTYPE html>
     --accent1:#00a3ff;
     --accent2:#6a40ff;
     --accent3:#00c07a;
-    --shadow: 0 0 16px rgba(0,163,255,.25), 0 0 36px rgba(106,64,255,.20);
+    --danger:#d7003a;
+    --ok:#07a87e;
   }
   html,body{height:100%}
   body{
@@ -38,95 +46,74 @@ html = r"""<!DOCTYPE html>
                          var(--bg);
     color:var(--text);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
   }
-  /* ===== Header / Logo ===== */
   header{
     position:sticky;top:0;z-index:50;
     backdrop-filter: blur(10px);
-    background: linear-gradient(180deg, rgba(10,11,16,.85), rgba(10,11,16,.55));
-    border-bottom: 1px solid rgba(141,160,255,.15);
+    background: linear-gradient(180deg, rgba(10,11,16,.85), rgba(10,11,16,.55)); border-bottom:1px solid rgba(141,160,255,.15);
   }
-  [data-theme="light"] header{
-    background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
-  }
+  [data-theme="light"] header{background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));}
   .wrap{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:14px;align-items:center}
   .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
   .logo svg{width:40px;height:40px;filter: drop-shadow(0 0 12px rgba(93,246,255,.5));}
   .logo h1{font-size:clamp(18px,3.2vw,28px);margin:0;letter-spacing:.5px}
   .sub{font-size:12px;color:var(--muted)}
-  .controls{margin-left:auto;display:flex;gap:10px;align-items:center}
-  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(141,160,255,.25);padding:6px 10px;border-radius:999px;background:linear-gradient(135deg, rgba(93,246,255,.08), rgba(138,93,255,.08));box-shadow:var(--shadow)}
-  .chip label{font-size:12px;color:var(--muted)}
-  .switch{position:relative;width:46px;height:26px;border-radius:999px;background:#2a325a;cursor:pointer}
-  .knob{position:absolute;height:22px;width:22px;border-radius:50%;background:white;top:2px;left:2px;transition:.25s cubic-bezier(.22,.61,.36,1);
-        box-shadow:0 2px 10px rgba(0,0,0,.35)}
-  input[type="checkbox"]{display:none}
-  input[type="checkbox"]:checked + .switch .knob{left:22px}
-  .btn{
-    background:linear-gradient(135deg, var(--accent1), var(--accent2));
-    color:#06121b;border:0;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;
-    box-shadow:var(--shadow);transition: transform .08s ease, box-shadow .2s ease;
-  }
-  .btn:hover{transform:translateY(-1px)}
-  .btn:active{transform:translateY(0)}
-  /* ===== Layout ===== */
-  main{max-width:1200px;margin:18px auto 64px;display:grid;grid-template-columns:300px 1fr;gap:16px}
-  aside{position:sticky;top:68px;height:calc(100vh - 84px);overflow:auto;padding-right:6px}
-  .panel{background:var(--card);border:1px solid rgba(141,160,255,.15);border-radius:16px;padding:14px 14px 8px;box-shadow:var(--shadow)}
-  .panel h3{margin:0 0 8px 0;font-size:14px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase}
+  /* Admin Tab + Panel */
   .admin-tab{
     position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:60;
     background:linear-gradient(180deg, var(--accent2), var(--accent1));color:#031018;
     padding:8px 10px;border-top-right-radius:12px;border-bottom-right-radius:12px;
-    font-weight:800;cursor:pointer;box-shadow:var(--shadow);user-select:none
+    font-weight:800;cursor:pointer;box-shadow:var(--ring);user-select:none
   }
-  .admin {position:fixed;left:-360px;top:0;bottom:0;width:340px;z-index:70;
+  .admin {position:fixed;left:-380px;top:0;bottom:0;width:360px;z-index:70;
     backdrop-filter: blur(12px);
-    background: linear-gradient(180deg, rgba(6,10,22,.85), rgba(10,22,22,.85));
+    background: linear-gradient(180deg, rgba(6,10,22,.92), rgba(10,22,22,.92));
     border-right:1px solid rgba(141,160,255,.15);transition:left .25s ease}
-  [data-theme="light"] .admin{background:linear-gradient(180deg, rgba(250,250,255,.9), rgba(245,245,255,.9))}
+  [data-theme="light"] .admin{background:linear-gradient(180deg, rgba(250,250,255,.95), rgba(245,245,255,.95))}
   .admin.open{left:0}
   .admin .head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(141,160,255,.15)}
   .admin .body{padding:12px;overflow:auto;height:calc(100% - 56px)}
+  .btn{background:linear-gradient(135deg, var(--accent1), var(--accent2));color:#06121b;border:0;padding:9px 12px;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:var(--ring)}
+  .ghost{background:transparent;border:1px solid rgba(141,160,255,.3);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
   .field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
-  .field input,.field select,.field textarea{background:#0e1424;color:var(--text);border:1px solid rgba(141,160,255,.25);border-radius:10px;padding:8px 10px}
-  [data-theme="light"] .field input,[data-theme="light"] .field select,[data-theme="light"] .field textarea{background:#fff;color:#111}
-  .ocr-drop{border:1px dashed rgba(141,160,255,.35);padding:14px;border-radius:14px;text-align:center}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .switch{position:relative;width:46px;height:26px;border-radius:999px;background:#2a325a;cursor:pointer}
+  .knob{position:absolute;height:22px;width:22px;border-radius:50%;background:white;top:2px;left:2px;transition:.25s}
+  input[type="checkbox"]{display:none}
+  input[type="checkbox"]:checked + .switch .knob{left:22px}
+  input[type="text"], input[type="password"], select, textarea {background:#0e1424;color:var(--text);border:1px solid rgba(141,160,255,.25);border-radius:10px;padding:8px 10px;width:100%}
+  [data-theme="light"] input[type="text"],[data-theme="light"] input[type="password"],[data-theme="light"] select,[data-theme="light"] textarea{background:#fff;color:#111}
+  .ocr-drop{border:1px dashed rgba(141,160,255,.35);padding:12px;border-radius:10px;text-align:center}
   .ocr-drop.drag{background:rgba(93,246,255,.08)}
-  .ocr-table{width:100%;border-collapse:collapse;font-size:12px}
-  .ocr-table th,.ocr-table td{border-bottom:1px solid rgba(141,160,255,.2);padding:6px}
-  /* ===== Results grid ===== */
-  .section{margin-bottom:16px}
-  .section h2{margin:0 0 10px 0;font-size:18px;display:flex;align-items:center;gap:10px}
-  .grid{display:grid;grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));gap:12px;align-items:stretch}
-  .tile{position:relative;background:linear-gradient(135deg, rgba(93,246,255,.08), rgba(138,93,255,.08));border:1px solid rgba(141,160,255,.25);border-radius:16px;padding:10px;
-        aspect-ratio: 1 / 1.05;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--shadow);overflow:hidden}
-  .tile:before{content:"";position:absolute;inset:-1px;border-radius:16px;padding:1px;background:
-      linear-gradient(135deg, rgba(93,246,255,.45), rgba(138,93,255,.35), rgba(24,255,178,.35));
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor; mask-composite: exclude; pointer-events:none}
+  .ocr-wrap{border:1px dashed rgba(141,160,255,.25);border-radius:10px;padding:8px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid rgba(141,160,255,.2);padding:6px;font-size:12px}
+  /* Layout main */
+  main{max-width:1200px;margin:18px auto 64px;padding:0 14px}
+  .section{margin-bottom:18px}
+  .section h2{margin:0 0 12px 0;font-size:18px}
+  .grid{display:grid;grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));gap:12px}
+  .tile{position:relative;background:linear-gradient(135deg, rgba(93,246,255,.08), rgba(138,93,255,.08));border:1px solid rgba(141,160,255,.25);border-radius:14px;padding:10px;
+        aspect-ratio: 1 / 1.05;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--ring);overflow:hidden}
   .badge{display:flex;align-items:center;gap:6px;font-weight:800}
   .emblem{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent3));display:grid;place-items:center;color:#001018;
           font-size:14px;font-weight:900;box-shadow:0 0 16px rgba(93,246,255,.5)}
   .name{font-size:13px;color:var(--muted)}
-  .draw{font-size:12px;color:var(--muted)}
+  .pill{font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#cbd5e1;margin-left:auto}
   .nums{font-size:22px;letter-spacing:2px;font-weight:900}
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--muted)}
-  .state{position:absolute;right:8px;top:8px;font-size:10px;color:var(--muted)}
-  .status{position:absolute;left:8px;top:8px;font-size:10px;padding:2px 6px;border-radius:999px;background:rgba(24,255,178,.15);color:#00df9a;border:1px solid rgba(24,255,178,.35)}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--muted);align-items:center}
+  .status{font-size:10px;padding:2px 6px;border-radius:999px;justify-self:start;background:rgba(24,255,178,.15);color:#00df9a;border:1px solid rgba(24,255,178,.35)}
   .status.closed{background:rgba(255,77,109,.12);color:#ff6682;border-color:rgba(255,77,109,.35)}
-  /* ===== Modal ===== */
+  /* PIN modal */
   .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);z-index:80}
   .modal.open{display:grid}
-  .card{width:min(520px, 92vw);background:var(--card);border-radius:14px;border:1px solid rgba(141,160,255,.25);box-shadow:var(--shadow);padding:12px}
-  .card h3{margin:6px 0 10px 0}
-  .row{display:flex;gap:8px;align-items:center}
-  .eye{cursor:pointer;user-select:none;font-size:20px;padding:6px}
-  .scroll-btn{position:fixed;right:14px;bottom:18px;z-index:55}
-  .marquee{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--muted)}
+  .card{width:min(420px, 92vw);background:var(--card);border-radius:12px;border:1px solid rgba(141,160,255,.25);box-shadow:var(--ring);padding:12px}
+  .eye{cursor:pointer;user-select:none;font-size:18px;padding:6px}
 </style>
 </head>
 <body data-theme="dark">
+  <!-- Admin open tab -->
   <div class="admin-tab" id="adminTab">ADMIN</div>
+  <!-- Admin Panel -->
   <div class="admin" id="adminPanel" aria-hidden="true">
     <div class="head">
       <strong>Admin</strong>
@@ -134,22 +121,52 @@ html = r"""<!DOCTYPE html>
     </div>
     <div class="body">
       <div class="field">
-        <label>Importar imagen (OCR)</label>
-        <div id="drop" class="ocr-drop">
-          Arrastra aquí una imagen de resultados (.jpg/.png) o haz clic para seleccionar.
-          <input type="file" id="file" accept="image/*" hidden />
+        <label>Preferencias</label>
+        <div class="row">
+          <div class="row">
+            <span>Idioma</span>
+            <input id="langTgl" type="checkbox"/><div class="switch"><div class="knob"></div></div>
+          </div>
+          <div class="row" style="margin-left:12px">
+            <span>Tema</span>
+            <input id="themeTgl" type="checkbox"/><div class="switch"><div class="knob"></div></div>
+          </div>
+          <button class="ghost" id="autoScrollBtn">Auto Scroll</button>
         </div>
       </div>
-      <div id="ocrPreview"></div>
+      <div class="field">
+        <label>Buscar lotería</label>
+        <input id="search" placeholder="Buscar..." />
+      </div>
+      <hr style="border-color:rgba(141,160,255,.2)">
+      <!-- OCR -->
+      <div class="field">
+        <label>OCR — Arrastra imagen o haz clic</label>
+        <div id="drop" class="ocr-drop">Suelta tu captura (.jpg/.png) aquí <input type="file" id="file" accept="image/*" hidden/></div>
+      </div>
+      <div class="field">
+        <label>Contenido OCR (bruto)</label>
+        <textarea id="ocrOut" rows="6" class="ocr-wrap" placeholder="Aquí aparecerá el texto detectado..."></textarea>
+        <div class="row">
+          <button class="ghost" id="btnParse">Previsualizar tabla</button>
+          <button class="btn" id="btnAssignAll">Guardar todos</button>
+        </div>
+      </div>
+      <div class="field">
+        <div id="ocrTable" class="ocr-wrap"></div>
+      </div>
       <hr style="border-color:rgba(141,160,255,.2)">
       <div class="field">
         <label>Agregar/Editar resultado manual</label>
-        <select id="catalogSelect"></select>
-        <select id="drawSelect"></select>
-        <input id="resultInput" placeholder="Ej: 123-4567 (USA) o 12-34-56 (RD/Special)"/>
-        <button class="btn" id="saveManual">Guardar</button>
+        <div class="row">
+          <select id="catalogSelect"></select>
+          <select id="drawSelect"></select>
+        </div>
+        <div class="row">
+          <input id="resultInput" placeholder="Ej: 123-4567 (USA) o 12-34-56 (RD/Special)"/>
+          <button class="btn" id="saveManual">Guardar</button>
+        </div>
       </div>
-      <p class="marquee">⚡ Los cambios se reflejan en vivo en la portada.</p>
     </div>
   </div>
 
@@ -171,50 +188,27 @@ html = r"""<!DOCTYPE html>
   <header>
     <div class="wrap">
       <a class="logo" href="#">
-        <!-- Neon Beast SVG -->
+        <!-- Neon Beast logo -->
         <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
             <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stop-color="#5df6ff"/><stop offset="1" stop-color="#8a5dff"/>
             </linearGradient>
-            <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           </defs>
           <rect x="4" y="4" width="64" height="64" rx="14" fill="url(#g1)"/>
-          <path d="M18 46c8-2 20-12 17-22-3 8 8 14 19 11-3 12-17 19-36 11z" fill="#001219" opacity=".85" filter="url(#glow)"/>
-          <circle cx="26" cy="28" r="4" fill="#001219"/><circle cx="48" cy="28" r="4" fill="#001219"/>
+          <circle cx="26" cy="28" r="5" fill="#001219"/><circle cx="46" cy="28" r="5" fill="#001219"/>
+          <path d="M18 46c10-2 22-12 18-22-3 8 8 14 19 11-4 12-18 19-37 11z" fill="#001219" opacity=".85"/>
         </svg>
         <div>
           <h1>Beast Reader</h1>
           <div class="sub" id="subTitle">Resultados en vivo — USA, RD & Special</div>
         </div>
       </a>
-      <div class="controls">
-        <div class="chip">
-          <label id="langLbl">Idioma</label>
-          <input id="langTgl" type="checkbox"/>
-          <div class="switch"><div class="knob"></div></div>
-        </div>
-        <div class="chip">
-          <label id="themeLbl">Tema</label>
-          <input id="themeTgl" type="checkbox"/>
-          <div class="switch"><div class="knob"></div></div>
-        </div>
-        <button class="btn scroll-btn" id="autoScrollBtn">Auto Scroll ▽</button>
-      </div>
     </div>
   </header>
 
-  <main>
-    <aside>
-      <div class="panel">
-        <h3 id="filtersTitle">Filtros</h3>
-        <div class="field"><input id="search" placeholder="Buscar lotería..."/></div>
-        <div class="field"><label id="closingHint">* El cierre es 20 min antes del sorteo.</label></div>
-      </div>
-    </aside>
-    <section id="content">
-      <!-- Sections rendered here -->
-    </section>
+  <main id="content">
+    <!-- Sections appear here -->
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -222,11 +216,6 @@ html = r"""<!DOCTYPE html>
   /*************** I18N ***************/
   const i18n = {
     es: {
-      accessAdmin: "Acceso administrador",
-      enterPin: "Introduce PIN",
-      filters: "Filtros",
-      searchPh: "Buscar lotería...",
-      closingHint: "* El cierre es 20 min antes del sorteo.",
       usa: "Loterías de USA",
       rd: "Loterías de Santo Domingo",
       special: "Loterías Special",
@@ -234,15 +223,10 @@ html = r"""<!DOCTYPE html>
       draw: "Sorteo", close: "Cierre",
       save: "Guardar", saveAll: "Guardar todos",
       abbr: "Abrev.", map: "Mapa", detected:"Detectado", value:"Valor", actions:"Acciones",
-      admin: "Admin", adminHidden:"",  // no texto explícito
-      pinOk: "Entrar"
+      adminAccess: "Acceso administrador", enterPin: "Introduce PIN", enter:"Entrar",
+      ocrRaw:"Contenido OCR (bruto)", ocrTable:"Previsualización"
     },
     en: {
-      accessAdmin: "Admin access",
-      enterPin: "Enter PIN",
-      filters: "Filters",
-      searchPh: "Search lottery...",
-      closingHint: "* Closing time is 20 minutes before draw time.",
       usa: "USA Lotteries",
       rd: "Santo Domingo Lotteries",
       special: "Special Lotteries",
@@ -250,35 +234,22 @@ html = r"""<!DOCTYPE html>
       draw: "Draw", close: "Close",
       save: "Save", saveAll: "Save all",
       abbr: "Abbrev.", map: "Map", detected:"Detected", value:"Value", actions:"Actions",
-      admin: "Admin", adminHidden:"", // no explicit text
-      pinOk: "Enter"
+      adminAccess: "Admin access", enterPin: "Enter PIN", enter:"Enter",
+      ocrRaw:"OCR raw text", ocrTable:"Preview"
     }
   };
   let lang = localStorage.getItem("lang") || "es";
   function applyLang(){
-    const t = i18n[lang];
-    document.getElementById("pinTitle").textContent=t.accessAdmin;
-    document.getElementById("pinLabel").textContent=t.enterPin;
-    document.getElementById("filtersTitle").textContent=t.filters;
-    document.getElementById("search").placeholder=t.searchPh;
-    document.getElementById("closingHint").textContent=t.closingHint;
-    document.getElementById("pinOk").textContent=t.pinOk;
     document.getElementById("subTitle").textContent = lang==="es" ? "Resultados en vivo — USA, RD & Special" : "Live results — USA, RD & Special";
+    document.getElementById("pinTitle").textContent = i18n[lang].adminAccess;
+    document.getElementById("pinLabel").textContent = i18n[lang].enterPin;
+    document.getElementById("pinOk").textContent = i18n[lang].enter;
     render();
   }
-  document.getElementById("langTgl").checked = (lang==="en");
-  document.getElementById("langTgl").addEventListener("change",e=>{lang=e.target.checked?"en":"es";localStorage.setItem("lang",lang);applyLang();});
 
   /*************** THEME ***************/
-  const themeTgl = document.getElementById("themeTgl");
   const savedTheme = localStorage.getItem("theme") || "dark";
   document.body.setAttribute("data-theme", savedTheme);
-  themeTgl.checked = savedTheme==="light";
-  themeTgl.addEventListener("change", e=>{
-    const th = e.target.checked?"light":"dark";
-    document.body.setAttribute("data-theme", th);
-    localStorage.setItem("theme", th);
-  });
 
   /*************** ADMIN PIN ***************/
   const ADMIN_PIN = "1983";
@@ -297,178 +268,117 @@ html = r"""<!DOCTYPE html>
   toggleEye.addEventListener("click",()=>{ pinInput.type = pinInput.type==="password"?"text":"password"; });
   pinModal.addEventListener("click",e=>{ if(e.target===pinModal) pinModal.classList.remove("open"); });
 
-  /*************** AUTO SCROLL ***************/
+  /*************** AUTO SCROLL (MUY LENTO) ***************/
   let scrollTimer=null, scrollDown=true;
   const autoBtn = document.getElementById("autoScrollBtn");
-  autoBtn.addEventListener("click",()=>{
-    if(scrollTimer){ clearInterval(scrollTimer); scrollTimer=null; autoBtn.textContent="Auto Scroll ▽"; return; }
-    autoBtn.textContent="Detener Scroll";
-    const area = document.scrollingElement;
-    scrollTimer = setInterval(()=>{
-      const step = 0.6; // pixels per tick (slow)
-      area.scrollBy(0, scrollDown?step:-step);
-      if(area.scrollTop + window.innerHeight + 2 >= area.scrollHeight){ scrollDown=false; }
-      if(area.scrollTop<=1){ scrollDown=true; }
-    }, 10);
-  });
+  if(autoBtn){
+    autoBtn.addEventListener("click",()=>{
+      if(scrollTimer){ clearInterval(scrollTimer); scrollTimer=null; autoBtn.textContent="Auto Scroll"; return; }
+      autoBtn.textContent="Detener Scroll";
+      const area = document.scrollingElement;
+      scrollTimer = setInterval(()=>{
+        const step = 0.2; // MUY lento
+        area.scrollBy(0, scrollDown?step:-step);
+        if(area.scrollTop + window.innerHeight + 2 >= area.scrollHeight){ scrollDown=false; }
+        if(area.scrollTop<=1){ scrollDown=true; }
+      }, 20);
+    });
+  }
+
+  /*************** PREFERENCIAS EN ADMIN ***************/
+  const themeTgl = document.getElementById("themeTgl");
+  const langTgl  = document.getElementById("langTgl");
+  if(themeTgl){
+    themeTgl.checked = savedTheme==="light";
+    themeTgl.addEventListener("change", e=>{
+      const th = e.target.checked?"light":"dark";
+      document.body.setAttribute("data-theme", th);
+      localStorage.setItem("theme", th);
+    });
+  }
+  if(langTgl){
+    langTgl.checked = (lang==="en");
+    langTgl.addEventListener("change", e=>{
+      lang = e.target.checked?"en":"es"; localStorage.setItem("lang", lang); applyLang();
+    });
+  }
 
   /*************** CATALOG + SCHEDULES ***************/
-  // Utility: compute closing time 20 minutes before draw
   function minus20(timeStr){
-    // timeStr: "HH:MM" 24h
     const [H,M]=timeStr.split(":").map(Number);
-    const when=new Date();
-    when.setHours(H,M,0,0);
-    when.setMinutes(when.getMinutes()-20);
-    return when.toTimeString().slice(0,5);
+    const d=new Date(); d.setHours(H,M,0,0); d.setMinutes(d.getMinutes()-20);
+    return d.toTimeString().slice(0,5);
   }
-  // Days helper: 0=Sun..6=Sat
-  const ALL=[0,1,2,3,4,5,6], M_S=[1,2,3,4,5,6]; // Mon-Sat
-  const MON_SAT=[1,2,3,4,5,6];
+  const ALL=[0,1,2,3,4,5,6], MON_SAT=[1,2,3,4,5,6];
 
-  // Catalog of lotteries
   const catalog = {
     usa: [
-      { id:"ny",  name:"New York", abbr:"NY", emblem:"NY", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"14:30", days:ALL},
-          {code:"Evening", time:"22:30", days:ALL}
-        ]
-      },
-      { id:"nj",  name:"New Jersey", abbr:"NJ", emblem:"NJ", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"12:59", days:ALL},
-          {code:"Evening", time:"22:57", days:ALL}
-        ]
-      },
-      { id:"ct",  name:"Connecticut", abbr:"CT", emblem:"CT", tz:"ET",
-        draws:[
-          {code:"Day",     time:"13:57", days:ALL},
-          {code:"Night",   time:"22:29", days:ALL}
-        ]
-      },
-      { id:"fl",  name:"Florida", abbr:"FL", emblem:"FL", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"13:30", days:ALL},
-          {code:"Evening", time:"21:45", days:ALL}
-        ]
-      },
-      { id:"ga",  name:"Georgia", abbr:"GA", emblem:"GA", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"12:29", days:ALL},
-          {code:"Evening", time:"18:59", days:ALL},
-          {code:"Night",   time:"23:34", days:ALL}
-        ]
-      },
-      { id:"pa",  name:"Pennsylvania", abbr:"PA", emblem:"PA", tz:"ET",
-        draws:[
-          {code:"Day",     time:"13:35", days:ALL},
-          {code:"Evening", time:"18:59", days:ALL}
-        ]
-      },
-      { id:"de",  name:"Delaware", abbr:"DE", emblem:"DE", tz:"ET",
-        draws:[
-          {code:"Day",     time:"13:58", days:ALL},
-          {code:"Night",   time:"19:57", days:ALL}
-        ]
-      },
-      { id:"md",  name:"Maryland", abbr:"MD", emblem:"MD", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"12:28", days:ALL},
-          {code:"Evening", time:"19:56", days:ALL}
-        ]
-      },
-      { id:"ma",  name:"Massachusetts", abbr:"MA", emblem:"MA", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"14:00", days:ALL},
-          {code:"Evening", time:"21:00", days:ALL}
-        ]
-      },
-      { id:"va",  name:"Virginia", abbr:"VA", emblem:"VA", tz:"ET",
-        draws:[
-          {code:"Day",     time:"13:59", days:ALL},
-          {code:"Night",   time:"23:00", days:ALL}
-        ]
-      },
-      { id:"mi",  name:"Michigan", abbr:"MI", emblem:"MI", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"12:59", days:ALL},
-          {code:"Evening", time:"19:29", days:ALL}
-        ]
-      },
-      { id:"nc",  name:"North Carolina", abbr:"NC", emblem:"NC", tz:"ET",
-        draws:[
-          {code:"Day",     time:"15:00", days:ALL},
-          {code:"Evening", time:"23:22", days:ALL}
-        ]
-      },
-      { id:"sc",  name:"South Carolina", abbr:"SC", emblem:"SC", tz:"ET",
-        draws:[
-          {code:"Midday",  time:"12:59", days:MON_SAT},
-          {code:"Evening", time:"18:59", days:ALL}
-        ]
-      },
-      { id:"tx",  name:"Texas", abbr:"TX", emblem:"TX", tz:"CT",
-        draws:[
-          {code:"Morning", time:"10:00", days:[1,2,3,4,5,6]}, // no Sunday
-          {code:"Day",     time:"12:27", days:[1,2,3,4,5,6]},
-          {code:"Evening", time:"18:00", days:[1,2,3,4,5,6]},
-          {code:"Night",   time:"22:12", days:[1,2,3,4,5,6]}
-        ]
-      },
-      { id:"tn",  name:"Tennessee", abbr:"TN", emblem:"TN", tz:"CT",
-        draws:[
-          {code:"Morning", time:"09:28", days:[1,2,3,4,5,6]}, // Mon-Sat
-          {code:"Midday",  time:"12:28", days:[1,2,3,4,5,6]}, // Mon-Sat
-          {code:"Evening", time:"18:28", days:ALL} // Sun only this one
-        ]
-      }
+      { id:"ny", name:"New York", emblem:"NY", tz:"ET",
+        draws:[{code:"Midday",time:"14:30",days:ALL},{code:"Evening",time:"22:30",days:ALL}] },
+      { id:"nj", name:"New Jersey", emblem:"NJ", tz:"ET",
+        draws:[{code:"Midday",time:"12:59",days:ALL},{code:"Evening",time:"22:57",days:ALL}] },
+      { id:"ct", name:"Connecticut", emblem:"CT", tz:"ET",
+        draws:[{code:"Day",time:"13:57",days:ALL},{code:"Night",time:"22:29",days:ALL}] },
+      { id:"fl", name:"Florida", emblem:"FL", tz:"ET",
+        draws:[{code:"Midday",time:"13:30",days:ALL},{code:"Evening",time:"21:45",days:ALL}] },
+      { id:"ga", name:"Georgia", emblem:"GA", tz:"ET",
+        draws:[{code:"Midday",time:"12:29",days:ALL},{code:"Evening",time:"18:59",days:ALL},{code:"Night",time:"23:34",days:ALL}] },
+      { id:"pa", name:"Pennsylvania", emblem:"PA", tz:"ET",
+        draws:[{code:"Day",time:"13:35",days:ALL},{code:"Evening",time:"18:59",days:ALL}] },
+      { id:"de", name:"Delaware", emblem:"DE", tz:"ET",
+        draws:[{code:"Day",time:"13:58",days:ALL},{code:"Night",time:"19:57",days:ALL}] },
+      { id:"md", name:"Maryland", emblem:"MD", tz:"ET",
+        draws:[{code:"Midday",time:"12:28",days:ALL},{code:"Evening",time:"19:56",days:ALL}] },
+      { id:"ma", name:"Massachusetts", emblem:"MA", tz:"ET",
+        draws:[{code:"Midday",time:"14:00",days:ALL},{code:"Evening",time:"21:00",days:ALL}] },
+      { id:"va", name:"Virginia", emblem:"VA", tz:"ET",
+        draws:[{code:"Day",time:"13:59",days:ALL},{code:"Night",time:"23:00",days:ALL}] },
+      { id:"mi", name:"Michigan", emblem:"MI", tz:"ET",
+        draws:[{code:"Midday",time:"12:59",days:ALL},{code:"Evening",time:"19:29",days:ALL}] },
+      { id:"nc", name:"North Carolina", emblem:"NC", tz:"ET",
+        draws:[{code:"Day",time:"15:00",days:ALL},{code:"Evening",time:"23:22",days:ALL}] },
+      { id:"sc", name:"South Carolina", emblem:"SC", tz:"ET",
+        draws:[{code:"Midday",time:"12:59",days:MON_SAT},{code:"Evening",time:"18:59",days:ALL}] },
+      { id:"tx", name:"Texas", emblem:"TX", tz:"CT",
+        draws:[{code:"Morning",time:"10:00",days:MON_SAT},{code:"Day",time:"12:27",days:MON_SAT},{code:"Evening",time:"18:00",days:MON_SAT},{code:"Night",time:"22:12",days:MON_SAT}] },
+      { id:"tn", name:"Tennessee", emblem:"TN", tz:"CT",
+        draws:[{code:"Morning",time:"09:28",days:MON_SAT},{code:"Midday",time:"12:28",days:MON_SAT},{code:"Evening",time:"18:28",days:ALL}] }
     ],
     rd: [
-      { id:"real",  name:"Lotería Real", abbr:"REAL", emblem:"RL", tz:"AST",
-        draws:[{code:"Mediodía", time:"12:55", days:[1,2,3,4,5,6,0]}]
-      },
-      { id:"ganamas",name:"Gana Más", abbr:"GANAMAS", emblem:"GM", tz:"AST",
-        draws:[{code:"Tarde", time:"14:30", days:[1,2,3,4,5,6,0]}]
-      },
-      { id:"loteka", name:"Loteka", abbr:"LOTEKA", emblem:"LK", tz:"AST",
-        draws:[{code:"Noche", time:"19:55", days:[1,2,3,4,5,6,0]}]
-      },
-      { id:"nacional", name:"Lotería Nacional", abbr:"NAC", emblem:"LN", tz:"AST",
-        draws:[{code:"Tarde", time:"14:30", days:ALL},{code:"Noche", time:"21:00", days:[1,2,3,4,5,6]}, {code:"Domingo", time:"18:00", days:[0]}]
-      },
-      { id:"quiniela", name:"Quiniela Palé (Leidsa)", abbr:"QP", emblem:"QP", tz:"AST",
-        draws:[{code:"Diario", time:"20:55", days:[1,2,3,4,5,6]},{code:"Domingo", time:"15:55", days:[0]}]
-      },
-      { id:"laprimera", name:"La Primera", abbr:"PRIMERA", emblem:"LP", tz:"AST",
-        draws:[{code:"AM", time:"12:00", days:ALL}, {code:"PM", time:"20:00", days:ALL}]
-      },
-      { id:"lasuerte", name:"La Suerte Dominicana", abbr:"SUERTE", emblem:"LS", tz:"AST",
-        draws:[{code:"AM", time:"12:30", days:ALL}, {code:"PM", time:"18:00", days:ALL}]
-      },
-      { id:"lotedom", name:"LoteDom", abbr:"LOTEDOM", emblem:"LD", tz:"AST",
-        draws:[{code:"Tarde", time:"13:55", days:ALL}]
-      }
+      { id:"real", name:"Lotería Real", emblem:"RL", tz:"AST", draws:[{code:"Mediodía",time:"12:55",days:ALL}] },
+      { id:"ganamas", name:"Gana Más", emblem:"GM", tz:"AST", draws:[{code:"Tarde",time:"14:30",days:ALL}] },
+      { id:"loteka", name:"Loteka", emblem:"LK", tz:"AST", draws:[{code:"Noche",time:"19:55",days:ALL}] },
+      { id:"nacional", name:"Lotería Nacional", emblem:"LN", tz:"AST", draws:[{code:"Tarde",time:"14:30",days:ALL},{code:"Noche",time:"21:00",days:[1,2,3,4,5,6]},{code:"Domingo",time:"18:00",days:[0]}] },
+      { id:"quiniela", name:"Quiniela Palé (Leidsa)", emblem:"QP", tz:"AST", draws:[{code:"Diario",time:"20:55",days:[1,2,3,4,5,6]},{code:"Domingo",time:"15:55",days:[0]}] },
+      { id:"laprimera", name:"La Primera", emblem:"LP", tz:"AST", draws:[{code:"AM",time:"12:00",days:ALL},{code:"PM",time:"20:00",days:ALL}] },
+      { id:"lasuerte", name:"La Suerte Dominicana", emblem:"LS", tz:"AST", draws:[{code:"AM",time:"12:30",days:ALL},{code:"PM",time:"18:00",days:ALL}] },
+      { id:"lotedom", name:"LoteDom", emblem:"LD", tz:"AST", draws:[{code:"Tarde",time:"13:55",days:ALL}] }
     ],
     special: [
-      { id:"ny-bk", name:"NY-BK", abbr:"BK", emblem:"BK", tz:"ET", draws:[{code:"AM", time:"12:00", days:ALL},{code:"PM",time:"22:00",days:ALL}]},
-      { id:"ny-race", name:"NY Horses", abbr:"NYH", emblem:"NY", tz:"ET", draws:[{code:"R1", time:"14:00", days:ALL},{code:"R2",time:"18:30",days:ALL},{code:"R3",time:"21:30",days:ALL}]},
-      { id:"357", name:"3-5-7", abbr:"357", emblem:"35", tz:"ET", draws:[{code:"Main", time:"20:30", days:ALL}]}
+      { id:"ny-bk", name:"NY-BK", emblem:"BK", tz:"ET", draws:[{code:"AM", time:"12:00", days:ALL},{code:"PM",time:"22:00",days:ALL}] },
+      { id:"ny-race", name:"NY Horses", emblem:"NY", tz:"ET", draws:[{code:"R1", time:"14:00", days:ALL},{code:"R2",time:"18:30",days:ALL},{code:"R3",time:"21:30",days:ALL}] },
+      { id:"357", name:"3-5-7", emblem:"35", tz:"ET", draws:[{code:"Main", time:"20:30", days:ALL}] }
     ]
   };
 
-  // Build select options in admin
+  // Store
+  const results = JSON.parse(localStorage.getItem("lottoResults")||"{}");
+  function setResult(section,id,draw,value){
+    results[section] ??= {}; results[section][id] ??= {};
+    results[section][id][draw] = { value, ts: new Date().toISOString() };
+    localStorage.setItem("lottoResults", JSON.stringify(results)); render();
+  }
+
+  // Admin selects
   const catalogSelect = document.getElementById("catalogSelect");
   const drawSelect = document.getElementById("drawSelect");
   function fillCatalogSelect(){
     const groups=[["usa","USA"],["rd","RD"],["special","Special"]];
     catalogSelect.innerHTML="";
     groups.forEach(([key,label])=>{
-      catalog[key].forEach(lot=>{
+      catalog[key].forEach(l=>{
         const opt=document.createElement("option");
-        opt.value = key+"|"+lot.id;
-        opt.textContent = `${label} — ${lot.name}`;
-        catalogSelect.appendChild(opt);
+        opt.value = key+"|"+l.id; opt.textContent = `${label} — ${l.name}`; catalogSelect.appendChild(opt);
       });
     });
     fillDraws();
@@ -477,215 +387,175 @@ html = r"""<!DOCTYPE html>
     const [section,id] = catalogSelect.value.split("|");
     const lot = catalog[section].find(x=>x.id===id);
     drawSelect.innerHTML="";
-    lot.draws.forEach(d=>{
-      const o=document.createElement("option");
-      o.value=d.code;o.textContent=d.code;drawSelect.appendChild(o);
-    });
+    lot.draws.forEach(d=>{ const o=document.createElement("option"); o.value=d.code; o.textContent=d.code; drawSelect.appendChild(o); });
   }
   catalogSelect.addEventListener("change",fillDraws);
-  fillCatalogSelect();
-
-  /*************** DATA (results) ***************/
-  const results = JSON.parse(localStorage.getItem("lottoResults")||"{}");
-  function setResult(section,id,draw,value){
-    results[section] ??= {};
-    results[section][id] ??= {};
-    results[section][id][draw] = { value, ts: new Date().toISOString() };
-    localStorage.setItem("lottoResults", JSON.stringify(results));
-    render();
-  }
   document.getElementById("saveManual").addEventListener("click",()=>{
     const [section,id] = catalogSelect.value.split("|");
     setResult(section,id,drawSelect.value,document.getElementById("resultInput").value.trim());
   });
+  fillCatalogSelect();
 
-  /*************** OCR ***************/
-  const drop = document.getElementById("drop");
-  const fileInput = document.getElementById("file");
+  /*************** OCR (reinstated rich UI) ***************/
+  const drop = document.getElementById("drop"); const fileInput=document.getElementById("file");
   drop.addEventListener("click",()=>fileInput.click());
   ;["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag")}));
   ;["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag")}));
   drop.addEventListener("drop",e=>{ if(e.dataTransfer.files[0]) processImage(e.dataTransfer.files[0]); });
   fileInput.addEventListener("change",e=>{ if(e.target.files[0]) processImage(e.target.files[0]); });
 
-  const abbrMap = [
+  const ABBR_MAP = [
     // New York
-    {keys:["MIDDAY","NY AM","NYMID","NYMIDDAY","N Y"], map:{section:"usa", id:"ny", draw:"Midday"}, fmt:"usa"},
-    {keys:["STATE","NYS","NY PM","NYNIGHT","NYEVENING","NEWYORKEVENING"], map:{section:"usa", id:"ny", draw:"Evening"}, fmt:"usa"},
-    // NY Horses
-    {keys:["NY","NYHORSES","HORSES"], map:{section:"special", id:"ny-race", draw:"R1"}, fmt:"rd"},
-    // Brooklyn
-    {keys:["BKDAY","BKAM","BK-DAY"], map:{section:"special", id:"ny-bk", draw:"AM"}, fmt:"rd"},
-    {keys:["BKTV","BKPM","BK-NIGHT"], map:{section:"special", id:"ny-bk", draw:"PM"}, fmt:"rd"},
+    { keys:["MIDDAY","NY AM","NYMID","NY MID","N Y"], target:{section:"usa",lottery:"ny",draw:"Midday"} },
+    { keys:["STATE","NYS","NY PM","NY NIGHT","NEW YORK EVENING","STATE-"], target:{section:"usa",lottery:"ny",draw:"Evening"} },
+    // Brooklyn & Horses
+    { keys:["BK-DAY","BK DAY","BK AM"], target:{section:"special",lottery:"ny-bk",draw:"AM"} },
+    { keys:["BK-TV","BK TV","BK PM","BROOKLYN NIGHT"], target:{section:"special",lottery:"ny-bk",draw:"PM"} },
+    { keys:["NY","NY HORSES","HORSES"], target:{section:"special",lottery:"ny-race",draw:"R1"} }, // si hay varias, el usuario edita en tabla
     // New Jersey
-    {keys:["NJDAY","NJAM","NJD","NJ-MIDDAY","NJ A M"], map:{section:"usa", id:"nj", draw:"Midday"}, fmt:"usa"},
-    {keys:["NJPM","NJNIGHT","NJE","NJ P M"], map:{section:"usa", id:"nj", draw:"Evening"}, fmt:"usa"},
+    { keys:["NJ-DAY","NJ AM","N J AM","NJ MIDDAY"], target:{section:"usa",lottery:"nj",draw:"Midday"} },
+    { keys:["NJ PM","NJ-NIGHT","N J PM"], target:{section:"usa",lottery:"nj",draw:"Evening"} },
     // Connecticut
-    {keys:["CTAM","CTDAY","CONNDAY","CT A M"], map:{section:"usa", id:"ct", draw:"Day"}, fmt:"usa"},
-    {keys:["CTPM","CTNIGHT","CONNNIGHT","CT P M"], map:{section:"usa", id:"ct", draw:"Night"}, fmt:"usa"},
+    { keys:["CT AM","CONN-DAY","CT DAY","C T AM"], target:{section:"usa",lottery:"ct",draw:"Day"} },
+    { keys:["CT PM","CONN-NIGHT","C T PM"], target:{section:"usa",lottery:"ct",draw:"Night"} },
     // Florida
-    {keys:["FLORIDAAM","FLAM","FLAAM","FLA-MIDDAY"], map:{section:"usa", id:"fl", draw:"Midday"}, fmt:"usa"},
-    {keys:["FLORIDAPM","FLPM","FLANIGHT","FLA-PM"], map:{section:"usa", id:"fl", draw:"Evening"}, fmt:"usa"},
+    { keys:["FLORIDA AM","FLA AM","FL AM"], target:{section:"usa",lottery:"fl",draw:"Midday"} },
+    { keys:["FLORIDA PM","FLA PM","FL PM","FL NIGHT"], target:{section:"usa",lottery:"fl",draw:"Evening"} },
     // Georgia
-    {keys:["GEORGIAAM","GAAM"], map:{section:"usa", id:"ga", draw:"Midday"}, fmt:"usa"},
-    {keys:["GEORGIAEVE","GEORGIAEVENING","GAPM","GAP"], map:{section:"usa", id:"ga", draw:"Evening"}, fmt:"usa"},
-    {keys:["GEORGIANIGHT","GANIGHT","GAE"], map:{section:"usa", id:"ga", draw:"Night"}, fmt:"usa"},
+    { keys:["GEORGIA AM","GA AM"], target:{section:"usa",lottery:"ga",draw:"Midday"} },
+    { keys:["GEORGIA EVE","GEORGIA PM","GA PM"], target:{section:"usa",lottery:"ga",draw:"Evening"} },
+    { keys:["GEORGIA NIGHT","GA NIGHT"], target:{section:"usa",lottery:"ga",draw:"Night"} },
     // Pennsylvania
-    {keys:["PAAM","PENNAM","PADAY"], map:{section:"usa", id:"pa", draw:"Day"}, fmt:"usa"},
-    {keys:["PAPM","PENNPM","PAEVENING"], map:{section:"usa", id:"pa", draw:"Evening"}, fmt:"usa"},
-    // Delaware
-    {keys:["DEAM","DEDAY"], map:{section:"usa", id:"de", draw:"Day"}, fmt:"usa"},
-    {keys:["DEPM","DENIGHT"], map:{section:"usa", id:"de", draw:"Night"}, fmt:"usa"},
-    // Connecticut short
-    {keys:["CTPM"], map:{section:"usa", id:"ct", draw:"Night"}, fmt:"usa"},
-    // RD
-    {keys:["LOTEKA"], map:{section:"rd", id:"loteka", draw:"Noche"}, fmt:"rd"},
-    {keys:["REAL"], map:{section:"rd", id:"real", draw:"Mediodía"}, fmt:"rd"},
-    {keys:["GANAMAS","GANAMÁS","GANA MAS","GANAMAS"], map:{section:"rd", id:"ganamas", draw:"Tarde"}, fmt:"rd"},
-    {keys:["QUINIELAPALE","QUINIELAPALELEIDSA","QUINIELAPALE (LEIDSA)","QUINIELAPALELEIDSA"], map:{section:"rd", id:"quiniela", draw:"Diario"}, fmt:"rd"},
-    {keys:["NACIONAL","NATIONAL"], map:{section:"rd", id:"nacional", draw:"Noche"}, fmt:"rd"},
-    {keys:["LAPRIMERA"], map:{section:"rd", id:"laprimera", draw:"AM"}, fmt:"rd"},
-    {keys:["LASUERTE","SUERTE"], map:{section:"rd", id:"lasuerte", draw:"AM"}, fmt:"rd"},
-    {keys:["LOTEDOM"], map:{section:"rd", id:"lotedom", draw:"Tarde"}, fmt:"rd"},
-    // Special 3-5-7
-    {keys:["3.5.7","357","3-5-7"], map:{section:"special", id:"357", draw:"Main"}, fmt:"rd"}
+    { keys:["PA AM","PENN AM","PA DAY"], target:{section:"usa",lottery:"pa",draw:"Day"} },
+    { keys:["PA PM","PENN PM"], target:{section:"usa",lottery:"pa",draw:"Evening"} },
+    // RD comunes
+    { keys:["LOTEKA"], target:{section:"rd",lottery:"loteka",draw:"Noche"} },
+    { keys:["REAL"], target:{section:"rd",lottery:"real",draw:"Mediodía"} },
+    { keys:["GANAMAS","GANA MAS"], target:{section:"rd",lottery:"ganamas",draw:"Tarde"} },
+    { keys:["QUINIELA PALE","QUINIELA PALE LEIDSA","QUINIELA PALE (LEIDSA)"], target:{section:"rd",lottery:"quiniela",draw:"Diario"} },
+    { keys:["NACIONAL"], target:{section:"rd",lottery:"nacional",draw:"Noche"} },
+    // Special 357
+    { keys:["3.5.7","357","3-5-7"], target:{section:"special",lottery:"357",draw:"Main"} }
   ];
-  function norm(s){ return s.toUpperCase().replace(/\s+/g,"").replace(/[^\w]/g,""); }
 
-  function processImage(file){
-    const preview = document.getElementById("ocrPreview");
-    preview.innerHTML = "<p>Procesando imagen con OCR...</p>";
-    const imgUrl = URL.createObjectURL(file);
-    Tesseract.recognize(imgUrl, 'eng', { logger: m => {} })
-      .then(({ data:{ text } })=>{
-        const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-        const rows = [];
-        // Extract pairs like "label --- 123 - 4567" or "label 444"
-        for(const ln of lines){
-          // Split by dashes or colon
-          const m = ln.match(/^(.{2,24}?)[\s\-\—\_:.]+([0-9\s\-]{2,12,})$/i);
-          if(m){
-            rows.push({abbr:m[1].trim(), detected:m[2].trim().replace(/\s+/g,"")});
-          }else{
-            const m2 = ln.match(/^([A-Za-z\.\s]{2,24})\s+([0-9]{2,4}(\s*-\s*[0-9]{2,4})?)$/);
-            if(m2) rows.push({abbr:m2[1].trim(), detected:m2[2].trim().replace(/\s+/g,"")});
-          }
-        }
-        renderOCRTable(rows);
-      })
-      .catch(err=>{ preview.innerHTML = "<p style='color:var(--danger)'>OCR falló: "+err+"</p>"; });
+  function norm(s){ return s.toUpperCase().replace(/\s+/g," ").trim(); }
+
+  async function processImage(file){
+    const out = document.getElementById("ocrOut");
+    out.value = "Leyendo imagen con OCR...";
+    try{
+      const { data:{ text } } = await Tesseract.recognize(file, 'eng', { logger:m=>{} });
+      out.value = text.trim();
+      renderOCRTable(text.trim());
+    }catch(e){
+      out.value = "Error de OCR: " + e.message;
+    }
   }
 
-  function mapAbbrev(ab){
-    const N = norm(ab);
-    for(const rule of abbrMap){
-      if(rule.keys.some(k => N.includes(k))) return rule.map;
+  function parseOCRText(text){
+    const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const entries=[];
+    for(const raw of lines){
+      // label ---- numbers
+      const m = raw.match(/^([A-Za-z\.\s\-]{2,24})[\s\-\—\_:.]+([0-9][0-9\s\-]{1,12})$/);
+      if(m){
+        entries.push({abbr:m[1].trim(), detected:m[2].trim().replace(/\s+/g,"")});
+        continue;
+      }
+      // or label 123 - 4567
+      const m2 = raw.match(/^([A-Za-z\.\s\-]{2,24})\s+([0-9]{2,4}\s*-\s*[0-9]{2,4}|[0-9]{3})$/);
+      if(m2){
+        entries.push({abbr:m2[1].trim(), detected:m2[2].trim().replace(/\s+/g,"")});
+      }
     }
-    // Heuristics for common patterns
-    if(N==="MIDDAY") return {section:"usa", id:"ny", draw:"Midday"};
-    if(N==="STATE") return {section:"usa", id:"ny", draw:"Evening"};
+    return entries;
+  }
+
+  function findTarget(token){
+    const N = norm(token);
+    for(const rule of ABBR_MAP){
+      for(const k of rule.keys){
+        if(N.includes(k)) return rule.target;
+      }
+    }
+    if(N==="MIDDAY") return {section:"usa",lottery:"ny",draw:"Midday"};
+    if(N==="STATE") return {section:"usa",lottery:"ny",draw:"Evening"};
     return null;
   }
 
   function isUSA(section){ return section==="usa"; }
-  function validUSA(val){ return /^\d{3}\-\d{4}$/.test(val); }
-  function validRD(val){ return /^\d{2}\-\d{2}\-\d{2}$/.test(val) || /^\d{3}$/.test(val); }
+  function validUSA(val){ return /^\d{3}-\d{4}$/.test(val); }
+  function validRD(val){ return /^\d{2}-\d{2}-\d{2}$/.test(val) || /^\d{3}$/.test(val); }
 
-  function renderOCRTable(rows){
-    const t=i18n[lang];
-    const div = document.getElementById("ocrPreview");
-    const table = document.createElement("table"); table.className="ocr-table";
-    table.innerHTML = `<thead><tr>
-      <th>${t.abbr}</th><th>${t.map}</th><th>${t.detected}</th><th>${t.value}</th><th>${t.actions}</th>
-    </tr></thead>`;
+  function renderOCRTable(text){
+    const rows = Array.isArray(text) ? text : parseOCRText(text);
+    const box = document.getElementById("ocrTable"); box.innerHTML="";
+    const table = document.createElement("table");
+    table.innerHTML = `<thead><tr><th>${i18n[lang].abbr}</th><th>${i18n[lang].map}</th><th>${i18n[lang].detected}</th><th>${i18n[lang].value}</th><th>${i18n[lang].actions}</th></tr></thead>`;
     const tb=document.createElement("tbody");
-    rows.forEach((r,idx)=>{
-      const map = mapAbbrev(r.abbr);
-      const tr = document.createElement("tr");
-      const mapTxt = map? `${map.section}/${map.id}/${map.draw}` : "—";
-      const inp = document.createElement("input");
-      // normalize value spaces -> hyphen
-      const normv = r.detected.replace(/\s*-\s*/g,"-");
-      inp.value = normv;
-      tr.innerHTML = `<td>${r.abbr}</td><td>${mapTxt}</td><td>${r.detected}</td>`;
-      const tdv = document.createElement("td"); tdv.appendChild(inp); tr.appendChild(tdv);
-      const save = document.createElement("button"); save.className="btn"; save.textContent=t.save;
+    rows.forEach(r=>{
+      const map = findTarget(r.abbr);
+      const tr=document.createElement("tr");
+      const mapTxt = map? `${map.section}/${map.lottery}/${map.draw}` : "—";
+      const inp = document.createElement("input"); inp.value = r.detected.replace(/\s*-\s*/g,"-");
+      const save = document.createElement("button"); save.className="btn"; save.textContent=i18n[lang].save;
       save.addEventListener("click",()=>{
         if(!map) return;
         const val = inp.value.trim();
-        const ok = isUSA(map.section)? validUSA(val) : validRD(val);
+        const ok = isUSA(map.section) ? validUSA(val) : validRD(val);
         if(!ok){ inp.style.borderColor="var(--danger)"; setTimeout(()=>inp.style.borderColor="",800); return; }
-        setResult(map.section, map.id, map.draw, val);
+        setResult(map.section, map.lottery, map.draw, val);
       });
-      const tda = document.createElement("td"); tda.appendChild(save); tr.appendChild(tda);
+      tr.appendChild(td(r.abbr)); tr.appendChild(td(mapTxt)); tr.appendChild(td(r.detected));
+      const tdv=td(""); tdv.appendChild(inp); tr.appendChild(tdv); const tda=td(""); tda.appendChild(save); tr.appendChild(tda);
       tb.appendChild(tr);
     });
     table.appendChild(tb);
-    const all = document.createElement("button"); all.className="btn"; all.textContent=t.saveAll;
-    all.addEventListener("click",()=>{
-      [...tb.querySelectorAll("tr")].forEach(tr=>{
-        const ab = tr.children[0].textContent;
-        const map = mapAbbrev(ab); if(!map) return;
-        const val = tr.querySelector("input").value.trim();
-        const ok = isUSA(map.section)? validUSA(val) : validRD(val);
-        if(ok) setResult(map.section, map.id, map.draw, val);
-      });
+    box.appendChild(table);
+  }
+  function td(t){ const d=document.createElement("td"); d.textContent=t; return d; }
+  document.getElementById("btnParse").addEventListener("click",()=>renderOCRTable(document.getElementById("ocrOut").value));
+
+  document.getElementById("btnAssignAll").addEventListener("click",()=>{
+    const box=document.getElementById("ocrTable");
+    const rows=[...box.querySelectorAll("tbody tr")];
+    if(!rows.length) return alert("No hay filas.");
+    rows.forEach(tr=>{
+      const ab = tr.children[0].textContent;
+      const map = findTarget(ab); if(!map) return;
+      const val = tr.querySelector("input").value.trim();
+      const ok = isUSA(map.section)? validUSA(val) : validRD(val);
+      if(ok) setResult(map.section, map.lottery, map.draw, val);
     });
-    div.innerHTML=""; div.appendChild(table); div.appendChild(all);
-  }
+    alert("Filas guardadas.");
+  });
 
-  /*************** RENDER ***************/
+  /*************** RENDER tiles ***************/
   function inDays(days,d){ return days.includes(d); }
-  function fmtDrawClose(t){ return {draw:t, close: minus20(t)}; }
-  function withinOpen(draw, tz){
-    // For display only: if current minute < close -> "Abierta"
-    const now = new Date();
-    // Interpret draw.close in local time for simplicity
-    const [cH,cM] = minus20(draw.time).split(":").map(Number);
-    const [dH,dM] = draw.time.split(":").map(Number);
-    const today = now.getDay();
-    const nowMin = now.getHours()*60 + now.getMinutes();
-    const closeMin = cH*60 + cM;
-    const drawMin = dH*60 + dM;
-    const open = nowMin < closeMin && inDays(draw.days,today);
-    const closed = nowMin >= closeMin && nowMin < drawMin && inDays(draw.days,today) ? "closing" : (!inDays(draw.days,today) ? "off" : "after");
-    return open ? "open" : "closed";
-  }
-
   function renderSection(key, title){
-    const sec = document.createElement("div");
-    sec.className="section";
-    sec.innerHTML = `<h2>${title}</h2><div class="grid"></div>`;
-    const grid = sec.querySelector(".grid");
-    const q = document.getElementById("search").value.trim().toLowerCase();
+    const sec=document.createElement("div"); sec.className="section";
+    sec.innerHTML=`<h2>${title}</h2><div class="grid"></div>`;
+    const grid=sec.querySelector(".grid");
+    const q = (document.getElementById("search").value||"").trim().toLowerCase();
     catalog[key].forEach(l=>{
-      // Filter by search
       if(q && !(l.name.toLowerCase().includes(q) || l.id.includes(q))) return;
       l.draws.forEach(d=>{
-        // Skip day if not allowed today
-        const today = new Date().getDay();
-        if(!d.days.includes(today)) return;
-        const card = document.createElement("div");
-        card.className="tile";
-        // result value
+        const today=new Date().getDay(); if(!inDays(d.days,today)) return;
         const r = results[key]?.[l.id]?.[d.code]?.value || "—";
-        const st = withinOpen(d,l.tz)==="open" ? "open" : "closed";
-        const stCls = st==="open"?"status":"status closed";
-        const drawClose = fmtDrawClose(d.time);
+        const card=document.createElement("div"); card.className="tile";
+        const open = isOpenNow(d);
         card.innerHTML = `
-          <div class="${stCls}">${st==="open"? i18n[lang].open : i18n[lang].closed}</div>
-          <div class="state">${l.tz}</div>
           <div class="badge">
             <div class="emblem">${l.emblem}</div>
-            <div>
-              <div class="name">${l.name}</div>
-              <div class="draw">${d.code}</div>
-            </div>
+            <div class="name">${l.name}</div>
+            <div class="pill">${d.code}</div>
           </div>
           <div class="nums">${r}</div>
           <div class="meta">
             <div>${i18n[lang].draw}: ${d.time}</div>
             <div>${i18n[lang].close}: ${minus20(d.time)}</div>
+            <div class="status ${open?'':'closed'}">${open? i18n[lang].open : i18n[lang].closed}</div>
+            <div style="justify-self:end">${l.tz}</div>
           </div>
         `;
         grid.appendChild(card);
@@ -693,21 +563,35 @@ html = r"""<!DOCTYPE html>
     });
     return sec;
   }
+  function isOpenNow(draw){
+    const now = new Date();
+    const [dh,dm] = draw.time.split(":").map(Number);
+    const close = minus20(draw.time).split(":").map(Number);
+    const nowMin = now.getHours()*60 + now.getMinutes();
+    const dMin = dh*60 + dm; const cMin = (+close[0])*60 + (+close[1]);
+    const today=new Date().getDay();
+    return nowMin < cMin && draw.days.includes(today);
+  }
 
   function render(){
-    const content = document.getElementById("content");
-    content.innerHTML="";
+    const content=document.getElementById("content"); content.innerHTML="";
     content.appendChild(renderSection("usa", i18n[lang].usa));
     content.appendChild(renderSection("rd", i18n[lang].rd));
     content.appendChild(renderSection("special", i18n[lang].special));
   }
-  document.getElementById("search").addEventListener("input", render);
+
+  // Search filter from admin
+  const search = document.getElementById("search"); if(search) search.addEventListener("input", render);
+
+  // Initial
   applyLang();
+  render();
 
   </script>
 </body>
 </html>
 """
-with open("/mnt/data/beast_reader_v4.html","w",encoding="utf-8") as f:
+with open("/mnt/data/beast_reader_v5.html","w",encoding="utf-8") as f:
     f.write(html)
-print("Archivo creado: /mnt/data/beast_reader_v4.html")
+
+print("Archivo creado: /mnt/data/beast_reader_v5.html")
