@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Resultados de Loterías — Portal</title>
+<style>
+  :root{
+    --bg:#0e1116; --card:#151a22; --muted:#8792a2; --text:#e8eef7; --accent:#23b5d3; --warn:#eab308; --good:#16a34a; --bad:#ef4444;
+    --light-bg:#f7fafc; --light-card:#ffffff; --light-text:#0f172a; --light-muted:#4b5563;
+  }
+  html,body{height:100%;}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .light body,.light{background:var(--light-bg);color:var(--light-text);}
+  header{padding:24px 16px;display:flex;gap:16px;align-items:center;justify-content:space-between;position:sticky;top:0;background:linear-gradient(180deg,rgba(0,0,0,.65),transparent);backdrop-filter: blur(6px);z-index:5}
+  .title{display:flex;align-items:center;gap:12px;}
+  .title h1{font-size:clamp(20px,3vw,28px);margin:0}
+  .subtitle{font-size:12px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 16px 80px}
+  @media (max-width:1100px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:700px){.grid{grid-template-columns:1fr;}}
+  .section{margin-top:12px;}
+  .section h2{font-size:18px;margin:16px 4px;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .card{background:var(--card);border-radius:14px;padding:12px 12px 10px;border:1px solid rgba(255,255,255,.06);box-shadow:0 4px 20px rgba(0,0,0,.25)}
+  .light .card{background:var(--light-card);border-color:#e5e7eb;}
+  .lot-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .lot-name{font-weight:700}
+  .pill{font-size:12px;padding:3px 8px;border-radius:999px;background:#1f2937;color:#cbd5e1}
+  .light .pill{background:#f1f5f9;color:#334155}
+  .res{font-size:22px;font-weight:800;letter-spacing:.5px}
+  .muted{color:var(--muted);font-size:12px}
+  .time{font-variant-numeric:tabular-nums}
+  .toolbar{display:flex;gap:8px;align-items:center}
+  button, .btn{background:var(--accent);color:#07242b;border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.15)}
+  .light .ghost{border-color:#e5e7eb;color:var(--light-text)}
+  .toggle{appearance:none;width:48px;height:28px;background:#334155;border-radius:999px;position:relative;outline:none;cursor:pointer}
+  .toggle:checked{background:#bae6fd}
+  .toggle:before{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:999px;background:#e2e8f0;transition:all .18s}
+  .toggle:checked:before{transform:translateX(20px);background:#0ea5e9}
+  /* Admin tab (accordion-like) */
+  .admin-tab{position:fixed;right:0;top:40%;transform:translateY(-50%);z-index:6}
+  .admin-handle{writing-mode:vertical-rl;transform:rotate(180deg);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:10px 6px;border-radius:10px 0 0 10px;cursor:pointer;font-weight:700;letter-spacing:.08em}
+  .light .admin-handle{background:#edf2f7;border-color:#e2e8f0}
+  .admin-accordion{position:fixed;right:-220px;top:30%;width:220px;background:var(--card);border:1px solid rgba(255,255,255,.15);border-right:none;border-radius:12px 0 0 12px;transition:right .18s;box-shadow: -8px 0 24px rgba(0,0,0,.2);z-index:7}
+  .light .admin-accordion{background:var(--light-card);border-color:#e5e7eb}
+  .admin-accordion.open{right:0}
+  .admin-accordion .inner{padding:12px;display:flex;flex-direction:column;gap:8px}
+  .admin-accordion .inner .hidden-admin{display:none}
+  .admin-accordion.open .inner .hidden-admin{display:block}
+  .admin-button{width:100%}
+  /* Modal Admin */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;place-items:center;z-index:20}
+  .modal.show{display:grid}
+  .panel{width:min(980px,96vw);max-height:85vh;overflow:auto;background:var(--card);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px}
+  .light .panel{background:var(--light-card);border-color:#e5e7eb}
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tabs button{background:#1f2937;color:#cbd5e1}
+  .light .tabs button{background:#f1f5f9;color:#111827}
+  .tabs button.active{background:var(--accent);color:#07242b}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px dashed rgba(255,255,255,.08);padding:8px;font-size:14px}
+  .light th,.light td{border-color:#e5e7eb}
+  input[type="text"]{width:120px;padding:8px 10px;border-radius:8px;border:1px solid #344155;background:#0b1220;color:#e2e8f0}
+  .light input[type="text"]{background:#fff;color:#0f172a;border-color:#e5e7eb}
+  select{padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+  .light select{background:#fff;color:#0f172a;border-color:#e5e7eb}
+  .dropzone{border:2px dashed #64748b;border-radius:12px;padding:16px;text-align:center;color:#94a3b8}
+  .status-open{color:var(--good);font-weight:700}
+  .status-closed{color:var(--bad);font-weight:700}
+  footer{position:fixed;bottom:0;left:0;right:0;padding:10px 16px;background:linear-gradient(0deg,rgba(0,0,0,.7),transparent);display:flex;gap:12px;align-items:center;justify-content:space-between;z-index:4}
+</style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <div>
+        <h1>Resultados de Loterías</h1>
+        <div class="subtitle">USA • Santo Domingo • Special</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <label class="muted">Claro</label><input id="themeToggle" class="toggle" type="checkbox" />
+      <span class="muted time" id="clock"></span>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <!-- Admin Handle & Accordion -->
+  <div class="admin-tab">
+    <div class="admin-handle" id="openAccordion">⋮⋮</div>
+  </div>
+  <div class="admin-accordion" id="accordion">
+    <div class="inner">
+      <button id="btnShowAdmin" class="btn admin-button">ADMIN</button>
+      <div class="hidden-admin muted" style="font-size:12px">Cargar resultados, OCR, catálogo.</div>
+    </div>
+  </div>
+
+  <!-- Admin Modal -->
+  <div class="modal" id="adminModal" aria-hidden="true">
+    <div class="panel">
+      <div class="tabs">
+        <button data-tab="results" class="active">Resultados</button>
+        <button data-tab="ocr">OCR</button>
+        <button data-tab="catalog">Catálogo</button>
+      </div>
+      <section id="tab-results"></section>
+      <section id="tab-ocr" style="display:none"></section>
+      <section id="tab-catalog" style="display:none"></section>
+    </div>
+  </div>
+
+  <footer>
+    <div class="muted">Cambios del Admin aparecen instantáneamente.</div>
+    <div class="muted">PIN admin: <b>1983</b></div>
+  </footer>
+
+  <!-- Tesseract.js (única dependencia externa) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+/* =============================
+   Seed de catálogo y almacenamiento
+============================= */
+const DEFAULT_CATALOG = {
+  sections: [
+    {
+      id: "usa",
+      title: "USA Lotteries",
+      format: "P3P4",
+      items: [
+        { id:"ny", name:"New York", draws:["Midday","Evening"] },
+        { id:"nj", name:"New Jersey", draws:["Midday","Evening"] },
+        { id:"pa", name:"Pennsylvania", draws:["Day","Evening"] },
+        { id:"de", name:"Delaware", draws:["Day","Night"] },
+        { id:"ct", name:"Connecticut", draws:["Day","Night"] },
+        { id:"md", name:"Maryland", draws:["Midday","Evening"] },
+        { id:"ma", name:"Massachusetts", draws:["Midday","Evening"] },
+        { id:"va", name:"Virginia", draws:["Day","Night"] },
+        { id:"mi", name:"Michigan", draws:["Midday","Evening"] },
+        { id:"fl", name:"Florida", draws:["Midday","Evening"] },
+        { id:"nc", name:"North Carolina", draws:["Day","Evening"] },
+        { id:"sc", name:"South Carolina", draws:["Midday","Evening"] },
+        // Tennessee: 3 diarios Lun–Sáb + Solo Evening el domingo
+        { id:"tn", name:"Tennessee", draws:["Morning","Midday","Evening"], schedule:{
+          mon:[0,1,2], tue:[0,1,2], wed:[0,1,2], thu:[0,1,2], fri:[0,1,2], sat:[0,1,2], sun:[2] } },
+        // Texas: 4 diarios Lun–Sáb (no hay sorteos el domingo)
+        { id:"tx", name:"Texas", draws:["Morning","Day","Evening","Night"], schedule:{
+          mon:[0,1,2,3], tue:[0,1,2,3], wed:[0,1,2,3], thu:[0,1,2,3], fri:[0,1,2,3], sat:[0,1,2,3], sun:[] } },
+        // Georgia: 3 diarios
+        { id:"ga", name:"Georgia", draws:["Midday","Evening","Night"] }
+      ]
+    },
+    {
+      id: "sd",
+      title: "Santo Domingo Lotteries",
+      format: "QPT",
+      items: [
+        { id:"la-primera", name:"La Primera", draws:["Día","Noche"] },
+        { id:"lotedom", name:"Lotedom", draws:["Mediodía"] },
+        { id:"real", name:"Lotería Real", draws:["Tarde"] },
+        { id:"ganamas", name:"Gana Más (Lotería Nacional)", draws:["Tarde"] },
+        { id:"nacional", name:"Lotería Nacional", draws:["Noche"] },
+        { id:"la-suerte", name:"La Suerte Dominicana", draws:["12:30","6:00 pm"] },
+        { id:"quiniela-pale", name:"Quiniela Palé", draws:["Noche"] },
+        { id:"loteka", name:"Loteka", draws:["Noche"] }
+      ]
+    },
+    {
+      id: "special",
+      title: "Special Lotteries",
+      format: "XX-XX-XX",
+      items: [
+        { id:"anguilla", name:"Anguilla", draws:["10:00","1:00","6:00","9:00"] },
+        { id:"king", name:"King Lottery (SXM)", draws:["Midday","Night"] },
+        { id:"panama", name:"Panamá", draws:["Programados"] },
+        { id:"ny-race", name:"NY Race", draws:["R1","R2","R3"] },
+        { id:"ny-bk", name:"NY-BK", draws:["AM","PM"] },
+        { id:"extra", name:"Extra", draws:["Midday"] }
+      ]
+    }
+  ]
+};
+
+const seedResults = {
+  // USA examples
+  "usa/ny/Midday": { value: "123-4567", updatedAt: Date.now() },
+  "usa/ny/Evening": { value: "987-6543", updatedAt: Date.now() },
+  "usa/tx/Morning": { value: "111-2222", updatedAt: Date.now() },
+  // RD examples
+  "sd/la-primera/Día": { value: "12-34-56", updatedAt: Date.now() },
+  "sd/la-primera/Noche": { value: "11-22-33", updatedAt: Date.now() },
+  // Special
+  "special/anguilla/10:00": { value: "10-20-30", updatedAt: Date.now() }
+};
+
+const KEY="lottoResults";
+const KEY_CATALOG="lottoCatalog";
+
+function ensureSeed(){
+  if(!localStorage.getItem(KEY_CATALOG)){
+    localStorage.setItem(KEY_CATALOG, JSON.stringify(DEFAULT_CATALOG));
+  }
+  if(!localStorage.getItem(KEY)){
+    localStorage.setItem(KEY, JSON.stringify({results:seedResults}));
+  }
+}
+
+function getCatalog(){ return JSON.parse(localStorage.getItem(KEY_CATALOG)||"{}"); }
+function saveCatalog(cat){ localStorage.setItem(KEY_CATALOG, JSON.stringify(cat)); }
+function getStore(){ return JSON.parse(localStorage.getItem(KEY)||"{}"); }
+function saveStore(store){ localStorage.setItem(KEY, JSON.stringify(store)); }
+
+/* =============================
+   Utilidades
+============================= */
+class Bus extends EventTarget{};
+const bus = new Bus();
+
+function $(sel, root=document){ return root.querySelector(sel); }
+function $all(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+
+function fmt(dt){const d=new Date(dt);return d.toLocaleString();}
+function formatResult(sectionId, raw){
+  if(!raw) return "—";
+  if(sectionId==="usa"){
+    return /^\d{3}-\d{4}$/.test(raw) ? raw : "Formato: 123-4567";
+  }
+  // RD & Special -> XX-XX-XX por defecto
+  return /^\d{2}-\d{2}-\d{2}$/.test(raw) ? raw : "Formato: 12-34-56";
+}
+
+function isDrawActive(item, drawIndex){
+  // Respeta reglas especiales de Texas y Tennessee si existe schedule
+  if(!item.schedule) return true;
+  const map = item.schedule;
+  const dow = ["sun","mon","tue","wed","thu","fri","sat"][new Date().getDay()];
+  const allowed = map[dow] || [];
+  return allowed.includes(drawIndex);
+}
+
+function statusBadge(active){
+  return active ? '<span class="status-open">Abierto</span>' : '<span class="status-closed">Cerrado</span>';
+}
+
+/* =============================
+   Render de Landing
+============================= */
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML="";
+  const cat = getCatalog();
+  const store = getStore();
+  cat.sections.forEach(section=>{
+    const wrapper = document.createElement("div");
+    wrapper.className="section";
+    wrapper.innerHTML = `<h2>${section.title}</h2>`;
+    const grid = document.createElement("div");
+    grid.className="grid";
+    section.items.forEach(item=>{
+      item.draws.forEach((drawName, idx)=>{
+        const key = `${section.id}/${item.id}/${drawName}`;
+        const res = store.results?.[key]?.value || "";
+        const active = isDrawActive(item, idx);
+        const card = document.createElement("div");
+        card.className="card";
+        card.innerHTML = `
+          <div class="lot-head">
+            <div class="lot-name">${item.name}</div>
+            <div class="pill">${drawName}</div>
+          </div>
+          <div class="res">${formatResult(section.id, res)}</div>
+          <div class="muted time">${statusBadge(active)} · <span>${fmt(store.results?.[key]?.updatedAt||Date.now())}</span></div>
+        `;
+        grid.appendChild(card);
+      });
+    });
+    wrapper.appendChild(grid);
+    app.appendChild(wrapper);
+  });
+}
+
+/* =============================
+   Admin (PIN 1983) + Accordion
+============================= */
+const PIN="1983";
+let authed = false;
+
+const accordion = document.getElementById("accordion");
+document.getElementById("openAccordion").addEventListener("click",()=>{
+  accordion.classList.toggle("open");
+});
+
+document.getElementById("btnShowAdmin").addEventListener("click",()=>{
+  if(!authed){
+    const pin = prompt("Introduce el PIN de administrador:");
+    if(pin!==PIN){ alert("PIN incorrecto."); return; }
+    authed = true;
+  }
+  openAdmin();
+});
+
+function openAdmin(){
+  const modal = document.getElementById("adminModal");
+  modal.classList.add("show");
+  buildResultsTab();
+  buildOCRTab();
+  buildCatalogTab();
+  modal.addEventListener("click",(e)=>{
+    if(e.target===modal){ modal.classList.remove("show"); }
+  });
+  // Tabs
+  $all(".tabs button", modal).forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      $all(".tabs button", modal).forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      ["results","ocr","catalog"].forEach(id=>$("#tab-"+id).style.display="none");
+      $("#tab-"+btn.dataset.tab).style.display="block";
+    });
+  });
+}
+
+/* ---- Tab: Resultados manuales ---- */
+function buildResultsTab(){
+  const host = $("#tab-results");
+  host.innerHTML="";
+  const cat = getCatalog();
+  const store = getStore();
+  cat.sections.forEach(section=>{
+    const h = document.createElement("h3");
+    h.textContent = section.title;
+    host.appendChild(h);
+    const table = document.createElement("table");
+    table.innerHTML = `<thead><tr><th>Lotería</th><th>Draw</th><th>Resultado</th><th>Guardar</th></tr></thead>`;
+    const tb = document.createElement("tbody");
+    section.items.forEach(item=>{
+      item.draws.forEach((drawName, idx)=>{
+        const key = `${section.id}/${item.id}/${drawName}`;
+        const row = document.createElement("tr");
+        const input = document.createElement("input");
+        input.type="text";
+        input.placeholder = (section.id==="usa"?"123-4567":"12-34-56");
+        input.value = store.results?.[key]?.value || "";
+        // Validación simple por sección
+        input.addEventListener("input",()=>{
+          const ok = section.id==="usa" ? /^\d{3}-\d{4}$/.test(input.value) : /^\d{2}-\d{2}-\d{2}$/.test(input.value);
+          input.style.borderColor = ok ? "#16a34a" : "#ef4444";
+        });
+        const btn = document.createElement("button");
+        btn.className="btn";
+        btn.textContent="Guardar";
+        btn.addEventListener("click",()=>{
+          const ok = section.id==="usa" ? /^\d{3}-\d{4}$/.test(input.value) : /^\d{2}-\d{2}-\d{2}$/.test(input.value);
+          if(!ok){ alert("Formato inválido."); return; }
+          const store = getStore();
+          store.results = store.results || {};
+          store.results[key] = { value: input.value, updatedAt: Date.now() };
+          saveStore(store);
+          bus.dispatchEvent(new Event("refresh"));
+        });
+        row.append(
+          td(item.name),
+          td(drawName),
+          tdEl(input),
+          tdEl(btn)
+        );
+        tb.appendChild(row);
+      });
+    });
+    table.appendChild(tb);
+    host.appendChild(table);
+  });
+}
+function td(txt){ const el=document.createElement("td"); el.textContent=txt; return el; }
+function tdEl(node){ const el=document.createElement("td"); el.appendChild(node); return el; }
+
+/* ---- Tab: OCR ---- */
+function buildOCRTab(){
+  const host = $("#tab-ocr");
+  host.innerHTML = `
+    <div class="dropzone" id="drop">
+      Arrastra una imagen o haz clic para seleccionar.<br/>
+      El OCR intentará detectar números y formatearlos.<br/>
+      <small class="muted">Usa capturas con los resultados en texto nítido.</small>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <select id="ocrSection"></select>
+      <select id="ocrLottery"></select>
+      <select id="ocrDraw"></select>
+      <button class="btn" id="btnAssign">Asignar resultado</button>
+    </div>
+    <pre id="ocrOut" class="muted" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin-top:8px"></pre>
+  `;
+  populateSelectors();
+  const drop = $("#drop");
+  drop.addEventListener("click",()=>pickFile());
+  drop.addEventListener("dragover",(e)=>{e.preventDefault(); drop.style.background="rgba(35,181,211,.08)";});
+  drop.addEventListener("dragleave",()=>drop.style.background="transparent");
+  drop.addEventListener("drop",(e)=>{
+    e.preventDefault(); drop.style.background="transparent";
+    const f = e.dataTransfer.files[0]; if(f) ocrFile(f);
+  });
+  $("#btnAssign").addEventListener("click",()=>{
+    const section = $("#ocrSection").value;
+    const lot = $("#ocrLottery").value;
+    const draw = $("#ocrDraw").value;
+    const text = $("#ocrOut").textContent || "";
+    const numbers = extractNumbers(section, text);
+    if(!numbers){ alert("No se pudo detectar un resultado válido."); return; }
+    const store = getStore();
+    store.results = store.results || {};
+    const key = `${section}/${lot}/${draw}`;
+    store.results[key] = { value: numbers, updatedAt: Date.now() };
+    saveStore(store);
+    bus.dispatchEvent(new Event("refresh"));
+    alert("Asignado: "+numbers);
+  });
+}
+function pickFile(){
+  const input = document.createElement("input");
+  input.type="file"; input.accept="image/*";
+  input.onchange = () => { if(input.files[0]) ocrFile(input.files[0]); };
+  input.click();
+}
+async function ocrFile(file){
+  const out = $("#ocrOut");
+  out.textContent="Leyendo imagen con OCR...";
+  try{
+    const { data:{ text } } = await Tesseract.recognize(file, 'eng', { logger:m=>{} });
+    out.textContent = text.trim();
+  }catch(e){
+    out.textContent="Error de OCR: "+e.message;
+  }
+}
+function populateSelectors(){
+  const cat = getCatalog();
+  const sSel = $("#ocrSection"), lSel=$("#ocrLottery"), dSel=$("#ocrDraw");
+  sSel.innerHTML = cat.sections.map(s=>`<option value="${s.id}">${s.title}</option>`).join("");
+  sSel.onchange = ()=>{
+    const s = cat.sections.find(x=>x.id===sSel.value);
+    lSel.innerHTML = s.items.map(i=>`<option value="${i.id}">${i.name}</option>`).join("");
+    lSel.onchange();
+  };
+  lSel.onchange = ()=>{
+    const s = cat.sections.find(x=>x.id===sSel.value);
+    const it = s.items.find(i=>i.id===lSel.value);
+    dSel.innerHTML = it.draws.map(d=>`<option>${d}</option>`).join("");
+  };
+  sSel.onchange();
+}
+function extractNumbers(sectionId, text){
+  // Intenta detectar 3-4 dígitos agrupados, tolerando separadores
+  text = (text||"").replace(/[^\d\s-]/g," ").replace(/\s+/g," ").trim();
+  if(sectionId==="usa"){
+    // Busca 3 y 4 dígitos cercanos
+    const m = text.match(/(\d{3}).{0,6}(\d{4})/);
+    return m ? `${m[1]}-${m[2]}` : null;
+  }else{
+    // Tres pares de 2 dígitos
+    const nums = (text.match(/\d{2}/g)||[]).slice(0,3);
+    return nums.length===3 ? `${nums[0]}-${nums[1]}-${nums[2]}` : null;
+  }
+}
+
+/* ---- Tab: Catálogo (CRUD) ---- */
+function buildCatalogTab(){
+  const host = $("#tab-catalog");
+  const cat = getCatalog();
+  host.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <select id="catSection"></select>
+      <input id="catName" type="text" placeholder="Nombre lotería" />
+      <input id="catId" type="text" placeholder="ID (slug)" />
+      <input id="catDraws" type="text" placeholder="Draws (coma)" />
+      <button class="btn" id="catAdd">Agregar/Actualizar</button>
+    </div>
+    <div class="muted" style="margin-bottom:8px">Edite o agregue loterías. Los cambios se guardan en localStorage.</div>
+    <div id="catList"></div>
+  `;
+  const sSel = $("#catSection");
+  sSel.innerHTML = cat.sections.map(s=>`<option value="${s.id}">${s.title}</option>`).join("");
+  $("#catAdd").addEventListener("click",()=>{
+    const sid = sSel.value;
+    const name = $("#catName").value.trim();
+    const id = $("#catId").value.trim() || name.toLowerCase().replace(/\s+/g,"-");
+    const draws = $("#catDraws").value.split(",").map(x=>x.trim()).filter(Boolean);
+    if(!name || !draws.length){ alert("Completa nombre y draws."); return; }
+    const sec = cat.sections.find(x=>x.id===sid);
+    const existing = sec.items.find(x=>x.id===id);
+    if(existing){
+      existing.name=name; existing.draws=draws;
+    }else{
+      sec.items.push({id,name,draws});
+    }
+    saveCatalog(cat);
+    buildCatalogTab();
+    bus.dispatchEvent(new Event("refresh"));
+  });
+  // listado
+  const list = $("#catList");
+  cat.sections.forEach(section=>{
+    const h = document.createElement("h3");
+    h.textContent = section.title;
+    list.appendChild(h);
+    section.items.forEach(item=>{
+      const row = document.createElement("div");
+      row.style.display="flex"; row.style.gap="8px"; row.style.alignItems="center"; row.style.margin="4px 0";
+      row.innerHTML = `<div style="min-width:220px">${item.name}</div><div class="muted" style="min-width:160px">${item.draws.join(", ")}</div>`;
+      const del = document.createElement("button"); del.className="ghost"; del.textContent="Eliminar";
+      del.onclick=()=>{
+        const confirmed = confirm("¿Eliminar "+item.name+"?");
+        if(!confirmed) return;
+        section.items = section.items.filter(x=>x.id!==item.id);
+        saveCatalog(cat); buildCatalogTab(); bus.dispatchEvent(new Event("refresh"));
+      };
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  });
+}
+
+/* =============================
+   UI: Tema, reloj y eventos
+============================= */
+const themeToggle = document.getElementById("themeToggle");
+themeToggle.addEventListener("change",()=>{
+  document.documentElement.classList.toggle("light", themeToggle.checked);
+  localStorage.setItem("themeLight", themeToggle.checked? "1":"0");
+});
+if(localStorage.getItem("themeLight")==="1"){ themeToggle.checked=true; document.documentElement.classList.add("light"); }
+
+function tick(){ document.getElementById("clock").textContent = new Date().toLocaleString(); }
+setInterval(tick, 1000); tick();
+
+bus.addEventListener("refresh", render);
+
+/* =============================
+   Init
+============================= */
+ensureSeed();
+render();
+</script>
+</body>
+</html>
