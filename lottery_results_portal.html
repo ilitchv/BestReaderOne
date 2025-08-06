@@ -1,608 +1,713 @@
-# Create an improved single-file HTML with the requested updates:
-# - Admin PIN modal with password input and eye icon (toggle visibility)
-# - Card layout: squarer tiles, dense grid using auto-fill + aspect-ratio
-# - OCR: parse multiple lines, map abbreviations to (section/lottery/draw), preview table, "Guardar todos"
-# - Mapping based on user's abbreviations for NY, NJ, CT, FL, GA, PA, BK, NY Horses, etc.
-# - Neon futuristic theme with glow, animated gradients; simple generated SVG "logos" per lottery initials
-# - Keep Texas Sunday off & Tennessee Sunday-only rules
-# - Accordion-click admin access preserved
-#
-# Save to /mnt/data/lottery_results_portal_v3.html
+# We'll generate the updated single-file HTML with the requested features (v4).
+# The file will be saved to /mnt/data/beast_reader_v4.html
 
 html = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mangos Lottery — Resultados</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Beast Reader — Resultados de Loterías</title>
 <style>
-  /* ===== Neon Futuristic Theme ===== */
   :root{
-    --bg:#06070b;
-    --panel:#0b0f17;
-    --card:#0e1420;
-    --muted:#94a3b8;
-    --text:#e5f0ff;
-    --acc1:#00e4ff;   /* cyan neon */
-    --acc2:#8b5cf6;   /* violet neon */
-    --acc3:#00ffa3;   /* green neon */
-    --warn:#ffd166;
-    --good:#22c55e;
-    --bad:#ef4444;
-    --ring: 0 0 0 2px rgba(0,228,255,.3), 0 0 32px rgba(139,92,246,.25), inset 0 0 24px rgba(0,228,255,.08);
-    --shadow: 0 10px 30px rgba(0,0,0,.45), 0 0 16px rgba(0,228,255,.08);
-    --grad: linear-gradient(120deg, rgba(0,228,255,.18), rgba(139,92,246,.18) 55%, rgba(0,255,163,.18));
+    --bg:#0a0b10;
+    --card:#10142a;
+    --text:#e7f0ff;
+    --muted:#a8b3d8;
+    --accent1:#5df6ff;
+    --accent2:#8a5dff;
+    --accent3:#18ffb2;
+    --danger:#ff4d6d;
+    --ok:#1be7a8;
+    --shadow: 0 0 22px rgba(93,246,255,.35), 0 0 55px rgba(138,93,255,.25);
+    --tile: 160px;
   }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 80% -10%, rgba(0,228,255,.08), transparent), radial-gradient(900px 600px at -10% 20%, rgba(139,92,246,.10), transparent), var(--bg);color:var(--text)}
-  a{color:var(--acc1);text-decoration:none}
-  header{position:sticky;top:0;z-index:6;background:linear-gradient(180deg, rgba(6,7,11,.95), rgba(6,7,11,.6) 70%, transparent);backdrop-filter: blur(8px);padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
-  .hero{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .brand{display:flex;align-items:center;gap:12px}
-  .brand svg{filter: drop-shadow(0 0 22px rgba(0,228,255,.35));}
-  .brand h1{font-size:clamp(18px,2.8vw,26px);margin:0;font-weight:800;letter-spacing:.3px}
-  .subtitle{color:var(--muted);font-size:12px}
-  .toolbar{display:flex;align-items:center;gap:10px}
-  .time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
-  .search{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#0a0f17;color:var(--text);min-width:200px;box-shadow:var(--ring)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));gap:10px;padding:14px 14px 90px}
-  .section{margin-top:12px}
-  .section h2{font-size:16px;margin:16px 6px;color:#dbeafe;opacity:.9;display:flex;gap:8px;align-items:center}
-  .chip{padding:3px 8px;border-radius:999px;background:rgba(0,228,255,.12);border:1px solid rgba(0,228,255,.25);color:#7dd3fc;font-size:12px}
-  .card{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)), var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:10px;box-shadow:var(--shadow);position:relative;overflow:hidden;isolation:isolate;aspect-ratio: 1 / 1.05;display:flex;flex-direction:column;justify-content:space-between}
-  .card:before{content:"";position:absolute;inset:-1px;border-radius:inherit;background:var(--grad);filter:blur(28px);opacity:.5;z-index:-1}
-  .card:hover{transform:translateY(-2px);transition:transform .15s ease;box-shadow:0 14px 36px rgba(0,0,0,.5), 0 0 24px rgba(0,228,255,.18)}
-  .lot-head{display:flex;gap:8px;align-items:center;justify-content:space-between}
-  .lot-meta{display:flex;gap:8px;align-items:center}
-  .logo{width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg, rgba(0,228,255,.35), rgba(139,92,246,.35));display:grid;place-items:center;font-weight:900;color:#00131a;box-shadow:inset 0 0 12px rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.35)}
-  .lot-name{font-weight:800;font-size:12px;letter-spacing:.2px}
-  .pill{font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#cbd5e1}
-  .res{font-size:20px;font-weight:900;letter-spacing:.6px}
-  .muted{color:var(--muted);font-size:12px}
-  .status-open{color:var(--good);font-weight:800}
-  .status-closed{color:var(--bad);font-weight:800}
-  /* Admin accordion */
-  .admin-tab{position:fixed;right:0;top:40%;transform:translateY(-50%);z-index:8}
-  .admin-handle{writing-mode:vertical-rl;transform:rotate(180deg);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);padding:10px 6px;border-radius:10px 0 0 10px;cursor:pointer;font-weight:800;letter-spacing:.08em}
-  .admin-accordion{position:fixed;right:-230px;top:30%;width:230px;background:var(--panel);border:1px solid rgba(255,255,255,.12);border-right:none;border-radius:14px 0 0 14px;transition:right .18s;box-shadow:-10px 0 40px rgba(0,0,0,.4);z-index:9}
-  .admin-accordion.open{right:0}
-  .admin-accordion .inner{padding:12px;display:flex;flex-direction:column;gap:8px}
-  .btn{background:linear-gradient(135deg, var(--acc1), var(--acc2));border:none;color:#00131a;font-weight:900;padding:10px 12px;border-radius:12px;cursor:pointer;box-shadow:var(--ring)}
-  .ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.18);padding:8px 10px;border-radius:10px;cursor:pointer}
-  /* Admin modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}
-  .modal.show{display:grid}
-  .panel{width:min(1000px,96vw);max-height:85vh;overflow:auto;background:var(--panel);border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:16px;box-shadow:var(--ring)}
-  .tabs{display:flex;gap:8px;margin-bottom:12px}
-  .tabs button{background:rgba(255,255,255,.06);color:#dbeafe;border:1px solid rgba(255,255,255,.12);font-weight:700;padding:8px 12px;border-radius:10px}
-  .tabs button.active{background:linear-gradient(135deg, var(--acc1), var(--acc2));color:#00131a}
-  table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px dashed rgba(255,255,255,.12);padding:8px;font-size:14px;vertical-align:top}
-  input[type="text"],input[type="password"]{width:140px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#0a0f17;color:var(--text);box-shadow:var(--ring)}
-  select{padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#0a0f17;color:var(--text)}
-  .dropzone{border:2px dashed rgba(148,163,184,.6);border-radius:14px;padding:16px;text-align:center;color:#a3b2c8;background:rgba(148,163,184,.05)}
-  .ocr-grid{display:grid;grid-template-columns: 1fr 1fr 1fr 1fr 120px;gap:6px;align-items:center}
-  .ocr-row{padding:6px;border-bottom:1px dashed rgba(255,255,255,.08)}
-  footer{position:fixed;bottom:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(0deg, rgba(6,7,11,.95), transparent);border-top:1px solid rgba(255,255,255,.06);z-index:5}
-  .logo-big{display:flex;align-items:center;gap:10px}
-  .glow{text-shadow:0 0 10px rgba(0,228,255,.5), 0 0 24px rgba(139,92,246,.35)}
-  .eye{cursor:pointer;margin-left:-32px;user-select:none}
+  [data-theme="light"]{
+    --bg:#f7f8ff;
+    --card:#ffffff;
+    --text:#0b1020;
+    --muted:#4a5578;
+    --accent1:#00a3ff;
+    --accent2:#6a40ff;
+    --accent3:#00c07a;
+    --shadow: 0 0 16px rgba(0,163,255,.25), 0 0 36px rgba(106,64,255,.20);
+  }
+  html,body{height:100%}
+  body{
+    margin:0;background: radial-gradient(1200px 1200px at 10% -10%, rgba(93,246,255,.10), transparent 60%),
+                         radial-gradient(900px 900px at 110% 10%, rgba(138,93,255,.12), transparent 60%),
+                         var(--bg);
+    color:var(--text);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  }
+  /* ===== Header / Logo ===== */
+  header{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, rgba(10,11,16,.85), rgba(10,11,16,.55));
+    border-bottom: 1px solid rgba(141,160,255,.15);
+  }
+  [data-theme="light"] header{
+    background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:14px;align-items:center}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+  .logo svg{width:40px;height:40px;filter: drop-shadow(0 0 12px rgba(93,246,255,.5));}
+  .logo h1{font-size:clamp(18px,3.2vw,28px);margin:0;letter-spacing:.5px}
+  .sub{font-size:12px;color:var(--muted)}
+  .controls{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(141,160,255,.25);padding:6px 10px;border-radius:999px;background:linear-gradient(135deg, rgba(93,246,255,.08), rgba(138,93,255,.08));box-shadow:var(--shadow)}
+  .chip label{font-size:12px;color:var(--muted)}
+  .switch{position:relative;width:46px;height:26px;border-radius:999px;background:#2a325a;cursor:pointer}
+  .knob{position:absolute;height:22px;width:22px;border-radius:50%;background:white;top:2px;left:2px;transition:.25s cubic-bezier(.22,.61,.36,1);
+        box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  input[type="checkbox"]{display:none}
+  input[type="checkbox"]:checked + .switch .knob{left:22px}
+  .btn{
+    background:linear-gradient(135deg, var(--accent1), var(--accent2));
+    color:#06121b;border:0;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;
+    box-shadow:var(--shadow);transition: transform .08s ease, box-shadow .2s ease;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  /* ===== Layout ===== */
+  main{max-width:1200px;margin:18px auto 64px;display:grid;grid-template-columns:300px 1fr;gap:16px}
+  aside{position:sticky;top:68px;height:calc(100vh - 84px);overflow:auto;padding-right:6px}
+  .panel{background:var(--card);border:1px solid rgba(141,160,255,.15);border-radius:16px;padding:14px 14px 8px;box-shadow:var(--shadow)}
+  .panel h3{margin:0 0 8px 0;font-size:14px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase}
+  .admin-tab{
+    position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:60;
+    background:linear-gradient(180deg, var(--accent2), var(--accent1));color:#031018;
+    padding:8px 10px;border-top-right-radius:12px;border-bottom-right-radius:12px;
+    font-weight:800;cursor:pointer;box-shadow:var(--shadow);user-select:none
+  }
+  .admin {position:fixed;left:-360px;top:0;bottom:0;width:340px;z-index:70;
+    backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(6,10,22,.85), rgba(10,22,22,.85));
+    border-right:1px solid rgba(141,160,255,.15);transition:left .25s ease}
+  [data-theme="light"] .admin{background:linear-gradient(180deg, rgba(250,250,255,.9), rgba(245,245,255,.9))}
+  .admin.open{left:0}
+  .admin .head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(141,160,255,.15)}
+  .admin .body{padding:12px;overflow:auto;height:calc(100% - 56px)}
+  .field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .field input,.field select,.field textarea{background:#0e1424;color:var(--text);border:1px solid rgba(141,160,255,.25);border-radius:10px;padding:8px 10px}
+  [data-theme="light"] .field input,[data-theme="light"] .field select,[data-theme="light"] .field textarea{background:#fff;color:#111}
+  .ocr-drop{border:1px dashed rgba(141,160,255,.35);padding:14px;border-radius:14px;text-align:center}
+  .ocr-drop.drag{background:rgba(93,246,255,.08)}
+  .ocr-table{width:100%;border-collapse:collapse;font-size:12px}
+  .ocr-table th,.ocr-table td{border-bottom:1px solid rgba(141,160,255,.2);padding:6px}
+  /* ===== Results grid ===== */
+  .section{margin-bottom:16px}
+  .section h2{margin:0 0 10px 0;font-size:18px;display:flex;align-items:center;gap:10px}
+  .grid{display:grid;grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));gap:12px;align-items:stretch}
+  .tile{position:relative;background:linear-gradient(135deg, rgba(93,246,255,.08), rgba(138,93,255,.08));border:1px solid rgba(141,160,255,.25);border-radius:16px;padding:10px;
+        aspect-ratio: 1 / 1.05;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--shadow);overflow:hidden}
+  .tile:before{content:"";position:absolute;inset:-1px;border-radius:16px;padding:1px;background:
+      linear-gradient(135deg, rgba(93,246,255,.45), rgba(138,93,255,.35), rgba(24,255,178,.35));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude; pointer-events:none}
+  .badge{display:flex;align-items:center;gap:6px;font-weight:800}
+  .emblem{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent3));display:grid;place-items:center;color:#001018;
+          font-size:14px;font-weight:900;box-shadow:0 0 16px rgba(93,246,255,.5)}
+  .name{font-size:13px;color:var(--muted)}
+  .draw{font-size:12px;color:var(--muted)}
+  .nums{font-size:22px;letter-spacing:2px;font-weight:900}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--muted)}
+  .state{position:absolute;right:8px;top:8px;font-size:10px;color:var(--muted)}
+  .status{position:absolute;left:8px;top:8px;font-size:10px;padding:2px 6px;border-radius:999px;background:rgba(24,255,178,.15);color:#00df9a;border:1px solid rgba(24,255,178,.35)}
+  .status.closed{background:rgba(255,77,109,.12);color:#ff6682;border-color:rgba(255,77,109,.35)}
+  /* ===== Modal ===== */
+  .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);z-index:80}
+  .modal.open{display:grid}
+  .card{width:min(520px, 92vw);background:var(--card);border-radius:14px;border:1px solid rgba(141,160,255,.25);box-shadow:var(--shadow);padding:12px}
+  .card h3{margin:6px 0 10px 0}
+  .row{display:flex;gap:8px;align-items:center}
+  .eye{cursor:pointer;user-select:none;font-size:20px;padding:6px}
+  .scroll-btn{position:fixed;right:14px;bottom:18px;z-index:55}
+  .marquee{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--muted)}
 </style>
 </head>
-<body>
-  <header>
-    <div class="hero">
-      <div class="brand">
-        <!-- Neon SVG Logo -->
-        <svg width="38" height="38" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#00e4ff"/><stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-          <circle cx="32" cy="32" r="28" fill="none" stroke="url(#g1)" stroke-width="3"/>
-          <path d="M18 36 L32 18 L46 36" fill="none" stroke="#00ffa3" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="32" cy="42" r="4" fill="#00ffa3"/>
-        </svg>
-        <div>
-          <h1 class="glow">Mangos Lottery</h1>
-          <div class="subtitle">Resultados • USA • Santo Domingo • Special</div>
+<body data-theme="dark">
+  <div class="admin-tab" id="adminTab">ADMIN</div>
+  <div class="admin" id="adminPanel" aria-hidden="true">
+    <div class="head">
+      <strong>Admin</strong>
+      <button class="btn" id="closeAdmin">×</button>
+    </div>
+    <div class="body">
+      <div class="field">
+        <label>Importar imagen (OCR)</label>
+        <div id="drop" class="ocr-drop">
+          Arrastra aquí una imagen de resultados (.jpg/.png) o haz clic para seleccionar.
+          <input type="file" id="file" accept="image/*" hidden />
         </div>
       </div>
-      <div class="toolbar">
-        <input id="q" class="search" placeholder="Buscar lotería o draw…" />
-        <span class="time" id="clock"></span>
+      <div id="ocrPreview"></div>
+      <hr style="border-color:rgba(141,160,255,.2)">
+      <div class="field">
+        <label>Agregar/Editar resultado manual</label>
+        <select id="catalogSelect"></select>
+        <select id="drawSelect"></select>
+        <input id="resultInput" placeholder="Ej: 123-4567 (USA) o 12-34-56 (RD/Special)"/>
+        <button class="btn" id="saveManual">Guardar</button>
+      </div>
+      <p class="marquee">⚡ Los cambios se reflejan en vivo en la portada.</p>
+    </div>
+  </div>
+
+  <!-- PIN Modal -->
+  <div class="modal" id="pinModal">
+    <div class="card">
+      <h3 id="pinTitle">Acceso administrador</h3>
+      <div class="field">
+        <label id="pinLabel">Introduce PIN</label>
+        <div class="row">
+          <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••"/>
+          <span id="toggleEye" class="eye" title="Mostrar/Ocultar">👁️</span>
+          <button class="btn" id="pinOk">Entrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <a class="logo" href="#">
+        <!-- Neon Beast SVG -->
+        <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#5df6ff"/><stop offset="1" stop-color="#8a5dff"/>
+            </linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <rect x="4" y="4" width="64" height="64" rx="14" fill="url(#g1)"/>
+          <path d="M18 46c8-2 20-12 17-22-3 8 8 14 19 11-3 12-17 19-36 11z" fill="#001219" opacity=".85" filter="url(#glow)"/>
+          <circle cx="26" cy="28" r="4" fill="#001219"/><circle cx="48" cy="28" r="4" fill="#001219"/>
+        </svg>
+        <div>
+          <h1>Beast Reader</h1>
+          <div class="sub" id="subTitle">Resultados en vivo — USA, RD & Special</div>
+        </div>
+      </a>
+      <div class="controls">
+        <div class="chip">
+          <label id="langLbl">Idioma</label>
+          <input id="langTgl" type="checkbox"/>
+          <div class="switch"><div class="knob"></div></div>
+        </div>
+        <div class="chip">
+          <label id="themeLbl">Tema</label>
+          <input id="themeTgl" type="checkbox"/>
+          <div class="switch"><div class="knob"></div></div>
+        </div>
+        <button class="btn scroll-btn" id="autoScrollBtn">Auto Scroll ▽</button>
       </div>
     </div>
   </header>
 
-  <main id="app"></main>
-
-  <!-- Admin Handle & Accordion -->
-  <div class="admin-tab">
-    <div class="admin-handle" id="openAccordion">⋮⋮</div>
-  </div>
-  <div class="admin-accordion" id="accordion">
-    <div class="inner">
-      <button id="btnShowAdmin" class="btn">ADMIN</button>
-      <div class="muted" style="font-size:12px">Panel oculto</div>
-    </div>
-  </div>
-
-  <!-- Admin PIN Modal -->
-  <div class="modal" id="pinModal" aria-hidden="true">
-    <div class="panel" style="max-width:380px">
-      <h3 style="margin:0 0 8px 0">Ingresar PIN</h3>
-      <div class="muted" style="margin-bottom:10px">Introduce el PIN para acceder al panel.</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="pinField" type="password" inputmode="numeric" placeholder="••••" maxlength="8" />
-        <span class="eye" id="toggleEye" title="Mostrar/ocultar">👁️</span>
+  <main>
+    <aside>
+      <div class="panel">
+        <h3 id="filtersTitle">Filtros</h3>
+        <div class="field"><input id="search" placeholder="Buscar lotería..."/></div>
+        <div class="field"><label id="closingHint">* El cierre es 20 min antes del sorteo.</label></div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button class="ghost" id="cancelPin">Cancelar</button>
-        <button class="btn" id="enterPin">Entrar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Admin Modal -->
-  <div class="modal" id="adminModal" aria-hidden="true">
-    <div class="panel">
-      <div class="tabs">
-        <button data-tab="results" class="active">Resultados</button>
-        <button data-tab="ocr">OCR</button>
-        <button data-tab="catalog">Catálogo</button>
-      </div>
-      <section id="tab-results"></section>
-      <section id="tab-ocr" style="display:none"></section>
-      <section id="tab-catalog" style="display:none"></section>
-    </div>
-  </div>
-
-  <footer>
-    <div class="logo-big"><strong class="glow">⚡</strong><span class="muted">Actualiza en vivo desde Admin</span></div>
-    <div class="muted">PIN: <b>1983</b></div>
-  </footer>
+    </aside>
+    <section id="content">
+      <!-- Sections rendered here -->
+    </section>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script>
-/* =============================
-   Catálogo con reglas especiales (TX/TN)
-============================= */
-const DEFAULT_CATALOG = {
-  sections: [
-    {
-      id: "usa",
-      title: "USA Lotteries",
-      format: "P3P4",
-      items: [
-        { id:"ny", name:"New York", draws:["Midday","Evening"] },
-        { id:"nj", name:"New Jersey", draws:["Midday","Evening"] },
-        { id:"pa", name:"Pennsylvania", draws:["Day","Evening"] },
-        { id:"de", name:"Delaware", draws:["Day","Night"] },
-        { id:"ct", name:"Connecticut", draws:["Day","Night"] },
-        { id:"md", name:"Maryland", draws:["Midday","Evening"] },
-        { id:"ma", name:"Massachusetts", draws:["Midday","Evening"] },
-        { id:"va", name:"Virginia", draws:["Day","Night"] },
-        { id:"mi", name:"Michigan", draws:["Midday","Evening"] },
-        { id:"fl", name:"Florida", draws:["Midday","Evening"] },
-        { id:"nc", name:"North Carolina", draws:["Day","Evening"] },
-        { id:"sc", name:"South Carolina", draws:["Midday","Evening"] },
-        // Tennessee: 3 diarios Lun–Sáb + Solo Evening el domingo
-        { id:"tn", name:"Tennessee", draws:["Morning","Midday","Evening"], schedule:{
-          mon:[0,1,2], tue:[0,1,2], wed:[0,1,2], thu:[0,1,2], fri:[0,1,2], sat:[0,1,2], sun:[2] } },
-        // Texas: 4 diarios Lun–Sáb (no hay sorteos el domingo)
-        { id:"tx", name:"Texas", draws:["Morning","Day","Evening","Night"], schedule:{
-          mon:[0,1,2,3], tue:[0,1,2,3], wed:[0,1,2,3], thu:[0,1,2,3], fri:[0,1,2,3], sat:[0,1,2,3], sun:[] } },
-        // Georgia: 3 diarios
-        { id:"ga", name:"Georgia", draws:["Midday","Evening","Night"] }
-      ]
+  <script>
+  /*************** I18N ***************/
+  const i18n = {
+    es: {
+      accessAdmin: "Acceso administrador",
+      enterPin: "Introduce PIN",
+      filters: "Filtros",
+      searchPh: "Buscar lotería...",
+      closingHint: "* El cierre es 20 min antes del sorteo.",
+      usa: "Loterías de USA",
+      rd: "Loterías de Santo Domingo",
+      special: "Loterías Special",
+      open: "Abierta", closed: "Cerrada",
+      draw: "Sorteo", close: "Cierre",
+      save: "Guardar", saveAll: "Guardar todos",
+      abbr: "Abrev.", map: "Mapa", detected:"Detectado", value:"Valor", actions:"Acciones",
+      admin: "Admin", adminHidden:"",  // no texto explícito
+      pinOk: "Entrar"
     },
-    {
-      id:"sd",
-      title:"Santo Domingo Lotteries",
-      format:"QPT",
-      items:[
-        { id:"la-primera", name:"La Primera", draws:["Día","Noche"] },
-        { id:"lotedom", name:"Lotedom", draws:["Mediodía"] },
-        { id:"real", name:"Lotería Real", draws:["Tarde"] },
-        { id:"ganamas", name:"Gana Más (Lotería Nacional)", draws:["Tarde"] },
-        { id:"nacional", name:"Lotería Nacional", draws:["Noche"] },
-        { id:"la-suerte", name:"La Suerte Dominicana", draws:["12:30","6:00 pm"] },
-        { id:"quiniela-pale", name:"Quiniela Palé", draws:["Noche"] },
-        { id:"loteka", name:"Loteka", draws:["Noche"] }
-      ]
-    },
-    {
-      id:"special",
-      title:"Special Lotteries",
-      format:"XX-XX-XX",
-      items:[
-        { id:"anguilla", name:"Anguilla", draws:["10:00","1:00","6:00","9:00"] },
-        { id:"king", name:"King Lottery (SXM)", draws:["Midday","Night"] },
-        { id:"panama", name:"Panamá", draws:["Programados"] },
-        { id:"ny-race", name:"NY Horses", draws:["R1","R2","R3"] },
-        { id:"ny-bk", name:"NY-BK", draws:["AM","PM"] },
-        { id:"extra", name:"Extra", draws:["Midday"] }
-      ]
+    en: {
+      accessAdmin: "Admin access",
+      enterPin: "Enter PIN",
+      filters: "Filters",
+      searchPh: "Search lottery...",
+      closingHint: "* Closing time is 20 minutes before draw time.",
+      usa: "USA Lotteries",
+      rd: "Santo Domingo Lotteries",
+      special: "Special Lotteries",
+      open: "Open", closed: "Closed",
+      draw: "Draw", close: "Close",
+      save: "Save", saveAll: "Save all",
+      abbr: "Abbrev.", map: "Map", detected:"Detected", value:"Value", actions:"Actions",
+      admin: "Admin", adminHidden:"", // no explicit text
+      pinOk: "Enter"
     }
-  ]
-};
-
-const KEY="lottoResults"; const KEY_CATALOG="lottoCatalog";
-const PIN="1983";
-let authed=false;
-
-const ABBR_MAP = [
-  // --- From user's list ---
-  // New York
-  { keys:["MIDDAY","MID","NY AM","NY MID","NYS AM"], target:{section:"usa",lottery:"ny",draw:"Midday"} },
-  { keys:["NYS","STATE","NY PM","NY NIGHT","NEW YORK NIGHT","NEW YORK EVENING"], target:{section:"usa",lottery:"ny",draw:"Evening"} },
-  // Brooklyn & Horses (Special)
-  { keys:["BK-DAY","BK DAY","BK AM"], target:{section:"special",lottery:"ny-bk",draw:"AM"} },
-  { keys:["BK-TV","BK TV","BK PM","BROOKLYN NIGHT"], target:{section:"special",lottery:"ny-bk",draw:"PM"} },
-  { keys:["NY","NY HORSES","HORSES"], target:{section:"special",lottery:"ny-race",draw:"AUTO_R"} }, // AUTO_R = R1,R2,R3 in order
-  // New Jersey
-  { keys:["NJ-DAY","NJ AM","NJ AM.","NJ MIDDAY","NJ MID"], target:{section:"usa",lottery:"nj",draw:"Midday"} },
-  { keys:["NJ-NIGHT","NJ PM","NJ NIGHT","NEW JERSEY EVENING"], target:{section:"usa",lottery:"nj",draw:"Evening"} },
-  // Connecticut
-  { keys:["CONN-DAY","CT AM","CT DAY","CONNECTICUT MIDDAY"], target:{section:"usa",lottery:"ct",draw:"Day"} },
-  { keys:["CONN-NIGHT","CT PM","CT NIGHT","CONNECTICUT EVENING"], target:{section:"usa",lottery:"ct",draw:"Night"} },
-  // Florida
-  { keys:["FLA-MIDDAY","FLORIDA AM","FL AM","FLA AM"], target:{section:"usa",lottery:"fl",draw:"Midday"} },
-  { keys:["FLA-NIGHT","FLORIDA PM","FL PM","FLA PM","FL NIGHT","FL EVENING"], target:{section:"usa",lottery:"fl",draw:"Evening"} },
-  // Georgia
-  { keys:["GEORGIA EVE","GA EVE","GA MIDDAY","GEORGIA MIDDAY"], target:{section:"usa",lottery:"ga",draw:"Midday"} },
-  { keys:["GEORGIA PM","GA PM","GEORGIA EVENING"], target:{section:"usa",lottery:"ga",draw:"Evening"} },
-  { keys:["GEORGIA NIGHT","GA NIGHT"], target:{section:"usa",lottery:"ga",draw:"Night"} },
-  // Pennsylvania
-  { keys:["PA AM","PENN AM","PA DAY","PENNSYLVANIA DAY"], target:{section:"usa",lottery:"pa",draw:"Day"} },
-  { keys:["PA PM","PENN PM","PENNSYLVANIA EVENING"], target:{section:"usa",lottery:"pa",draw:"Evening"} },
-  // Santo Domingo bucket (generic, will not auto-assign to a specific RD lottery)
-  { keys:["STO DGO","SANTO DOMINGO","RD"], target:{section:"sd",lottery:null,draw:null} }
-];
-
-const AUTO_R_ORDER = ["R1","R2","R3"];
-
-const seedResults = {
-  "usa/ny/Midday": { value: "123-4567", updatedAt: Date.now() },
-  "usa/ny/Evening": { value: "987-6543", updatedAt: Date.now() },
-  "sd/la-primera/Día": { value: "12-34-56", updatedAt: Date.now() }
-};
-
-/* =============================
-   Storage
-============================= */
-function ensureSeed(){
-  if(!localStorage.getItem(KEY_CATALOG)){
-    localStorage.setItem(KEY_CATALOG, JSON.stringify(DEFAULT_CATALOG));
+  };
+  let lang = localStorage.getItem("lang") || "es";
+  function applyLang(){
+    const t = i18n[lang];
+    document.getElementById("pinTitle").textContent=t.accessAdmin;
+    document.getElementById("pinLabel").textContent=t.enterPin;
+    document.getElementById("filtersTitle").textContent=t.filters;
+    document.getElementById("search").placeholder=t.searchPh;
+    document.getElementById("closingHint").textContent=t.closingHint;
+    document.getElementById("pinOk").textContent=t.pinOk;
+    document.getElementById("subTitle").textContent = lang==="es" ? "Resultados en vivo — USA, RD & Special" : "Live results — USA, RD & Special";
+    render();
   }
-  if(!localStorage.getItem(KEY)){
-    localStorage.setItem(KEY, JSON.stringify({results:seedResults}));
-  }
-}
-function getCatalog(){ return JSON.parse(localStorage.getItem(KEY_CATALOG)||"{}"); }
-function saveCatalog(cat){ localStorage.setItem(KEY_CATALOG, JSON.stringify(cat)); }
-function getStore(){ return JSON.parse(localStorage.getItem(KEY)||"{}"); }
-function saveStore(store){ localStorage.setItem(KEY, JSON.stringify(store)); }
+  document.getElementById("langTgl").checked = (lang==="en");
+  document.getElementById("langTgl").addEventListener("change",e=>{lang=e.target.checked?"en":"es";localStorage.setItem("lang",lang);applyLang();});
 
-/* =============================
-   Helpers & UI
-============================= */
-class Bus extends EventTarget{}; const bus = new Bus();
-function $(s,r=document){return r.querySelector(s)}; function $all(s,r=document){return [...r.querySelectorAll(s)]}
-function fmt(dt){const d=new Date(dt);return d.toLocaleString();}
-function logoFor(id){
-  const map={ny:"NY",nj:"NJ",pa:"PA",de:"DE",ct:"CT",md:"MD",ma:"MA",va:"VA",mi:"MI",fl:"FL",nc:"NC",sc:"SC",tn:"TN",tx:"TX",ga:"GA",
-             "la-primera":"LP","lotedom":"LD","real":"RL","ganamas":"GM","nacional":"LN","la-suerte":"LS","quiniela-pale":"QP","loteka":"LK",
-             "anguilla":"AI","king":"KG","panama":"PA*","ny-race":"NYR","ny-bk":"BK","extra":"EX"};
-  return map[id] || id.slice(0,2).toUpperCase();
-}
-function formatResult(sectionId, raw){
-  if(!raw) return "—";
-  if(sectionId==="usa"){
-    return /^\d{3}-\d{4}$/.test(raw) ? raw : "123-4567";
-  }
-  return /^\d{2}-\d{2}-\d{2}$/.test(raw) ? raw : "12-34-56";
-}
-function isDrawActive(item, idx){
-  if(!item.schedule) return true;
-  const map = item.schedule;
-  const dow = ["sun","mon","tue","wed","thu","fri","sat"][new Date().getDay()];
-  const allowed = map[dow] || [];
-  return allowed.includes(idx);
-}
-function statusBadge(active){ return active?'<span class="status-open">Abierto</span>':'<span class="status-closed">Cerrado</span>'; }
+  /*************** THEME ***************/
+  const themeTgl = document.getElementById("themeTgl");
+  const savedTheme = localStorage.getItem("theme") || "dark";
+  document.body.setAttribute("data-theme", savedTheme);
+  themeTgl.checked = savedTheme==="light";
+  themeTgl.addEventListener("change", e=>{
+    const th = e.target.checked?"light":"dark";
+    document.body.setAttribute("data-theme", th);
+    localStorage.setItem("theme", th);
+  });
 
-/* =============================
-   Render Landing
-============================= */
-function render(filter=""){
-  const q = (filter||"").toLowerCase().trim();
-  const app = $("#app"); app.innerHTML="";
-  const cat = getCatalog(); const store = getStore();
-  cat.sections.forEach(section=>{
-    const wrapper = document.createElement("div"); wrapper.className="section";
-    wrapper.innerHTML = `<h2>${section.title} <span class="chip">${section.items.length} loterías</span></h2>`;
-    const grid = document.createElement("div"); grid.className="grid";
-    section.items.forEach(item=>{
-      if(q && !(`${section.title} ${item.name} ${item.id}`.toLowerCase().includes(q))) return;
-      item.draws.forEach((drawName, idx)=>{
-        const key = `${section.id}/${item.id}/${drawName}`;
-        const res = store.results?.[key]?.value || "";
-        const active = isDrawActive(item, idx);
-        const card = document.createElement("div"); card.className="card";
+  /*************** ADMIN PIN ***************/
+  const ADMIN_PIN = "1983";
+  const adminTab = document.getElementById("adminTab");
+  const adminPanel = document.getElementById("adminPanel");
+  const pinModal = document.getElementById("pinModal");
+  const pinInput = document.getElementById("pinInput");
+  const pinOk = document.getElementById("pinOk");
+  const toggleEye = document.getElementById("toggleEye");
+  adminTab.addEventListener("click",()=>{pinModal.classList.add("open"); pinInput.value=""; pinInput.type="password";});
+  document.getElementById("closeAdmin").addEventListener("click",()=>adminPanel.classList.remove("open"));
+  pinOk.addEventListener("click",()=>{
+    if(pinInput.value===ADMIN_PIN){ pinModal.classList.remove("open"); adminPanel.classList.add("open"); }
+    else { pinInput.style.borderColor="var(--danger)"; setTimeout(()=>pinInput.style.borderColor="",600); }
+  });
+  toggleEye.addEventListener("click",()=>{ pinInput.type = pinInput.type==="password"?"text":"password"; });
+  pinModal.addEventListener("click",e=>{ if(e.target===pinModal) pinModal.classList.remove("open"); });
+
+  /*************** AUTO SCROLL ***************/
+  let scrollTimer=null, scrollDown=true;
+  const autoBtn = document.getElementById("autoScrollBtn");
+  autoBtn.addEventListener("click",()=>{
+    if(scrollTimer){ clearInterval(scrollTimer); scrollTimer=null; autoBtn.textContent="Auto Scroll ▽"; return; }
+    autoBtn.textContent="Detener Scroll";
+    const area = document.scrollingElement;
+    scrollTimer = setInterval(()=>{
+      const step = 0.6; // pixels per tick (slow)
+      area.scrollBy(0, scrollDown?step:-step);
+      if(area.scrollTop + window.innerHeight + 2 >= area.scrollHeight){ scrollDown=false; }
+      if(area.scrollTop<=1){ scrollDown=true; }
+    }, 10);
+  });
+
+  /*************** CATALOG + SCHEDULES ***************/
+  // Utility: compute closing time 20 minutes before draw
+  function minus20(timeStr){
+    // timeStr: "HH:MM" 24h
+    const [H,M]=timeStr.split(":").map(Number);
+    const when=new Date();
+    when.setHours(H,M,0,0);
+    when.setMinutes(when.getMinutes()-20);
+    return when.toTimeString().slice(0,5);
+  }
+  // Days helper: 0=Sun..6=Sat
+  const ALL=[0,1,2,3,4,5,6], M_S=[1,2,3,4,5,6]; // Mon-Sat
+  const MON_SAT=[1,2,3,4,5,6];
+
+  // Catalog of lotteries
+  const catalog = {
+    usa: [
+      { id:"ny",  name:"New York", abbr:"NY", emblem:"NY", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"14:30", days:ALL},
+          {code:"Evening", time:"22:30", days:ALL}
+        ]
+      },
+      { id:"nj",  name:"New Jersey", abbr:"NJ", emblem:"NJ", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"12:59", days:ALL},
+          {code:"Evening", time:"22:57", days:ALL}
+        ]
+      },
+      { id:"ct",  name:"Connecticut", abbr:"CT", emblem:"CT", tz:"ET",
+        draws:[
+          {code:"Day",     time:"13:57", days:ALL},
+          {code:"Night",   time:"22:29", days:ALL}
+        ]
+      },
+      { id:"fl",  name:"Florida", abbr:"FL", emblem:"FL", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"13:30", days:ALL},
+          {code:"Evening", time:"21:45", days:ALL}
+        ]
+      },
+      { id:"ga",  name:"Georgia", abbr:"GA", emblem:"GA", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"12:29", days:ALL},
+          {code:"Evening", time:"18:59", days:ALL},
+          {code:"Night",   time:"23:34", days:ALL}
+        ]
+      },
+      { id:"pa",  name:"Pennsylvania", abbr:"PA", emblem:"PA", tz:"ET",
+        draws:[
+          {code:"Day",     time:"13:35", days:ALL},
+          {code:"Evening", time:"18:59", days:ALL}
+        ]
+      },
+      { id:"de",  name:"Delaware", abbr:"DE", emblem:"DE", tz:"ET",
+        draws:[
+          {code:"Day",     time:"13:58", days:ALL},
+          {code:"Night",   time:"19:57", days:ALL}
+        ]
+      },
+      { id:"md",  name:"Maryland", abbr:"MD", emblem:"MD", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"12:28", days:ALL},
+          {code:"Evening", time:"19:56", days:ALL}
+        ]
+      },
+      { id:"ma",  name:"Massachusetts", abbr:"MA", emblem:"MA", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"14:00", days:ALL},
+          {code:"Evening", time:"21:00", days:ALL}
+        ]
+      },
+      { id:"va",  name:"Virginia", abbr:"VA", emblem:"VA", tz:"ET",
+        draws:[
+          {code:"Day",     time:"13:59", days:ALL},
+          {code:"Night",   time:"23:00", days:ALL}
+        ]
+      },
+      { id:"mi",  name:"Michigan", abbr:"MI", emblem:"MI", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"12:59", days:ALL},
+          {code:"Evening", time:"19:29", days:ALL}
+        ]
+      },
+      { id:"nc",  name:"North Carolina", abbr:"NC", emblem:"NC", tz:"ET",
+        draws:[
+          {code:"Day",     time:"15:00", days:ALL},
+          {code:"Evening", time:"23:22", days:ALL}
+        ]
+      },
+      { id:"sc",  name:"South Carolina", abbr:"SC", emblem:"SC", tz:"ET",
+        draws:[
+          {code:"Midday",  time:"12:59", days:MON_SAT},
+          {code:"Evening", time:"18:59", days:ALL}
+        ]
+      },
+      { id:"tx",  name:"Texas", abbr:"TX", emblem:"TX", tz:"CT",
+        draws:[
+          {code:"Morning", time:"10:00", days:[1,2,3,4,5,6]}, // no Sunday
+          {code:"Day",     time:"12:27", days:[1,2,3,4,5,6]},
+          {code:"Evening", time:"18:00", days:[1,2,3,4,5,6]},
+          {code:"Night",   time:"22:12", days:[1,2,3,4,5,6]}
+        ]
+      },
+      { id:"tn",  name:"Tennessee", abbr:"TN", emblem:"TN", tz:"CT",
+        draws:[
+          {code:"Morning", time:"09:28", days:[1,2,3,4,5,6]}, // Mon-Sat
+          {code:"Midday",  time:"12:28", days:[1,2,3,4,5,6]}, // Mon-Sat
+          {code:"Evening", time:"18:28", days:ALL} // Sun only this one
+        ]
+      }
+    ],
+    rd: [
+      { id:"real",  name:"Lotería Real", abbr:"REAL", emblem:"RL", tz:"AST",
+        draws:[{code:"Mediodía", time:"12:55", days:[1,2,3,4,5,6,0]}]
+      },
+      { id:"ganamas",name:"Gana Más", abbr:"GANAMAS", emblem:"GM", tz:"AST",
+        draws:[{code:"Tarde", time:"14:30", days:[1,2,3,4,5,6,0]}]
+      },
+      { id:"loteka", name:"Loteka", abbr:"LOTEKA", emblem:"LK", tz:"AST",
+        draws:[{code:"Noche", time:"19:55", days:[1,2,3,4,5,6,0]}]
+      },
+      { id:"nacional", name:"Lotería Nacional", abbr:"NAC", emblem:"LN", tz:"AST",
+        draws:[{code:"Tarde", time:"14:30", days:ALL},{code:"Noche", time:"21:00", days:[1,2,3,4,5,6]}, {code:"Domingo", time:"18:00", days:[0]}]
+      },
+      { id:"quiniela", name:"Quiniela Palé (Leidsa)", abbr:"QP", emblem:"QP", tz:"AST",
+        draws:[{code:"Diario", time:"20:55", days:[1,2,3,4,5,6]},{code:"Domingo", time:"15:55", days:[0]}]
+      },
+      { id:"laprimera", name:"La Primera", abbr:"PRIMERA", emblem:"LP", tz:"AST",
+        draws:[{code:"AM", time:"12:00", days:ALL}, {code:"PM", time:"20:00", days:ALL}]
+      },
+      { id:"lasuerte", name:"La Suerte Dominicana", abbr:"SUERTE", emblem:"LS", tz:"AST",
+        draws:[{code:"AM", time:"12:30", days:ALL}, {code:"PM", time:"18:00", days:ALL}]
+      },
+      { id:"lotedom", name:"LoteDom", abbr:"LOTEDOM", emblem:"LD", tz:"AST",
+        draws:[{code:"Tarde", time:"13:55", days:ALL}]
+      }
+    ],
+    special: [
+      { id:"ny-bk", name:"NY-BK", abbr:"BK", emblem:"BK", tz:"ET", draws:[{code:"AM", time:"12:00", days:ALL},{code:"PM",time:"22:00",days:ALL}]},
+      { id:"ny-race", name:"NY Horses", abbr:"NYH", emblem:"NY", tz:"ET", draws:[{code:"R1", time:"14:00", days:ALL},{code:"R2",time:"18:30",days:ALL},{code:"R3",time:"21:30",days:ALL}]},
+      { id:"357", name:"3-5-7", abbr:"357", emblem:"35", tz:"ET", draws:[{code:"Main", time:"20:30", days:ALL}]}
+    ]
+  };
+
+  // Build select options in admin
+  const catalogSelect = document.getElementById("catalogSelect");
+  const drawSelect = document.getElementById("drawSelect");
+  function fillCatalogSelect(){
+    const groups=[["usa","USA"],["rd","RD"],["special","Special"]];
+    catalogSelect.innerHTML="";
+    groups.forEach(([key,label])=>{
+      catalog[key].forEach(lot=>{
+        const opt=document.createElement("option");
+        opt.value = key+"|"+lot.id;
+        opt.textContent = `${label} — ${lot.name}`;
+        catalogSelect.appendChild(opt);
+      });
+    });
+    fillDraws();
+  }
+  function fillDraws(){
+    const [section,id] = catalogSelect.value.split("|");
+    const lot = catalog[section].find(x=>x.id===id);
+    drawSelect.innerHTML="";
+    lot.draws.forEach(d=>{
+      const o=document.createElement("option");
+      o.value=d.code;o.textContent=d.code;drawSelect.appendChild(o);
+    });
+  }
+  catalogSelect.addEventListener("change",fillDraws);
+  fillCatalogSelect();
+
+  /*************** DATA (results) ***************/
+  const results = JSON.parse(localStorage.getItem("lottoResults")||"{}");
+  function setResult(section,id,draw,value){
+    results[section] ??= {};
+    results[section][id] ??= {};
+    results[section][id][draw] = { value, ts: new Date().toISOString() };
+    localStorage.setItem("lottoResults", JSON.stringify(results));
+    render();
+  }
+  document.getElementById("saveManual").addEventListener("click",()=>{
+    const [section,id] = catalogSelect.value.split("|");
+    setResult(section,id,drawSelect.value,document.getElementById("resultInput").value.trim());
+  });
+
+  /*************** OCR ***************/
+  const drop = document.getElementById("drop");
+  const fileInput = document.getElementById("file");
+  drop.addEventListener("click",()=>fileInput.click());
+  ;["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag")}));
+  ;["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag")}));
+  drop.addEventListener("drop",e=>{ if(e.dataTransfer.files[0]) processImage(e.dataTransfer.files[0]); });
+  fileInput.addEventListener("change",e=>{ if(e.target.files[0]) processImage(e.target.files[0]); });
+
+  const abbrMap = [
+    // New York
+    {keys:["MIDDAY","NY AM","NYMID","NYMIDDAY","N Y"], map:{section:"usa", id:"ny", draw:"Midday"}, fmt:"usa"},
+    {keys:["STATE","NYS","NY PM","NYNIGHT","NYEVENING","NEWYORKEVENING"], map:{section:"usa", id:"ny", draw:"Evening"}, fmt:"usa"},
+    // NY Horses
+    {keys:["NY","NYHORSES","HORSES"], map:{section:"special", id:"ny-race", draw:"R1"}, fmt:"rd"},
+    // Brooklyn
+    {keys:["BKDAY","BKAM","BK-DAY"], map:{section:"special", id:"ny-bk", draw:"AM"}, fmt:"rd"},
+    {keys:["BKTV","BKPM","BK-NIGHT"], map:{section:"special", id:"ny-bk", draw:"PM"}, fmt:"rd"},
+    // New Jersey
+    {keys:["NJDAY","NJAM","NJD","NJ-MIDDAY","NJ A M"], map:{section:"usa", id:"nj", draw:"Midday"}, fmt:"usa"},
+    {keys:["NJPM","NJNIGHT","NJE","NJ P M"], map:{section:"usa", id:"nj", draw:"Evening"}, fmt:"usa"},
+    // Connecticut
+    {keys:["CTAM","CTDAY","CONNDAY","CT A M"], map:{section:"usa", id:"ct", draw:"Day"}, fmt:"usa"},
+    {keys:["CTPM","CTNIGHT","CONNNIGHT","CT P M"], map:{section:"usa", id:"ct", draw:"Night"}, fmt:"usa"},
+    // Florida
+    {keys:["FLORIDAAM","FLAM","FLAAM","FLA-MIDDAY"], map:{section:"usa", id:"fl", draw:"Midday"}, fmt:"usa"},
+    {keys:["FLORIDAPM","FLPM","FLANIGHT","FLA-PM"], map:{section:"usa", id:"fl", draw:"Evening"}, fmt:"usa"},
+    // Georgia
+    {keys:["GEORGIAAM","GAAM"], map:{section:"usa", id:"ga", draw:"Midday"}, fmt:"usa"},
+    {keys:["GEORGIAEVE","GEORGIAEVENING","GAPM","GAP"], map:{section:"usa", id:"ga", draw:"Evening"}, fmt:"usa"},
+    {keys:["GEORGIANIGHT","GANIGHT","GAE"], map:{section:"usa", id:"ga", draw:"Night"}, fmt:"usa"},
+    // Pennsylvania
+    {keys:["PAAM","PENNAM","PADAY"], map:{section:"usa", id:"pa", draw:"Day"}, fmt:"usa"},
+    {keys:["PAPM","PENNPM","PAEVENING"], map:{section:"usa", id:"pa", draw:"Evening"}, fmt:"usa"},
+    // Delaware
+    {keys:["DEAM","DEDAY"], map:{section:"usa", id:"de", draw:"Day"}, fmt:"usa"},
+    {keys:["DEPM","DENIGHT"], map:{section:"usa", id:"de", draw:"Night"}, fmt:"usa"},
+    // Connecticut short
+    {keys:["CTPM"], map:{section:"usa", id:"ct", draw:"Night"}, fmt:"usa"},
+    // RD
+    {keys:["LOTEKA"], map:{section:"rd", id:"loteka", draw:"Noche"}, fmt:"rd"},
+    {keys:["REAL"], map:{section:"rd", id:"real", draw:"Mediodía"}, fmt:"rd"},
+    {keys:["GANAMAS","GANAMÁS","GANA MAS","GANAMAS"], map:{section:"rd", id:"ganamas", draw:"Tarde"}, fmt:"rd"},
+    {keys:["QUINIELAPALE","QUINIELAPALELEIDSA","QUINIELAPALE (LEIDSA)","QUINIELAPALELEIDSA"], map:{section:"rd", id:"quiniela", draw:"Diario"}, fmt:"rd"},
+    {keys:["NACIONAL","NATIONAL"], map:{section:"rd", id:"nacional", draw:"Noche"}, fmt:"rd"},
+    {keys:["LAPRIMERA"], map:{section:"rd", id:"laprimera", draw:"AM"}, fmt:"rd"},
+    {keys:["LASUERTE","SUERTE"], map:{section:"rd", id:"lasuerte", draw:"AM"}, fmt:"rd"},
+    {keys:["LOTEDOM"], map:{section:"rd", id:"lotedom", draw:"Tarde"}, fmt:"rd"},
+    // Special 3-5-7
+    {keys:["3.5.7","357","3-5-7"], map:{section:"special", id:"357", draw:"Main"}, fmt:"rd"}
+  ];
+  function norm(s){ return s.toUpperCase().replace(/\s+/g,"").replace(/[^\w]/g,""); }
+
+  function processImage(file){
+    const preview = document.getElementById("ocrPreview");
+    preview.innerHTML = "<p>Procesando imagen con OCR...</p>";
+    const imgUrl = URL.createObjectURL(file);
+    Tesseract.recognize(imgUrl, 'eng', { logger: m => {} })
+      .then(({ data:{ text } })=>{
+        const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+        const rows = [];
+        // Extract pairs like "label --- 123 - 4567" or "label 444"
+        for(const ln of lines){
+          // Split by dashes or colon
+          const m = ln.match(/^(.{2,24}?)[\s\-\—\_:.]+([0-9\s\-]{2,12,})$/i);
+          if(m){
+            rows.push({abbr:m[1].trim(), detected:m[2].trim().replace(/\s+/g,"")});
+          }else{
+            const m2 = ln.match(/^([A-Za-z\.\s]{2,24})\s+([0-9]{2,4}(\s*-\s*[0-9]{2,4})?)$/);
+            if(m2) rows.push({abbr:m2[1].trim(), detected:m2[2].trim().replace(/\s+/g,"")});
+          }
+        }
+        renderOCRTable(rows);
+      })
+      .catch(err=>{ preview.innerHTML = "<p style='color:var(--danger)'>OCR falló: "+err+"</p>"; });
+  }
+
+  function mapAbbrev(ab){
+    const N = norm(ab);
+    for(const rule of abbrMap){
+      if(rule.keys.some(k => N.includes(k))) return rule.map;
+    }
+    // Heuristics for common patterns
+    if(N==="MIDDAY") return {section:"usa", id:"ny", draw:"Midday"};
+    if(N==="STATE") return {section:"usa", id:"ny", draw:"Evening"};
+    return null;
+  }
+
+  function isUSA(section){ return section==="usa"; }
+  function validUSA(val){ return /^\d{3}\-\d{4}$/.test(val); }
+  function validRD(val){ return /^\d{2}\-\d{2}\-\d{2}$/.test(val) || /^\d{3}$/.test(val); }
+
+  function renderOCRTable(rows){
+    const t=i18n[lang];
+    const div = document.getElementById("ocrPreview");
+    const table = document.createElement("table"); table.className="ocr-table";
+    table.innerHTML = `<thead><tr>
+      <th>${t.abbr}</th><th>${t.map}</th><th>${t.detected}</th><th>${t.value}</th><th>${t.actions}</th>
+    </tr></thead>`;
+    const tb=document.createElement("tbody");
+    rows.forEach((r,idx)=>{
+      const map = mapAbbrev(r.abbr);
+      const tr = document.createElement("tr");
+      const mapTxt = map? `${map.section}/${map.id}/${map.draw}` : "—";
+      const inp = document.createElement("input");
+      // normalize value spaces -> hyphen
+      const normv = r.detected.replace(/\s*-\s*/g,"-");
+      inp.value = normv;
+      tr.innerHTML = `<td>${r.abbr}</td><td>${mapTxt}</td><td>${r.detected}</td>`;
+      const tdv = document.createElement("td"); tdv.appendChild(inp); tr.appendChild(tdv);
+      const save = document.createElement("button"); save.className="btn"; save.textContent=t.save;
+      save.addEventListener("click",()=>{
+        if(!map) return;
+        const val = inp.value.trim();
+        const ok = isUSA(map.section)? validUSA(val) : validRD(val);
+        if(!ok){ inp.style.borderColor="var(--danger)"; setTimeout(()=>inp.style.borderColor="",800); return; }
+        setResult(map.section, map.id, map.draw, val);
+      });
+      const tda = document.createElement("td"); tda.appendChild(save); tr.appendChild(tda);
+      tb.appendChild(tr);
+    });
+    table.appendChild(tb);
+    const all = document.createElement("button"); all.className="btn"; all.textContent=t.saveAll;
+    all.addEventListener("click",()=>{
+      [...tb.querySelectorAll("tr")].forEach(tr=>{
+        const ab = tr.children[0].textContent;
+        const map = mapAbbrev(ab); if(!map) return;
+        const val = tr.querySelector("input").value.trim();
+        const ok = isUSA(map.section)? validUSA(val) : validRD(val);
+        if(ok) setResult(map.section, map.id, map.draw, val);
+      });
+    });
+    div.innerHTML=""; div.appendChild(table); div.appendChild(all);
+  }
+
+  /*************** RENDER ***************/
+  function inDays(days,d){ return days.includes(d); }
+  function fmtDrawClose(t){ return {draw:t, close: minus20(t)}; }
+  function withinOpen(draw, tz){
+    // For display only: if current minute < close -> "Abierta"
+    const now = new Date();
+    // Interpret draw.close in local time for simplicity
+    const [cH,cM] = minus20(draw.time).split(":").map(Number);
+    const [dH,dM] = draw.time.split(":").map(Number);
+    const today = now.getDay();
+    const nowMin = now.getHours()*60 + now.getMinutes();
+    const closeMin = cH*60 + cM;
+    const drawMin = dH*60 + dM;
+    const open = nowMin < closeMin && inDays(draw.days,today);
+    const closed = nowMin >= closeMin && nowMin < drawMin && inDays(draw.days,today) ? "closing" : (!inDays(draw.days,today) ? "off" : "after");
+    return open ? "open" : "closed";
+  }
+
+  function renderSection(key, title){
+    const sec = document.createElement("div");
+    sec.className="section";
+    sec.innerHTML = `<h2>${title}</h2><div class="grid"></div>`;
+    const grid = sec.querySelector(".grid");
+    const q = document.getElementById("search").value.trim().toLowerCase();
+    catalog[key].forEach(l=>{
+      // Filter by search
+      if(q && !(l.name.toLowerCase().includes(q) || l.id.includes(q))) return;
+      l.draws.forEach(d=>{
+        // Skip day if not allowed today
+        const today = new Date().getDay();
+        if(!d.days.includes(today)) return;
+        const card = document.createElement("div");
+        card.className="tile";
+        // result value
+        const r = results[key]?.[l.id]?.[d.code]?.value || "—";
+        const st = withinOpen(d,l.tz)==="open" ? "open" : "closed";
+        const stCls = st==="open"?"status":"status closed";
+        const drawClose = fmtDrawClose(d.time);
         card.innerHTML = `
-          <div class="lot-head">
-            <div class="lot-meta">
-              <div class="logo">${logoFor(item.id)}</div>
-              <div class="lot-name">${item.name}</div>
+          <div class="${stCls}">${st==="open"? i18n[lang].open : i18n[lang].closed}</div>
+          <div class="state">${l.tz}</div>
+          <div class="badge">
+            <div class="emblem">${l.emblem}</div>
+            <div>
+              <div class="name">${l.name}</div>
+              <div class="draw">${d.code}</div>
             </div>
-            <div class="pill">${drawName}</div>
           </div>
-          <div class="res">${formatResult(section.id, res)}</div>
-          <div class="muted">${statusBadge(active)} · <span class="time">${fmt(store.results?.[key]?.updatedAt||Date.now())}</span></div>
+          <div class="nums">${r}</div>
+          <div class="meta">
+            <div>${i18n[lang].draw}: ${d.time}</div>
+            <div>${i18n[lang].close}: ${minus20(d.time)}</div>
+          </div>
         `;
         grid.appendChild(card);
       });
     });
-    wrapper.appendChild(grid); app.appendChild(wrapper);
-  });
-}
-
-/* =============================
-   Admin Access (Accordion + PIN Modal)
-============================= */
-const accordion = $("#accordion");
-$("#openAccordion").addEventListener("click",()=>accordion.classList.toggle("open"));
-$("#btnShowAdmin").addEventListener("click",()=>{
-  if(!authed){ $("#pinModal").classList.add("show"); $("#pinField").focus(); return; }
-  openAdmin();
-});
-$("#cancelPin").onclick=()=>$("#pinModal").classList.remove("show");
-$("#toggleEye").onclick=()=>{
-  const f=$("#pinField"); f.type = f.type==="password" ? "text" : "password";
-};
-$("#enterPin").onclick=()=>{
-  if($("#pinField").value===PIN){ authed=true; $("#pinModal").classList.remove("show"); openAdmin(); }
-  else alert("PIN incorrecto.");
-};
-
-/* =============================
-   Admin Modal & Tabs
-============================= */
-function openAdmin(){
-  const modal = $("#adminModal");
-  modal.classList.add("show");
-  buildResultsTab(); buildOCRTab(); buildCatalogTab();
-  modal.addEventListener("click",(e)=>{ if(e.target===modal) modal.classList.remove("show"); });
-  $all(".tabs button", modal).forEach(btn=>{
-    btn.addEventListener("click",()=>{
-      $all(".tabs button", modal).forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      ["results","ocr","catalog"].forEach(id=>$("#tab-"+id).style.display="none");
-      $("#tab-"+btn.dataset.tab).style.display="block";
-    });
-  });
-}
-
-/* -------- Resultados (manual) -------- */
-function buildResultsTab(){
-  const host = $("#tab-results"); host.innerHTML="";
-  const cat = getCatalog(); const store = getStore();
-  cat.sections.forEach(section=>{
-    const h=document.createElement("h3"); h.textContent=section.title; host.appendChild(h);
-    const table=document.createElement("table"); table.innerHTML='<thead><tr><th>Lotería</th><th>Draw</th><th>Resultado</th><th></th></tr></thead>';
-    const tb=document.createElement("tbody");
-    section.items.forEach(item=>{
-      item.draws.forEach((drawName, idx)=>{
-        const key = `${section.id}/${item.id}/${drawName}`;
-        const tr=document.createElement("tr");
-        const input=document.createElement("input"); input.type="text"; input.placeholder=(section.id==="usa"?"123-4567":"12-34-56"); input.value = store.results?.[key]?.value || "";
-        input.addEventListener("input",()=>{
-          const ok = section.id==="usa" ? /^\d{3}-\d{4}$/.test(input.value) : /^\d{2}-\d{2}-\d{2}$/.test(input.value);
-          input.style.borderColor = ok ? "#22c55e" : "#ef4444";
-        });
-        const btn=document.createElement("button"); btn.className="btn"; btn.textContent="Guardar";
-        btn.onclick=()=>{
-          const ok = section.id==="usa" ? /^\d{3}-\d{4}$/.test(input.value) : /^\d{2}-\d{2}-\d{2}$/.test(input.value);
-          if(!ok) return alert("Formato inválido.");
-          const s=getStore(); s.results = s.results || {}; s.results[key] = { value: input.value, updatedAt: Date.now() };
-          saveStore(s); bus.dispatchEvent(new Event("refresh"));
-        };
-        tr.append(td(item.name), td(drawName), tdEl(input), tdEl(btn)); tb.appendChild(tr);
-      });
-    });
-    table.appendChild(tb); host.appendChild(table);
-  });
-}
-function td(t){const d=document.createElement("td"); d.textContent=t; return d;}
-function tdEl(n){const d=document.createElement("td"); d.appendChild(n); return d;}
-
-/* -------- OCR -------- */
-function buildOCRTab(){
-  const host=$("#tab-ocr");
-  host.innerHTML = `
-    <div class="dropzone" id="drop">Arrastra una imagen o haz clic aquí. El OCR detectará varias líneas y asignará automáticamente según abreviaturas.</div>
-    <div style="display:flex;gap:8px;margin:10px 0">
-      <button class="ghost" id="btnParseToTable">Previsualizar tabla</button>
-      <button class="btn" id="btnAssignAll">Guardar todos</button>
-    </div>
-    <div id="ocrTable" style="max-height:260px;overflow:auto;border:1px dashed rgba(255,255,255,.12);border-radius:10px;padding:8px"></div>
-    <pre id="ocrOut" class="muted" style="white-space:pre-wrap;margin-top:8px"></pre>
-  `;
-  const drop=$("#drop");
-  drop.addEventListener("click",()=>pickFile());
-  drop.addEventListener("dragover",(e)=>{e.preventDefault(); drop.style.background="rgba(0,228,255,.08)";});
-  drop.addEventListener("dragleave",()=>drop.style.background="transparent");
-  drop.addEventListener("drop",(e)=>{ e.preventDefault(); drop.style.background="transparent"; const f=e.dataTransfer.files[0]; if(f) ocrFile(f); });
-  $("#btnParseToTable").onclick=()=>renderOCRTable($("#ocrOut").textContent);
-  $("#btnAssignAll").onclick=()=>assignAllFromTable();
-}
-
-function pickFile(){ const i=document.createElement("input"); i.type="file"; i.accept="image/*"; i.onchange=()=>{ if(i.files[0]) ocrFile(i.files[0]); }; i.click(); }
-
-async function ocrFile(file){
-  const out=$("#ocrOut"); out.textContent="Leyendo imagen con OCR…";
-  try{
-    const { data:{ text } } = await Tesseract.recognize(file, 'eng', { logger:m=>{} });
-    out.textContent = text.trim();
-    renderOCRTable(text.trim());
-  }catch(e){ out.textContent="Error de OCR: "+e.message; }
-}
-
-/* Parse lines -> entries {abbr, p3, p4, target} */
-function parseOCRText(text){
-  // Split by lines; also split on semicolons
-  let lines = text.split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean);
-  // Sometimes lines contain multiple fields separated by tabs/spaces
-  const entries=[];
-  // helper to find mapping
-  const findTarget=(token)=>{
-    token = token.toUpperCase().replace(/\./g,"").trim();
-    for(const map of ABBR_MAP){
-      for(const key of map.keys){
-        const norm=key.toUpperCase().replace(/\./g,"").trim();
-        if(token===norm) return map.target;
-      }
-    }
-    return null;
-  };
-  // Track auto R slots for NY Horses
-  const autoR = { used:0 };
-
-  for(const raw of lines){
-    // Attempt to extract abbreviation token and numbers
-    // A token is sequence of letters/dashes/spaces; numbers afterwards
-    const abbrMatch = raw.match(/[A-Za-z][A-Za-z\s\-\(\)\.]+/);
-    const nums3 = raw.match(/(\d{3})(?!\d)/); // 3 consecutive digits
-    const nums4 = raw.match(/(\d{4})(?!\d)/);
-    if(!abbrMatch || (!nums3 && !nums4)) continue;
-    let abbr = abbrMatch[0].trim();
-    // Normalize some shorthand like "Nj am" etc.
-    abbr = abbr.replace(/\s+/g," ").replace(/\bAM\b/i,"AM").replace(/\bPM\b/i,"PM");
-    // Map to target
-    let target = findTarget(abbr.toUpperCase());
-    if(target && target.draw==="AUTO_R"){
-      target = {...target, draw: AUTO_R_ORDER[Math.min(autoR.used, AUTO_R_ORDER.length-1)]};
-      autoR.used++;
-    }
-    // Build entry only if target resolved and has draw and lottery (skip generic RD bucket)
-    if(target && target.lottery){
-      const p3 = nums3 ? nums3[1] : null;
-      const p4 = nums4 ? nums4[1] : null;
-      // Decide expected format by section
-      let value = null;
-      if(target.section==="usa" && p3 && p4) value = `${p3}-${p4}`;
-      else if(target.section!=="usa"){
-        // for RD/Special try to capture three pairs of 2 digits
-        const pairs = (raw.match(/\b\d{2}\b/g)||[]).slice(0,3);
-        if(pairs.length===3) value = `${pairs[0]}-${pairs[1]}-${pairs[2]}`;
-      }
-      entries.push({ abbr, target, p3, p4, value });
-    }
+    return sec;
   }
-  return entries;
-}
 
-function renderOCRTable(text){
-  const box=$("#ocrTable"); box.innerHTML="";
-  const rows = parseOCRText(text);
-  if(!rows.length){ box.innerHTML='<div class="muted">No se detectaron filas válidas.</div>'; return; }
-  // header
-  const header=document.createElement("div"); header.className="ocr-grid muted";
-  header.innerHTML = "<div>Abrev.</div><div>Mapa</div><div>Detectado</div><div>Valor</div><div>Acción</div>";
-  box.appendChild(header);
-  rows.forEach((r,i)=>{
-    const row=document.createElement("div"); row.className="ocr-grid ocr-row";
-    const mapLabel = `${r.target.section}/${r.target.lottery}/${r.target.draw}`;
-    const detected = r.p3 && r.p4 ? `${r.p3}-${r.p4}` : (r.value||"—");
-    const value = r.value || detected || "—";
-    row.dataset.key = mapLabel; row.dataset.value = value;
-    row.innerHTML = `
-      <div>${r.abbr}</div>
-      <div class="muted">${mapLabel}</div>
-      <div>${detected}</div>
-      <div><input type="text" value="${value}" style="width:130px"/></div>
-      <div><button class="btn" data-idx="${i}">Guardar</button></div>
-    `;
-    box.appendChild(row);
-  });
-  // Attach single-save
-  box.querySelectorAll("button[data-idx]").forEach(btn=>{
-    btn.onclick=()=>{
-      const row=btn.closest(".ocr-grid"); const input=row.querySelector("input");
-      const [section,lottery,draw]=row.dataset.key.split("/");
-      const store=getStore(); store.results = store.results || {};
-      store.results[`${section}/${lottery}/${draw}`] = { value: input.value, updatedAt: Date.now() };
-      saveStore(store); bus.dispatchEvent(new Event("refresh"));
-      btn.textContent="Guardado ✓"; setTimeout(()=>btn.textContent="Guardar",1000);
-    };
-  });
-}
+  function render(){
+    const content = document.getElementById("content");
+    content.innerHTML="";
+    content.appendChild(renderSection("usa", i18n[lang].usa));
+    content.appendChild(renderSection("rd", i18n[lang].rd));
+    content.appendChild(renderSection("special", i18n[lang].special));
+  }
+  document.getElementById("search").addEventListener("input", render);
+  applyLang();
 
-function assignAllFromTable(){
-  const box=$("#ocrTable"); const rows = [...box.querySelectorAll(".ocr-grid.ocr-row")];
-  if(!rows.length) return alert("No hay filas para guardar.");
-  const store=getStore(); store.results = store.results || {};
-  rows.forEach(row=>{
-    const input=row.querySelector("input"); const val=input.value;
-    const [section,lottery,draw]=row.dataset.key.split("/");
-    store.results[`${section}/${lottery}/${draw}`] = { value: val, updatedAt: Date.now() };
-  });
-  saveStore(store); bus.dispatchEvent(new Event("refresh"));
-  alert("Todas las filas guardadas.");
-}
-
-/* -------- Catálogo (CRUD) -------- */
-function buildCatalogTab(){
-  const host=$("#tab-catalog"); const cat=getCatalog();
-  host.innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <select id="catSection"></select>
-      <input id="catName" type="text" placeholder="Nombre" />
-      <input id="catId" type="text" placeholder="ID" />
-      <input id="catDraws" type="text" placeholder="Draws separados por coma" />
-      <button class="btn" id="catAdd">Agregar/Actualizar</button>
-    </div>
-    <div id="catList"></div>
-  `;
-  const sSel=$("#catSection"); sSel.innerHTML = cat.sections.map(s=>`<option value="${s.id}">${s.title}</option>`).join("");
-  $("#catAdd").onclick=()=>{
-    const sid=sSel.value; const name=$("#catName").value.trim(); const id=$("#catId").value.trim()||name.toLowerCase().replace(/\s+/g,"-");
-    const draws=$("#catDraws").value.split(",").map(x=>x.trim()).filter(Boolean);
-    if(!name||!draws.length) return alert("Completa nombre y draws.");
-    const sec=cat.sections.find(x=>x.id===sid); const ex=sec.items.find(x=>x.id===id);
-    if(ex){ ex.name=name; ex.draws=draws; } else { sec.items.push({id:name? id:"new", name, draws}); }
-    saveCatalog(cat); buildCatalogTab(); bus.dispatchEvent(new Event("refresh"));
-  };
-  const list=$("#catList");
-  cat.sections.forEach(section=>{
-    const h=document.createElement("h3"); h.textContent=section.title; list.appendChild(h);
-    section.items.forEach(item=>{
-      const row=document.createElement("div"); row.style.cssText="display:flex;gap:8px;align-items:center;margin:4px 0";
-      row.innerHTML = `<div style="min-width:220px">${item.name}</div><div class="muted" style="min-width:160px">${item.draws.join(", ")}</div>`;
-      const del=document.createElement("button"); del.className="ghost"; del.textContent="Eliminar";
-      del.onclick=()=>{ if(!confirm("Eliminar "+item.name+"?"))return; section.items=section.items.filter(x=>x.id!==item.id); saveCatalog(cat); buildCatalogTab(); bus.dispatchEvent(new Event("refresh")); };
-      row.appendChild(del); list.appendChild(row);
-    });
-  });
-}
-
-/* =============================
-   Init & events
-============================= */
-ensureSeed();
-render();
-$("#q").addEventListener("input", (e)=>render(e.target.value));
-function tick(){ $("#clock").textContent = new Date().toLocaleString(); } setInterval(tick,1000); tick();
-bus.addEventListener("refresh", ()=>render($("#q").value||""));
-
-</script>
+  </script>
 </body>
 </html>
 """
-with open("/mnt/data/lottery_results_portal_v3.html","w",encoding="utf-8") as f:
+with open("/mnt/data/beast_reader_v4.html","w",encoding="utf-8") as f:
     f.write(html)
-
-print("Archivo creado: /mnt/data/lottery_results_portal_v3.html")
+print("Archivo creado: /mnt/data/beast_reader_v4.html")
