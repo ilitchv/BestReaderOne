@@ -1,11 +1,3 @@
-# Generate Beast Reader v7 with requested tweaks:
-# - Show date on each tile (from last saved timestamp) + History modal per draw
-# - Keep Admin dashboard intact; do not change core behaviours
-# - Place a single static Auto-Scroll button in the header (top-right)
-# - Increase auto-scroll speed to moderate (approx 30–35 px/s)
-# - Theme colors: dark = deep green (MongoDB-like), light = warm beige/cream
-# Save to /mnt/data/beast_reader_v7.html
-
 html = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -656,8 +648,4 @@ html = r"""<!DOCTYPE html>
   </script>
 </body>
 </html>
-"""
-with open("/mnt/data/beast_reader_v7.html","w",encoding="utf-8") as f:
-    f.write(html)
-
-print("Archivo creado: /mnt/data/beast_reader_v7.html")
+ 
