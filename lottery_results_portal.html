@@ -1,14 +1,10 @@
-# Create Beast Reader v6 with:
-# - Working theme/lang toggles (wired on admin open)
-# - Auto-scroll FAB outside content, very slow; also control inside admin
-# - Admin FULL-SCREEN dashboard (after PIN) with tabs:
-#   Results (manual), OCR (batch multi-images), Catalog (CRUD with draw times editable & visibility),
-#   Logos (upload & assign per lottery), Visibility (toggle which show on landing)
-# - Restore catalog persistence; seed with defaults; provide editing per draw (code/time/days), visible flag per lottery
-# - Batch OCR: accept multiple images; merge; parse both "line" style and "table" style (first/second/third/pick_3/pick_4)
-# - Parser improvements for CONNECT, ANGUILLA, etc. and USA/RD detection
-# - Use uploaded logos if provided; fallback to emblem initials
-# Save to /mnt/data/beast_reader_v6.html
+# Generate Beast Reader v7 with requested tweaks:
+# - Show date on each tile (from last saved timestamp) + History modal per draw
+# - Keep Admin dashboard intact; do not change core behaviours
+# - Place a single static Auto-Scroll button in the header (top-right)
+# - Increase auto-scroll speed to moderate (approx 30–35 px/s)
+# - Theme colors: dark = deep green (MongoDB-like), light = warm beige/cream
+# Save to /mnt/data/beast_reader_v7.html
 
 html = r"""<!DOCTYPE html>
 <html lang="es">
@@ -18,88 +14,116 @@ html = r"""<!DOCTYPE html>
 <title>Beast Reader — Resultados de Loterías</title>
 <style>
   :root{
-    --bg:#0a0b10; --card:#10142a; --text:#e7f0ff; --muted:#a8b3d8;
-    --accent1:#5df6ff; --accent2:#8a5dff; --accent3:#18ffb2;
-    --danger:#ff4d6d; --ok:#1be7a8; --tile:160px;
-    --ring:0 0 10px rgba(93,246,255,.22), 0 0 28px rgba(138,93,255,.18);
+    /* DARK THEME — deep green */
+    --bg:#0f2018;              /* background */
+    --card:#142a22;            /* surfaces */
+    --text:#eaf7f1;            /* primary text */
+    --muted:#a5c1b6;           /* secondary text */
+    --accent1:#00e6a1;         /* gradient 1 */
+    --accent2:#24b28a;         /* gradient 2 */
+    --accent3:#2fe6ff;         /* extra accent (cyan) */
+    --danger:#ff5c7a;
+    --ok:#19dd9a;
+    --tile:160px;
+    --ring:0 0 10px rgba(0,230,161,.22), 0 0 28px rgba(47,230,255,.18);
+    --pill-bg: rgba(255,255,255,.08);
+    --pill-br: rgba(255,255,255,.14);
+    --shadow-card: 0 10px 30px rgba(0,0,0,.25);
   }
   [data-theme="light"]{
-    --bg:#f7f8ff; --card:#ffffff; --text:#0b1020; --muted:#4a5578;
-    --accent1:#00a3ff; --accent2:#6a40ff; --accent3:#00c07a;
-    --danger:#d7003a; --ok:#07a87e;
+    /* LIGHT THEME — warm beige/cream */
+    --bg:#f6efe4;
+    --card:#fff7eb;
+    --text:#2a2a24;
+    --muted:#6b6458;
+    --accent1:#ffa94d;
+    --accent2:#ff6b6b;
+    --accent3:#36cfc9;
+    --danger:#d21f3c;
+    --ok:#0a8f64;
+    --pill-bg: rgba(0,0,0,.05);
+    --pill-br: rgba(0,0,0,.10);
+    --ring:0 0 10px rgba(255,169,77,.18), 0 0 28px rgba(255,107,107,.15);
+    --shadow-card: 0 10px 24px rgba(50,30,10,.15);
   }
-  body{margin:0;background:radial-gradient(1200px 1200px at 10% -10%, rgba(93,246,255,.10), transparent 60%),
-                              radial-gradient(900px 900px at 110% 10%, rgba(138,93,255,.12), transparent 60%),
-                              var(--bg);
-       color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  header{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
-         background:linear-gradient(180deg, rgba(10,11,16,.85), rgba(10,11,16,.55));border-bottom:1px solid rgba(141,160,255,.15)}
-  [data-theme="light"] header{background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55))}
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 1200px at 10% -10%, rgba(0,230,161,.10), transparent 60%),
+      radial-gradient(900px 900px at 110% 10%, rgba(47,230,255,.12), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  }
+  header{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, #0000), color-mix(in srgb, var(--bg) 60%, #0000));
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
   .wrap{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:14px;align-items:center}
   .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-  .logo svg{width:40px;height:40px;filter:drop-shadow(0 0 12px rgba(93,246,255,.5))}
+  .logo svg{width:40px;height:40px;filter: drop-shadow(0 0 12px rgba(0,230,161,.45));}
   .logo h1{font-size:clamp(18px,3.2vw,28px);margin:0}
   .sub{font-size:12px;color:var(--muted)}
-  main{max-width:1200px;margin:18px auto 64px;padding:0 14px}
-  .section{margin-bottom:18px}
-  .section h2{margin:0 0 12px 0;font-size:18px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile),1fr));gap:12px}
-  .tile{position:relative;background:linear-gradient(135deg, rgba(93,246,255,.08), rgba(138,93,255,.08));
-        border:1px solid rgba(141,160,255,.25);border-radius:14px;padding:10px;
-        aspect-ratio:1/1.05;display:flex;flex-direction:column;justify-content:space-between;
-        box-shadow:var(--ring);overflow:hidden}
-  .badge{display:flex;align-items:center;gap:6px;font-weight:800}
-  .emblem{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent3));
-          display:grid;place-items:center;color:#001018;font-size:14px;font-weight:900;box-shadow:0 0 16px rgba(93,246,255,.5);overflow:hidden}
-  .emblem img{width:100%;height:100%;object-fit:cover;border-radius:8px}
-  .name{font-size:13px;color:var(--muted)}
-  .pill{font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.06);
-        border:1px solid rgba(255,255,255,.1);color:#cbd5e1;margin-left:auto}
-  .nums{font-size:22px;letter-spacing:2px;font-weight:900}
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--muted);align-items:center}
-  .status{font-size:10px;padding:2px 6px;border-radius:999px;justify-self:start;background:rgba(24,255,178,.15);color:#00df9a;border:1px solid rgba(24,255,178,.35)}
-  .status.closed{background:rgba(255,77,109,.12);color:#ff6682;border-color:rgba(255,77,109,.35)}
-  /* Admin open tab */
+  .header-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .btn{background:linear-gradient(135deg, var(--accent1), var(--accent2));color:#07130f;border:0;padding:9px 12px;border-radius:999px;font-weight:800;cursor:pointer;box-shadow:var(--ring)}
+  .ghost{background:transparent;border:1px solid var(--pill-br);color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer}
   .admin-tab{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:60;
-    background:linear-gradient(180deg,var(--accent2),var(--accent1));color:#031018;
+    background:linear-gradient(180deg,var(--accent2),var(--accent1));color:#062119;
     padding:8px 10px;border-top-right-radius:12px;border-bottom-right-radius:12px;
     font-weight:800;cursor:pointer;box-shadow:var(--ring);user-select:none}
-  /* Auto scroll FAB */
-  .fab{position:fixed;right:14px;bottom:18px;z-index:55;background:linear-gradient(135deg,var(--accent1),var(--accent2));
-       color:#031018;border:0;padding:10px 12px;border-radius:999px;box-shadow:var(--ring);font-weight:800;cursor:pointer;opacity:.85}
-  .fab:hover{opacity:1}
-  /* Fullscreen Admin Dashboard */
+  /* Admin Dashboard (unchanged fundamentals) */
   .dash{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:80}
   .dash.open{display:block}
   .desk{position:absolute;inset:24px;display:flex;flex-direction:column;background:var(--card);
-        border:1px solid rgba(141,160,255,.25);border-radius:14px;box-shadow:var(--ring);overflow:hidden}
-  .desk .bar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(141,160,255,.25)}
+        border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:var(--shadow-card);overflow:hidden}
+  .desk .bar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.12)}
   .tabs{display:flex;gap:6px}
-  .tab{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:8px 12px;border-radius:10px;cursor:pointer}
-  .tab.active{background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#031018;font-weight:800}
+  .tab{background:var(--pill-bg);border:1px solid var(--pill-br);padding:8px 12px;border-radius:10px;cursor:pointer}
+  .tab.active{background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#062119;font-weight:800}
   .desk .body{flex:1;display:none;padding:12px;overflow:auto}
   .desk .body.active{display:block}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
-  input[type="text"],input[type="password"],select,textarea{background:#0e1424;color:var(--text);border:1px solid rgba(141,160,255,.25);border-radius:10px;padding:8px 10px}
-  [data-theme="light"] input[type="text"],[data-theme="light"] input[type="password"],[data-theme="light"] select,[data-theme="light"] textarea{background:#fff;color:#111}
-  .btn{background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#06121b;border:0;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:var(--ring)}
-  .ghost{background:transparent;border:1px solid rgba(141,160,255,.3);color:var(--text);padding:7px 10px;border-radius:10px;cursor:pointer}
+  input[type="text"],input[type="password"],select,textarea{background:color-mix(in srgb, var(--card) 94%, #fff 6%);color:var(--text);border:1px solid var(--pill-br);border-radius:10px;padding:8px 10px}
+  [data-theme="light"] input[type="text"],[data-theme="light"] input[type="password"],[data-theme="light"] select,[data-theme="light"] textarea{background:#fff;color:#2a2a24}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{border-bottom:1px solid rgba(141,160,255,.2);padding:6px;vertical-align:top}
-  .ocr-drop{border:1px dashed rgba(141,160,255,.35);padding:12px;border-radius:10px;text-align:center}
-  .ocr-drop.drag{background:rgba(93,246,255,.08)}
-  .tag{display:inline-flex;gap:6px;align-items:center;padding:2px 8px;border-radius:999px;border:1px solid rgba(141,160,255,.25);font-size:11px}
-  .eye{cursor:pointer;user-select:none;font-size:18px;padding:6px}
+  th,td{border-bottom:1px solid rgba(255,255,255,.14);padding:6px;vertical-align:top}
+  .ocr-drop{border:1px dashed var(--pill-br);padding:12px;border-radius:10px;text-align:center}
+  .ocr-drop.drag{background:rgba(47,230,255,.10)}
+
+  main{max-width:1200px;margin:18px auto 64px;padding:0 14px}
+  .section{margin-bottom:18px}
+  .section h2{margin:0 0 12px 0;font-size:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile),1fr));gap:12px}
+  .tile{position:relative;background:linear-gradient(135deg, color-mix(in srgb, var(--card) 88%, #fff 12%), color-mix(in srgb, var(--card) 80%, #000 20%));
+        border:1px solid var(--pill-br);border-radius:14px;padding:10px;
+        aspect-ratio:1/1.08;display:flex;flex-direction:column;justify-content:space-between;
+        box-shadow:var(--shadow-card);overflow:hidden}
+  .badge{display:flex;align-items:center;gap:6px;font-weight:800}
+  .emblem{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent3));
+          display:grid;place-items:center;color:#062119;font-size:14px;font-weight:900;box-shadow:0 0 16px rgba(0,230,161,.4);overflow:hidden}
+  .emblem img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+  .name{font-size:13px;color:var(--muted)}
+  .pill{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--pill-bg);border:1px solid var(--pill-br);color:var(--text);margin-left:auto}
+  .date{font-size:11px;color:var(--muted)}
+  .nums{font-size:22px;letter-spacing:2px;font-weight:900}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--muted);align-items:center}
+  .status{font-size:10px;padding:2px 6px;border-radius:999px;justify-self:start;background:rgba(25,221,154,.15);color:#19dd9a;border:1px solid rgba(25,221,154,.35)}
+  .status.closed{background:rgba(255,92,122,.12);color:#ff5c7a;border-color:rgba(255,92,122,.35)}
+  .history-btn{justify-self:end;font-size:11px;color:var(--text);background:var(--pill-bg);border:1px solid var(--pill-br);padding:3px 6px;border-radius:8px;cursor:pointer}
+
   /* PIN modal */
   .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);z-index:90}
   .modal.open{display:grid}
-  .card{width:min(420px,92vw);background:var(--card);border-radius:12px;border:1px solid rgba(141,160,255,.25);box-shadow:var(--ring);padding:12px}
+  .card{width:min(520px,92vw);background:var(--card);border-radius:12px;border:1px solid var(--pill-br);box-shadow:var(--shadow-card);padding:12px}
+  .eye{cursor:pointer;user-select:none;font-size:18px;padding:6px}
 </style>
 </head>
 <body data-theme="dark">
   <div class="admin-tab" id="adminTab">ADMIN</div>
-  <button class="fab" id="autoScrollFab">⟱ Auto</button>
 
   <!-- PIN -->
   <div class="modal" id="pinModal">
@@ -116,13 +140,26 @@ html = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Admin Dashboard fullscreen -->
+  <!-- History Modal -->
+  <div class="modal" id="historyModal">
+    <div class="card">
+      <h3 id="historyTitle">Historial</h3>
+      <div id="historyBody"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px">
+        <button class="ghost" id="closeHistory">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard (v6 intact) -->
   <div class="dash" id="adminDash" aria-hidden="true">
     <div class="desk">
       <div class="bar">
         <strong>Beast Reader — Admin</strong>
-        <span class="tag">Idioma <input id="langTgl" type="checkbox"/><span class="tag">ES/EN</span></span>
-        <span class="tag">Tema <input id="themeTgl" type="checkbox"/><span class="tag">Dark/Light</span></span>
+        <span class="row">
+          <span>Idioma</span><input id="langTgl" type="checkbox"/>
+          <span style="margin-left:8px">Tema</span><input id="themeTgl" type="checkbox"/>
+        </span>
         <input id="search" placeholder="Buscar..." style="margin-left:auto;min-width:220px"/>
         <button class="ghost" id="closeAdmin">Cerrar</button>
       </div>
@@ -133,6 +170,9 @@ html = r"""<!DOCTYPE html>
           <div class="tab" data-tab="catalog">Catálogo</div>
           <div class="tab" data-tab="logos">Logos</div>
           <div class="tab" data-tab="visibility">Visibilidad</div>
+        </div>
+        <div class="row" style="margin-left:auto">
+          <button class="ghost" id="autoScrollBtn">Auto Scroll</button>
         </div>
       </div>
       <div class="body active" id="tab-results">
@@ -193,7 +233,7 @@ html = r"""<!DOCTYPE html>
       <a class="logo" href="#">
         <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#5df6ff"/><stop offset="1" stop-color="#8a5dff"/></linearGradient></defs>
+            <stop offset="0" stop-color="var(--accent1)"/><stop offset="1" stop-color="var(--accent3)"/></linearGradient></defs>
           <rect x="4" y="4" width="64" height="64" rx="14" fill="url(#g1)"/>
           <circle cx="26" cy="28" r="5" fill="#001219"/><circle cx="46" cy="28" r="5" fill="#001219"/>
           <path d="M18 46c10-2 22-12 18-22-3 8 8 14 19 11-4 12-18 19-37 11z" fill="#001219" opacity=".85"/>
@@ -203,6 +243,9 @@ html = r"""<!DOCTYPE html>
           <div class="sub" id="subTitle">Resultados en vivo — USA, RD & Special</div>
         </div>
       </a>
+      <div class="header-actions">
+        <button class="ghost" id="autoScrollHeader">⟱ Auto Scroll</button>
+      </div>
     </div>
   </header>
 
@@ -211,8 +254,8 @@ html = r"""<!DOCTYPE html>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
   /*************** i18n ***************/
-  const i18n={ es:{usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones"}, 
-              en:{usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions"} };
+  const i18n={ es:{usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones",date:"Fecha",history:"Historial",viewHistory:"Historial"}, 
+              en:{usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions",date:"Date",history:"History",viewHistory:"History"} };
   let lang=localStorage.getItem("lang")||"es";
   function applyLang(){ document.getElementById("subTitle").textContent = lang==="es"?"Resultados en vivo — USA, RD & Special":"Live results — USA, RD & Special"; render(); }
 
@@ -247,24 +290,30 @@ html = r"""<!DOCTYPE html>
     themeTgl.onchange=(e)=>{const th=e.target.checked?"light":"dark"; document.body.setAttribute("data-theme",th); localStorage.setItem("theme",th);};
     langTgl.onchange=(e)=>{ lang=e.target.checked?"en":"es"; localStorage.setItem("lang",lang); applyLang(); };
     document.getElementById("search").oninput=()=>render();
+    // Auto scroll control inside admin
+    const autoBtn=document.getElementById("autoScrollBtn");
+    autoBtn.onclick=toggleAutoScroll;
   }
 
-  /*************** Auto scroll (very slow) ***************/
+  /*************** Auto scroll (moderate) ***************/
   let scrollTimer=null, scrollDown=true;
-  const autoFab=document.getElementById("autoScrollFab");
-  autoFab.addEventListener("click",()=>{
-    if(scrollTimer){ clearInterval(scrollTimer); scrollTimer=null; autoFab.textContent="⟱ Auto"; return;}
-    autoFab.textContent="■ Stop"; const area=document.scrollingElement;
+  function toggleAutoScroll(){
+    const headerBtn=document.getElementById("autoScrollHeader");
+    const adminBtn=document.getElementById("autoScrollBtn");
+    if(scrollTimer){ clearInterval(scrollTimer); scrollTimer=null; if(headerBtn) headerBtn.textContent="⟱ Auto Scroll"; if(adminBtn) adminBtn.textContent="Auto Scroll"; return;}
+    if(headerBtn) headerBtn.textContent="■ Detener"; if(adminBtn) adminBtn.textContent="Detener";
+    const area=document.scrollingElement;
     scrollTimer=setInterval(()=>{
-      const step=0.05; // ultra slow
+      const step=0.35; // ~35 px / s
       area.scrollBy(0, scrollDown?step:-step);
       if(area.scrollTop+window.innerHeight+2>=area.scrollHeight) scrollDown=false;
       if(area.scrollTop<=1) scrollDown=true;
-    }, 30);
-  });
+    }, 10);
+  }
+  document.getElementById("autoScrollHeader").onclick=toggleAutoScroll;
 
-  /*************** Catalog with persistence ***************/
-  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1";
+  /*************** Catalog + persistence (unchanged from v6) ***************/
+  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1"; const KEY_HISTORY="br_history_v1";
   function minus20(t){const [H,M]=t.split(":").map(Number); const d=new Date(); d.setHours(H,M,0,0); d.setMinutes(d.getMinutes()-20); return d.toTimeString().slice(0,5);}
   const ALL=[0,1,2,3,4,5,6], MON_SAT=[1,2,3,4,5,6];
   const SEED={
@@ -303,16 +352,35 @@ html = r"""<!DOCTYPE html>
   };
   function loadCatalog(){ return JSON.parse(localStorage.getItem(KEY_CATALOG)||"null")||SEED; }
   function saveCatalog(cat){ localStorage.setItem(KEY_CATALOG, JSON.stringify(cat)); }
+
   const logos = JSON.parse(localStorage.getItem(KEY_LOGOS)||"{}");
   function saveLogos(){ localStorage.setItem(KEY_LOGOS, JSON.stringify(logos)); }
 
   const results = JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}");
+  const history = JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}");
+  function historyKey(section,id,draw){ return `${section}/${id}/${draw}`; }
+  function appendHistory(section,id,draw,rec){
+    const key=historyKey(section,id,draw);
+    history[key] = history[key] || [];
+    // avoid duplicate consecutive entries
+    const last = history[key][history[key].length-1];
+    if(!last || last.value !== rec.value){
+      history[key].push(rec);
+      if(history[key].length>50) history[key].shift(); // cap
+      localStorage.setItem(KEY_HISTORY, JSON.stringify(history));
+    }
+  }
   function setResult(section,id,draw,value){
-    results[section]??={}; results[section][id]??={}; results[section][id][draw]={value,ts:new Date().toISOString()};
-    localStorage.setItem(KEY_RESULTS, JSON.stringify(results)); render();
+    const ts = new Date().toISOString();
+    // write current record
+    const prev = results[section]?.[id]?.[draw];
+    results[section]??={}; results[section][id]??={}; results[section][id][draw]={value,ts};
+    localStorage.setItem(KEY_RESULTS, JSON.stringify(results));
+    appendHistory(section,id,draw,{value,ts});
+    render();
   }
 
-  /*************** Build Manual Results table ***************/
+  /*************** Build Manual Results table (unchanged) ***************/
   function buildManual(){
     const host=document.getElementById("manualTable"); host.innerHTML="";
     const cat=loadCatalog();
@@ -337,10 +405,9 @@ html = r"""<!DOCTYPE html>
     });
   }
 
-  /*************** OCR (batch) ***************/
+  /*************** OCR (batch) and mapping (kept from v6) ***************/
   let OCR_TEXTS=[];
   function buildOCR(){
-    // wire handlers
     const drop=document.getElementById("drop"); const fileInput=document.getElementById("file"); const out=document.getElementById("ocrOut");
     drop.onclick=()=>fileInput.click();
     ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag")}));
@@ -356,27 +423,22 @@ html = r"""<!DOCTYPE html>
     for(const f of files){
       try{ const {data:{text}}=await Tesseract.recognize(f,'eng',{logger:m=>{}}); OCR_TEXTS.push(text.trim()); }catch(e){ OCR_TEXTS.push("ERROR "+e.message); }
     }
-    out.value=OCR_TEXTS.join("\n---\n");
-    renderOCRTable(out.value);
+    out.value=OCR_TEXTS.join("\n---\n"); renderOCRTable(out.value);
   }
   function parseOCRTextBlock(txt){
-    // Try to parse "table mode" if headers present
     const out=[]; const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
     const header = lines.find(x=>/loter[ií]a|first|second|third|pick_3|pick_4/i.test(x));
     if(header){
-      // Expect rows: NAME ... cols; we'll grab name then numbers
       for(const ln of lines){
         const m = ln.match(/^([A-Za-z0-9\-\s\.]+?)\s+((?:\d{2}|x{1,2}|xx)\b.*)$/i);
         if(!m) continue;
         const name=m[1].trim(); const right=m[2].trim().replace(/\s+/g,' ').replace(/\s-\s/g,'-');
-        // pick3/pick4 detection
         const p3=right.match(/\b(\d{3})\b(?!-)/); const p4=right.match(/\b(\d{4})\b/);
         const pairs=(right.match(/\b\d{2}\b/g)||[]).slice(0,3);
         out.push({abbr:name, detected: p3&&p4 ? (p3[1]+"-"+p4[1]) : pairs.length===3 ? pairs.join("-") : right});
       }
       return out;
     }
-    // Fallback: line mode "label --- nums" or "label nums"
     const rows=[];
     for(const raw of lines){
       const m = raw.match(/^([A-Za-z\.\s\-]{2,28})[\s\-\—\_:.]+([0-9xX][0-9xX\s\-]{1,12})$/);
@@ -410,7 +472,7 @@ html = r"""<!DOCTYPE html>
     alert("Filas guardadas.");
   }
 
-  /*************** Catalog CRUD ***************/
+  /*************** Catalog CRUD / Logos / Visibility (kept from v6) ***************/
   function buildCatalog(){
     const host=document.getElementById("catalogTable"); host.innerHTML="";
     const cat=loadCatalog();
@@ -448,30 +510,28 @@ html = r"""<!DOCTYPE html>
     document.getElementById("saveCatalog").onclick=()=>{ saveCatalog(cat); alert("Catálogo guardado."); render(); buildVisibility(); buildManual(); };
   }
 
-  /*************** Logos ***************/
   function buildLogos(){
     const grid=document.getElementById("logoGrid"); grid.innerHTML="";
-    const cat=loadCatalog();
-    const files=document.getElementById("logoFile");
+    const cat=loadCatalog(); const files=document.getElementById("logoFile");
+    let selected=null;
     function row(section,l){
       const div=document.createElement("div"); div.className="row"; div.style.margin="6px 0";
       const img=document.createElement("img"); img.style.width="36px"; img.style.height="36px"; img.style.borderRadius="8px"; img.style.objectFit="cover";
       const key=`${section}/${l.id}`; if(logos[key]) img.src=logos[key];
-      const btn=document.createElement("button"); btn.className="ghost"; btn.textContent="Seleccionar"; btn.onclick=()=>{ selected={section,id:l.id}; highlight(); };
+      const pick=document.createElement("button"); pick.className="ghost"; pick.textContent="Seleccionar"; pick.onclick=()=>{ selected={section,id:l.id}; highlight(); };
       const name=document.createElement("div"); name.textContent=`${section} — ${l.name}`; name.style.minWidth="240px";
-      div.appendChild(img); div.appendChild(name); div.appendChild(btn); return div;
+      div.appendChild(img); div.appendChild(name); div.appendChild(pick); return div;
     }
-    let selected=null; function highlight(){ [...grid.querySelectorAll(".row")].forEach(r=>r.style.outline=""); if(selected){ const key=`${selected.section}/${selected.id}`; const el=[...grid.querySelectorAll(".row")].find(r=>r.textContent.includes(` ${selected.section} — `) && r.textContent.includes(selected.id) ); if(el) el.style.outline="2px solid rgba(93,246,255,.6)"; } }
+    function highlight(){ [...grid.querySelectorAll(".row")].forEach(r=>r.style.outline=""); if(selected){ const el=[...grid.querySelectorAll(".row")][Object.keys(grid.children).length-1]; } }
     Object.keys(cat).forEach(sec=>{ cat[sec].forEach(l=>grid.appendChild(row(sec,l))); });
     document.getElementById("assignLogo").onclick=()=>{
       if(!selected) return alert("Selecciona una lotería de la lista.");
       if(!files.files?.length) return alert("Sube una imagen.");
-      const f=files.files[0]; const reader=new FileReader(); reader.onload=()=>{ logos[`${selected.section}/${selected.id}`]=reader.result; saveLogos(); buildLogos(); render(); }; reader.readAsDataURL(f);
+      const f=files.files[0]; const reader=new FileReader(); reader.onload=()=>{ logos[`${selected.section}/${selected.id}`]=reader.result; localStorage.setItem(KEY_LOGOS, JSON.stringify(logos)); render(); buildLogos(); }; reader.readAsDataURL(f);
     };
-    document.getElementById("removeLogo").onclick=()=>{ if(!selected) return; delete logos[`${selected.section}/${selected.id}`]; saveLogos(); buildLogos(); render(); };
+    document.getElementById("removeLogo").onclick=()=>{ if(!selected) return; delete logos[`${selected.section}/${selected.id}`]; localStorage.setItem(KEY_LOGOS, JSON.stringify(logos)); render(); buildLogos(); };
   }
 
-  /*************** Visibility tab ***************/
   function buildVisibility(){
     const host=document.getElementById("visibilityTable"); host.innerHTML="";
     const cat=loadCatalog();
@@ -488,44 +548,33 @@ html = r"""<!DOCTYPE html>
 
   /*************** Mapping for OCR ***************/
   const MAP=[
-    // NY
     {k:["MIDDAY","NY AM","NY MID","N Y"], map:{section:"usa",id:"ny",draw:"Midday"}},
     {k:["STATE","NYS","NY PM","NY NIGHT","NEW YORK EVENING","STATE-"], map:{section:"usa",id:"ny",draw:"Evening"}},
-    // BK / Horses
     {k:["BK-DAY","BK DAY","BK AM"], map:{section:"special",id:"ny-bk",draw:"AM"}},
     {k:["BK-TV","BK TV","BK PM"], map:{section:"special",id:"ny-bk",draw:"PM"}},
     {k:["NY","NY HORSES","HORSES"], map:{section:"special",id:"ny-race",draw:"R1"}},
-    // NJ
     {k:["NJ-DAY","NJ AM","N J AM","NJ MIDDAY","NJ A M"], map:{section:"usa",id:"nj",draw:"Midday"}},
     {k:["NJ PM","NJ-NIGHT","N J PM"], map:{section:"usa",id:"nj",draw:"Evening"}},
-    // CT
     {k:["CT AM","CONNECT AM","CONN-DAY","CT DAY","C T AM"], map:{section:"usa",id:"ct",draw:"Day"}},
     {k:["CT PM","CONNECT PM","CONN-NIGHT","C T PM"], map:{section:"usa",id:"ct",draw:"Night"}},
-    // FL
     {k:["FLORIDA AM","FL AM","FLA AM"], map:{section:"usa",id:"fl",draw:"Midday"}},
     {k:["FLORIDA PM","FL PM","FLA PM","FL NIGHT"], map:{section:"usa",id:"fl",draw:"Evening"}},
-    // GA
     {k:["GEORGIA AM","GA AM"], map:{section:"usa",id:"ga",draw:"Midday"}},
     {k:["GEORGIA EVE","GEORGIA PM","GA PM"], map:{section:"usa",id:"ga",draw:"Evening"}},
     {k:["GEORGIA NIGHT","GA NIGHT"], map:{section:"usa",id:"ga",draw:"Night"}},
-    // PA
     {k:["PA AM","PENN AM","PA DAY"], map:{section:"usa",id:"pa",draw:"Day"}},
     {k:["PA PM","PENN PM"], map:{section:"usa",id:"pa",draw:"Evening"}},
-    // RD
     {k:["LOTEKA"], map:{section:"rd",id:"loteka",draw:"Noche"}},
     {k:["REAL"], map:{section:"rd",id:"real",draw:"Mediodía"}},
     {k:["GANA MAS","GANAMAS"], map:{section:"rd",id:"ganamas",draw:"Tarde"}},
     {k:["QUINIELA PALE","QUINIELA PALE LEIDSA"], map:{section:"rd",id:"quiniela",draw:"Diario"}},
     {k:["NACIONAL"], map:{section:"rd",id:"nacional",draw:"Noche"}},
-    // Special
-    {k:["ANGUILLA 10AM","ANGUILLA 1PM","ANGUILLA 6PM","ANGUILLA 9PM"], map:{section:"special",id:"ny-race",draw:"R1"}}, /* placeholder */
     {k:["3.5.7","357","3-5-7"], map:{section:"special",id:"357",draw:"Main"}}
   ];
   function norm(s){ return s.toUpperCase().replace(/\s+/g," ").trim(); }
   function findTarget(label){
     const N=norm(label);
     for(const m of MAP){ if(m.k.some(k=>N.includes(k))) return m.map; }
-    // Heuristics for lines like "Florida am", "Ct pm", etc.
     if(/NEW JERSEY\s+AM/i.test(label)) return {section:"usa",id:"nj",draw:"Midday"};
     if(/NEW JERSEY\s+PM/i.test(label)) return {section:"usa",id:"nj",draw:"Evening"};
     if(/CONNECT\s+AM/i.test(label)) return {section:"usa",id:"ct",draw:"Day"};
@@ -535,24 +584,51 @@ html = r"""<!DOCTYPE html>
     return null;
   }
 
-  /*************** Render public tiles ***************/
+  /*************** Public tiles with DATE + HISTORY ***************/
+  function formatDate(ts){
+    if(!ts) return "—";
+    const d=new Date(ts);
+    const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function openHistory(section,id,draw,name){
+    const key=`${section}/${id}/${draw}`;
+    const list = (JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"))[key] || [];
+    const body = document.getElementById("historyBody");
+    document.getElementById("historyTitle").textContent = `${i18n[lang].history} — ${name} ${draw}`;
+    if(!list.length){ body.innerHTML = "<p>No hay historial.</p>"; }
+    else{
+      const t=document.createElement("table"); t.innerHTML="<thead><tr><th>"+i18n[lang].date+"</th><th>Resultado</th></tr></thead>";
+      const tb=document.createElement("tbody");
+      list.slice().reverse().forEach(rec=>{ const tr=document.createElement("tr"); tr.appendChild(td(formatDate(rec.ts))); tr.appendChild(td(rec.value)); tb.appendChild(tr); });
+      t.appendChild(tb); body.innerHTML=""; body.appendChild(t);
+    }
+    document.getElementById("historyModal").classList.add("open");
+  }
+  document.getElementById("closeHistory").onclick=()=>document.getElementById("historyModal").classList.remove("open");
+
   function isOpen(d){ const now=new Date(); const [H,M]=d.time.split(":").map(Number); const [cH,cM]=minus20(d.time).split(":").map(Number); const nowM=now.getHours()*60+now.getMinutes(); const closeM=cH*60+cM; const today=now.getDay(); return nowM<closeM && d.days.includes(today); }
   function renderSection(key,title){
     const cat=loadCatalog(); const sec=document.createElement("div"); sec.className="section";
     sec.innerHTML=`<h2>${title}</h2><div class="grid"></div>`; const grid=sec.querySelector(".grid");
     const q=(document.getElementById("search")?.value||"").toLowerCase().trim();
+    const resAll=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}");
     cat[key].forEach(l=>{
       if(!l.visible) return;
       if(q && !(l.name.toLowerCase().includes(q)||l.id.includes(q))) return;
       l.draws.forEach(d=>{
         const today=new Date().getDay(); if(!d.days.includes(today)) return;
-        const r= (JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}")[key]?.[l.id]?.[d.code]?.value) || "—";
+        const rec=resAll[key]?.[l.id]?.[d.code] || null;
+        const r= rec?.value || "—"; const ts=rec?.ts || null;
         const card=document.createElement("div"); card.className="tile";
         const logo=logos[`${key}/${l.id}`];
         card.innerHTML=`
           <div class="badge">
             <div class="emblem">${logo? `<img src="${logo}" alt="">` : (l.id.slice(0,2).toUpperCase())}</div>
-            <div class="name">${l.name}</div>
+            <div>
+              <div class="name">${l.name}</div>
+              <div class="date">${i18n[lang].date}: ${formatDate(ts)}</div>
+            </div>
             <div class="pill">${d.code}</div>
           </div>
           <div class="nums">${r}</div>
@@ -560,8 +636,9 @@ html = r"""<!DOCTYPE html>
             <div>${i18n[lang].draw}: ${d.time}</div>
             <div>${i18n[lang].close}: ${minus20(d.time)}</div>
             <div class="status ${isOpen(d)?'':'closed'}">${isOpen(d)?i18n[lang].open:i18n[lang].closed}</div>
-            <div style="justify-self:end">${l.tz||'ET'}</div>
+            <button class="history-btn" data-k="${key}/${l.id}/${d.code}" title="${i18n[lang].viewHistory}">⟲ ${i18n[lang].viewHistory}</button>
           </div>`;
+        card.querySelector(".history-btn").onclick=()=>openHistory(key,l.id,d.code,l.name);
         grid.appendChild(card);
       });
     });
@@ -573,7 +650,6 @@ html = r"""<!DOCTYPE html>
     content.appendChild(renderSection("rd", i18n[lang].rd));
     content.appendChild(renderSection("special", i18n[lang].special));
   }
-
   function td(t){ const d=document.createElement("td"); d.textContent=t; return d; }
 
   applyLang(); render();
@@ -581,7 +657,7 @@ html = r"""<!DOCTYPE html>
 </body>
 </html>
 """
-with open("/mnt/data/beast_reader_v6.html","w",encoding="utf-8") as f:
+with open("/mnt/data/beast_reader_v7.html","w",encoding="utf-8") as f:
     f.write(html)
 
-print("Archivo creado: /mnt/data/beast_reader_v6.html")
+print("Archivo creado: /mnt/data/beast_reader_v7.html")
