@@ -1,12 +1,3 @@
-# Build Beast Reader v8 with small, targeted adjustments requested:
-# 1) Reset results button in Admin > Resultados
-# 2) Bigger logo; state name placed below the numbers
-# 3) Date selector in Admin to stamp results (manual & OCR) with that date
-# 4) Admin button fixed in header next to Auto Scroll (remove floating tab)
-# 5) Center numbers
-# 6) History modal aligned + edit/add/delete entries
-# 7) Light theme background slightly darker; tiles use warm cream (same as admin cards)
-# Everything else stays intact.
 html = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -701,8 +692,3 @@ html = r"""<!DOCTYPE html>
   </script>
 </body>
 </html>
-"""
-with open("/mnt/data/beast_reader_v8.html","w",encoding="utf-8") as f:
-    f.write(html)
-
-print("Archivo creado: /mnt/data/beast_reader_v8.html")
