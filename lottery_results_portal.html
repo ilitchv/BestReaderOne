@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+html = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
@@ -6,54 +6,28 @@
 <title>Beast Reader — Resultados de Loterías</title>
 <style>
   :root{
-    /* DARK THEME — deep green */
-    --bg:#0f2018;              /* background */
-    --card:#142a22;            /* surfaces */
-    --text:#eaf7f1;            /* primary text */
-    --muted:#a5c1b6;           /* secondary text */
-    --accent1:#00e6a1;         /* gradient 1 */
-    --accent2:#24b28a;         /* gradient 2 */
-    --accent3:#2fe6ff;         /* extra accent (cyan) */
-    --danger:#ff5c7a;
-    --ok:#19dd9a;
-    --tile:160px;
+    --bg:#0f2018; --card:#142a22; --text:#eaf7f1; --muted:#a5c1b6;
+    --accent1:#00e6a1; --accent2:#24b28a; --accent3:#2fe6ff;
+    --danger:#ff5c7a; --ok:#19dd9a; --tile:160px;
     --ring:0 0 10px rgba(0,230,161,.22), 0 0 28px rgba(47,230,255,.18);
-    --pill-bg: rgba(255,255,255,.08);
-    --pill-br: rgba(255,255,255,.14);
+    --pill-bg: rgba(255,255,255,.08); --pill-br: rgba(255,255,255,.14);
     --shadow-card: 0 10px 30px rgba(0,0,0,.25);
   }
   [data-theme="light"]{
-    /* LIGHT THEME — warm beige background (darker) + cream tiles */
-    --bg:#e9dece;              /* darker than tiles */
-    --card:#fff7eb;            /* used for tiles & admin cards */
-    --text:#2a2a24;
-    --muted:#6b6458;
-    --accent1:#ffa94d;
-    --accent2:#ff6b6b;
-    --accent3:#36cfc9;
-    --danger:#d21f3c;
-    --ok:#0a8f64;
-    --pill-bg: rgba(0,0,0,.05);
-    --pill-br: rgba(0,0,0,.10);
+    --bg:#e9dece; --card:#fff7eb; --text:#2a2a24; --muted:#6b6458;
+    --accent1:#ffa94d; --accent2:#ff6b6b; --accent3:#36cfc9;
+    --danger:#d21f3c; --ok:#0a8f64;
+    --pill-bg: rgba(0,0,0,.05); --pill-br: rgba(0,0,0,.10);
     --ring:0 0 10px rgba(255,169,77,.18), 0 0 28px rgba(255,107,107,.15);
     --shadow-card: 0 10px 24px rgba(50,30,10,.15);
   }
-
-  body{
-    margin:0;
-    background:
-      radial-gradient(1200px 1200px at 10% -10%, rgba(0,230,161,.10), transparent 60%),
-      radial-gradient(900px 900px at 110% 10%, rgba(47,230,255,.12), transparent 60%),
-      var(--bg);
-    color:var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
-  }
-  header{
-    position:sticky; top:0; z-index:50;
-    backdrop-filter: blur(10px);
+  body{margin:0;background:
+    radial-gradient(1200px 1200px at 10% -10%, rgba(0,230,161,.10), transparent 60%),
+    radial-gradient(900px 900px at 110% 10%, rgba(47,230,255,.12), transparent 60%),
+    var(--bg);color:var(--text);font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans","Liberation Sans",sans-serif;}
+  header{position:sticky;top:0;z-index:50;backdrop-filter: blur(10px);
     background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, #0000), color-mix(in srgb, var(--bg) 60%, #0000));
-    border-bottom: 1px solid rgba(255,255,255,.12);
-  }
+    border-bottom: 1px solid rgba(255,255,255,.12);}
   .wrap{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:14px;align-items:center}
   .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
   .logo svg{width:46px;height:46px;filter: drop-shadow(0 0 12px rgba(0,230,161,.45));}
@@ -63,7 +37,6 @@
   .btn{background:linear-gradient(135deg, var(--accent1), var(--accent2));color:#07130f;border:0;padding:9px 12px;border-radius:999px;font-weight:800;cursor:pointer;box-shadow:var(--ring)}
   .ghost{background:transparent;border:1px solid var(--pill-br);color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer}
 
-  /* Admin Dashboard */
   .dash{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:80}
   .dash.open{display:block}
   .desk{position:absolute;inset:24px;display:flex;flex-direction:column;background:var(--card);
@@ -104,7 +77,6 @@
   .history-btn{justify-self:end;font-size:11px;color:var(--text);background:var(--pill-bg);border:1px solid var(--pill-br);padding:3px 6px;border-radius:8px;cursor:pointer}
   .date{font-size:11px;color:var(--muted);text-align:center}
 
-  /* PIN & History modals */
   .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);z-index:90}
   .modal.open{display:grid}
   .card{width:min(640px,94vw);background:var(--card);border-radius:12px;border:1px solid var(--pill-br);box-shadow:var(--shadow-card);padding:12px}
@@ -113,7 +85,6 @@
 </style>
 </head>
 <body data-theme="dark">
-  <!-- PIN -->
   <div class="modal" id="pinModal">
     <div class="card">
       <h3 id="pinTitle">Acceso administrador</h3>
@@ -128,7 +99,6 @@
     </div>
   </div>
 
-  <!-- History Modal (aligned + edit tools) -->
   <div class="modal" id="historyModal">
     <div class="card">
       <h3 id="historyTitle">Historial</h3>
@@ -144,7 +114,6 @@
     </div>
   </div>
 
-  <!-- Admin Dashboard -->
   <div class="dash" id="adminDash" aria-hidden="true">
     <div class="desk">
       <div class="bar">
@@ -173,7 +142,8 @@
         <div class="row" style="justify-content:space-between">
           <div class="field"><em>Editar/guardar resultados manualmente.</em></div>
           <div class="row">
-            <button class="ghost" id="resetResults">Resetear resultados</button>
+            <button class="ghost" id="refreshFromOCR">Refrescar desde OCR</button>
+            <button class="ghost" id="resetResults">Reset results</button>
           </div>
         </div>
         <div id="manualTable"></div>
@@ -253,16 +223,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
-  /*************** i18n ***************/
-  const i18n={ es:{usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones",date:"Fecha",history:"Historial",viewHistory:"Historial",reset:"Resetear resultados"},
-              en:{usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions",date:"Date",history:"History",viewHistory:"History",reset:"Reset results"} };
+  const i18n={ es:{usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones",date:"Fecha",history:"Historial",viewHistory:"Historial",reset:"Resetear resultados",refresh:"Refrescar desde OCR"},
+              en:{usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions",date:"Date",history:"History",viewHistory:"History",reset:"Reset results",refresh:"Refresh from OCR"} };
   let lang=localStorage.getItem("lang")||"es";
   function applyLang(){ document.getElementById("subTitle").textContent = lang==="es"?"Resultados en vivo — USA, RD & Special":"Live results — USA, RD & Special"; render(); }
 
-  /*************** Theme ***************/
   const savedTheme=localStorage.getItem("theme")||"dark"; document.body.setAttribute("data-theme",savedTheme);
 
-  /*************** Admin open + PIN ***************/
   const ADMIN_PIN="1983";
   const adminDash=document.getElementById("adminDash");
   const pinModal=document.getElementById("pinModal");
@@ -276,43 +243,38 @@
 
   function openAdmin(){
     adminDash.classList.add("open");
-    // Tabs
     const tabs=[...document.querySelectorAll(".tab")];
     const bodies=[...document.querySelectorAll(".desk .body")];
     function setTab(id){ tabs.forEach(t=>t.classList.toggle("active", t.dataset.tab===id)); bodies.forEach(b=>b.classList.toggle("active", b.id==="tab-"+id)); if(id==="results") buildManual(); if(id==="ocr") buildOCR(); if(id==="catalog") buildCatalog(); if(id==="logos") buildLogos(); if(id==="visibility") buildVisibility(); }
     tabs.forEach(t=>t.onclick=()=>setTab(t.dataset.tab)); setTab("results");
     document.getElementById("closeAdmin").onclick=()=>adminDash.classList.remove("open");
-    // Wire toggles every open
     const themeTgl=document.getElementById("themeTgl"); const langTgl=document.getElementById("langTgl");
     themeTgl.checked=(localStorage.getItem("theme")||"dark")==="light";
     langTgl.checked=(lang==="en");
     themeTgl.onchange=(e)=>{const th=e.target.checked?"light":"dark"; document.body.setAttribute("data-theme",th); localStorage.setItem("theme",th);};
     langTgl.onchange=(e)=>{ lang=e.target.checked?"en":"es"; localStorage.setItem("lang",lang); applyLang(); };
     document.getElementById("search").oninput=()=>render();
-    // Date prefill
     const dateInput=document.getElementById("resultDate");
     const storedDate = localStorage.getItem("br_date") || new Date().toISOString().slice(0,10);
     dateInput.value = storedDate;
     dateInput.onchange = () => localStorage.setItem("br_date", dateInput.value);
-    // Auto scroll mirror
     document.getElementById("autoScrollBtn").onclick=toggleAutoScroll;
-    // Reset results
     const resetBtn=document.getElementById("resetResults");
     resetBtn.textContent=i18n[lang].reset;
     resetBtn.onclick=()=>{
       if(confirm("¿Seguro que deseas borrar todos los resultados e historial?")){ localStorage.removeItem(KEY_RESULTS); localStorage.removeItem(KEY_HISTORY); alert("Resultados reseteados."); render(); buildManual(); }
     };
+    // Nuevo: refrescar desde OCR
+    const refreshBtn=document.getElementById("refreshFromOCR");
+    refreshBtn.textContent=i18n[lang].refresh;
+    refreshBtn.onclick=()=>importFromOCRSnapshot();
   }
 
-  /*************** Date helper ***************/
   function getSelectedDateISO(){
     const d = localStorage.getItem("br_date") || new Date().toISOString().slice(0,10);
-    // store at noon local to avoid TZ day-shift
-    const dt = new Date(d+"T12:00:00");
-    return dt.toISOString();
+    const dt = new Date(d+"T12:00:00"); return dt.toISOString();
   }
 
-  /*************** Auto scroll (moderate) ***************/
   let scrollTimer=null, scrollDown=true;
   function toggleAutoScroll(){
     const headerBtn=document.getElementById("autoScrollHeader");
@@ -320,7 +282,7 @@
     if(headerBtn) headerBtn.textContent="■ Detener";
     const area=document.scrollingElement;
     scrollTimer=setInterval(()=>{
-      const step=0.35; // ~35 px/s
+      const step=0.35;
       area.scrollBy(0, scrollDown?step:-step);
       if(area.scrollTop+window.innerHeight+2>=area.scrollHeight) scrollDown=false;
       if(area.scrollTop<=1) scrollDown=true;
@@ -328,8 +290,7 @@
   }
   document.getElementById("autoScrollHeader").onclick=toggleAutoScroll;
 
-  /*************** Catalog + persistence ***************/
-  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1"; const KEY_HISTORY="br_history_v1";
+  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1"; const KEY_HISTORY="br_history_v1"; const KEY_OCR_PREVIEW="br_ocr_preview_v1";
   function minus20(t){const [H,M]=t.split(":").map(Number); const d=new Date(); d.setHours(H,M,0,0); d.setMinutes(d.getMinutes()-20); return d.toTimeString().slice(0,5);}
   const ALL=[0,1,2,3,4,5,6], MON_SAT=[1,2,3,4,5,6];
   const SEED={
@@ -391,7 +352,6 @@
     render();
   }
 
-  /*************** Manual Results table ***************/
   function buildManual(){
     const host=document.getElementById("manualTable"); host.innerHTML="";
     const cat=loadCatalog();
@@ -417,7 +377,6 @@
     });
   }
 
-  /*************** OCR (batch) ***************/
   let OCR_TEXTS=[];
   function buildOCR(){
     const drop=document.getElementById("drop"); const fileInput=document.getElementById("file"); const out=document.getElementById("ocrOut");
@@ -427,7 +386,7 @@
     drop.addEventListener("drop",e=>{ if(e.dataTransfer.files?.length) processFiles([...e.dataTransfer.files]); });
     fileInput.onchange=(e)=>{ if(e.target.files?.length) processFiles([...e.target.files]); };
     document.getElementById("btnParse").onclick=()=>renderOCRTable(out.value);
-    document.getElementById("btnAssignAll").onclick=()=>assignAllFromOCR();
+    document.getElementById("btnAssignAll").onclick=()=>{ assignAllFromOCR(); buildManual(); };
   }
   async function processFiles(files){
     const out=document.getElementById("ocrOut"); out.value="Procesando "+files.length+" imagen(es)...";
@@ -460,31 +419,74 @@
     }
     return rows;
   }
+
+  // Guarda snapshot de previsualización
+  function persistOCRPreview(rows){
+    localStorage.setItem(KEY_OCR_PREVIEW, JSON.stringify(rows));
+  }
+
   function renderOCRTable(text){
     const box=document.getElementById("ocrTable"); box.innerHTML="";
     const rows = text.split(/\n---\n/).flatMap(parseOCRTextBlock);
     const table=document.createElement("table");
     table.innerHTML=`<thead><tr><th>${i18n[lang].abbr}</th><th>${i18n[lang].map}</th><th>${i18n[lang].detected}</th><th>${i18n[lang].value}</th><th>${i18n[lang].actions}</th></tr></thead>`;
     const tb=document.createElement("tbody");
+    const snapshot=[];
     rows.forEach(r=>{
       const map=findTarget(r.abbr);
       const tr=document.createElement("tr");
       const mapTxt=map?`${map.section}/${map.id}/${map.draw}`:"—";
       const inp=document.createElement("input"); inp.value=r.detected.replace(/\s*-\s*/g,"-");
+      inp.oninput=()=>{ // actualizar snapshot en vivo
+        const idx=[...tb.children].indexOf(tr);
+        if(idx>=0){ snapshot[idx].value=inp.value; persistOCRPreview(snapshot); }
+      };
       const btn=document.createElement("button"); btn.className="btn"; btn.textContent=i18n[lang].save;
-      btn.onclick=()=>{ if(!map) return; const val=inp.value.trim(); const ok = map.section==="usa" ? /^\d{3}-\d{4}$/.test(val) : (/^\d{2}-\d{2}-\d{2}$/.test(val)||/^\d{3}$/.test(val)); if(!ok){inp.style.borderColor="var(--danger)"; setTimeout(()=>inp.style.borderColor="",800); return;} setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); };
+      btn.onclick=()=>{ if(!map) return; const val=inp.value.trim(); setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); };
       tr.appendChild(td(r.abbr)); tr.appendChild(td(mapTxt)); tr.appendChild(td(r.detected)); const tdv=td(""); tdv.appendChild(inp); tr.appendChild(tdv); const tdb=td(""); tdb.appendChild(btn); tr.appendChild(tdb);
       tb.appendChild(tr);
+      snapshot.push({abbr:r.abbr, map:map?{section:map.section,id:map.id,draw:map.draw}:null, value:inp.value});
     });
     table.appendChild(tb); box.appendChild(table);
-  }
-  function assignAllFromOCR(){
-    const rows=[...document.querySelectorAll("#ocrTable tbody tr")];
-    rows.forEach(tr=>{ const ab=tr.children[0].textContent; const map=findTarget(ab); if(!map) return; const val=tr.querySelector("input").value.trim(); const ok = map.section==="usa" ? /^\d{3}-\d{4}$/.test(val) : (/^\d{2}-\d{2}-\d{2}$/.test(val)||/^\d{3}$/.test(val)); if(ok) setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); });
-    alert("Filas guardadas.");
+    persistOCRPreview(snapshot);
   }
 
-  /*************** Catalog CRUD / Logos / Visibility (unchanged) ***************/
+  function assignAllFromOCR(){
+    const rows=[...document.querySelectorAll("#ocrTable tbody tr")];
+    rows.forEach(tr=>{ const ab=tr.children[0].textContent; const map=findTarget(ab); if(!map) return; const val=tr.querySelector("input").value.trim(); if(val) setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); });
+    alert("Filas guardadas.");
+    buildManual();
+  }
+
+  // Importar desde snapshot de OCR al tab Resultados
+  function importFromOCRSnapshot(){
+    const snap = JSON.parse(localStorage.getItem(KEY_OCR_PREVIEW)||"null");
+    if(!snap || !Array.isArray(snap) || snap.length===0){ alert("No hay una previsualización de OCR reciente. Ve al tab OCR y pulsa 'Previsualizar tabla'."); return; }
+    let ok=0, skip=0;
+    snap.forEach(row=>{
+      if(!row.map){ skip++; return; }
+      const {section,id,draw}=row.map; const raw=(row.value||"").trim();
+      if(!raw){ skip++; return; }
+      const val = softNormalize(section, raw);
+      setResult(section,id,draw,val, getSelectedDateISO());
+      ok++;
+    });
+    buildManual();
+    alert(`Importadas ${ok} fila(s) desde OCR. Omitidas ${skip}.`);
+  }
+
+  function softNormalize(section, raw){
+    let v = raw.trim().replace(/\s{2,}/g,' ').replace(/\s*—\s*/g,'-').replace(/\s*-\s*/g,'-');
+    if(section==="usa"){
+      const m = v.match(/^\s*(\d{3})[\s\-]?(\d{4})\s*$/);
+      if(m) v = `${m[1]}-${m[2]}`;
+    } else if(section==="rd"){
+      const parts = v.replace(/\s+/g,'-').split('-').filter(Boolean);
+      if(parts.length===3 && parts.every(p=>/^\d{2}$/.test(p))) v = parts.join('-');
+    }
+    return v;
+  }
+
   function buildCatalog(){
     const host=document.getElementById("catalogTable"); host.innerHTML="";
     const cat=loadCatalog();
@@ -557,7 +559,6 @@
     table.appendChild(tb); host.appendChild(table);
   }
 
-  /*************** Mapping for OCR ***************/
   const MAP=[
     {k:["MIDDAY","NY AM","NY MID","N Y"], map:{section:"usa",id:"ny",draw:"Midday"}},
     {k:["STATE","NYS","NY PM","NY NIGHT","NEW YORK EVENING","STATE-"], map:{section:"usa",id:"ny",draw:"Evening"}},
@@ -595,7 +596,6 @@
     return null;
   }
 
-  /*************** History editor ***************/
   let currentHistKey=null;
   function openHistory(section,id,draw,name){
     currentHistKey = historyKey(section,id,draw);
@@ -612,7 +612,6 @@
       const save=document.createElement("button"); save.className="btn"; save.textContent="Guardar"; save.onclick=()=>{
         rec.ts = new Date(dIn.value+"T12:00:00").toISOString(); rec.value=vIn.value.trim();
         const H=JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"); H[currentHistKey][idx]=rec; localStorage.setItem(KEY_HISTORY, JSON.stringify(H));
-        // If edited row is the most recent, sync current result
         if(idx===H[currentHistKey].length-1){
           const [section,id,draw]=currentHistKey.split("/");
           const R=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}"); R[section]??={}; R[section][id]??={}; R[section][id][draw]=rec; localStorage.setItem(KEY_RESULTS, JSON.stringify(R)); render();
@@ -632,20 +631,17 @@
     });
     t.appendChild(tb); body.appendChild(t);
     document.getElementById("historyModal").classList.add("open");
-    // Add-new prefill
     document.getElementById("histDate").value = (localStorage.getItem("br_date") || new Date().toISOString().slice(0,10));
     document.getElementById("histValue").value = "";
     document.getElementById("histAdd").onclick=()=>{
       const d=document.getElementById("histDate").value; const v=document.getElementById("histValue").value.trim(); if(!d||!v) return;
       const H=JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"); H[currentHistKey]=H[currentHistKey]||[]; const rec={ts:new Date(d+"T12:00:00").toISOString(), value:v}; H[currentHistKey].push(rec); localStorage.setItem(KEY_HISTORY, JSON.stringify(H));
-      // set also as current
       const [section,id,draw]=currentHistKey.split("/"); const R=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}"); R[section]??={}; R[section][id]??={}; R[section][id][draw]=rec; localStorage.setItem(KEY_RESULTS, JSON.stringify(R)); render();
       openHistory(section,id,draw,name);
     };
   }
   document.getElementById("closeHistory").onclick=()=>document.getElementById("historyModal").classList.remove("open");
 
-  /*************** Public tiles (centered numbers, bigger logo, name below) ***************/
   function formatDate(ts){ if(!ts) return "—"; const d=new Date(ts); const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0"); return `${yyyy}-${mm}-${dd}`; }
   function isOpen(d){ const now=new Date(); const [cH,cM]=minus20(d.time).split(":").map(Number); const nowM=now.getHours()*60+now.getMinutes(); const closeM=cH*60+cM; const today=now.getDay(); return nowM<closeM && d.days.includes(today); }
   function renderSection(key,title){
@@ -692,3 +688,4 @@
   </script>
 </body>
 </html>
+ 
