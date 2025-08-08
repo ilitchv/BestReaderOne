@@ -1,694 +1,540 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Beast Reader — Resultados de Loterías</title>
-<style>
-  :root{
-    /* DARK THEME — deep green */
-    --bg:#0f2018;              /* background */
-    --card:#142a22;            /* surfaces */
-    --text:#eaf7f1;            /* primary text */
-    --muted:#a5c1b6;           /* secondary text */
-    --accent1:#00e6a1;         /* gradient 1 */
-    --accent2:#24b28a;         /* gradient 2 */
-    --accent3:#2fe6ff;         /* extra accent (cyan) */
-    --danger:#ff5c7a;
-    --ok:#19dd9a;
-    --tile:160px;
-    --ring:0 0 10px rgba(0,230,161,.22), 0 0 28px rgba(47,230,255,.18);
-    --pill-bg: rgba(255,255,255,.08);
-    --pill-br: rgba(255,255,255,.14);
-    --shadow-card: 0 10px 30px rgba(0,0,0,.25);
-  }
-  [data-theme="light"]{
-    /* LIGHT THEME — warm beige background (darker) + cream tiles */
-    --bg:#e9dece;              /* darker than tiles */
-    --card:#fff7eb;            /* used for tiles & admin cards */
-    --text:#2a2a24;
-    --muted:#6b6458;
-    --accent1:#ffa94d;
-    --accent2:#ff6b6b;
-    --accent3:#36cfc9;
-    --danger:#d21f3c;
-    --ok:#0a8f64;
-    --pill-bg: rgba(0,0,0,.05);
-    --pill-br: rgba(0,0,0,.10);
-    --ring:0 0 10px rgba(255,169,77,.18), 0 0 28px rgba(255,107,107,.15);
-    --shadow-card: 0 10px 24px rgba(50,30,10,.15);
-  }
+# We'll create a JS patch file br_patch_v8_3_1.js that can be included or pasted into user's HTML.
+# The patch focuses on:
+# - Adding a "Refresh from OCR" button that copies the exact preview table values into the Admin Results table and auto-saves each row.
+# - Allowing OCR text paste and CSV import (within OCR tab) by capturing the preview table as a snapshot saved to localStorage `br_ocr_preview_v1`.
+# - Robust alias mapping to match OCR rows to results rows.
+# - Guarding history edits behind admin PIN 1983 using sessionStorage 'br_is_admin'.
+# - Non-invasive: only appends new elements and does not modify existing CSS/theme/layout.
 
-  body{
-    margin:0;
-    background:
-      radial-gradient(1200px 1200px at 10% -10%, rgba(0,230,161,.10), transparent 60%),
-      radial-gradient(900px 900px at 110% 10%, rgba(47,230,255,.12), transparent 60%),
-      var(--bg);
-    color:var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
-  }
-  header{
-    position:sticky; top:0; z-index:50;
-    backdrop-filter: blur(10px);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, #0000), color-mix(in srgb, var(--bg) 60%, #0000));
-    border-bottom: 1px solid rgba(255,255,255,.12);
-  }
-  .wrap{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:14px;align-items:center}
-  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-  .logo svg{width:46px;height:46px;filter: drop-shadow(0 0 12px rgba(0,230,161,.45));}
-  .logo h1{font-size:clamp(18px,3.2vw,28px);margin:0}
-  .sub{font-size:12px;color:var(--muted)}
-  .header-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
-  .btn{background:linear-gradient(135deg, var(--accent1), var(--accent2));color:#07130f;border:0;padding:9px 12px;border-radius:999px;font-weight:800;cursor:pointer;box-shadow:var(--ring)}
-  .ghost{background:transparent;border:1px solid var(--pill-br);color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer}
+patch_js = r"""
+/* Beast Reader — Patch v8.3.1 (safe, non-invasive)
+   - Restores previous behavior (no admin autoload, no theme changes).
+   - Adds "Refresh from OCR" (Results tab) that copies EXACT preview values to all rows and auto-saves.
+   - Adds CSV import + text paste capture within OCR tab (uses existing preview table).
+   - Requires Admin PIN for history edits (sessionStorage 'br_is_admin' == '1').
+   This file is safe to append at the end of your current HTML, after the main app scripts.
+*/
 
-  /* Admin Dashboard */
-  .dash{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:80}
-  .dash.open{display:block}
-  .desk{position:absolute;inset:24px;display:flex;flex-direction:column;background:var(--card);
-        border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:var(--shadow-card);overflow:hidden}
-  .desk .bar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.12)}
-  .tabs{display:flex;gap:6px}
-  .tab{background:var(--pill-bg);border:1px solid var(--pill-br);padding:8px 12px;border-radius:10px;cursor:pointer}
-  .tab.active{background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#062119;font-weight:800}
-  .desk .body{flex:1;display:none;padding:12px;overflow:auto}
-  .desk .body.active{display:block}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
-  input[type="text"],input[type="password"],input[type="date"],select,textarea{background:color-mix(in srgb, var(--card) 94%, #fff 6%);color:var(--text);border:1px solid var(--pill-br);border-radius:10px;padding:8px 10px}
-  [data-theme="light"] input[type="text"],[data-theme="light"] input[type="password"],[data-theme="light"] input[type="date"],[data-theme="light"] select,[data-theme="light"] textarea{background:#fff;color:#2a2a24}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{border-bottom:1px solid rgba(255,255,255,.14);padding:6px;vertical-align:top}
-  .ocr-drop{border:1px dashed var(--pill-br);padding:12px;border-radius:10px;text-align:center}
-  .ocr-drop.drag{background:rgba(47,230,255,.10)}
+(function () {
+  const PIN_CODE = '1983';
+  const LS_OCR_PREVIEW = 'br_ocr_preview_v1';
 
-  main{max-width:1200px;margin:18px auto 64px;padding:0 14px}
-  .section{margin-bottom:18px}
-  .section h2{margin:0 0 12px 0;font-size:18px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile),1fr));gap:12px}
-  .tile{position:relative;background:var(--card);
-        border:1px solid var(--pill-br);border-radius:14px;padding:10px;
-        aspect-ratio:1/1.08;display:flex;flex-direction:column;justify-content:space-between;
-        box-shadow:var(--shadow-card);overflow:hidden}
-  .top{display:flex;justify-content:center}
-  .emblem{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--accent1),var(--accent3));
-          display:grid;place-items:center;color:#062119;font-size:16px;font-weight:900;box-shadow:0 0 16px rgba(0,230,161,.4);overflow:hidden}
-  .emblem img{width:100%;height:100%;object-fit:cover;border-radius:12px}
-  .nums{font-size:24px;letter-spacing:2px;font-weight:900;text-align:center;margin-top:6px}
-  .nameUnder{font-size:13px;color:var(--muted);text-align:center;margin-top:4px}
-  .pill{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--pill-bg);border:1px solid var(--pill-br);color:var(--text);margin-top:6px}
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--muted);align-items:center;margin-top:6px}
-  .status{font-size:10px;padding:2px 6px;border-radius:999px;justify-self:start;background:rgba(25,221,154,.15);color:#19dd9a;border:1px solid rgba(25,221,154,.35)}
-  .status.closed{background:rgba(255,92,122,.12);color:#ff5c7a;border-color:rgba(255,92,122,.35)}
-  .history-btn{justify-self:end;font-size:11px;color:var(--text);background:var(--pill-bg);border:1px solid var(--pill-br);padding:3px 6px;border-radius:8px;cursor:pointer}
-  .date{font-size:11px;color:var(--muted);text-align:center}
-
-  /* PIN & History modals */
-  .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);z-index:90}
-  .modal.open{display:grid}
-  .card{width:min(640px,94vw);background:var(--card);border-radius:12px;border:1px solid var(--pill-br);box-shadow:var(--shadow-card);padding:12px}
-  .card h3{margin:8px 0 12px 0}
-  .eye{cursor:pointer;user-select:none;font-size:18px;padding:6px}
-</style>
-</head>
-<body data-theme="dark">
-  <!-- PIN -->
-  <div class="modal" id="pinModal">
-    <div class="card">
-      <h3 id="pinTitle">Acceso administrador</h3>
-      <div class="field">
-        <label id="pinLabel">Introduce PIN</label>
-        <div class="row">
-          <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••"/>
-          <span id="toggleEye" class="eye" title="Mostrar/Ocultar">👁️</span>
-          <button class="btn" id="pinOk">Entrar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- History Modal (aligned + edit tools) -->
-  <div class="modal" id="historyModal">
-    <div class="card">
-      <h3 id="historyTitle">Historial</h3>
-      <div id="historyBody"></div>
-      <div class="row" style="justify-content:space-between;margin-top:10px">
-        <div class="row">
-          <input id="histDate" type="date"/>
-          <input id="histValue" placeholder="Resultado"/>
-          <button class="btn" id="histAdd">Agregar</button>
-        </div>
-        <button class="ghost" id="closeHistory">Cerrar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Admin Dashboard -->
-  <div class="dash" id="adminDash" aria-hidden="true">
-    <div class="desk">
-      <div class="bar">
-        <strong>Beast Reader — Admin</strong>
-        <span class="row">
-          <span>Idioma</span><input id="langTgl" type="checkbox"/>
-          <span style="margin-left:8px">Tema</span><input id="themeTgl" type="checkbox"/>
-          <span style="margin-left:12px">Fecha para resultados</span><input id="resultDate" type="date"/>
-        </span>
-        <input id="search" placeholder="Buscar..." style="margin-left:auto;min-width:220px"/>
-        <button class="ghost" id="closeAdmin">Cerrar</button>
-      </div>
-      <div class="bar">
-        <div class="tabs">
-          <div class="tab active" data-tab="results">Resultados</div>
-          <div class="tab" data-tab="ocr">OCR</div>
-          <div class="tab" data-tab="catalog">Catálogo</div>
-          <div class="tab" data-tab="logos">Logos</div>
-          <div class="tab" data-tab="visibility">Visibilidad</div>
-        </div>
-        <div class="row" style="margin-left:auto">
-          <button class="ghost" id="autoScrollBtn">Auto Scroll</button>
-        </div>
-      </div>
-      <div class="body active" id="tab-results">
-        <div class="row" style="justify-content:space-between">
-          <div class="field"><em>Editar/guardar resultados manualmente.</em></div>
-          <div class="row">
-            <button class="ghost" id="resetResults">Resetear resultados</button>
-          </div>
-        </div>
-        <div id="manualTable"></div>
-      </div>
-      <div class="body" id="tab-ocr">
-        <div class="row">
-          <div class="field" style="flex:1">
-            <label>OCR — Arrastra imágenes o haz clic (múltiples)</label>
-            <div id="drop" class="ocr-drop">Suelta aquí (.jpg/.png). <input type="file" id="file" accept="image/*" multiple hidden /></div>
-          </div>
-          <div class="field">
-            <label>Acciones</label>
-            <div class="row">
-              <button class="ghost" id="btnParse">Previsualizar tabla</button>
-              <button class="btn" id="btnAssignAll">Guardar todos</button>
-            </div>
-          </div>
-        </div>
-        <div class="field">
-          <label>Contenido OCR (bruto)</label>
-          <textarea id="ocrOut" rows="8" placeholder="Aquí aparecerá el texto detectado..."></textarea>
-        </div>
-        <div class="field">
-          <label>Tabla detectada</label>
-          <div id="ocrTable"></div>
-        </div>
-      </div>
-      <div class="body" id="tab-catalog">
-        <div class="row" style="justify-content:space-between">
-          <div><strong>Catálogo (editar draws, horas y visibilidad)</strong></div>
-          <div class="row">
-            <button class="ghost" id="addLottery">Añadir lotería</button>
-            <button class="ghost" id="addDraw">Añadir draw a selección</button>
-            <button class="btn" id="saveCatalog">Guardar catálogo</button>
-          </div>
-        </div>
-        <div id="catalogTable"></div>
-      </div>
-      <div class="body" id="tab-logos">
-        <div class="row">
-          <input id="logoFile" type="file" accept="image/*" multiple/>
-          <button class="ghost" id="assignLogo">Asignar a selección</button>
-          <button class="ghost" id="removeLogo">Quitar logo de selección</button>
-        </div>
-        <div id="logoGrid"></div>
-      </div>
-      <div class="body" id="tab-visibility">
-        <div class="field"><em>Marca qué loterías se muestran en la página pública.</em></div>
-        <div id="visibilityTable"></div>
-      </div>
-    </div>
-  </div>
-
-  <header>
-    <div class="wrap">
-      <a class="logo" href="#">
-        <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="var(--accent1)"/><stop offset="1" stop-color="var(--accent3)"/></linearGradient></defs>
-          <rect x="4" y="4" width="64" height="64" rx="14" fill="url(#g1)"/>
-          <circle cx="26" cy="28" r="5" fill="#001219"/><circle cx="46" cy="28" r="5" fill="#001219"/>
-          <path d="M18 46c10-2 22-12 18-22-3 8 8 14 19 11-4 12-18 19-37 11z" fill="#001219" opacity=".85"/>
-        </svg>
-        <div>
-          <h1>Beast Reader</h1>
-          <div class="sub" id="subTitle">Resultados en vivo — USA, RD & Special</div>
-        </div>
-      </a>
-      <div class="header-actions">
-        <button class="ghost" id="adminBtn">Admin</button>
-        <button class="ghost" id="autoScrollHeader">⟱ Auto Scroll</button>
-      </div>
-    </div>
-  </header>
-
-  <main id="content"></main>
-
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script>
-  /*************** i18n ***************/
-  const i18n={ es:{usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones",date:"Fecha",history:"Historial",viewHistory:"Historial",reset:"Resetear resultados"},
-              en:{usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions",date:"Date",history:"History",viewHistory:"History",reset:"Reset results"} };
-  let lang=localStorage.getItem("lang")||"es";
-  function applyLang(){ document.getElementById("subTitle").textContent = lang==="es"?"Resultados en vivo — USA, RD & Special":"Live results — USA, RD & Special"; render(); }
-
-  /*************** Theme ***************/
-  const savedTheme=localStorage.getItem("theme")||"dark"; document.body.setAttribute("data-theme",savedTheme);
-
-  /*************** Admin open + PIN ***************/
-  const ADMIN_PIN="1983";
-  const adminDash=document.getElementById("adminDash");
-  const pinModal=document.getElementById("pinModal");
-  const pinInput=document.getElementById("pinInput");
-  const pinOk=document.getElementById("pinOk");
-  const toggleEye=document.getElementById("toggleEye");
-  document.getElementById("adminBtn").addEventListener("click",()=>{pinModal.classList.add("open"); pinInput.value=""; pinInput.type="password";});
-  pinOk.addEventListener("click",()=>{ if(pinInput.value===ADMIN_PIN){ pinModal.classList.remove("open"); openAdmin(); } else { pinInput.style.borderColor="var(--danger)"; setTimeout(()=>pinInput.style.borderColor="",600);} });
-  toggleEye.addEventListener("click",()=>{ pinInput.type=pinInput.type==="password"?"text":"password"; });
-  pinModal.addEventListener("click",e=>{ if(e.target===pinModal) pinModal.classList.remove("open"); });
-
-  function openAdmin(){
-    adminDash.classList.add("open");
-    // Tabs
-    const tabs=[...document.querySelectorAll(".tab")];
-    const bodies=[...document.querySelectorAll(".desk .body")];
-    function setTab(id){ tabs.forEach(t=>t.classList.toggle("active", t.dataset.tab===id)); bodies.forEach(b=>b.classList.toggle("active", b.id==="tab-"+id)); if(id==="results") buildManual(); if(id==="ocr") buildOCR(); if(id==="catalog") buildCatalog(); if(id==="logos") buildLogos(); if(id==="visibility") buildVisibility(); }
-    tabs.forEach(t=>t.onclick=()=>setTab(t.dataset.tab)); setTab("results");
-    document.getElementById("closeAdmin").onclick=()=>adminDash.classList.remove("open");
-    // Wire toggles every open
-    const themeTgl=document.getElementById("themeTgl"); const langTgl=document.getElementById("langTgl");
-    themeTgl.checked=(localStorage.getItem("theme")||"dark")==="light";
-    langTgl.checked=(lang==="en");
-    themeTgl.onchange=(e)=>{const th=e.target.checked?"light":"dark"; document.body.setAttribute("data-theme",th); localStorage.setItem("theme",th);};
-    langTgl.onchange=(e)=>{ lang=e.target.checked?"en":"es"; localStorage.setItem("lang",lang); applyLang(); };
-    document.getElementById("search").oninput=()=>render();
-    // Date prefill
-    const dateInput=document.getElementById("resultDate");
-    const storedDate = localStorage.getItem("br_date") || new Date().toISOString().slice(0,10);
-    dateInput.value = storedDate;
-    dateInput.onchange = () => localStorage.setItem("br_date", dateInput.value);
-    // Auto scroll mirror
-    document.getElementById("autoScrollBtn").onclick=toggleAutoScroll;
-    // Reset results
-    const resetBtn=document.getElementById("resetResults");
-    resetBtn.textContent=i18n[lang].reset;
-    resetBtn.onclick=()=>{
-      if(confirm("¿Seguro que deseas borrar todos los resultados e historial?")){ localStorage.removeItem(KEY_RESULTS); localStorage.removeItem(KEY_HISTORY); alert("Resultados reseteados."); render(); buildManual(); }
-    };
-  }
-
-  /*************** Date helper ***************/
-  function getSelectedDateISO(){
-    const d = localStorage.getItem("br_date") || new Date().toISOString().slice(0,10);
-    // store at noon local to avoid TZ day-shift
-    const dt = new Date(d+"T12:00:00");
-    return dt.toISOString();
-  }
-
-  /*************** Auto scroll (moderate) ***************/
-  let scrollTimer=null, scrollDown=true;
-  function toggleAutoScroll(){
-    const headerBtn=document.getElementById("autoScrollHeader");
-    if(scrollTimer){ clearInterval(scrollTimer); scrollTimer=null; if(headerBtn) headerBtn.textContent="⟱ Auto Scroll"; return;}
-    if(headerBtn) headerBtn.textContent="■ Detener";
-    const area=document.scrollingElement;
-    scrollTimer=setInterval(()=>{
-      const step=0.35; // ~35 px/s
-      area.scrollBy(0, scrollDown?step:-step);
-      if(area.scrollTop+window.innerHeight+2>=area.scrollHeight) scrollDown=false;
-      if(area.scrollTop<=1) scrollDown=true;
-    }, 10);
-  }
-  document.getElementById("autoScrollHeader").onclick=toggleAutoScroll;
-
-  /*************** Catalog + persistence ***************/
-  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1"; const KEY_HISTORY="br_history_v1";
-  function minus20(t){const [H,M]=t.split(":").map(Number); const d=new Date(); d.setHours(H,M,0,0); d.setMinutes(d.getMinutes()-20); return d.toTimeString().slice(0,5);}
-  const ALL=[0,1,2,3,4,5,6], MON_SAT=[1,2,3,4,5,6];
-  const SEED={
-    usa:[
-      {id:"ny", name:"New York", tz:"ET", visible:true, draws:[{code:"Midday", time:"14:30", days:ALL},{code:"Evening", time:"22:30", days:ALL}]},
-      {id:"nj", name:"New Jersey", tz:"ET", visible:true, draws:[{code:"Midday", time:"12:59", days:ALL},{code:"Evening", time:"22:57", days:ALL}]},
-      {id:"ct", name:"Connecticut", tz:"ET", visible:true, draws:[{code:"Day", time:"13:57", days:ALL},{code:"Night", time:"22:29", days:ALL}]},
-      {id:"fl", name:"Florida", tz:"ET", visible:true, draws:[{code:"Midday", time:"13:30", days:ALL},{code:"Evening", time:"21:45", days:ALL}]},
-      {id:"ga", name:"Georgia", tz:"ET", visible:true, draws:[{code:"Midday", time:"12:29", days:ALL},{code:"Evening", time:"18:59", days:ALL},{code:"Night", time:"23:34", days:ALL}]},
-      {id:"pa", name:"Pennsylvania", tz:"ET", visible:true, draws:[{code:"Day", time:"13:35", days:ALL},{code:"Evening", time:"18:59", days:ALL}]},
-      {id:"de", name:"Delaware", tz:"ET", visible:true, draws:[{code:"Day", time:"13:58", days:ALL},{code:"Night", time:"19:57", days:ALL}]},
-      {id:"md", name:"Maryland", tz:"ET", visible:true, draws:[{code:"Midday", time:"12:28", days:ALL},{code:"Evening", time:"19:56", days:ALL}]},
-      {id:"ma", name:"Massachusetts", tz:"ET", visible:true, draws:[{code:"Midday", time:"14:00", days:ALL},{code:"Evening", time:"21:00", days:ALL}]},
-      {id:"va", name:"Virginia", tz:"ET", visible:true, draws:[{code:"Day", time:"13:59", days:ALL},{code:"Night", time:"23:00", days:ALL}]},
-      {id:"mi", name:"Michigan", tz:"ET", visible:true, draws:[{code:"Midday", time:"12:59", days:ALL},{code:"Evening", time:"19:29", days:ALL}]},
-      {id:"nc", name:"North Carolina", tz:"ET", visible:true, draws:[{code:"Day", time:"15:00", days:ALL},{code:"Evening", time:"23:22", days:ALL}]},
-      {id:"sc", name:"South Carolina", tz:"ET", visible:true, draws:[{code:"Midday", time:"12:59", days:MON_SAT},{code:"Evening", time:"18:59", days:ALL}]},
-      {id:"tx", name:"Texas", tz:"CT", visible:true, draws:[{code:"Morning", time:"10:00", days:MON_SAT},{code:"Day", time:"12:27", days:MON_SAT},{code:"Evening", time:"18:00", days:MON_SAT},{code:"Night", time:"22:12", days:MON_SAT}]},
-      {id:"tn", name:"Tennessee", tz:"CT", visible:true, draws:[{code:"Morning", time:"09:28", days:MON_SAT},{code:"Midday", time:"12:28", days:MON_SAT},{code:"Evening", time:"18:28", days:ALL}]}
-    ],
-    rd:[
-      {id:"real", name:"Lotería Real", tz:"AST", visible:true, draws:[{code:"Mediodía", time:"12:55", days:ALL}]},
-      {id:"ganamas", name:"Gana Más", tz:"AST", visible:true, draws:[{code:"Tarde", time:"14:30", days:ALL}]},
-      {id:"loteka", name:"Loteka", tz:"AST", visible:true, draws:[{code:"Noche", time:"19:55", days:ALL}]},
-      {id:"nacional", name:"Lotería Nacional", tz:"AST", visible:true, draws:[{code:"Tarde", time:"14:30", days:ALL},{code:"Noche", time:"21:00", days:[1,2,3,4,5,6]},{code:"Domingo", time:"18:00", days:[0]}]},
-      {id:"quiniela", name:"Quiniela Palé (Leidsa)", tz:"AST", visible:true, draws:[{code:"Diario", time:"20:55", days:[1,2,3,4,5,6]},{code:"Domingo", time:"15:55", days:[0]}]},
-      {id:"laprimera", name:"La Primera", tz:"AST", visible:true, draws:[{code:"AM", time:"12:00", days:ALL},{code:"PM", time:"20:00", days:ALL}]},
-      {id:"lasuerte", name:"La Suerte Dominicana", tz:"AST", visible:true, draws:[{code:"AM", time:"12:30", days:ALL},{code:"PM", time:"18:00", days:ALL}]},
-      {id:"lotedom", name:"LoteDom", tz:"AST", visible:true, draws:[{code:"Tarde", time:"13:55", days:ALL}]}
-    ],
-    special:[
-      {id:"ny-bk", name:"NY-BK", tz:"ET", visible:true, draws:[{code:"AM", time:"12:00", days:ALL},{code:"PM", time:"22:00", days:ALL}]},
-      {id:"ny-race", name:"NY Horses", tz:"ET", visible:true, draws:[{code:"R1", time:"14:00", days:ALL},{code:"R2", time:"18:30", days:ALL},{code:"R3", time:"21:30", days:ALL}]},
-      {id:"357", name:"3-5-7", tz:"ET", visible:true, draws:[{code:"Main", time:"20:30", days:ALL}]}
-    ]
+  // ---------- Utilities
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+  const txt = (el) => (el ? (el.textContent || '').trim() : '');
+  const norm = (s='') => s
+      .toString()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,]/g,'')
+      .replace(/\s+/g,' ').trim().toUpperCase();
+  const isAdmin = () => sessionStorage.getItem('br_is_admin') === '1';
+  const ensureAdmin = () => {
+    if (isAdmin()) return true;
+    const pin = prompt('Introduce PIN de administrador:');
+    if (pin && pin.trim() === PIN_CODE) {
+      sessionStorage.setItem('br_is_admin','1');
+      alert('Sesión de administrador activa.');
+      return true;
+    }
+    alert('Acción cancelada. Se requiere PIN de administrador.');
+    return false;
   };
-  function loadCatalog(){ return JSON.parse(localStorage.getItem(KEY_CATALOG)||"null")||SEED; }
-  function saveCatalog(cat){ localStorage.setItem(KEY_CATALOG, JSON.stringify(cat)); }
 
-  const logos = JSON.parse(localStorage.getItem(KEY_LOGOS)||"{}");
-  const results = JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}");
-  const history = JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}");
-  function historyKey(section,id,draw){ return `${section}/${id}/${draw}`; }
-  function appendHistory(section,id,draw,rec){
-    const key=historyKey(section,id,draw);
-    history[key] = history[key] || [];
-    const last = history[key][history[key].length-1];
-    if(!last || last.value !== rec.value || last.ts !== rec.ts){
-      history[key].push(rec);
-      if(history[key].length>100) history[key].shift();
-      localStorage.setItem(KEY_HISTORY, JSON.stringify(history));
-    }
-  }
-  function setResult(section,id,draw,value, tsOverride){
-    const ts = tsOverride || getSelectedDateISO();
-    results[section]??={}; results[section][id]??={}; results[section][id][draw]={value,ts};
-    localStorage.setItem(KEY_RESULTS, JSON.stringify(results));
-    appendHistory(section,id,draw,{value,ts});
-    render();
-  }
+  // ---------- Draw & lottery aliasing
+  // Draw slugs used in admin tables
+  const DRAW_EQ = {
+    'MIDDAY': ['MIDDAY','MEDIODIA','MEDIODÍA','AM','DAY'],
+    'EVENING': ['EVENING','PM','TARDE','EVE'],
+    'NIGHT': ['NIGHT','NOCHE'],
+    'DAY': ['DAY','DIA','DÍA','AM'], // CT/PA/VA have "Day" in UI
+    'AM': ['AM','A M'],
+    'PM': ['PM','P M'],
+    'MAIN': ['MAIN','R1','R2','R3'], // for special, will refine below
+    'R1': ['R1','R-1','1'],
+    'R2': ['R2','R-2','2'],
+    'R3': ['R3','R-3','3'],
+  };
 
-  /*************** Manual Results table ***************/
-  function buildManual(){
-    const host=document.getElementById("manualTable"); host.innerHTML="";
-    const cat=loadCatalog();
-    Object.keys(cat).forEach(section=>{
-      const h=document.createElement("h3"); h.textContent=(section==="usa"?i18n[lang].usa:section==="rd"?i18n[lang].rd:i18n[lang].special); host.appendChild(h);
-      const table=document.createElement("table");
-      table.innerHTML="<thead><tr><th>Lotería</th><th>Draw</th><th>Hora sorteo</th><th>Hora cierre</th><th>Resultado</th><th></th></tr></thead>";
-      const tb=document.createElement("tbody");
-      cat[section].forEach(l=>{
-        if(!l.visible) return;
-        l.draws.forEach(d=>{
-          const tr=document.createElement("tr");
-          const res=results[section]?.[l.id]?.[d.code]?.value||"";
-          const inp=document.createElement("input"); const fmt=section==="usa"?"123-4567":"12-34-56"; inp.placeholder=fmt; inp.value=res;
-          const btn=document.createElement("button"); btn.className="btn"; btn.textContent=i18n[lang].save;
-          btn.onclick=()=>setResult(section,l.id,d.code,inp.value.trim(), getSelectedDateISO());
-          tr.appendChild(td(l.name)); tr.appendChild(td(d.code)); tr.appendChild(td(d.time)); tr.appendChild(td(minus20(d.time)));
-          const tdv=td(""); tdv.appendChild(inp); tr.appendChild(tdv); const tdb=td(""); tdb.appendChild(btn); tr.appendChild(tdb);
-          tb.appendChild(tr);
-        });
-      });
-      table.appendChild(tb); host.appendChild(table);
-    });
-  }
-
-  /*************** OCR (batch) ***************/
-  let OCR_TEXTS=[];
-  function buildOCR(){
-    const drop=document.getElementById("drop"); const fileInput=document.getElementById("file"); const out=document.getElementById("ocrOut");
-    drop.onclick=()=>fileInput.click();
-    ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag")}));
-    ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag")}));
-    drop.addEventListener("drop",e=>{ if(e.dataTransfer.files?.length) processFiles([...e.dataTransfer.files]); });
-    fileInput.onchange=(e)=>{ if(e.target.files?.length) processFiles([...e.target.files]); };
-    document.getElementById("btnParse").onclick=()=>renderOCRTable(out.value);
-    document.getElementById("btnAssignAll").onclick=()=>assignAllFromOCR();
-  }
-  async function processFiles(files){
-    const out=document.getElementById("ocrOut"); out.value="Procesando "+files.length+" imagen(es)...";
-    OCR_TEXTS=[];
-    for(const f of files){
-      try{ const {data:{text}}=await Tesseract.recognize(f,'eng',{logger:m=>{}}); OCR_TEXTS.push(text.trim()); }catch(e){ OCR_TEXTS.push("ERROR "+e.message); }
-    }
-    out.value=OCR_TEXTS.join("\n---\n"); renderOCRTable(out.value);
-  }
-  function parseOCRTextBlock(txt){
-    const out=[]; const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const header = lines.find(x=>/loter[ií]a|first|second|third|pick_3|pick_4/i.test(x));
-    if(header){
-      for(const ln of lines){
-        const m = ln.match(/^([A-Za-z0-9\-\s\.]+?)\s+((?:\d{2}|x{1,2}|xx)\b.*)$/i);
-        if(!m) continue;
-        const name=m[1].trim(); const right=m[2].trim().replace(/\s+/g,' ').replace(/\s-\s/g,'-');
-        const p3=right.match(/\b(\d{3})\b(?!-)/); const p4=right.match(/\b(\d{4})\b/);
-        const pairs=(right.match(/\b\d{2}\b/g)||[]).slice(0,3);
-        out.push({abbr:name, detected: p3&&p4 ? (p3[1]+"-"+p4[1]) : pairs.length===3 ? pairs.join("-") : right});
+  function matchDraw(label) {
+    const n = norm(label);
+    for (const k of Object.keys(DRAW_EQ)) {
+      for (const v of DRAW_EQ[k]) {
+        if (n === norm(v)) return k;
       }
-      return out;
     }
-    const rows=[];
-    for(const raw of lines){
-      const m = raw.match(/^([A-Za-z\.\s\-]{2,28})[\s\-\—\_:.]+([0-9xX][0-9xX\s\-]{1,12})$/);
-      if(m){ rows.push({abbr:m[1].trim(), detected:m[2].trim().replace(/\s+/g,"")}); continue; }
-      const m2 = raw.match(/^([A-Za-z\.\s\-]{2,28})\s+([0-9]{2,4}\s*-\s*[0-9]{2,4}|[0-9]{3})$/);
-      if(m2){ rows.push({abbr:m2[1].trim(), detected:m2[2].trim().replace(/\s+/g,"")}); }
-    }
-    return rows;
-  }
-  function renderOCRTable(text){
-    const box=document.getElementById("ocrTable"); box.innerHTML="";
-    const rows = text.split(/\n---\n/).flatMap(parseOCRTextBlock);
-    const table=document.createElement("table");
-    table.innerHTML=`<thead><tr><th>${i18n[lang].abbr}</th><th>${i18n[lang].map}</th><th>${i18n[lang].detected}</th><th>${i18n[lang].value}</th><th>${i18n[lang].actions}</th></tr></thead>`;
-    const tb=document.createElement("tbody");
-    rows.forEach(r=>{
-      const map=findTarget(r.abbr);
-      const tr=document.createElement("tr");
-      const mapTxt=map?`${map.section}/${map.id}/${map.draw}`:"—";
-      const inp=document.createElement("input"); inp.value=r.detected.replace(/\s*-\s*/g,"-");
-      const btn=document.createElement("button"); btn.className="btn"; btn.textContent=i18n[lang].save;
-      btn.onclick=()=>{ if(!map) return; const val=inp.value.trim(); const ok = map.section==="usa" ? /^\d{3}-\d{4}$/.test(val) : (/^\d{2}-\d{2}-\d{2}$/.test(val)||/^\d{3}$/.test(val)); if(!ok){inp.style.borderColor="var(--danger)"; setTimeout(()=>inp.style.borderColor="",800); return;} setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); };
-      tr.appendChild(td(r.abbr)); tr.appendChild(td(mapTxt)); tr.appendChild(td(r.detected)); const tdv=td(""); tdv.appendChild(inp); tr.appendChild(tdv); const tdb=td(""); tdb.appendChild(btn); tr.appendChild(tdb);
-      tb.appendChild(tr);
-    });
-    table.appendChild(tb); box.appendChild(table);
-  }
-  function assignAllFromOCR(){
-    const rows=[...document.querySelectorAll("#ocrTable tbody tr")];
-    rows.forEach(tr=>{ const ab=tr.children[0].textContent; const map=findTarget(ab); if(!map) return; const val=tr.querySelector("input").value.trim(); const ok = map.section==="usa" ? /^\d{3}-\d{4}$/.test(val) : (/^\d{2}-\d{2}-\d{2}$/.test(val)||/^\d{3}$/.test(val)); if(ok) setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); });
-    alert("Filas guardadas.");
+    // Fallback includes partials
+    if (/\bMID/i.test(n)) return 'MIDDAY';
+    if (/\bNOCH|NIGHT\b/i.test(n)) return 'NIGHT';
+    if (/\bEVE|TARDE|PM\b/i.test(n)) return 'EVENING';
+    if (/\bDAY|DIA\b/i.test(n)) return 'DAY';
+    return n;
   }
 
-  /*************** Catalog CRUD / Logos / Visibility (unchanged) ***************/
-  function buildCatalog(){
-    const host=document.getElementById("catalogTable"); host.innerHTML="";
-    const cat=loadCatalog();
-    const table=document.createElement("table"); table.innerHTML="<thead><tr><th>Sección</th><th>Lotería</th><th>Visible</th><th>Draw</th><th>Hora sorteo</th><th>Días (0-6)</th><th></th></tr></thead>";
-    const tb=document.createElement("tbody");
-    Object.keys(cat).forEach(section=>{
-      cat[section].forEach((l,li)=>{
-        l.draws.forEach((d,di)=>{
-          const tr=document.createElement("tr");
-          const vis=document.createElement("input"); vis.type="checkbox"; vis.checked=!!l.visible; vis.onchange=()=>{ l.visible=vis.checked; };
-          const time=document.createElement("input"); time.value=d.time; time.oninput=()=>d.time=time.value;
-          const code=document.createElement("input"); code.value=d.code; code.oninput=()=>d.code=code.value;
-          const days=document.createElement("input"); days.value=d.days.join(","); days.oninput=()=>{ d.days = days.value.split(",").map(x=>+x.trim()).filter(x=>!Number.isNaN(x)); };
-          const del=document.createElement("button"); del.className="ghost"; del.textContent="Eliminar draw"; del.onclick=()=>{ l.draws.splice(di,1); buildCatalog(); };
-          tr.appendChild(td(section)); tr.appendChild(td(l.name)); const tv=td(""); tv.appendChild(vis); tr.appendChild(tv);
-          const tcode=td(""); tcode.appendChild(code); tr.appendChild(tcode);
-          const ttime=td(""); ttime.appendChild(time); tr.appendChild(ttime);
-          const tdays=td(""); tdays.appendChild(days); tr.appendChild(tdays);
-          const tdel=td(""); tdel.appendChild(del); tr.appendChild(tdel);
-          tb.appendChild(tr);
-        });
+  // Abbreviation mapping from OCR "Abbrev." or short forms to canonical (lottery, draw) label pair,
+  // tuned with the examples you've provided.
+  const ABBR_MAP = {
+    'MIDDAY': {lottery: 'NEW YORK', draw: 'MIDDAY'},
+    'NYS': {lottery: 'NEW YORK', draw: 'NIGHT'},
+    'NY': {lottery: 'NY HORSES', draw: 'R1'}, // default; OCR row may specify R1/R2/R3 on map
+    'STATE': {lottery: 'NEW YORK', draw: 'STATE'}, // Many times used for New York Pick 4 "State" (we'll match via alias below)
+    'BK-DAY': {lottery: 'NY-BK', draw: 'AM'},
+    'BK-TV': {lottery: 'NY-BK', draw: 'PM'},
+    'NY-BK AM': {lottery: 'NY-BK', draw: 'AM'},
+    'NY-BK PM': {lottery: 'NY-BK', draw: 'PM'},
+    'NJ-DAY': {lottery: 'NEW JERSEY', draw: 'MIDDAY'},
+    'NJ-NIGHT': {lottery: 'NEW JERSEY', draw: 'EVENING'},
+    'CONN-DAY': {lottery: 'CONNECTICUT', draw: 'DAY'},
+    'CONN-NIGHT': {lottery: 'CONNECTICUT', draw: 'NIGHT'},
+    'CT AM': {lottery: 'CONNECTICUT', draw: 'DAY'},
+    'CT PM': {lottery: 'CONNECTICUT', draw: 'NIGHT'},
+    'FLA-MIDDAY': {lottery: 'FLORIDA', draw: 'MIDDAY'},
+    'FLA-NIGHT': {lottery: 'FLORIDA', draw: 'EVENING'},
+    'GEORGIA AM': {lottery: 'GEORGIA', draw: 'MIDDAY'},
+    'GEORGIA EVE': {lottery: 'GEORGIA', draw: 'EVENING'},
+    'GEORGIA PM': {lottery: 'GEORGIA', draw: 'EVENING'},
+    'GEORGIA NIGHT': {lottery: 'GEORGIA', draw: 'NIGHT'},
+    'PA AM': {lottery: 'PENNSYLVANIA', draw: 'DAY'},
+    'PA PM': {lottery: 'PENNSYLVANIA', draw: 'EVENING'},
+    'PENNSYLV AM': {lottery: 'PENNSYLVANIA', draw: 'DAY'},
+    'PENNSYLV PM': {lottery: 'PENNSYLVANIA', draw: 'EVENING'},
+    'BK PAPER': {lottery: 'BK PAPER', draw: 'MAIN'},
+    '3.5.7': {lottery: '3-5-7', draw: 'MAIN'},
+    '357': {lottery: '3-5-7', draw: 'MAIN'},
+    'FL PICK2 AM': {lottery: 'FL PICK 2', draw: 'AM'},
+    'FL PICK2 PM': {lottery: 'FL PICK 2', draw: 'PM'},
+    'FL PICK 2 AM': {lottery: 'FL PICK 2', draw: 'AM'},
+    'FL PICK 2 PM': {lottery: 'FL PICK 2', draw: 'PM'},
+    // RD / Special common
+    'LOTEDOM': {lottery: 'LOTEDOM', draw: 'TARDE'},
+    'LOTEKA': {lottery: 'LOTEKA', draw: 'NOCHE'},
+    'REAL': {lottery: 'LOTERIA REAL', draw: 'MEDIODIA'},
+    'GANAMAS': {lottery: 'GANA MAS', draw: 'TARDE'},
+    'QUINIELA PALE': {lottery: 'QUINIELA PALE', draw: 'DIARIO'},
+    'LA PRIMERA': {lottery: 'LA PRIMERA', draw: 'AM'},
+    'LA PRIMERA NOCHE': {lottery: 'LA PRIMERA', draw: 'PM'},
+    'LA SUERTE': {lottery: 'LA SUERTE DOMINICANA', draw: 'AM'},
+    'LA SUERTE PM': {lottery: 'LA SUERTE DOMINICANA', draw: 'PM'},
+    'NY-BP AM': {lottery: 'NY-BP', draw: 'AM'},
+    'NY-BP PM': {lottery: 'NY-BP', draw: 'PM'},
+    'NY-FP AM': {lottery: 'NY-FP', draw: 'AM'},
+    'NY-FP PM': {lottery: 'NY-FP', draw: 'PM'},
+    'KING LOTTERY AM': {lottery: 'KING LOTTERY', draw: 'AM'},
+    'KING LOTTERY PM': {lottery: 'KING LOTTERY', draw: 'PM'},
+    'EXTRA MIDDAY': {lottery: 'EXTRA', draw: 'MIDDAY'},
+    'EXTRA NIGHT': {lottery: 'EXTRA', draw: 'NIGHT'},
+    'ANGUILLA 10AM': {lottery: 'ANGUILLA', draw: '10AM'},
+    'ANGUILLA 1PM': {lottery: 'ANGUILLA', draw: '1PM'},
+    'ANGUILLA 6PM': {lottery: 'ANGUILLA', draw: '6PM'},
+    'ANGUILLA 9PM': {lottery: 'ANGUILLA', draw: '9PM'}
+  };
+
+  const NAME_ALIAS = {
+    'NEW YORK': ['NEW YORK','NY','N.Y.'],
+    'NEW JERSEY': ['NEW JERSEY','NJ','N.J.'],
+    'CONNECTICUT': ['CONNECTICUT','CT','CONN'],
+    'PENNSYLVANIA': ['PENNSYLVANIA','PA','PENNSYLV'],
+    'FLORIDA': ['FLORIDA','FL','FLA'],
+    'GEORGIA': ['GEORGIA','GA'],
+    'MASSACHUSETTS': ['MASSACHUSETTS','MA'],
+    'MARYLAND': ['MARYLAND','MD'],
+    'MICHIGAN': ['MICHIGAN','MI'],
+    'VIRGINIA': ['VIRGINIA','VA'],
+    'NORTH CAROLINA': ['NORTH CAROLINA','NC'],
+    'SOUTH CAROLINA': ['SOUTH CAROLINA','SC'],
+    'TEXAS': ['TEXAS','TX'],
+    // RD
+    'GANA MAS': ['GANA MAS','GANAMAS','GANA MAS RD'],
+    'LOTERIA REAL': ['LOTERIA REAL','REAL'],
+    'LOTEKA': ['LOTEKA'],
+    'LOTEDOM': ['LOTEDOM','LOTE DOM'],
+    'LA PRIMERA': ['LA PRIMERA'],
+    'LA SUERTE DOMINICANA': ['LA SUERTE','LA SUERTE DOMINICANA'],
+    'QUINIELA PALE': ['QUINIELA PALE','QUINIELA PALE (LEIDSA)','QUINIELA PALE LEIDSA'],
+    // Special
+    'NY-BK': ['NY-BK','BK','BROOKLYN'],
+    'NY-BP': ['NY-BP','BP'],
+    'NY-FP': ['NY-FP','FP'],
+    'NY HORSES': ['NY HORSES','NEW YORK HORSES','HORSES','NY RACE'],
+    'KING LOTTERY': ['KING LOTTERY','KING'],
+    'EXTRA': ['EXTRA'],
+    'ANGUILLA': ['ANGUILLA'],
+    '3-5-7': ['3-5-7','357','3.5.7'],
+    'BK PAPER': ['BK PAPER','BKPAPER','BK PAPER MAIN'],
+    'FL PICK 2': ['FL PICK 2','FL PICK2','FL PICK TWO']
+  };
+
+  function canonicalName(input) {
+    const n = norm(input);
+    for (const [key, arr] of Object.entries(NAME_ALIAS)) {
+      if (arr.some(alias => n === norm(alias))) return key;
+    }
+    return n;
+  }
+
+  function keyJoin(lottery, draw) {
+    return `${canonicalName(lottery)}|${matchDraw(draw)}`;
+  }
+
+  // Build mapping from OCR preview
+  function loadOCRPreview() {
+    try {
+      const raw = localStorage.getItem(LS_OCR_PREVIEW);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.rows)) return parsed;
+        if (Array.isArray(parsed)) return {rows: parsed};
+      }
+    } catch (e) {}
+    // Fallback: scrape preview table if present
+    const previewTable = detectOCRPreviewTable();
+    if (previewTable) {
+      const rows = [];
+      const trs = $$('tbody tr', previewTable);
+      trs.forEach(tr => {
+        const tds = $$('td', tr);
+        const abbr = txt(tds[0])
+        const map = txt(tds[1])
+        const value = txt(tds[3]) || (tds[3] && tds[3].querySelector('input') ? tds[3].querySelector('input').value.trim() : '');
+        rows.push({abbr, map, value});
       });
-    });
-    table.appendChild(tb); host.appendChild(table);
-    document.getElementById("addLottery").onclick=()=>{
-      const cat=loadCatalog(); const sec=prompt("Sección (usa/rd/special)","usa"); if(!sec||!cat[sec]) return;
-      const id=prompt("ID interno (ej: ny2)")?.trim(); const name=prompt("Nombre público")?.trim(); if(!id||!name) return;
-      cat[sec].push({id,name,tz:"ET",visible:true,draws:[{code:"Midday",time:"12:00",days:[0,1,2,3,4,5,6]}]}); saveCatalog(cat); buildCatalog();
-    };
-    document.getElementById("addDraw").onclick=()=>{
-      const cat=loadCatalog(); const sec=prompt("Sección del ID de lotería (usa/rd/special)"); const id=prompt("ID de lotería a editar");
-      const lot=(cat[sec]||[]).find(x=>x.id===id); if(!lot) return alert("No encontrada.");
-      lot.draws.push({code:"New",time:"12:00",days:[0,1,2,3,4,5,6]}); saveCatalog(cat); buildCatalog();
-    };
-    document.getElementById("saveCatalog").onclick=()=>{ const cat=loadCatalog(); saveCatalog(cat); alert("Catálogo guardado."); render(); buildVisibility(); buildManual(); };
-  }
-
-  function buildLogos(){
-    const grid=document.getElementById("logoGrid"); grid.innerHTML="";
-    const cat=loadCatalog(); const files=document.getElementById("logoFile");
-    let selected=null;
-    function row(section,l){
-      const div=document.createElement("div"); div.className="row"; div.style.margin="6px 0";
-      const img=document.createElement("img"); img.style.width="36px"; img.style.height="36px"; img.style.borderRadius="8px"; img.style.objectFit="cover";
-      const key=`${section}/${l.id}`; if(logos[key]) img.src=logos[key];
-      const pick=document.createElement("button"); pick.className="ghost"; pick.textContent="Seleccionar"; pick.onclick=()=>{ selected={section,id:l.id}; [...grid.querySelectorAll(".row")].forEach(r=>r.style.outline=""); div.style.outline="2px solid rgba(0,230,161,.6)"; };
-      const name=document.createElement("div"); name.textContent=`${section} — ${l.name}`; name.style.minWidth="240px";
-      div.appendChild(img); div.appendChild(name); div.appendChild(pick); return div;
+      const snapshot = {rows, capturedAt: Date.now(), source: 'scrape'};
+      localStorage.setItem(LS_OCR_PREVIEW, JSON.stringify(snapshot));
+      return snapshot;
     }
-    Object.keys(cat).forEach(sec=>{ cat[sec].forEach(l=>grid.appendChild(row(sec,l))); });
-    document.getElementById("assignLogo").onclick=()=>{
-      if(!selected) return alert("Selecciona una lotería de la lista.");
-      if(!files.files?.length) return alert("Sube una imagen.");
-      const f=files.files[0]; const reader=new FileReader(); reader.onload=()=>{ logos[`${selected.section}/${selected.id}`]=reader.result; localStorage.setItem(KEY_LOGOS, JSON.stringify(logos)); render(); buildLogos(); }; reader.readAsDataURL(f);
-    };
-    document.getElementById("removeLogo").onclick=()=>{ if(!selected) return; delete logos[`${selected.section}/${selected.id}`]; localStorage.setItem(KEY_LOGOS, JSON.stringify(logos)); render(); buildLogos(); };
+    return {rows: []};
   }
 
-  function buildVisibility(){
-    const host=document.getElementById("visibilityTable"); host.innerHTML="";
-    const cat=loadCatalog();
-    const table=document.createElement("table"); table.innerHTML="<thead><tr><th>Sección</th><th>Lotería</th><th>Visible</th></tr></thead>";
-    const tb=document.createElement("tbody");
-    Object.keys(cat).forEach(section=>{
-      cat[section].forEach(l=>{
-        const tr=document.createElement("tr"); const vis=document.createElement("input"); vis.type="checkbox"; vis.checked=!!l.visible; vis.onchange=()=>{ l.visible=vis.checked; const c=loadCatalog(); (c[section].find(x=>x.id===l.id)||{}).visible=vis.checked; saveCatalog(c); render(); };
-        tr.appendChild(td(section)); tr.appendChild(td(l.name)); const tv=td(""); tv.appendChild(vis); tr.appendChild(tv); tb.appendChild(tr);
-      });
-    });
-    table.appendChild(tb); host.appendChild(table);
-  }
-
-  /*************** Mapping for OCR ***************/
-  const MAP=[
-    {k:["MIDDAY","NY AM","NY MID","N Y"], map:{section:"usa",id:"ny",draw:"Midday"}},
-    {k:["STATE","NYS","NY PM","NY NIGHT","NEW YORK EVENING","STATE-"], map:{section:"usa",id:"ny",draw:"Evening"}},
-    {k:["BK-DAY","BK DAY","BK AM"], map:{section:"special",id:"ny-bk",draw:"AM"}},
-    {k:["BK-TV","BK TV","BK PM"], map:{section:"special",id:"ny-bk",draw:"PM"}},
-    {k:["NY","NY HORSES","HORSES"], map:{section:"special",id:"ny-race",draw:"R1"}},
-    {k:["NJ-DAY","NJ AM","N J AM","NJ MIDDAY","NJ A M"], map:{section:"usa",id:"nj",draw:"Midday"}},
-    {k:["NJ PM","NJ-NIGHT","N J PM"], map:{section:"usa",id:"nj",draw:"Evening"}},
-    {k:["CT AM","CONNECT AM","CONN-DAY","CT DAY","C T AM"], map:{section:"usa",id:"ct",draw:"Day"}},
-    {k:["CT PM","CONNECT PM","CONN-NIGHT","C T PM"], map:{section:"usa",id:"ct",draw:"Night"}},
-    {k:["FLORIDA AM","FL AM","FLA AM"], map:{section:"usa",id:"fl",draw:"Midday"}},
-    {k:["FLORIDA PM","FL PM","FLA PM","FL NIGHT"], map:{section:"usa",id:"fl",draw:"Evening"}},
-    {k:["GEORGIA AM","GA AM"], map:{section:"usa",id:"ga",draw:"Midday"}},
-    {k:["GEORGIA EVE","GEORGIA PM","GA PM"], map:{section:"usa",id:"ga",draw:"Evening"}},
-    {k:["GEORGIA NIGHT","GA NIGHT"], map:{section:"usa",id:"ga",draw:"Night"}},
-    {k:["PA AM","PENN AM","PA DAY"], map:{section:"usa",id:"pa",draw:"Day"}},
-    {k:["PA PM","PENN PM"], map:{section:"usa",id:"pa",draw:"Evening"}},
-    {k:["LOTEKA"], map:{section:"rd",id:"loteka",draw:"Noche"}},
-    {k:["REAL"], map:{section:"rd",id:"real",draw:"Mediodía"}},
-    {k:["GANA MAS","GANAMAS"], map:{section:"rd",id:"ganamas",draw:"Tarde"}},
-    {k:["QUINIELA PALE","QUINIELA PALE LEIDSA"], map:{section:"rd",id:"quiniela",draw:"Diario"}},
-    {k:["NACIONAL"], map:{section:"rd",id:"nacional",draw:"Noche"}},
-    {k:["3.5.7","357","3-5-7"], map:{section:"special",id:"357",draw:"Main"}}
-  ];
-  function norm(s){ return s.toUpperCase().replace(/\s+/g," ").trim(); }
-  function findTarget(label){
-    const N=norm(label);
-    for(const m of MAP){ if(m.k.some(k=>N.includes(k))) return m.map; }
-    if(/NEW JERSEY\s+AM/i.test(label)) return {section:"usa",id:"nj",draw:"Midday"};
-    if(/NEW JERSEY\s+PM/i.test(label)) return {section:"usa",id:"nj",draw:"Evening"};
-    if(/CONNECT\s+AM/i.test(label)) return {section:"usa",id:"ct",draw:"Day"};
-    if(/CONNECT\s+PM/i.test(label)) return {section:"usa",id:"ct",draw:"Night"};
-    if(/^MIDDAY$/i.test(N)) return {section:"usa",id:"ny",draw:"Midday"};
-    if(/^STATE$/i.test(N)) return {section:"usa",id:"ny",draw:"Evening"};
+  function detectOCRPreviewTable() {
+    // Try to find the preview table by header names
+    const tables = $$('table');
+    for (const tb of tables) {
+      const headerText = norm(tb.innerText.slice(0, 200));
+      if (/\bABBREV\b/.test(headerText) && /\bDETECTED\b/.test(headerText) && /\bVALUE\b/.test(headerText)) {
+        return tb;
+      }
+    }
     return null;
   }
 
-  /*************** History editor ***************/
-  let currentHistKey=null;
-  function openHistory(section,id,draw,name){
-    currentHistKey = historyKey(section,id,draw);
-    document.getElementById("historyTitle").textContent = `${i18n[lang].history} — ${name} ${draw}`;
-    const list = (JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"))[currentHistKey] || [];
-    const body = document.getElementById("historyBody"); body.innerHTML="";
-    const t=document.createElement("table"); t.innerHTML="<thead><tr><th>"+i18n[lang].date+"</th><th>Resultado</th><th>Acciones</th></tr></thead>";
-    const tb=document.createElement("tbody");
-    list.slice().reverse().forEach((rec,idxRev)=>{
-      const idx = list.length-1-idxRev;
-      const tr=document.createElement("tr");
-      const dIn=document.createElement("input"); dIn.type="date"; dIn.value=rec.ts.slice(0,10);
-      const vIn=document.createElement("input"); vIn.value=rec.value;
-      const save=document.createElement("button"); save.className="btn"; save.textContent="Guardar"; save.onclick=()=>{
-        rec.ts = new Date(dIn.value+"T12:00:00").toISOString(); rec.value=vIn.value.trim();
-        const H=JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"); H[currentHistKey][idx]=rec; localStorage.setItem(KEY_HISTORY, JSON.stringify(H));
-        // If edited row is the most recent, sync current result
-        if(idx===H[currentHistKey].length-1){
-          const [section,id,draw]=currentHistKey.split("/");
-          const R=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}"); R[section]??={}; R[section][id]??={}; R[section][id][draw]=rec; localStorage.setItem(KEY_RESULTS, JSON.stringify(R)); render();
-        }
-        openHistory(...currentHistKey.split("/"), name);
-      };
-      const del=document.createElement("button"); del.className="ghost"; del.textContent="Eliminar"; del.onclick=()=>{
-        const H=JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"); H[currentHistKey].splice(idx,1); localStorage.setItem(KEY_HISTORY, JSON.stringify(H));
-        openHistory(...currentHistKey.split("/"), name);
-      };
-      const use=document.createElement("button"); use.className="ghost"; use.textContent="Usar como actual"; use.onclick=()=>{
-        const [section,id,draw]=currentHistKey.split("/"); const R=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}"); R[section]??={}; R[section][id]??={}; R[section][id][draw]=rec; localStorage.setItem(KEY_RESULTS, JSON.stringify(R)); render();
-      };
-      const tdDate=td(""); tdDate.appendChild(dIn); const tdVal=td(""); tdVal.appendChild(vIn);
-      const tdAct=td(""); tdAct.appendChild(save); tdAct.appendChild(document.createTextNode(" ")); tdAct.appendChild(del); tdAct.appendChild(document.createTextNode(" ")); tdAct.appendChild(use);
-      tr.appendChild(tdDate); tr.appendChild(tdVal); tr.appendChild(tdAct); tb.appendChild(tr);
-    });
-    t.appendChild(tb); body.appendChild(t);
-    document.getElementById("historyModal").classList.add("open");
-    // Add-new prefill
-    document.getElementById("histDate").value = (localStorage.getItem("br_date") || new Date().toISOString().slice(0,10));
-    document.getElementById("histValue").value = "";
-    document.getElementById("histAdd").onclick=()=>{
-      const d=document.getElementById("histDate").value; const v=document.getElementById("histValue").value.trim(); if(!d||!v) return;
-      const H=JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}"); H[currentHistKey]=H[currentHistKey]||[]; const rec={ts:new Date(d+"T12:00:00").toISOString(), value:v}; H[currentHistKey].push(rec); localStorage.setItem(KEY_HISTORY, JSON.stringify(H));
-      // set also as current
-      const [section,id,draw]=currentHistKey.split("/"); const R=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}"); R[section]??={}; R[section][id]??={}; R[section][id][draw]=rec; localStorage.setItem(KEY_RESULTS, JSON.stringify(R)); render();
-      openHistory(section,id,draw,name);
-    };
+  function rowToKey(row) {
+    // priority: explicit map (e.g., "usa/ny/Midday")
+    if (row.map && row.map.includes('/')) {
+      const parts = row.map.split('/').map(s => s.trim());
+      // try to deduce lottery + draw
+      let lottery = parts[1] || '';
+      let draw = parts[2] || '';
+      // Special handling
+      if (/ny-bk|ny-bp|ny-fp/i.test(row.map)) {
+        lottery = row.map.match(/ny-(bk|bp|fp)/i)[0].toUpperCase();
+      }
+      if (/horses|race/i.test(row.map)) {
+        lottery = 'NY HORSES';
+      }
+      return keyJoin(lottery, draw);
+    }
+    // Use abbr mapping
+    if (row.abbr) {
+      const ab = norm(row.abbr);
+      if (ABBR_MAP[ab]) {
+        const m = ABBR_MAP[ab];
+        return keyJoin(m.lottery, m.draw);
+      }
+      // Try raw split like "GEORGIA PM"
+      const m2 = ab.match(/^(.*?)\s+(AM|PM|MIDDAY|EVE|EVENING|NIGHT|DAY)$/i);
+      if (m2) {
+        return keyJoin(m2[1], m2[2]);
+      }
+    }
+    // last hope: lottery/draw present
+    if (row.lottery && row.draw) {
+      return keyJoin(row.lottery, row.draw);
+    }
+    return null;
   }
-  document.getElementById("closeHistory").onclick=()=>document.getElementById("historyModal").classList.remove("open");
 
-  /*************** Public tiles (centered numbers, bigger logo, name below) ***************/
-  function formatDate(ts){ if(!ts) return "—"; const d=new Date(ts); const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0"); return `${yyyy}-${mm}-${dd}`; }
-  function isOpen(d){ const now=new Date(); const [cH,cM]=minus20(d.time).split(":").map(Number); const nowM=now.getHours()*60+now.getMinutes(); const closeM=cH*60+cM; const today=now.getDay(); return nowM<closeM && d.days.includes(today); }
-  function renderSection(key,title){
-    const cat=loadCatalog(); const sec=document.createElement("div"); sec.className="section";
-    sec.innerHTML=`<h2>${title}</h2><div class="grid"></div>`; const grid=sec.querySelector(".grid");
-    const q=(document.getElementById("search")?.value||"").toLowerCase().trim();
-    const resAll=JSON.parse(localStorage.getItem(KEY_RESULTS)||"{}");
-    cat[key].forEach(l=>{
-      if(!l.visible) return;
-      if(q && !(l.name.toLowerCase().includes(q)||l.id.includes(q))) return;
-      l.draws.forEach(d=>{
-        const today=new Date().getDay(); if(!d.days.includes(today)) return;
-        const rec=resAll[key]?.[l.id]?.[d.code] || null;
-        const r= rec?.value || "—"; const ts=rec?.ts || null;
-        const card=document.createElement("div"); card.className="tile";
-        const logo=logos[`${key}/${l.id}`];
-        const dateStr = formatDate(ts);
-        card.innerHTML=`
-          <div class="top"><div class="emblem">${logo? `<img src="${logo}" alt="">` : (l.id.slice(0,2).toUpperCase())}</div></div>
-          <div class="nums">${r}</div>
-          <div class="nameUnder">${l.name} <span class="pill">${d.code}</span></div>
-          <div class="date">${i18n[lang].date}: ${dateStr}</div>
-          <div class="meta">
-            <div>${i18n[lang].draw}: ${d.time}</div>
-            <div>${i18n[lang].close}: ${minus20(d.time)}</div>
-            <div class="status ${isOpen(d)?'':'closed'}">${isOpen(d)?i18n[lang].open:i18n[lang].closed}</div>
-            <button class="history-btn" data-k="${key}/${l.id}/${d.code}" title="${i18n[lang].viewHistory}">⟲ ${i18n[lang].viewHistory}</button>
-          </div>`;
-        card.querySelector(".history-btn").onclick=()=>openHistory(key,l.id,d.code,l.name);
-        grid.appendChild(card);
+  function buildPreviewMap() {
+    const snap = loadOCRPreview();
+    const map = new Map();
+    (snap.rows || []).forEach(row => {
+      const key = rowToKey(row);
+      const val = (row.value || '').trim();
+      if (key && val) map.set(key, val);
+    });
+    return map;
+  }
+
+  // ---------- Results table integration
+  function findAdminResultsTables() {
+    // Identify the admin "Resultados" tables by section titles
+    const sections = [];
+    $$('h2,h3,h4').forEach(h => {
+      const n = norm(h.textContent || '');
+      if (/\bUSA LOTTERIES\b|\bSANTO DOMINGO LOTTERIES\b|\bSPECIAL LOTTERIES\b/.test(n)) {
+        // next table sibling
+        let sib = h.nextElementSibling;
+        while (sib && sib.tagName !== 'TABLE') sib = sib.nextElementSibling;
+        if (sib && sib.tagName === 'TABLE') sections.push({title: n, table: sib});
+      }
+    });
+    // Fallback: grab all tables that look like admin rows (6 columns + Save button)
+    if (!sections.length) {
+      $$('table').forEach(tb => {
+        const hasSave = tb.innerText.includes('Save');
+        if (hasSave) sections.push({title: 'UNKNOWN', table: tb});
+      });
+    }
+    return sections;
+  }
+
+  function refreshFromOCR() {
+    const previewMap = buildPreviewMap();
+    if (!previewMap.size) {
+      alert('No hay previsualización OCR guardada. Ve al tab OCR, previsualiza y guarda antes de refrescar.');
+      return;
+    }
+    const sections = findAdminResultsTables();
+    let applied = 0;
+    sections.forEach(({table}) => {
+      const rows = $$('tbody tr', table);
+      rows.forEach(tr => {
+        const tds = $$('td', tr);
+        if (tds.length < 6) return;
+        const lot = txt(tds[0]);
+        const draw = txt(tds[1]);
+        const key = keyJoin(lot, draw);
+        const input = $('input,textarea', tds[4]);
+        const saveBtn = $('button', tds[5]);
+        const newVal = previewMap.get(key);
+        if (newVal && input) {
+          input.value = newVal;
+          input.dispatchEvent(new Event('input', {bubbles:true}));
+          applied++;
+          // auto-save if button exists
+          if (saveBtn) {
+            setTimeout(()=>{
+              try { saveBtn.click(); } catch(e){}
+            }, 10);
+          }
+        }
       });
     });
-    return sec;
+    alert(`Refresh from OCR: ${applied} resultados aplicados y guardados.`);
   }
-  function render(){
-    const content=document.getElementById("content"); content.innerHTML="";
-    content.appendChild(renderSection("usa", i18n[lang].usa));
-    content.appendChild(renderSection("rd", i18n[lang].rd));
-    content.appendChild(renderSection("special", i18n[lang].special));
-  }
-  function td(t){ const d=document.createElement("td"); d.textContent=t; return d; }
 
-  applyLang(); render();
-  </script>
-</body>
-</html>
+  // ---------- Buttons injection (non-invasive)
+  function installRefreshButton() {
+    // Find "Reset results" button and place ours next to it
+    const allBtns = $$('button');
+    let resetBtn = null;
+    for (const b of allBtns) {
+      if (/reset results/i.test(b.textContent || '')) { resetBtn = b; break; }
+      if (/reset\s+results/i.test((b.getAttribute('aria-label')||''))) { resetBtn = b; break; }
+    }
+    if (!resetBtn || $('#br-refresh-ocr-btn')) return; // already installed or not found
+    const btn = document.createElement('button');
+    btn.id = 'br-refresh-ocr-btn';
+    btn.className = resetBtn.className; // inherit styling
+    btn.style.marginLeft = '12px';
+    btn.textContent = 'Refresh from OCR';
+    btn.addEventListener('click', () => {
+      if (!ensureAdmin()) return;
+      refreshFromOCR();
+    });
+    resetBtn.parentElement.insertBefore(btn, resetBtn.nextSibling);
+  }
+
+  // ---------- OCR: CSV import and text capture helpers
+  function csvToRows(csv) {
+    // very light CSV parser (expects comma-separated, no quotes inside values)
+    const lines = csv.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return [];
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const rows = [];
+    for (let i=1;i<lines.length;i++){
+      const cols = lines[i].split(',').map(c=>c.trim());
+      const obj = {};
+      headers.forEach((h,idx)=> obj[h] = cols[idx] || '');
+      // normalize to our structure
+      rows.push({
+        abbr: obj.abbrev || obj.abbreviation || obj.abbr || obj.loteria || '',
+        map: obj.map || obj.catalogkey || '',
+        value: (obj.value || obj.result || '').trim(),
+        lottery: obj.lottery || obj.loteria || '',
+        draw: obj.draw || obj.sorteo || ''
+      });
+    }
+    return rows;
+  }
+
+  function installCSVandTextCapture() {
+    // Find OCR tab container and preview controls
+    // We insert a small "Import CSV" button near where "Previsualizar" lives.
+    const ocrButtons = $$('button');
+    let anchor = null;
+    for (const b of ocrButtons) {
+      if (/previsualizar/i.test(b.textContent||'')) { anchor = b; break; }
+    }
+    if (!anchor || $('#br-import-csv-btn')) return;
+
+    // CSV button
+    const up = document.createElement('input');
+    up.type = 'file';
+    up.accept = '.csv,text/csv';
+    up.style.display = 'none';
+
+    const btn = document.createElement('button');
+    btn.id = 'br-import-csv-btn';
+    btn.className = anchor.className;
+    btn.style.marginLeft = '12px';
+    btn.textContent = 'Importar CSV';
+
+    btn.addEventListener('click', ()=> up.click());
+    up.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const rows = csvToRows(reader.result || '');
+        const snapshot = {rows, capturedAt: Date.now(), source: 'csv'};
+        localStorage.setItem(LS_OCR_PREVIEW, JSON.stringify(snapshot));
+        alert(`CSV importado: ${rows.length} filas. Ve a "Refresh from OCR" para aplicarlo.`);
+      };
+      reader.readAsText(file);
+    });
+
+    anchor.parentElement.insertBefore(btn, anchor.nextSibling);
+    document.body.appendChild(up);
+
+    // Textarea capture fallback — if there's a visible preview table, we already scrape on refresh.
+    // If there's a textarea with id/name containing 'ocr' or 'texto', add a "Guardar preview" helper.
+    const ta = $('textarea[id*="ocr"], textarea[name*="ocr"], textarea[id*="texto"], textarea[name*="texto"]');
+    if (ta && !$('#br-save-preview-btn')) {
+      const sbtn = document.createElement('button');
+      sbtn.id = 'br-save-preview-btn';
+      sbtn.className = anchor.className;
+      sbtn.style.marginLeft = '12px';
+      sbtn.textContent = 'Guardar preview (texto)';
+      sbtn.addEventListener('click', ()=>{
+        // Try to parse simple lines: "NAME ... pick formats"
+        const lines = (ta.value||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        const rows = lines.map(line=>({ abbr: line.split(/\s+/)[0] || '', map:'', value: line.replace(/^[^A-Za-z0-9]+/,'') }));
+        const snapshot = {rows, capturedAt: Date.now(), source: 'text'};
+        localStorage.setItem(LS_OCR_PREVIEW, JSON.stringify(snapshot));
+        alert(`Texto guardado como previsualización (${rows.length} filas).`);
+      });
+      anchor.parentElement.insertBefore(sbtn, btn.nextSibling);
+    }
+  }
+
+  // ---------- History Edit guard
+  function guardHistoryEdits() {
+    document.addEventListener('click', function(e){
+      const el = e.target;
+      if (!el) return;
+      // Buttons that could edit/delete within history modal
+      const label = (el.textContent||'').trim().toLowerCase();
+      const isEditLike = /editar|edit|borrar|eliminar|guardar cambios|save/i.test(label);
+      const inHistoryModal = (el.closest && el.closest('.history, #history, [data-history], .modal')) &&
+                              /historial|history/i.test((el.closest('.modal')||el.closest('[data-history]')||{textContent:''}).textContent||'');
+      if (isEditLike && inHistoryModal) {
+        if (!ensureAdmin()) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          return false;
+        }
+      }
+    }, true);
+  }
+
+  // ---------- Ensure Admin not auto-opened
+  function disableAdminAutoload() {
+    // Common patterns that sometimes auto-open admin
+    const openAdmin = window.openAdminPanel || window.openAdmin || null;
+    if (openAdmin) {
+      // No-op wrapper to ensure it is only called on demand
+      window.openAdminPanel = function(){ if (ensureAdmin()) return openAdmin.apply(this, arguments); };
+      window.openAdmin = window.openAdminPanel;
+    }
+    // Hide admin by default if some CSS left it open
+    const adminPanel = $('#admin, #adminPanel, .admin-panel');
+    if (adminPanel) {
+      adminPanel.style.display = 'none';
+    }
+  }
+
+  // ---------- Init
+  function initPatch() {
+    try {
+      installRefreshButton();
+      installCSVandTextCapture();
+      guardHistoryEdits();
+      disableAdminAutoload();
+      // Do not alter theme/scroll/anything else
+    } catch (e) {
+      console.warn('Patch init error', e);
+    }
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(initPatch, 50);
+  } else {
+    document.addEventListener('DOMContentLoaded', initPatch);
+  }
+
+})();
+"""
+with open('/mnt/data/br_patch_v8_3_1.js','w',encoding='utf-8') as f:
+    f.write(patch_js)
+
+readme = """
+Beast Reader — Patch v8.3.1 (Drop-in)
+=====================================
+
+Qué resuelve
+------------
+1) "Refresh from OCR" copia **exactamente** lo que ves en la tabla de previsualización del OCR
+   hacia la tabla de Resultados (Admin) y auto-guarda cada fila.
+2) Permite **Importar CSV** y **Guardar preview desde texto** en el tab OCR (sin tocar layout).
+3) Protege la **edición del historial** con el PIN 1983 (sólo edición/eliminación).
+4) Evita que el Admin se abra solo al cargar (y oculta el panel por defecto).
+
+Cómo instalar
+-------------
+1. No borres nada de tu HTML actual. Añade, justo ANTES de `</body>`, esta línea:
+   <script src="br_patch_v8_3_1.js"></script>
+
+   (O pega el contenido del archivo `br_patch_v8_3_1.js` dentro de un <script> al final del body).
+
+2. Guarda y recarga.
+
+Uso
+---
+- En OCR: previsualiza como siempre. Opcionalmente, usa **Importar CSV** o **Guardar preview (texto)**.
+- En Resultados (Admin): pulsa **Refresh from OCR** (al lado de "Reset results").
+  Se aplicarán los textos tal cual al campo "Resultado" y se pulsará "Save" por cada fila encontrada.
+
+Notas
+-----
+- El patch es **no-invasivo**: no cambia tu tema, ni el grid del tablero ni posiciones de botones.
+- Si no encuentra una previsualización en localStorage, intenta **scrapear la tabla** de OCR visible.
+- Si algún row no se aplica, revisa alias/mapeos del OCR ("Abbrev." o "Map") para acercarlos a catálogo.
+
+Soporte a nuevas loterías
+-------------------------
+- Añadidos alias para **BK Paper**, **FL Pick 2 (AM/PM)**, **NY Horses (R1/R2/R3)**, **3-5-7**.
+- Estos no se muestran por defecto si tu UI los mantiene ocultos; sólo ayudan al mapeo desde OCR.
+
+Seguridad
+---------
+- Para editar o borrar entradas en el modal de historial, se pide el **PIN 1983**.
+- La sesión admin vive en `sessionStorage` (se pierde al cerrar la pestaña).
+
+Rollback
+--------
+- Basta con quitar la línea <script src="br_patch_v8_3_1.js"></script> para desinstalar el patch.
+"""
+with open('/mnt/data/README_patch_v8_3_1.txt','w',encoding='utf-8') as f:
+    f.write(readme)
+
+print("Created files:", "/mnt/data/br_patch_v8_3_1.js", "/mnt/data/README_patch_v8_3_1.txt")
