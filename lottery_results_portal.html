@@ -172,9 +172,8 @@
       <div class="body active" id="tab-results">
         <div class="row" style="justify-content:space-between">
           <div class="field"><em>Editar/guardar resultados manualmente.</em></div>
-          <div class="row">
-            <button class="ghost" id="resetResults">Resetear resultados</button>
-          </div>
+          <div class="row"><button class="ghost" id="refreshFromOCR">Refresh from OCR</button>
+            <button class="ghost" id="resetResults">Resetear resultados</button></div>
         </div>
         <div id="manualTable"></div>
       </div>
@@ -254,8 +253,8 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
   /*************** i18n ***************/
-  const i18n={ es:{usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones",date:"Fecha",history:"Historial",viewHistory:"Historial",reset:"Resetear resultados"},
-              en:{usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions",date:"Date",history:"History",viewHistory:"History",reset:"Reset results"} };
+  const i18n={ es:{refresh:"Actualizar desde OCR",loadCSV:"Cargar CSV",usa:"Loterías de USA",rd:"Loterías de Santo Domingo",special:"Loterías Special",open:"Abierta",closed:"Cerrada",draw:"Sorteo",close:"Cierre",save:"Guardar",saveAll:"Guardar todos",abbr:"Abrev.",map:"Mapa",detected:"Detectado",value:"Valor",actions:"Acciones",date:"Fecha",history:"Historial",viewHistory:"Historial",reset:"Resetear resultados"},
+              en:{refresh:"Refresh from OCR",loadCSV:"Load CSV",usa:"USA Lotteries",rd:"Santo Domingo Lotteries",special:"Special Lotteries",open:"Open",closed:"Closed",draw:"Draw",close:"Close",save:"Save",saveAll:"Save all",abbr:"Abbrev.",map:"Map",detected:"Detected",value:"Value",actions:"Actions",date:"Date",history:"History",viewHistory:"History",reset:"Reset results"} };
   let lang=localStorage.getItem("lang")||"es";
   function applyLang(){ document.getElementById("subTitle").textContent = lang==="es"?"Resultados en vivo — USA, RD & Special":"Live results — USA, RD & Special"; render(); }
 
@@ -269,9 +268,11 @@
   const pinInput=document.getElementById("pinInput");
   const pinOk=document.getElementById("pinOk");
   const toggleEye=document.getElementById("toggleEye");
-  document.getElementById("adminBtn").addEventListener("click",()=>{pinModal.classList.add("open"); pinInput.value=""; pinInput.type="password";});
-  pinOk.addEventListener("click",()=>{ if(pinInput.value===ADMIN_PIN){ pinModal.classList.remove("open"); openAdmin(); } else { pinInput.style.borderColor="var(--danger)"; setTimeout(()=>pinInput.style.borderColor="",600);} });
+  document.getElementById("adminBtn").addEventListener("click",()=>{window.pinContext="admin"; pinModal.classList.add("open"); pinInput.value=""; pinInput.type="password";});
+  pinOk.addEventListener("click",()=>{ if(pinInput.value===ADMIN_PIN){ window.__isAdmin=true; pinModal.classList.remove("open"); if(window.pinContext==="action" && typeof window.pendingAdminAction==="function"){ const fn=window.pendingAdminAction; window.pendingAdminAction=null; window.pinContext=null; fn(); } else { window.pinContext=null; openAdmin(); } } else { pinInput.style.borderColor="var(--danger)"; setTimeout(()=>pinInput.style.borderColor="",600);} });
   toggleEye.addEventListener("click",()=>{ pinInput.type=pinInput.type==="password"?"text":"password"; });
+      window.__isAdmin=false; window.pendingAdminAction=null; window.pinContext=null;
+      function ensureAdmin(cb){ if(window.__isAdmin){ cb(); } else { window.pendingAdminAction=cb; window.pinContext="action"; pinModal.classList.add("open"); pinInput.value=""; pinInput.type="password"; } }
   pinModal.addEventListener("click",e=>{ if(e.target===pinModal) pinModal.classList.remove("open"); });
 
   function openAdmin(){
@@ -281,7 +282,7 @@
     const bodies=[...document.querySelectorAll(".desk .body")];
     function setTab(id){ tabs.forEach(t=>t.classList.toggle("active", t.dataset.tab===id)); bodies.forEach(b=>b.classList.toggle("active", b.id==="tab-"+id)); if(id==="results") buildManual(); if(id==="ocr") buildOCR(); if(id==="catalog") buildCatalog(); if(id==="logos") buildLogos(); if(id==="visibility") buildVisibility(); }
     tabs.forEach(t=>t.onclick=()=>setTab(t.dataset.tab)); setTab("results");
-    document.getElementById("closeAdmin").onclick=()=>adminDash.classList.remove("open");
+    document.getElementById("closeAdmin").onclick=()=>{ adminDash.classList.remove("open"); window.__isAdmin=false; };
     // Wire toggles every open
     const themeTgl=document.getElementById("themeTgl"); const langTgl=document.getElementById("langTgl");
     themeTgl.checked=(localStorage.getItem("theme")||"dark")==="light";
@@ -329,7 +330,7 @@
   document.getElementById("autoScrollHeader").onclick=toggleAutoScroll;
 
   /*************** Catalog + persistence ***************/
-  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1"; const KEY_HISTORY="br_history_v1";
+  const KEY_CATALOG="br_catalog_v1"; const KEY_RESULTS="br_results_v1"; const KEY_LOGOS="br_logos_v1"; const KEY_HISTORY="br_history_v1"; const KEY_OCR_PREVIEW="br_ocr_preview_v1";
   function minus20(t){const [H,M]=t.split(":").map(Number); const d=new Date(); d.setHours(H,M,0,0); d.setMinutes(d.getMinutes()-20); return d.toTimeString().slice(0,5);}
   const ALL=[0,1,2,3,4,5,6], MON_SAT=[1,2,3,4,5,6];
   const SEED={
@@ -374,6 +375,29 @@
   const history = JSON.parse(localStorage.getItem(KEY_HISTORY)||"{}");
   function historyKey(section,id,draw){ return `${section}/${id}/${draw}`; }
   function appendHistory(section,id,draw,rec){
+            // Ensure specials exist (once)
+            (function(){
+              try{
+                const cat = loadCatalog();
+                function ensureLot(section, obj){
+                  if(!(cat[section]||[]).some(x=>x.id===obj.id)){
+                    cat[section] = cat[section] || [];
+                    cat[section].push(obj);
+                    saveCatalog(cat);
+                  }
+                }
+                ensureLot('special',{id:"king", name:"King Lottery", tz:"ET", visible:true, draws:[{code:"AM", time:"10:30", days:[0,1,2,3,4,5,6]},{code:"PM", time:"19:30", days:[0,1,2,3,4,5,6]}]});
+                ensureLot('special',{id:"anguilla", name:"Anguilla", tz:"ET", visible:true, draws:[{code:"10AM", time:"10:00", days:[0,1,2,3,4,5,6]},{code:"1PM", time:"13:00", days:[0,1,2,3,4,5,6]},{code:"6PM", time:"18:00", days:[0,1,2,3,4,5,6]},{code:"9PM", time:"21:00", days:[0,1,2,3,4,5,6]}]});
+                ensureLot('special',{id:"bk-paper", name:"BK Paper", tz:"ET", visible:false, draws:[{code:"AM", time:"12:00", days:[0,1,2,3,4,5,6]},{code:"PM", time:"22:00", days:[0,1,2,3,4,5,6]}]});
+                ensureLot('special',{id:"ny-bp", name:"NY-BP", tz:"ET", visible:false, draws:[{code:"AM", time:"12:00", days:[0,1,2,3,4,5,6]},{code:"PM", time:"22:00", days:[0,1,2,3,4,5,6]}]});
+                ensureLot('special',{id:"ny-fp", name:"NY-FP", tz:"ET", visible:false, draws:[{code:"AM", time:"12:00", days:[0,1,2,3,4,5,6]},{code:"PM", time:"22:00", days:[0,1,2,3,4,5,6]}]});
+                if(!(cat.usa||[]).some(x=>x.id==="fl-p2")){
+                  cat.usa = cat.usa || [];
+                  cat.usa.push({id:"fl-p2", name:"Florida Pick 2", tz:"ET", visible:false, draws:[{code:"AM", time:"13:00", days:[0,1,2,3,4,5,6]},{code:"PM", time:"21:45", days:[0,1,2,3,4,5,6]}]});
+                  saveCatalog(cat);
+                }
+              }catch(e){}
+            })();
     const key=historyKey(section,id,draw);
     history[key] = history[key] || [];
     const last = history[key][history[key].length-1];
@@ -438,16 +462,12 @@
     out.value=OCR_TEXTS.join("\n---\n"); renderOCRTable(out.value);
   }
   function parseOCRTextBlock(txt){
-    const out=[]; const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const header = lines.find(x=>/loter[ií]a|first|second|third|pick_3|pick_4/i.test(x));
-    if(header){
-      for(const ln of lines){
-        const m = ln.match(/^([A-Za-z0-9\-\s\.]+?)\s+((?:\d{2}|x{1,2}|xx)\b.*)$/i);
-        if(!m) continue;
-        const name=m[1].trim(); const right=m[2].trim().replace(/\s+/g,' ').replace(/\s-\s/g,'-');
-        const p3=right.match(/\b(\d{3})\b(?!-)/); const p4=right.match(/\b(\d{4})\b/);
-        const pairs=(right.match(/\b\d{2}\b/g)||[]).slice(0,3);
-        out.push({abbr:name, detected: p3&&p4 ? (p3[1]+"-"+p4[1]) : pairs.length===3 ? pairs.join("-") : right});
+        const out=[]; const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        for(const raw of lines){
+          const m = raw.match(/^(.+?)[\s\-\—\_:\.]{2,}(.+)$/) || raw.match(/^([A-Za-z0-9\-\.\s]{2,28})\s+(.+)$/);
+          if(m){ const abbr=m[1].trim(); const rest=m[2].trim(); out.push({abbr, detected:rest}); }
+        }
+        return out;
       }
       return out;
     }
@@ -461,28 +481,16 @@
     return rows;
   }
   function renderOCRTable(text){
-    const box=document.getElementById("ocrTable"); box.innerHTML="";
-    const rows = text.split(/\n---\n/).flatMap(parseOCRTextBlock);
-    const table=document.createElement("table");
-    table.innerHTML=`<thead><tr><th>${i18n[lang].abbr}</th><th>${i18n[lang].map}</th><th>${i18n[lang].detected}</th><th>${i18n[lang].value}</th><th>${i18n[lang].actions}</th></tr></thead>`;
-    const tb=document.createElement("tbody");
-    rows.forEach(r=>{
-      const map=findTarget(r.abbr);
-      const tr=document.createElement("tr");
-      const mapTxt=map?`${map.section}/${map.id}/${map.draw}`:"—";
-      const inp=document.createElement("input"); inp.value=r.detected.replace(/\s*-\s*/g,"-");
-      const btn=document.createElement("button"); btn.className="btn"; btn.textContent=i18n[lang].save;
-      btn.onclick=()=>{ if(!map) return; const val=inp.value.trim(); const ok = map.section==="usa" ? /^\d{3}-\d{4}$/.test(val) : (/^\d{2}-\d{2}-\d{2}$/.test(val)||/^\d{3}$/.test(val)); if(!ok){inp.style.borderColor="var(--danger)"; setTimeout(()=>inp.style.borderColor="",800); return;} setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); };
-      tr.appendChild(td(r.abbr)); tr.appendChild(td(mapTxt)); tr.appendChild(td(r.detected)); const tdv=td(""); tdv.appendChild(inp); tr.appendChild(tdv); const tdb=td(""); tdb.appendChild(btn); tr.appendChild(tdb);
-      tb.appendChild(tr);
-    });
-    table.appendChild(tb); box.appendChild(table);
-  }
+        const rows = text.split(/\n---\n/).flatMap(parseOCRTextBlock);
+        renderOCRRows(rows);
+      }
   function assignAllFromOCR(){
-    const rows=[...document.querySelectorAll("#ocrTable tbody tr")];
-    rows.forEach(tr=>{ const ab=tr.children[0].textContent; const map=findTarget(ab); if(!map) return; const val=tr.querySelector("input").value.trim(); const ok = map.section==="usa" ? /^\d{3}-\d{4}$/.test(val) : (/^\d{2}-\d{2}-\d{2}$/.test(val)||/^\d{3}$/.test(val)); if(ok) setResult(map.section,map.id,map.draw,val, getSelectedDateISO()); });
-    alert("Filas guardadas.");
-  }
+        const preview = JSON.parse(localStorage.getItem(KEY_OCR_PREVIEW)||"[]");
+        const ts = getSelectedDateISO();
+        let count=0;
+        preview.forEach(r=>{ if(r && r.map){ const val=(r.value||r.detected||"").trim(); setResult(r.map.section, r.map.id, r.map.draw, val, ts); count++; } });
+        alert((lang==="es"?"Filas guardadas: ":"Saved rows: ")+count);
+      }
 
   /*************** Catalog CRUD / Logos / Visibility (unchanged) ***************/
   function buildCatalog(){
@@ -559,6 +567,43 @@
 
   /*************** Mapping for OCR ***************/
   const MAP=[
+        {k:["NEW YORK MIDDAY","NEW YORK MID"], map:{section:"usa",id:"ny",draw:"Midday"}},
+        {k:["NEW YORK EVENING","NEW YORK NIGHT"], map:{section:"usa",id:"ny",draw:"Evening"}},
+        {k:["BK PAPER AM","BK PAPER"], map:{section:"special",id:"bk-paper",draw:"AM"}},
+        {k:["BK PAPER PM"], map:{section:"special",id:"bk-paper",draw:"PM"}},
+        {k:["NY-BP AM","NY BP AM","NY-BP"], map:{section:"special",id:"ny-bp",draw:"AM"}},
+        {k:["NY-BP PM","NY BP PM"], map:{section:"special",id:"ny-bp",draw:"PM"}},
+        {k:["NY-FP AM","NY FP AM","NY-FP"], map:{section:"special",id:"ny-fp",draw:"AM"}},
+        {k:["NY-FP PM","NY FP PM"], map:{section:"special",id:"ny-fp",draw:"PM"}},
+        {k:["FL PICK2 AM","FL PICK 2 AM"], map:{section:"usa",id:"fl-p2",draw:"AM"}},
+        {k:["FL PICK2 PM","FL PICK 2 PM"], map:{section:"usa",id:"fl-p2",draw:"PM"}},
+        {k:["MASSACHUSETTS EVENING","MA EVENING","MASS EVENING"], map:{section:"usa",id:"ma",draw:"Evening"}},
+        {k:["MASSACHUSETTS MIDDAY","MA MIDDAY","MASS MIDDAY"], map:{section:"usa",id:"ma",draw:"Midday"}},
+        {k:["VIRGINIA DAY","VA DAY","VA AM"], map:{section:"usa",id:"va",draw:"Day"}},
+        {k:["VIRGINIA NIGHT","VA NIGHT","VA PM"], map:{section:"usa",id:"va",draw:"Night"}},
+        {k:["MICHIGAN MIDDAY","MI MIDDAY","MI AM"], map:{section:"usa",id:"mi",draw:"Midday"}},
+        {k:["MICHIGAN EVENING","MI EVENING","MI PM"], map:{section:"usa",id:"mi",draw:"Evening"}},
+        {k:["MARYLAND MIDDAY","MD MIDDAY","MD AM"], map:{section:"usa",id:"md",draw:"Midday"}},
+        {k:["MARYLAND EVENING","MD EVENING","MD PM"], map:{section:"usa",id:"md",draw:"Evening"}},
+        {k:["DELAWARE DAY","DE DAY","DE AM"], map:{section:"usa",id:"de",draw:"Day"}},
+        {k:["DELAWARE NIGHT","DE NIGHT","DE PM"], map:{section:"usa",id:"de",draw:"Night"}},
+        {k:["NORTH CAROLINA DAY","NC DAY","NC AM"], map:{section:"usa",id:"nc",draw:"Day"}},
+        {k:["NORTH CAROLINA EVENING","NC EVENING","NC PM"], map:{section:"usa",id:"nc",draw:"Evening"}},
+        {k:["SOUTH CAROLINA MIDDAY","SC MIDDAY","SC AM","SOUTH C AM"], map:{section:"usa",id:"sc",draw:"Midday"}},
+        {k:["SOUTH CAROLINA EVENING","SC EVENING","SC PM","SOUTH C PM"], map:{section:"usa",id:"sc",draw:"Evening"}},
+        {k:["LA PRIMERA AM"], map:{section:"rd",id:"laprimera",draw:"AM"}},
+        {k:["LA PRIMERA PM"], map:{section:"rd",id:"laprimera",draw:"PM"}},
+        {k:["LA SUERTE AM"], map:{section:"rd",id:"lasuerte",draw:"AM"}},
+        {k:["LA SUERTE PM"], map:{section:"rd",id:"lasuerte",draw:"PM"}},
+        {k:["LOTEDOM"], map:{section:"rd",id:"lotedom",draw:"Tarde"}},
+        {k:["EXTRA MIDDAY"], map:{section:"special",id:"extra",draw:"Midday"}},
+        {k:["EXTRA NIGHT"], map:{section:"special",id:"extra",draw:"Night"}},
+        {k:["KING LOTTERY AM"], map:{section:"special",id:"king",draw:"AM"}},
+        {k:["KING LOTTERY PM"], map:{section:"special",id:"king",draw:"PM"}},
+        {k:["ANGUILLA 10AM"], map:{section:"special",id:"anguilla",draw:"10AM"}},
+        {k:["ANGUILLA 1PM","ANGUILLA 1 PM"], map:{section:"special",id:"anguilla",draw:"1PM"}},
+        {k:["ANGUILLA 6PM","ANGUILLA 6 PM"], map:{section:"special",id:"anguilla",draw:"6PM"}},
+        {k:["ANGUILLA 9PM","ANGUILLA 9 PM"], map:{section:"special",id:"anguilla",draw:"9PM"}},
     {k:["MIDDAY","NY AM","NY MID","N Y"], map:{section:"usa",id:"ny",draw:"Midday"}},
     {k:["STATE","NYS","NY PM","NY NIGHT","NEW YORK EVENING","STATE-"], map:{section:"usa",id:"ny",draw:"Evening"}},
     {k:["BK-DAY","BK DAY","BK AM"], map:{section:"special",id:"ny-bk",draw:"AM"}},
