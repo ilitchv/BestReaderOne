@@ -174,6 +174,7 @@
           <div class="field"><em>Editar/guardar resultados manualmente.</em></div>
           <div class="row">
             <button class="ghost" id="resetResults">Resetear resultados</button>
+<button class="btn ghost" id="refreshFromOCR">Refresh from OCR</button>
           </div>
         </div>
         <div id="manualTable"></div>
@@ -690,5 +691,145 @@
 
   applyLang(); render();
   </script>
-</body>
-</html>
+
+<!-- Beast Reader v8_3_1 minimal patch: keeps everything intact -->
+<script>
+(function(){
+  const KEY_OCR_SNAPSHOT = 'br_ocr_preview_v1';
+
+  // ---- Admin PIN caching (remember 1983 locally) ----
+  try {
+    const ADMIN_PIN = (typeof window.ADMIN_PIN!=='undefined') ? window.ADMIN_PIN : '1983';
+    const adminBtn  = document.getElementById('adminBtn');
+    const pinModal  = document.getElementById('pinModal');
+    const pinInput  = document.getElementById('pinInput');
+    const pinOk     = document.getElementById('pinOk');
+
+    // Auto-open admin if PIN is stored
+    if (adminBtn) {
+      adminBtn.addEventListener('click', function(ev){
+        try{
+          const saved = localStorage.getItem('br_admin_pin');
+          if (saved && saved === ADMIN_PIN && typeof window.openAdmin === 'function') {
+            ev.preventDefault();
+            ev.stopImmediatePropagation();
+            if (pinModal) pinModal.classList.remove('open');
+            window.openAdmin();
+          }
+        }catch(e){ console.warn(e); }
+      }, true);
+    }
+
+    // When PIN is correct, remember it in localStorage
+    if (pinOk) {
+      pinOk.addEventListener('click', function(){
+        try{
+          if (pinInput && pinInput.value === ADMIN_PIN) {
+            localStorage.setItem('br_admin_pin', ADMIN_PIN);
+          }
+        }catch(e){ console.warn(e); }
+      }, true);
+    }
+  } catch(err){ console.warn('PIN cache patch error', err); }
+
+  // ---- OCR snapshot helpers (non-invasive) ----
+  function saveOcrSnapshotFromDom(){
+    const ocrTable = document.getElementById('ocrTable');
+    if (!ocrTable) return;
+    const rows = Array.from(ocrTable.querySelectorAll('tbody tr'));
+    const data = rows.map(tr => {
+      const tds = tr.querySelectorAll('td');
+      const abbr = (tds[0] && tds[0].textContent || '').trim();
+      const map  = (tds[1] && tds[1].textContent || '').trim();
+      const det  = (tds[2] && tds[2].textContent || '').trim();
+      const input = tr.querySelector('input') || tr.querySelector('input.ocr-value');
+      const value = input ? input.value.trim() : ((tds[3] && tds[3].textContent) || '').trim();
+      return { abbr, map, detected: det, value };
+    }).filter(r => r.abbr);
+    localStorage.setItem('br_ocr_preview_v1', JSON.stringify({ ts: Date.now(), items: data }));
+  }
+
+  function readOcrData(){
+    const ocrTable = document.getElementById('ocrTable');
+    if (ocrTable) {
+      const rows = Array.from(ocrTable.querySelectorAll('tbody tr'));
+      const data = rows.map(tr => {
+        const tds = tr.querySelectorAll('td');
+        const abbr = (tds[0] && tds[0].textContent || '').trim();
+        const map  = (tds[1] && tds[1].textContent || '').trim();
+        const det  = (tds[2] && tds[2].textContent || '').trim();
+        const input = tr.querySelector('input') || tr.querySelector('input.ocr-value');
+        const value = input ? input.value.trim() : ((tds[3] && tds[3].textContent) || '').trim();
+        return { abbr, map, detected: det, value };
+      }).filter(r => r.abbr);
+      if (data.length) return data;
+    }
+    try{
+      const raw = localStorage.getItem('br_ocr_preview_v1');
+      if (raw) {
+        const obj = JSON.parse(raw);
+        if (obj && Array.isArray(obj.items) && obj.items.length) return obj.items;
+      }
+    }catch(e){ console.warn(e); }
+    return [];
+  }
+
+  function tryHookOCRTable(){
+    const ocrTable = document.getElementById('ocrTable');
+    if (!ocrTable) return;
+    saveOcrSnapshotFromDom();
+    ocrTable.addEventListener('input', function(ev){
+      const t = ev.target;
+      if (t && t.closest && t.closest('#ocrTable')) saveOcrSnapshotFromDom();
+    });
+  }
+
+  function mapItemToTarget(item){
+    if (typeof window.findTarget === 'function') return window.findTarget(item.abbr);
+    return null;
+  }
+
+  async function applyOcrToResults(){
+    const btn = document.getElementById('refreshFromOCR');
+    if (btn) { btn.disabled = true; btn.textContent = 'Importando…'; }
+    try {
+      const rows = readOcrData();
+      if (!rows.length) { alert('No hay datos en la tabla de OCR o snapshot.'); return; }
+
+      const dateISO = (typeof window.getSelectedDateISO === 'function') ? window.getSelectedDateISO() : null;
+      if (!dateISO) { alert('Selecciona una fecha para resultados.'); return; }
+
+      let imported = 0, skipped = 0;
+      for (const r of rows) {
+        if (!r.value || !r.value.trim()) { skipped++; continue; }
+        const tgt = mapItemToTarget(r);
+        if (!tgt || !tgt.section || !tgt.lottery || !tgt.draw) { skipped++; continue; }
+        try{
+          if (typeof window.setResult === 'function') {
+            window.setResult(tgt.section, tgt.lottery, tgt.draw, r.value.trim(), dateISO);
+            imported++;
+          } else skipped++;
+        }catch(e){ skipped++; }
+      }
+      if (typeof window.renderResultsAdmin === 'function') window.renderResultsAdmin();
+      if (typeof window.renderBoard === 'function') window.renderBoard();
+      alert(`Importación desde OCR completada.
+Cargados: ${imported}
+Saltados: ${skipped}`);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Refresh from OCR'; }
+    }
+  }
+
+  function wire(){
+    const btn = document.getElementById('refreshFromOCR');
+    if (btn && !btn.__wired) { btn.__wired = true; btn.addEventListener('click', applyOcrToResults); }
+    tryHookOCRTable();
+  }
+  document.addEventListener('DOMContentLoaded', wire);
+  const obs = new MutationObserver(wire);
+  obs.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
+</body></html>
