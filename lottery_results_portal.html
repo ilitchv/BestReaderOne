@@ -1,16 +1,3 @@
-# We'll generate a verbose, fully expanded single-file HTML (v8_3_3_verbose) that restores:
-# - Full catalog seed (USA, RD, Special including BK Paper, Florida Pick 2, NY Horses)
-# - Public board renders cards even with no results
-# - Admin with tabs (Resultados/OCR/Catálogo/Logos/Visibilidad)
-# - PIN 1983, persisted in localStorage
-# - OCR tab accepts pasted text and images with Tesseract.js; preview saved to localStorage
-# - Results tab "Refresh from OCR" imports preview into results for selected date with mapping
-# - Visibility default ON for all seeded items
-# - Auto-scroll (optional button); date selector; light/dark theme via CSS variables (kept simple)
-# Note: This is a best-effort reconstruction based on the user's requirements.
-
-
-html = r"""
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1001,10 +988,3 @@ html = r"""
   </script>
 </body>
 </html>
-"""
-
-# Save file
-out_path = "/mnt/data/beast_reader_v8_3_3_verbose.html"
-with open(out_path, "w", encoding="utf-8") as f:
-    f.write(html)
-out_path
