@@ -175,6 +175,7 @@
           <div class="row">
             <button class="ghost" id="resetResults">Resetear resultados</button>
           </div>
+            <div class="row"><button class="btn" id="refreshFromOCR">Refresh from OCR</button></div>
         </div>
         <div id="manualTable"></div>
       </div>
@@ -690,5 +691,198 @@
 
   applyLang(); render();
   </script>
-</body>
-</html>
+
+<script>
+// === Beast Reader minimal patch: OCR snapshot + Refresh + History PIN + Aliases ===
+(function(){
+  const SNAP='br_ocr_preview_v1';
+  function parseMapText(txt){
+    const m = (txt||'').trim().match(/^([a-z]+)\/([^\/]+)\/(.+)$/i);
+    return m ? {section:m[1], id:m[2], draw:m[3]} : null;
+  }
+  function snapshotFromTable(){
+    const rows=[...document.querySelectorAll("#ocrTable tbody tr")];
+    const data=rows.map(tr=>{
+      const ab=(tr.children[0]?.textContent||"").trim();
+      const mapTxt=(tr.children[1]?.textContent||"").trim();
+      const detected=(tr.children[2]?.textContent||"").trim();
+      const inp=tr.querySelector('input');
+      const value= (inp ? inp.value : detected) || "";
+      const map = parseMapText(mapTxt) || (window.findTarget ? window.findTarget(ab) : null);
+      return {abbr:ab, detected, value, map};
+    });
+    localStorage.setItem(SNAP, JSON.stringify(data));
+    return data;
+  }
+  function hookOCRInputs(){
+    document.querySelectorAll("#ocrTable tbody input").forEach(inp=>{
+      inp.addEventListener('input', ()=>snapshotFromTable());
+    });
+  }
+  // Wrap original renderOCRTable to persist preview
+  const _render = window.renderOCRTable;
+  if (typeof _render === "function"){
+    window.renderOCRTable = function(text){
+      _render.call(this, text);
+      try{ snapshotFromTable(); hookOCRInputs(); }catch(e){}
+    }
+  }
+  // Override assignAllFromOCR to use snapshot (or scrape if empty)
+  window.assignAllFromOCR = function(){
+    let data = [];
+    try{ data = JSON.parse(localStorage.getItem(SNAP)||"[]") }catch(e){ data=[]; }
+    if(!data.length){
+      // fallback: scrape current table
+      data = snapshotFromTable();
+    }
+    const dateISO = (typeof getSelectedDateISO==="function") ? getSelectedDateISO() : new Date().toISOString();
+    let saved=0;
+    data.forEach(r=>{
+      const map = r.map || (window.findTarget ? window.findTarget(r.abbr) : null);
+      const val = (r.value||r.detected||"").trim();
+      if(map && val){
+        try{ window.setResult(map.section,map.id,map.draw,val, dateISO); saved++; }catch(e){}
+      }
+    });
+    alert((window.i18n && window.i18n[window.lang]?.savedRows)||`Filas guardadas: ${saved}`);
+  };
+  // Inject "Refresh from OCR" button handler if not wired
+  function wireRefreshBtn(){
+    const btn=document.getElementById('refreshFromOCR');
+    if(btn && !btn.__wired){
+      btn.__wired=true;
+      btn.addEventListener('click', ()=>{
+        // If admin not open, require PIN flow via Admin button (UI already handles it)
+        const dash=document.getElementById('adminDash');
+        if(!(dash && dash.classList.contains('open'))){
+          document.getElementById('adminBtn')?.click();
+          // user will open admin; assign after open
+          const iv=setInterval(()=>{
+            if(dash && dash.classList.contains('open')){ clearInterval(iv); window.assignAllFromOCR(); }
+          },200);
+        }else{
+          window.assignAllFromOCR();
+        }
+      });
+    }
+  }
+  // Protect History edit/delete/use with PIN
+  function ensureAdmin(cb){
+    const dash=document.getElementById('adminDash');
+    if(dash && dash.classList.contains('open')){ cb(); return; }
+    // Trigger PIN modal via Admin button
+    document.getElementById('adminBtn')?.click();
+    const iv=setInterval(()=>{
+      if(dash && dash.classList.contains('open')){ clearInterval(iv); cb(); }
+    },200);
+  }
+  document.addEventListener('click', function(e){
+    const withinHist = e.target.closest('#historyModal');
+    if(withinHist && /(Guardar|Eliminar|Usar como actual)/i.test(e.target.textContent||"")){
+      e.preventDefault(); e.stopPropagation();
+      ensureAdmin(()=> e.target.click());
+    }
+  }, true);
+
+  // CSV support (optional minimal)
+  function addCSVButton(){
+    const actions = document.querySelector('#tab-ocr .row .field:nth-child(2) .row');
+    if(!actions || document.getElementById('btnCSV')) return;
+    const file = document.createElement('input'); file.type='file'; file.accept='.csv'; file.id='csvFile'; file.style.display='none';
+    const btn = document.createElement('button'); btn.className='ghost'; btn.id='btnCSV'; btn.textContent='Cargar CSV';
+    btn.onclick=()=>file.click();
+    file.onchange=(ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const lines = String(reader.result).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        const rows=[];
+        let hasHeader=false;
+        if(/abbr\s*,\s*value/i.test(lines[0]||"")){ hasHeader=true; }
+        lines.slice(hasHeader?1:0).forEach(L=>{
+          const parts = L.split(",");
+          if(parts.length>=2){
+            const ab=parts[0].trim();
+            const v=parts.slice(1).join(",").trim();
+            rows.push({abbr:ab, detected:v});
+          }
+        });
+        // Render by synthesizing text: "ABBR v" per line
+        const txt = rows.map(r=>`${r.abbr} ${r.detected}`).join("\n");
+        const ta=document.getElementById('ocrOut'); if(ta){ ta.value = (ta.value.trim()? ta.value.trim()+"\n---\n":"") + txt; }
+        if(typeof window.renderOCRTable==="function") window.renderOCRTable(ta.value);
+      };
+      reader.readAsText(f);
+    };
+    actions.appendChild(btn); actions.appendChild(file);
+  }
+
+  // Extend alias MAP with specials and modes
+  function extendAliases(){
+    try{
+      if(!Array.isArray(window.MAP)) return;
+      const push=(keys,map)=>{
+        const exists = window.MAP.some(m=> JSON.stringify(m.map)===JSON.stringify(map));
+        if(!exists) window.MAP.push({k:keys, map});
+      };
+      // Specials
+      push(["EXTRA MIDDAY","EXTRA AM","EXTRA"], {section:"special",id:"extra",draw:"Midday"});
+      push(["EXTRA NIGHT","EXTRA PM"], {section:"special",id:"extra",draw:"Night"});
+      push(["ANGUILLA 10AM"], {section:"special",id:"anguilla",draw:"10AM"});
+      push(["ANGUILLA 1PM"], {section:"special",id:"anguilla",draw:"1PM"});
+      push(["ANGUILLA 6PM"], {section:"special",id:"anguilla",draw:"6PM"});
+      push(["ANGUILLA 9PM"], {section:"special",id:"anguilla",draw:"9PM"});
+      push(["NY-BP AM"], {section:"special",id:"ny-bp",draw:"AM"});
+      push(["NY-BP PM"], {section:"special",id:"ny-bp",draw:"PM"});
+      push(["NY-FP AM"], {section:"special",id:"ny-fp",draw:"AM"});
+      push(["NY-FP PM"], {section:"special",id:"ny-fp",draw:"PM"});
+      push(["BK PAPER","BK PAPER AM"], {section:"special",id:"bk-paper",draw:"AM"});
+      push(["BK PAPER PM"], {section:"special",id:"bk-paper",draw:"PM"});
+      push(["NY RACE 1","NY HORSES R1"], {section:"special",id:"ny-race",draw:"R1"});
+      push(["NY RACE 2","NY HORSES R2"], {section:"special",id:"ny-race",draw:"R2"});
+      push(["NY RACE 3","NY HORSES R3"], {section:"special",id:"ny-race",draw:"R3"});
+      // Florida Pick 2
+      push(["FL PICK2 AM","FL PICK 2 AM"], {section:"usa",id:"fl-p2",draw:"AM"});
+      push(["FL PICK2 PM","FL PICK 2 PM"], {section:"usa",id:"fl-p2",draw:"PM"});
+    }catch(e){}
+  }
+
+  // Ensure catalog includes specials so board can display them
+  function ensureCatalog(){
+    try{
+      const KEY_CATALOG = (window.KEY_CATALOG||'br_catalog_v1');
+      const cat = JSON.parse(localStorage.getItem(KEY_CATALOG)||"null") || (window.SEED||{});
+      cat.special = cat.special || [];
+      const ensure = (id,name,draws,visible=false)=>{
+        if(!cat.special.find(x=>x.id===id)){
+          cat.special.push({id, name, tz:"ET", visible, draws});
+        }
+      };
+      ensure("extra","Extra", [{code:"Midday",time:"13:00",days:[0,1,2,3,4,5,6]},{code:"Night",time:"22:00",days:[0,1,2,3,4,5,6]}], true);
+      ensure("anguilla","Anguilla", [{code:"10AM",time:"10:00",days:[0,1,2,3,4,5,6]},{code:"1PM",time:"13:00",days:[0,1,2,3,4,5,6]},{code:"6PM",time:"18:00",days:[0,1,2,3,4,5,6]},{code:"9PM",time:"21:00",days:[0,1,2,3,4,5,6]}], false);
+      ensure("ny-bp","NY-BP", [{code:"AM",time:"11:30",days:[0,1,2,3,4,5,6]},{code:"PM",time:"21:30",days:[0,1,2,3,4,5,6]}], false);
+      ensure("ny-fp","NY-FP", [{code:"AM",time:"11:30",days:[0,1,2,3,4,5,6]},{code:"PM",time:"21:30",days:[0,1,2,3,4,5,6]}], false);
+      ensure("bk-paper","BK Paper", [{code:"AM",time:"11:30",days:[0,1,2,3,4,5,6]},{code:"PM",time:"21:30",days:[0,1,2,3,4,5,6]}], false);
+      // NY Horses is already represented as ny-race/R1; if you want R2/R3 as separate draws, extend here (optional)
+      // Florida Pick 2 (keep hidden by default)
+      cat.usa = cat.usa || [];
+      if(!cat.usa.find(x=>x.id==="fl-p2")){
+        cat.usa.push({id:"fl-p2", name:"Florida Pick 2", tz:"ET", visible:false, draws:[{code:"AM",time:"13:30",days:[0,1,2,3,4,5,6]},{code:"PM",time:"21:45",days:[0,1,2,3,4,5,6]}]});
+      }
+      localStorage.setItem(KEY_CATALOG, JSON.stringify(cat));
+    }catch(e){}
+  }
+
+  function init(){
+    wireRefreshBtn();
+    addCSVButton();
+    extendAliases();
+    ensureCatalog();
+  }
+  if(document.readyState!=="loading") init();
+  else document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+
+</body></html>
