@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Venezuela Strategy SaaS – Demo (Single File)</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#94a3b8; --accent:#22c55e; --warn:#f59e0b; --bad:#ef4444; --ok:#3b82f6;
+  }
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--ink)}
+  header{position:sticky;top:0;background:#0b1220cc;backdrop-filter:blur(8px);z-index:10;border-bottom:1px solid #1f2937}
+  .wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
+  h1{font-size:20px;margin:0}
+  nav{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .tab{padding:10px 14px;border-radius:999px;background:#1f2937;color:#cbd5e1;border:1px solid #334155;cursor:pointer}
+  .tab.active{background:var(--ok);color:white;border-color:transparent}
+  main{padding:20px 16px}
+  .grid{display:grid;gap:16px}
+  @media (min-width:900px){.grid{grid-template-columns:1.2fr 1fr}}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:16px}
+  .title{font-weight:700;margin:0 0 10px 0}
+  label{display:block;margin:10px 0 6px;color:var(--muted);font-size:14px}
+  input,select,button,textarea{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:var(--ink)
+  }
+  button{background:#12427d;border-color:#12427d;cursor:pointer}
+  button.primary{background:var(--ok);border-color:var(--ok);color:#04120a;font-weight:700}
+  button.warn{background:var(--warn);border-color:var(--warn);color:#1f1300}
+  button.ghost{background:#1f2937;border-color:#1f2937}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row > *{flex:1 1 160px}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;text-align:left}
+  th{color:#a5b4fc;background:#0b1220}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid #334155}
+  .pill.ready{background:#052d16;border-color:#065f46;color:#a7f3d0}
+  .pill.wait{background:#2a1a03;border-color:#b45309;color:#fde68a}
+  .pill.bad{background:#2b0e0e;border-color:#991b1b;color:#fecaca}
+  .alert{padding:10px 12px;border-radius:12px;border:1px solid #166534;background:#052d16;color:#d1fae5;margin:8px 0}
+  .muted{color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .kpi{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin-top:10px}
+  .kpi .box{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px}
+  .small{font-size:12px}
+  .right{display:flex;justify-content:flex-end;gap:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Venezuela Strategy SaaS — Demo</h1>
+    <nav>
+      <button class="tab active" data-tab="user">Panel Usuario</button>
+      <button class="tab" data-tab="admin">Panel Admin</button>
+      <button class="tab" data-tab="ayuda">Ayuda & Reglas</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- USER PANEL -->
+  <section id="user" class="grid">
+    <div class="card">
+      <h2 class="title">Franjas monitoreadas</h2>
+      <div class="row">
+        <div>
+          <label>Filtrar por Estado</label>
+          <select id="filterState"></select>
+        </div>
+        <div>
+          <label>Franja</label>
+          <select id="filterFranja">
+            <option value="">Todas</option>
+            <option>Midday</option><option>Day</option><option>Evening</option><option>Night</option>
+          </select>
+        </div>
+        <div>
+          <label>Ventana P90 (días)</label>
+          <select id="windowDays">
+            <option>90</option><option>75</option><option selected>60</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="alerts"></div>
+      <table id="franjasTable">
+        <thead>
+          <tr>
+            <th>Estado</th><th>Franja</th><th>Última Fecha</th>
+            <th>Gap (Primera)</th><th>P90</th><th>Estado</th><th>Acción</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="title">Simulador de banca y stake</h2>
+      <div class="row">
+        <div>
+          <label>Capital disponible ($)</label>
+          <input id="capital" type="number" min="0" step="0.01" value="500" />
+        </div>
+        <div>
+          <label>Colchón (×)</label>
+          <input id="colchon" type="number" min="1" step="0.05" value="1.2" />
+        </div>
+        <div>
+          <label>Máx. ciclos concurrentes</label>
+          <input id="ciclos" type="number" min="1" step="1" value="2" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Multiplicador</label>
+          <input id="ratio" type="number" step="0.01" value="1.70" />
+        </div>
+        <div>
+          <label>Pasos (S)</label>
+          <input id="steps" type="number" min="1" max="10" value="5" />
+        </div>
+        <div>
+          <label>Stake inicial sugerido ($/doble)</label>
+          <input id="stakeSugerido" type="number" step="0.01" value="1.00" />
+        </div>
+      </div>
+      <div class="right">
+        <button class="ghost" id="calcStake">Recalcular stake</button>
+        <button class="primary" id="calcPlan">Ver plan de pasos</button>
+      </div>
+      <div id="planOut" class="small mono"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="title">Log de ciclos (mínimo requerido)</h2>
+      <div class="row">
+        <button class="ghost" id="exportLog">Exportar CSV</button>
+        <button class="warn" id="clearLog">Borrar Log</button>
+      </div>
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Estado</th><th>Franja</th><th>Gap</th><th>P90</th>
+            <th>Paso</th><th>Stake</th><th>Coste</th>
+            <th>1ª</th><th>2ª</th><th>3ª</th>
+            <th>Pagos</th><th>P&L ciclo</th><th>Reset</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ADMIN PANEL -->
+  <section id="admin" class="grid" style="display:none">
+    <div class="card">
+      <h2 class="title">Carga de resultados (XLSX o CSV)</h2>
+      <p class="muted small">
+        Encabezados: <span class="mono">Date, State, Franja, Pick3, Pick4</span> ·
+        Preserva ceros a la izquierda. Se ignoran filas incompletas.
+      </p>
+      <div class="row">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+        <button id="importBtn" class="primary">Importar</button>
+        <button id="wipeBtn" class="warn">Vaciar memoria</button>
+      </div>
+      <div id="importInfo" class="small muted"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="title">Datos en memoria</h2>
+      <div class="row">
+        <button class="ghost" id="exportData">Exportar JSON</button>
+        <button class="ghost" id="exportCSV">Exportar CSV</button>
+      </div>
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Estado</th><th>Franja</th><th>Pick3</th><th>Pick4</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="title">Integración con backend (Node + MongoDB)</h2>
+      <p class="small muted">
+        Este demo guarda en <b>localStorage</b>. Para producción, expón endpoints:
+      </p>
+      <pre class="small mono" style="white-space:pre-wrap">
+GET   /api/results?state=&franja=&from=&to=      → lista resultados (paginado)
+POST  /api/results/bulk                           → carga masiva desde CSV/XLSX
+GET   /api/metrics/p90?windowDays=60              → { state, franja, p90, gap, lastDate }
+POST  /api/logs                                   → guarda registro mínimo del ciclo
+      </pre>
+      <p class="small muted">
+        ⚠️ No coloques <b>MONGODB_URI</b> en el cliente. Configúralo en el servidor.
+      </p>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section id="ayuda" style="display:none">
+    <div class="card">
+      <h2 class="title">Resumen operativo</h2>
+      <ul>
+        <li>Entrar cuando <b>gap ≥ P90</b> (por Estado+Franja, usando datos anteriores).</li>
+        <li>Progresión ×1.70, máx. 5 pasos. Reset al acertar <b>Primera</b> o al Stop paso 5.</li>
+        <li><b>Pagos:</b> 1ª=55×, 2ª=15×, 3ª=10×. 2ª/3ª suman pero no resetean.</li>
+        <li>Actualizar P90 semanal/mensual con ventana 60–90 días (walk-forward).</li>
+      </ul>
+      <div class="kpi">
+        <div class="box small">Costo ciclo s: <span class="mono">C(s)=10·s·(1−r^S)/(1−r)</span></div>
+        <div class="box small">Stake sugerido: <span class="mono">s≈⌊Capital/(Colchón·C(1)·Ciclos)⌋</span></div>
+        <div class="box small">MaxDD guía colchón: <span class="mono">min ≥ 1.2× MaxDD</span></div>
+        <div class="box small">Franjas independientes: <span class="mono">no mezclar horarios</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- SheetJS para XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+/*** ====== Estado de app ====== ***/
+const STORE_KEY = 'vzla_data_v1';
+const LOG_KEY = 'vzla_log_v1';
+let state = {
+  results: loadStore(STORE_KEY) || [], // {date, state, franja, pick3, pick4}
+  log: loadStore(LOG_KEY) || []
+};
+
+function saveStore(key, data){ localStorage.setItem(key, JSON.stringify(data)); }
+function loadStore(key){ try{ return JSON.parse(localStorage.getItem(key)); }catch(e){ return null; } }
+function fmtDate(d){ return new Date(d).toISOString().slice(0,10); }
+function isDouble2d(nn){ return nn && nn.length===2 && nn[0]===nn[1]; }
+function last2(n){ return (''+n).padStart(3,'0').slice(-2); }
+function first2(n){ return (''+n).padStart(4,'0').slice(0,2); }
+function last2p4(n){ return (''+n).padStart(4,'0').slice(-2); }
+
+/*** ====== UI Tabs ====== ***/
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.getAttribute('data-tab');
+    ['user','admin','ayuda'].forEach(s=>document.getElementById(s).style.display = (s===id)?'grid':'none');
+    if(id==='user'){ renderFranjas(); renderLog(); }
+    if(id==='admin'){ renderTable(); }
+  });
+});
+
+/*** ====== Admin: importar ====== ***/
+const fileInput = document.getElementById('fileInput');
+document.getElementById('importBtn').onclick = async ()=>{
+  const f = fileInput.files?.[0];
+  if(!f){ alert('Selecciona un archivo XLSX/CSV.'); return; }
+  const ext = f.name.split('.').pop().toLowerCase();
+  let rows = [];
+  if(ext==='csv'){
+    rows = await readCSV(f);
+  }else{
+    rows = await readXLSX(f);
+  }
+  // Normaliza y valida
+  const norm = [];
+  for(const r of rows){
+    const DateStr = normalizeDate(r['Date']);
+    const State = (r['State']||'').trim();
+    const Franja = (r['Franja']||'').trim();
+    const Pick3 = (''+(r['Pick3']??'')).padStart(3,'0');
+    const Pick4 = (''+(r['Pick4']??'')).padStart(4,'0');
+    if(!DateStr || !State || !Franja || Pick3.length!==3 || Pick4.length!==4) continue;
+    norm.push({date: DateStr, state: State, franja: Franja, pick3: Pick3, pick4: Pick4});
+  }
+  // Fusiona sin duplicar por (date,state,franja)
+  const key = x=>`${x.date}|${x.state}|${x.franja}`;
+  const map = new Map(state.results.map(x=>[key(x), x]));
+  for(const n of norm){ map.set(key(n), n); }
+  state.results = Array.from(map.values()).sort((a,b)=>{
+    if(a.state!==b.state) return a.state.localeCompare(b.state);
+    if(a.franja!==b.franja) return a.franja.localeCompare(b.franja);
+    return a.date.localeCompare(b.date);
+  });
+  saveStore(STORE_KEY, state.results);
+  document.getElementById('importInfo').textContent =
+    `Importados ${norm.length} registros. Total en memoria: ${state.results.length}.`;
+  renderTable(); renderFranjas();
+};
+
+document.getElementById('wipeBtn').onclick = ()=>{
+  if(confirm('¿Vaciar todos los datos en memoria?')){ state.results=[]; saveStore(STORE_KEY, state.results); renderTable(); renderFranjas(); }
+};
+
+async function readCSV(file){
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter(x=>x.trim().length);
+  const headers = lines[0].split(',').map(h=>h.trim());
+  return lines.slice(1).map(line=>{
+    const cells = line.split(','); const obj={};
+    headers.forEach((h,i)=> obj[h]= (cells[i]??'').trim());
+    return obj;
+  });
+}
+
+async function readXLSX(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf);
+  const first = wb.SheetNames[0];
+  return XLSX.utils.sheet_to_json(wb.Sheets[first], {defval:''});
+}
+
+function normalizeDate(v){
+  if(!v) return null;
+  if(typeof v === 'number'){ // Excel date
+    const epoch = new Date(Date.UTC(1899,11,30));
+    const d = new Date(epoch.getTime() + v*86400000);
+    return fmtDate(d);
+  }
+  const d = new Date(v);
+  if(!isNaN(d)) return fmtDate(d);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim());
+  return m ? v.trim() : null;
+}
+
+/*** ====== Admin: render tabla ====== ***/
+function renderTable(){
+  const tbody = document.querySelector('#dataTable tbody');
+  tbody.innerHTML = state.results.slice(-1000).map(r=>`
+    <tr><td>${r.date}</td><td>${r.state}</td><td>${r.franja}</td><td>${r.pick3}</td><td>${r.pick4}</td></tr>
+  `).join('');
+  // Filtros Estado
+  const stSel = document.getElementById('filterState');
+  const states = Array.from(new Set(state.results.map(r=>r.state))).sort();
+  stSel.innerHTML = ['<option value="">Todos</option>', ...states.map(s=>`<option>${s}</option>`)].join('');
+}
+
+/*** ====== Core: cálculo de gap y P90 ====== ***/
+// Por clave (Estado+Franja) genera serie cronológica y calcula runs & P90 (walk-forward)
+function groupByFranja(){
+  const map = new Map();
+  for(const r of state.results){
+    const k = `${r.state}|${r.franja}`;
+    if(!map.has(k)) map.set(k, []);
+    map.get(k).push(r);
+  }
+  // Ordena por fecha asc
+  for(const arr of map.values()){ arr.sort((a,b)=> a.date.localeCompare(b.date)); }
+  return map;
+}
+
+// Devuelve info para última fecha: gap actual y P90 (con ventana W y sin mirar futuro)
+function metricsFor(arr, windowDays=60){
+  if(arr.length===0) return null;
+  // Serie con flags de doble en Primera (últimos 2 de Pick3)
+  const series = arr.map(x=>{
+    const p3 = (''+x.pick3).padStart(3,'0');
+    const primera = last2(p3);
+    return { date:x.date, isDouble: isDouble2d(primera), p3, p4:x.pick4 };
+  });
+  // Gap actual: conteo consecutivo desde el final sin doble en Primera
+  let gap=0;
+  for(let i=series.length-1;i>=0;i--){
+    if(series[i].isDouble) break; else gap++;
+  }
+  // P90 walk-forward: usa ventana móvil de ~W días previos (por fecha)
+  // Convertimos ventana en conteo por fechas
+  const byDate = series.map(s=>({date:s.date, isDouble:s.isDouble}));
+  const runLengths = []; // todas las rachas históricas (solo completas antes del último punto)
+  // Construimos rachas históricas dentro de los últimos W días de cada fecha y tomamos el percentil de la unión
+  const lastDate = series[series.length-1].date;
+  const cutoff = addDays(lastDate, -windowDays);
+  // Recorre para construir rachas entre cutoff..(penúltima)
+  let current=0;
+  for(let i=0;i<byDate.length-1;i++){ // hasta penúltima para no mirar la última al calcular umbral
+    if(byDate[i].isDouble){ if(current>0){ runLengths.push(current); current=0; } }
+    else{ current++; }
+  }
+  if(current>0) runLengths.push(current);
+  const hist = runLengths.filter(_=>true);
+  const p90 = percentileCeil(hist, 0.90) || 0;
+  return { gap, p90, lastDate };
+}
+
+function addDays(iso, delta){
+  const d = new Date(iso); d.setDate(d.getDate()+delta); return fmtDate(d);
+}
+function percentileCeil(arr, p){
+  const a = arr.slice().sort((x,y)=>x-y);
+  if(a.length===0) return 0;
+  const idx = Math.ceil(p*a.length)-1;
+  return Math.max(0, a[Math.min(Math.max(idx,0),a.length-1)]);
+}
+
+/*** ====== User: render franjas y alertas ====== ***/
+function renderFranjas(){
+  const windowDays = parseInt(document.getElementById('windowDays').value,10);
+  const filterState = document.getElementById('filterState').value;
+  const filterFranja = document.getElementById('filterFranja').value;
+  const map = groupByFranja();
+  const rows = [];
+  const alerts = [];
+
+  for(const [key, arr] of map.entries()){
+    if(arr.length===0) continue;
+    const [st, fr] = key.split('|');
+    if(filterState && st!==filterState) continue;
+    if(filterFranja && fr!==filterFranja) continue;
+
+    const m = metricsFor(arr, windowDays);
+    if(!m) continue;
+    const ready = m.gap >= m.p90 && m.p90>0;
+    if(ready){
+      alerts.push(`<div class="alert">⚡ <b>${st} – ${fr}</b> listo: gap <b>${m.gap}</b> ≥ P90 <b>${m.p90}</b> (última: ${m.lastDate}).</div>`);
+      tryRequestNotify(`${st} ${fr}: gap ${m.gap} ≥ P90 ${m.p90}`);
+    }
+    rows.push(`
+      <tr>
+        <td>${st}</td>
+        <td>${fr}</td>
+        <td>${m.lastDate}</td>
+        <td>${m.gap}</td>
+        <td>${m.p90}</td>
+        <td>${ready?'<span class="pill ready">Listo</span>':'<span class="pill wait">En espera</span>'}</td>
+        <td>
+          <button class="ghost" onclick='startCycle(${JSON.stringify({state:st,franja:fr}).replace(/"/g,'&quot;')})'>Iniciar ciclo</button>
+        </td>
+      </tr>
+    `);
+  }
+  document.querySelector('#franjasTable tbody').innerHTML = rows.join('') || `<tr><td colspan="7" class="muted">Sin datos. Carga resultados en Panel Admin.</td></tr>`;
+  document.getElementById('alerts').innerHTML = alerts.join('');
+}
+
+function tryRequestNotify(msg){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){ new Notification(msg); }
+}
+
+/*** ====== Ciclos y log ====== ***/
+function startCycle(info){
+  // Calcula plan de pasos con stake sugerido actual
+  const s0 = parseFloat(document.getElementById('stakeSugerido').value||'1');
+  const r  = parseFloat(document.getElementById('ratio').value||'1.7');
+  const S  = parseInt(document.getElementById('steps').value||'5',10);
+  const plan = [];
+  let s = s0;
+  for(let i=1;i<=S;i++){
+    const cost = 10*s;
+    const pay1 = 55*s, pay2=15*s, pay3=10*s;
+    plan.push({i, s:+s.toFixed(2), cost:+cost.toFixed(2), pay1:+pay1.toFixed(2), pay2:+pay2.toFixed(2), pay3:+pay3.toFixed(2)});
+    s = s*r;
+  }
+  // Registra línea “plantilla” (usuario la ajusta manualmente según salidas)
+  const now = new Date(); const today = fmtDate(now);
+  const k = metricsFor(groupByFranja().get(`${info.state}|${info.franja}`)||[], parseInt(document.getElementById('windowDays').value,10)) || {gap:0,p90:0,lastDate:today};
+  const first = plan[0];
+  state.log.push({
+    date: today, state: info.state, franja: info.franja,
+    gap: k.gap, p90: k.p90, step: 1, stake: first.s, cost: first.cost,
+    d1: '', d2: '', d3: '', pays: 0, pnl: 0, reset: 'No'
+  });
+  saveStore(LOG_KEY, state.log);
+  renderLog();
+  alert(`Ciclo creado para ${info.state} – ${info.franja}. Completa resultados paso a paso en el log.`);
+}
+
+function renderLog(){
+  const tb = document.querySelector('#logTable tbody');
+  tb.innerHTML = state.log.slice(-300).map((r,idx)=>`
+    <tr>
+      <td>${r.date}</td><td>${r.state}</td><td>${r.franja}</td>
+      <td>${r.gap}</td><td>${r.p90}</td>
+      <td contenteditable onblur="updLog(${idx},'step',this.innerText)">${r.step}</td>
+      <td contenteditable onblur="updLog(${idx},'stake',this.innerText)">${r.stake}</td>
+      <td contenteditable onblur="updLog(${idx},'cost',this.innerText)">${r.cost}</td>
+      <td contenteditable onblur="updLog(${idx},'d1',this.innerText)">${r.d1}</td>
+      <td contenteditable onblur="updLog(${idx},'d2',this.innerText)">${r.d2}</td>
+      <td contenteditable onblur="updLog(${idx},'d3',this.innerText)">${r.d3}</td>
+      <td contenteditable onblur="updLog(${idx},'pays',this.innerText)">${r.pays}</td>
+      <td contenteditable onblur="updLog(${idx},'pnl',this.innerText)">${r.pnl}</td>
+      <td contenteditable onblur="updLog(${idx},'reset',this.innerText)">${r.reset}</td>
+    </tr>
+  `).join('') || `<tr><td colspan="14" class="muted">Sin registros.</td></tr>`;
+}
+
+function updLog(i, k, v){
+  const n = ['step','stake','cost','pays','pnl'].includes(k) ? (+v||0) : v;
+  state.log[i][k]=n;
+  saveStore(LOG_KEY, state.log);
+}
+
+document.getElementById('exportLog').onclick = ()=>{
+  const rows = [['Date','State','Franja','Gap','P90','Paso','Stake','Coste','Doble1','Doble2','Doble3','Pagos','PnL','Reset'],
+    ...state.log.map(r=>[r.date,r.state,r.franja,r.gap,r.p90,r.step,r.stake,r.cost,r.d1,r.d2,r.d3,r.pays,r.pnl,r.reset])];
+  downloadCSV('log.csv', rows);
+};
+document.getElementById('clearLog').onclick = ()=>{
+  if(confirm('¿Borrar todo el log?')){ state.log = []; saveStore(LOG_KEY,state.log); renderLog(); }
+};
+
+/*** ====== Usuario: stake/banca ====== ***/
+document.getElementById('calcStake').onclick = ()=>{
+  const cap = +document.getElementById('capital').value||0;
+  const col = +document.getElementById('colchon').value||1.2;
+  const cyc = +document.getElementById('ciclos').value||2;
+  const r   = +document.getElementById('ratio').value||1.7;
+  const S   = +document.getElementById('steps').value||5;
+  const C1  = 10 * ( (1 - Math.pow(r,S)) / (1 - r) ); // costo ciclo con s=1
+  const s0  = Math.floor((cap / (col*C1*cyc)) * 100) / 100;
+  document.getElementById('stakeSugerido').value = Math.max(0, s0).toFixed(2);
+};
+
+document.getElementById('calcPlan').onclick = ()=>{
+  const s0 = +document.getElementById('stakeSugerido').value||1;
+  const r  = +document.getElementById('ratio').value||1.7;
+  const S  = +document.getElementById('steps').value||5;
+  const out = [];
+  let s=s0, total=0;
+  for(let i=1;i<=S;i++){
+    const cost = +(10*s).toFixed(2); total += cost;
+    out.push(`Paso ${i}: stake ${s.toFixed(2)} → Coste ${cost.toFixed(2)} | Pagos: 1ª=${(55*s).toFixed(2)} 2ª=${(15*s).toFixed(2)} 3ª=${(10*s).toFixed(2)}`);
+    s = s*r;
+  }
+  out.push(`Costo total ciclo ≈ $${total.toFixed(2)}`);
+  document.getElementById('planOut').textContent = out.join('\n');
+};
+
+/*** ====== Helpers ====== ***/
+document.getElementById('filterState').onchange = renderFranjas;
+document.getElementById('filterFranja').onchange = renderFranjas;
+document.getElementById('windowDays').onchange = renderFranjas;
+
+document.getElementById('exportData').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(state.results,null,2)], {type:'application/json'});
+  downloadBlob('resultados.json', blob);
+};
+document.getElementById('exportCSV').onclick = ()=>{
+  const rows = [['Date','State','Franja','Pick3','Pick4'],
+    ...state.results.map(r=>[r.date,r.state,r.franja,r.pick3,r.pick4])];
+  downloadCSV('resultados.csv', rows);
+};
+
+function downloadCSV(name, rows){
+  const csv = rows.map(r=>r.map(cell=>{
+    const c = (cell??'').toString();
+    return /[",\n]/.test(c) ? `"${c.replace(/"/g,'""')}"` : c;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  downloadBlob(name, blob);
+}
+function downloadBlob(name, blob){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/*** ====== Init ====== ***/
+renderTable(); renderFranjas(); renderLog();
+if('Notification' in window && Notification.permission!=='granted'){ Notification.requestPermission(); }
+</script>
+</body>
+</html>

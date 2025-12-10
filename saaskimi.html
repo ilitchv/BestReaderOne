@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BeastBet – Estrategia Venezuela</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background:#f7f7f7; }
+    .navbar-brand { font-weight:700; }
+    .card { border-radius:.75rem; }
+    .table-sm td, .table-sm th { padding:.35rem .5rem; }
+    .alert-fixed { position:fixed; top:15px; right:15px; z-index:9999; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+  <div class="container-fluid">
+    <span class="navbar-brand mb-0 h1"><i class="fas fa-chart-line"></i> BeastBet</span>
+    <div id="navButtons"><button class="btn btn-outline-light btn-sm" onclick="renderLogin()">Iniciar Sesión</button></div>
+  </div>
+</nav>
+
+<div id="app" class="container py-4"></div>
+
+<!-- MODALS -->
+<div class="modal fade" id="adminModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Panel de Administrador</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs" id="adminTab" role="tablist">
+          <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabUpload">Cargar Resultados</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabUsers">Usuarios</a></li>
+        </ul>
+        <div class="tab-content mt-3">
+          <div class="tab-pane fade show active" id="tabUpload">
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="form-control mb-2">
+            <button class="btn btn-primary" onclick="uploadFile()">Subir</button>
+          </div>
+          <div class="tab-pane fade" id="tabUsers">
+            <table class="table table-sm"><thead><tr><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody id="usersTable"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+<script type="module">
+import { io } from "https://cdn.socket.io/4.7.2/socket.io.esm.min.js";
+const socket = io("/", { transports:["websocket","polling"] });
+
+/* ========= CONFIG ========= */
+
+
+/* ========= UTILS ========= */
+const $ = sel => document.querySelector(sel);
+const render = html => $("#app").innerHTML = html;
+const toast = (msg,type='success') => {
+  const div = document.createElement('div');
+  div.className = `alert alert-${type} alert-dismissible fade show alert-fixed`;
+  div.innerHTML = `${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),4000);
+};
+
+/* ========= AUTH ========= */
+function renderLogin() {
+  render(`
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card shadow">
+          <div class="card-body">
+            <h4 class="mb-3">Iniciar Sesión</h4>
+            <form onsubmit="login(event)">
+              <input id="email" type="email" class="form-control mb-2" placeholder="Email" required>
+              <input id="password" type="password" class="form-control mb-3" placeholder="Contraseña" required>
+              <button class="btn btn-primary w-100">Entrar</button>
+            </form>
+            <hr>
+            <button class="btn btn-outline-secondary w-100" onclick="renderRegister()">Crear cuenta</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+window.renderLogin = renderLogin;
+
+function renderRegister() {
+  render(`
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card shadow">
+          <div class="card-body">
+            <h4 class="mb-3">Registro</h4>
+            <form onsubmit="register(event)">
+              <input id="email" type="email" class="form-control mb-2" placeholder="Email" required>
+              <input id="password" type="password" class="form-control mb-3" placeholder="Contraseña" required>
+              <button class="btn btn-success w-100">Registrarse</button>
+            </form>
+            <hr>
+            <button class="btn btn-outline-secondary w-100" onclick="renderLogin()">Volver</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+window.renderRegister = renderRegister;
+
+async function login(e){
+  e.preventDefault();
+  const res = await fetch('/api/login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email:$('#email').value, password:$('#password').value})
+  });
+  const data = await res.json();
+  if(res.ok){ user=data; renderDashboard(); toast('Bienvenido'); } else toast(data.error,'danger');
+}
+window.login = login;
+
+async function register(e){
+  e.preventDefault();
+  const res = await fetch('/api/register', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email:$('#email').value, password:$('#password').value})
+  });
+  const data = await res.json();
+  if(res.ok){ toast('Registrado, espere activación'); renderLogin(); } else toast(data.error,'danger');
+}
+window.register = register;
+
+/* ========= ADMIN ========= */
+function openAdmin(){ new bootstrap.Modal('#adminModal').show(); loadUsers(); }
+async function loadUsers(){
+  const res = await fetch('/api/admin/users');
+  const list = await res.json();
+  $('#usersTable').innerHTML = list.map(u=>`
+    <tr>
+      <td>${u.email}</td><td>${u.role}</td>
+      <td>
+        ${u.role==='pending' ? `<button class="btn btn-sm btn-outline-success" onclick="approveUser('${u._id}')">Activar</button>` : ''}
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${u._id}')">Borrar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+window.openAdmin = openAdmin;
+window.loadUsers = loadUsers;
+
+async function approveUser(id){
+  await fetch('/api/admin/approve', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})});
+  loadUsers(); toast('Usuario activado');
+}
+window.approveUser = approveUser;
+
+async function deleteUser(id){
+  await fetch('/api/admin/users/'+id, {method:'DELETE'});
+  loadUsers(); toast('Usuario eliminado');
+}
+window.deleteUser = deleteUser;
+
+/* ========= DASHBOARD ========= */
+function renderDashboard(){
+  $('#navButtons').innerHTML = `
+    <span class="text-light me-3">${user.email}</span>
+    ${user.role==='admin'?'<button class="btn btn-outline-warning btn-sm me-2" onclick="openAdmin()"><i class="fas fa-cog"></i> Admin</button>':''}
+    <button class="btn btn-outline-light btn-sm" onclick="logout()">Salir</button>
+  `;
+  render(`
+    <h4 class="mb-3">Resultados y Alertas</h4>
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card mb-3">
+          <div class="card-header">Últimos sorteos</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead><tr><th>Fecha</th><th>Franja</th><th>Pick-3</th><th>Pick-4</th><th>Primera</th><th>Segunda</th><th>Tercera</th></tr></thead>
+                <tbody id="resultBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">Alertas Activas</div>
+          <div class="card-body" id="alertsBox">Cargando...</div>
+        </div>
+      </div>
+    </div>
+  `);
+  loadResults();
+  loadAlerts();
+  socket.on('newAlert', loadAlerts);
+}
+window.renderDashboard = renderDashboard;
+
+async function loadResults(){
+  const res = await fetch('/api/results');
+  const rows = await res.json();
+  $('#resultBody').innerHTML = rows.slice(0,50).map(r=>{
+    const p3 = r.pick3.padStart(3,'0');
+    const p4 = r.pick4.padStart(4,'0');
+    const prim = p3.slice(-2);
+    const seg = p4.slice(0,2);
+    const terc = p4.slice(-2);
+    return `<tr>
+      <td>${r.date}</td><td>${r.band}</td><td>${p3}</td><td>${p4}</td>
+      <td class="${/(\d)\1/.test(prim)?'text-danger fw-bold':''}">${prim}</td>
+      <td class="${/(\d)\1/.test(seg)?'text-danger fw-bold':''}">${seg}</td>
+      <td class="${/(\d)\1/.test(terc)?'text-danger fw-bold':''}">${terc}</td>
+    </tr>`;
+  }).join('');
+}
+window.loadResults = loadResults;
+
+async function loadAlerts(){
+  const res = await fetch('/api/alerts');
+  const alerts = await res.json();
+  $('#alertsBox').innerHTML = alerts.length ? alerts.map(a=>`
+    <div class="alert alert-warning">${a.band} gap=${a.gap} ≥ P90=${a.p90} – Paso ${a.step}</div>
+  `).join('') : '<p class="text-muted">Sin alertas.</p>';
+}
+window.loadAlerts = loadAlerts;
+
+async function logout(){
+  await fetch('/api/logout');
+  user=null;
+  $('#navButtons').innerHTML = '<button class="btn btn-outline-light btn-sm" onclick="renderLogin()">Iniciar Sesión</button>';
+  renderLogin();
+}
+window.logout = logout;
+
+/* ========= UPLOAD ========= */
+async function uploadFile(){
+  const file = $('#fileInput').files[0];
+  if(!file) return toast('Selecciona archivo','warning');
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws);
+  const res = await fetch('/api/admin/upload', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows})
+  });
+  if(res.ok){ toast('Archivo procesado'); } else toast('Error','danger');
+}
+window.uploadFile = uploadFile;
+
+/* ========= INIT ========= */
+renderLogin();
+</script>
+
+<!-- ===== BACKEND (Node/Express) ===== -->
+<script type="module">
+/* Este bloque se ejecuta solo cuando el archivo se sirve con un servidor Node + Express + Mongo.
+   Para pruebas locales, puedes usar el siguiente mini-servidor:
+
+   1. npm init -y
+   2. npm i express mongoose cors multer xlsx dotenv socket.io
+   3. Copia el siguiente código en server.js y ejecuta "node server.js"
+*/
+if(typeof module !== 'undefined' && module.exports) return;
+</script>
+</body>
+</html>

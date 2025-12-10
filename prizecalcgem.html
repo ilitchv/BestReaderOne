@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Premios de Lotería</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light mode variables (original) */
+            --primary-light: #3b82f6; 
+            --primary-hover-light: #2563eb;
+            --secondary-light: #10b981; 
+            --secondary-hover-light: #059669;
+            --danger-light: #ef4444; 
+            --danger-hover-light: #dc2626;
+            --success-light: #22c55e; 
+            --success-hover-light: #16a34a;
+
+            --bg-light: #f8fafc; 
+            --text-light: #1e293b; 
+            --border-light: #cbd5e1; 
+            --card-bg-light: white;
+            --input-bg-light: white;
+            --input-text-light: var(--text-light);
+            --input-border-light: var(--border-light);
+            --input-focus-shadow-light: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            --button-text-on-primary-light: white;
+
+            /* Dark mode variables (from user's CSS) */
+            --color-fondo-dark: #0a0a0a;
+            --color-neon-cian-dark: #00ffff;
+            --color-neon-morado-dark: #ff00ff;
+            --color-neon-verde-dark: #39ff14;
+            --color-texto-dark: #ffffff;
+            --color-placeholder-dark: #cccccc;
+            --color-card-bg-dark: #1e1e1e; 
+            --color-border-dark: var(--color-neon-cian-dark);
+            --input-focus-shadow-dark: 0 0 15px var(--color-neon-morado-dark);
+            --button-text-on-neon-dark: #000000; 
+        }
+
+        body {
+            font-family: 'Montserrat', 'Poppins', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            margin: 0;
+        }
+
+        html.dark body {
+            background-color: var(--color-fondo-dark);
+            color: var(--color-texto-dark);
+        }
+
+        .container-main { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        html.dark .container-main {
+            background: rgba(10, 10, 10, 0.95); 
+            border-radius: 15px; 
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); 
+        }
+
+        h1 {
+            color: var(--primary-light);
+        }
+        html.dark h1 {
+            color: var(--color-neon-cian-dark);
+        }
+        
+        h2, h3.section-title { /* Apply to h3.section-title as well */
+            text-align: center;
+            margin-bottom: 1rem; /* Adjusted margin */
+            color: var(--text-light); 
+        }
+        html.dark h2, html.dark h3.section-title {
+            color: var(--color-neon-cian-dark);
+            text-shadow: 0 0 10px var(--color-neon-cian-dark);
+        }
+
+        .table-cell-editable {
+            padding: 0.5rem;
+            border: 1px solid transparent;
+            min-width: 60px;
+        }
+        .table-cell-editable:hover {
+            border-color: var(--primary-light);
+        }
+        html.dark .table-cell-editable:hover {
+            border-color: var(--color-neon-cian-dark);
+        }
+        .table-cell-editable:focus {
+            outline: 2px solid var(--primary-light);
+            background-color: var(--input-bg-light);
+            color: var(--input-text-light);
+            border-radius: 0.25rem;
+        }
+        html.dark .table-cell-editable:focus {
+            outline: 2px solid var(--color-neon-cian-dark);
+            background-color: var(--color-card-bg-dark);
+            color: var(--color-texto-dark);
+        }
+
+
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-bottom: 3px solid transparent;
+            transition: color 0.3s ease, border-color 0.3s ease;
+            color: var(--text-light);
+            opacity: 0.7;
+        }
+        html.dark .tab-button {
+            color: var(--color-texto-dark);
+        }
+        .tab-button:hover {
+            color: var(--primary-light);
+            opacity: 1;
+        }
+        html.dark .tab-button:hover {
+            color: var(--color-neon-cian-dark);
+        }
+        .tab-button.active {
+            border-bottom-color: var(--primary-light);
+            color: var(--primary-light);
+            font-weight: 600;
+            opacity: 1;
+        }
+        html.dark .tab-button.active {
+            border-bottom-color: var(--color-neon-cian-dark);
+            color: var(--color-neon-cian-dark);
+        }
+
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        
+        .modal-content-custom {
+            position: relative;
+            margin: auto;
+            padding: 1.5rem; /* p-6 */
+            border-width: 1px;
+            width: 100%;
+            max-width: 32rem; /* max-w-lg */
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); /* shadow-lg */
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: var(--card-bg-light);
+            border-color: var(--border-light);
+        }
+        html.dark .modal-content-custom { 
+            background-color: var(--color-fondo-dark);
+            color: var(--color-texto-dark);
+            box-shadow: 0 0 20px var(--color-neon-cian-dark);
+            border: 1px solid var(--color-neon-cian-dark);
+        }
+        .modal-title-custom {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            margin-bottom: 1rem; /* mb-4 */
+            color: var(--text-light);
+        }
+        html.dark .modal-title-custom { 
+             color: var(--color-neon-cian-dark);
+        }
+         .modal-footer-custom {
+            padding-top: 1rem; /* pt-4 */
+            display: flex;
+            justify-content: flex-end;
+            column-gap: 0.75rem; /* space-x-3 */
+        }
+        html.dark .modal-header-custom, html.dark .modal-footer-custom { 
+            border-color: var(--color-neon-cian-dark); /* Simplified, apply to top/bottom as needed */
+        }
+
+
+        .btn {
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: all 0.3s ease; 
+        }
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Light Mode Buttons */
+        .btn-primary { background-color: var(--primary-light); color: var(--button-text-on-primary-light); }
+        .btn-primary:hover { background-color: var(--primary-hover-light); }
+        .btn-secondary { background-color: var(--secondary-light); color: var(--button-text-on-primary-light); }
+        .btn-secondary:hover { background-color: var(--secondary-hover-light); }
+        .btn-danger { background-color: var(--danger-light); color: var(--button-text-on-primary-light); }
+        .btn-danger:hover { background-color: var(--danger-hover-light); }
+        .btn-success { background-color: var(--success-light); color: var(--button-text-on-primary-light); }
+        .btn-success:hover { background-color: var(--success-hover-light); }
+        .btn-outline { border: 1px solid var(--primary-light); color: var(--primary-light); background-color: transparent; }
+        .btn-outline:hover { background-color: var(--primary-light); color: var(--button-text-on-primary-light); }
+
+        /* Dark Mode Buttons (Neon Styles from user's CSS) */
+        html.dark .btn-primary {
+            background-color: var(--color-neon-cian-dark);
+            color: var(--button-text-on-neon-dark);
+            box-shadow: 0 0 10px var(--color-neon-cian-dark);
+        }
+        html.dark .btn-primary:hover {
+            background-color: #00cccc; /* Slightly darker cian */
+            box-shadow: 0 0 20px var(--color-neon-cian-dark);
+            transform: scale(1.05);
+        }
+        html.dark .btn-secondary { /* For "Recalcular Todos" */
+            background-color: var(--color-neon-verde-dark);
+            color: var(--button-text-on-neon-dark);
+            box-shadow: 0 0 10px var(--color-neon-verde-dark);
+        }
+        html.dark .btn-secondary:hover {
+            background-color: #2db812; /* Slightly darker green */
+            box-shadow: 0 0 20px var(--color-neon-verde-dark);
+            transform: scale(1.05);
+        }
+        html.dark .btn-danger {
+            background-color: var(--color-neon-morado-dark); 
+            color: var(--color-texto-dark); 
+            box-shadow: 0 0 10px var(--color-neon-morado-dark);
+        }
+        html.dark .btn-danger:hover {
+            background-color: #cc00cc; 
+            box-shadow: 0 0 20px var(--color-neon-morado-dark);
+            transform: scale(1.05);
+        }
+        html.dark .btn-success { 
+            background-color: var(--color-neon-verde-dark);
+            color: var(--button-text-on-neon-dark);
+            box-shadow: 0 0 10px var(--color-neon-verde-dark), 0 0 20px var(--color-neon-verde-dark);
+            animation: pulse 2s infinite;
+        }
+        html.dark .btn-success:hover {
+            transform: scale(1.02); 
+        }
+        @keyframes pulse { 
+            0% { box-shadow: 0 0 10px var(--color-neon-verde-dark), 0 0 20px var(--color-neon-verde-dark); }
+            50% { box-shadow: 0 0 20px var(--color-neon-verde-dark), 0 0 30px var(--color-neon-verde-dark); }
+            100% { box-shadow: 0 0 10px var(--color-neon-verde-dark), 0 0 20px var(--color-neon-verde-dark); }
+        }
+        html.dark .btn-outline {
+             border: 1px solid var(--color-neon-cian-dark);
+             color: var(--color-neon-cian-dark);
+             background-color: transparent;
+        }
+        html.dark .btn-outline:hover {
+            background-color: var(--color-neon-cian-dark);
+            color: var(--button-text-on-neon-dark);
+            box-shadow: 0 0 10px var(--color-neon-cian-dark);
+        }
+
+        /* Input fields */
+        input[type="text"], input[type="number"], input[type="date"], select, textarea, input[type="file"] {
+            padding: 0.5rem;
+            border: 1px solid var(--input-border-light);
+            border-radius: 0.375rem; 
+            background-color: var(--input-bg-light);
+            color: var(--input-text-light);
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,.05);
+            width: 100%; /* Ensure inputs take full width of their container */
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus, select:focus, textarea:focus, input[type="file"]:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: var(--primary-light);
+            box-shadow: var(--input-focus-shadow-light);
+        }
+        html.dark input[type="text"], 
+        html.dark input[type="number"], 
+        html.dark input[type="date"], 
+        html.dark select, 
+        html.dark textarea,
+        html.dark input[type="file"] {
+            background-color: var(--color-card-bg-dark); 
+            color: var(--color-texto-dark);
+            border: 1px solid var(--color-border-dark);
+            box-shadow: 0 0 10px var(--color-border-dark); 
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+        html.dark input[type="text"]:focus, 
+        html.dark input[type="number"]:focus, 
+        html.dark input[type="date"]:focus, 
+        html.dark select:focus, 
+        html.dark textarea:focus,
+        html.dark input[type="file"]:focus {
+            border-color: var(--color-neon-morado-dark); 
+            box-shadow: var(--input-focus-shadow-dark); 
+        }
+        html.dark input::placeholder { color: var(--color-placeholder-dark); opacity: 1;}
+        html.dark input:-ms-input-placeholder { color: var(--color-placeholder-dark); }
+        html.dark input::-ms-input-placeholder { color: var(--color-placeholder-dark); }
+        /* Style for file input button */
+        html.dark input[type="file"]::-webkit-file-upload-button {
+            background-color: var(--color-neon-cian-dark);
+            color: var(--button-text-on-neon-dark);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        html.dark input[type="file"]::-moz-file-upload-button { /* Firefox */
+            background-color: var(--color-neon-cian-dark);
+            color: var(--button-text-on-neon-dark);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+
+        .card {
+            background-color: var(--card-bg-light);
+            border-radius: 0.5rem; 
+            padding: 1.5rem; 
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); 
+        }
+        html.dark .card {
+            background-color: var(--color-card-bg-dark);
+            border: 1px solid var(--color-border-dark);
+            box-shadow: 0 0 15px var(--color-border-dark); 
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-light); }
+        html.dark ::-webkit-scrollbar-track { background: var(--color-fondo-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 4px; }
+        html.dark ::-webkit-scrollbar-thumb { background: var(--color-neon-cian-dark); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-hover-light); }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #00cccc; }
+
+        html.dark table { color: var(--color-texto-dark); }
+        html.dark th, html.dark td { border-color: var(--color-neon-cian-dark) !important; }
+        html.dark thead th {
+            color: var(--color-neon-cian-dark); 
+            text-shadow: 0 0 5px var(--color-neon-cian-dark); 
+        }
+        html.dark tbody tr:hover { background-color: rgba(0, 255, 255, 0.05); }
+        html.dark .table-dark { box-shadow: 0 0 10px var(--color-neon-cian-dark); }
+
+        /* Form grid for manual play input */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container-main">
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-[var(--border-light)] dark:border-[var(--color-border-dark)]">
+            <h1 class="text-3xl font-bold mb-4 sm:mb-0">Calculadora de Premios</h1>
+            <div class="flex items-center space-x-4">
+                <button id="recalculate-all-btn" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt mr-2"></i>Recalcular Todos
+                </button>
+                <button id="theme-toggle" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700 text-[var(--text-light)] dark:text-[var(--color-texto-dark)]">
+                    <i class="fas fa-sun text-yellow-500 block dark:hidden"></i>
+                    <i class="fas fa-moon text-slate-400 hidden dark:block"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sección para Agregar Jugadas -->
+        <section class="card mb-8">
+            <h3 class="section-title text-xl font-semibold mb-6">Agregar Nuevas Jugadas</h3>
+            
+            <!-- Ingreso Manual -->
+            <div class="mb-6 pb-6 border-b border-[var(--border-light)] dark:border-[var(--color-border-dark)]">
+                <h4 class="text-lg font-medium mb-3 text-center">Ingreso Manual</h4>
+                <form id="addPlayForm" class="space-y-4">
+                    <div class="form-grid">
+                        <div>
+                            <label for="playId" class="block text-sm font-medium">ID Jugada (opcional)</label>
+                            <input type="text" id="playId" name="_id" placeholder="Ej: p6, ticket-123">
+                        </div>
+                        <div>
+                            <label for="playUserId" class="block text-sm font-medium">ID Usuario</label>
+                            <input type="text" id="playUserId" name="userId" required placeholder="Ej: user123">
+                        </div>
+                        <div>
+                            <label for="playDate" class="block text-sm font-medium">Fecha</label>
+                            <input type="date" id="playDate" name="date" required>
+                        </div>
+                        <div>
+                            <label for="playState" class="block text-sm font-medium">Estado/País</label>
+                            <input type="text" id="playState" name="state" required placeholder="Ej: NY, VE, SD">
+                        </div>
+                        <div>
+                            <label for="playDraw" class="block text-sm font-medium">Sorteo</label>
+                            <input type="text" id="playDraw" name="draw" required placeholder="Ej: Midday, Noche">
+                        </div>
+                        <div>
+                            <label for="playGame" class="block text-sm font-medium">Juego</label>
+                            <select id="playGame" name="game" required>
+                                <option value="">Seleccione Juego</option>
+                                <option value="PICK3">PICK3</option>
+                                <option value="WIN4">WIN4</option>
+                                <option value="VENEZUELA">VENEZUELA</option>
+                                <option value="PULITO">PULITO</option>
+                                <option value="SD">SD (Santo Domingo)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="playBetType" class="block text-sm font-medium">Tipo de Apuesta</label>
+                            <input type="text" id="playBetType" name="betType" required placeholder="Ej: STRAIGHT, PALE_FULL">
+                        </div>
+                        <div>
+                            <label for="playNumbers" class="block text-sm font-medium">Números Jugados</label>
+                            <input type="text" id="playNumbers" name="numbers" required placeholder="Ej: 123, 45-67">
+                        </div>
+                        <div>
+                            <label for="playWager" class="block text-sm font-medium">Monto Apostado (USD)</label>
+                            <input type="number" id="playWager" name="wager" required step="0.01" min="0.01" placeholder="Ej: 1.00">
+                        </div>
+                        <div>
+                            <label for="playExtraPosition" class="block text-sm font-medium">Posición (Pulito/Quiniela)</label>
+                            <input type="number" id="playExtraPosition" name="extraPosition" min="1" max="3" placeholder="Ej: 1, 2 o 3">
+                        </div>
+                    </div>
+                    <div class="text-center pt-2">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus-circle mr-2"></i>Agregar Jugada Manual</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Carga por CSV -->
+            <div>
+                <h4 class="text-lg font-medium mb-3 text-center">Carga por Lote (CSV)</h4>
+                <form id="uploadPlaysForm" class="space-y-3 text-center">
+                    <div>
+                        <label for="csvFile" class="block text-sm font-medium mb-1">Seleccionar archivo CSV</label>
+                        <input type="file" id="csvFile" name="csvFile" accept=".csv" class="mx-auto block">
+                    </div>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-file-upload mr-2"></i>Cargar Jugadas desde CSV</button>
+                </form>
+            </div>
+        </section>
+
+        <div class="mb-6">
+            <nav id="tabs-navigation" class="-mb-px flex space-x-1 sm:space-x-4 overflow-x-auto pb-1" aria-label="Tabs">
+                <!-- Tabs will be generated by JS -->
+            </nav>
+        </div>
+
+        <div id="tab-content-area" class="space-y-8">
+            <!-- Content for each tab will be injected here by JS -->
+        </div>
+    </div>
+
+    <!-- Edit Winner Modal -->
+    <div id="editWinnerModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-black/70 overflow-y-auto h-full w-full items-center justify-center z-50">
+        <div class="modal-content-custom">
+            <h3 class="modal-title-custom">Editar Número Ganador</h3>
+            <form id="editWinnerForm" class="space-y-4">
+                <input type="hidden" id="winnerEditIndex">
+                <div>
+                    <label for="winnerDate" class="block text-sm font-medium">Fecha</label>
+                    <input type="date" id="winnerDate" name="date" class="mt-1" required>
+                </div>
+                <div>
+                    <label for="winnerState" class="block text-sm font-medium">Estado/País</label>
+                    <input type="text" id="winnerState" name="state" class="mt-1" required placeholder="Ej: NY, VE, SD">
+                </div>
+                <div>
+                    <label for="winnerDraw" class="block text-sm font-medium">Sorteo</label>
+                    <input type="text" id="winnerDraw" name="draw" class="mt-1" required placeholder="Ej: Midday, Evening, Noche">
+                </div>
+                <div>
+                    <label for="winnerGame" class="block text-sm font-medium">Juego</label>
+                    <input type="text" id="winnerGame" name="game" class="mt-1" required placeholder="Ej: PICK3, VENEZUELA">
+                </div>
+                <div>
+                    <label for="winnerNumbers" class="block text-sm font-medium">Números Ganadores</label>
+                    <input type="text" id="winnerNumbers" name="numbers" class="mt-1" required placeholder="Ej: 123, 01-23-45">
+                </div>
+                <div class="modal-footer-custom">
+                    <button type="button" id="cancelEditWinner" class="btn btn-outline">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Winner Modal -->
+    <div id="addWinnerModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-black/70 overflow-y-auto h-full w-full items-center justify-center z-50">
+        <div class="modal-content-custom">
+            <h3 class="modal-title-custom">Agregar Número Ganador</h3>
+            <form id="addWinnerForm" class="space-y-4">
+                <div>
+                    <label for="addWinnerDate" class="block text-sm font-medium">Fecha</label>
+                    <input type="date" id="addWinnerDate" name="date" class="mt-1" required>
+                </div>
+                <div>
+                    <label for="addWinnerState" class="block text-sm font-medium">Estado/País</label>
+                    <input type="text" id="addWinnerState" name="state" class="mt-1" required placeholder="Ej: NY, VE, SD">
+                </div>
+                <div>
+                    <label for="addWinnerDraw" class="block text-sm font-medium">Sorteo</label>
+                    <input type="text" id="addWinnerDraw" name="draw" class="mt-1" required placeholder="Ej: Midday, Evening, Noche">
+                </div>
+                <div>
+                    <label for="addWinnerGame" class="block text-sm font-medium">Juego</label>
+                    <select id="addWinnerGame" name="game" class="mt-1" required>
+                        <option value="PICK3">PICK3</option>
+                        <option value="WIN4">WIN4</option>
+                        <option value="VENEZUELA">VENEZUELA</option>
+                        <option value="PULITO">PULITO</option>
+                        <option value="SD">SD</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="addWinnerNumbers" class="block text-sm font-medium">Números Ganadores</label>
+                    <input type="text" id="addWinnerNumbers" name="numbers" class="mt-1" required placeholder="Ej: 123, 01-23-45">
+                </div>
+                <div class="modal-footer-custom">
+                    <button type="button" id="cancelAddWinner" class="btn btn-outline">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Agregar Ganador</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script id="seed-data" type="application/json">
+    {
+        "prizeTable": {
+            "PICK3": { "STRAIGHT": 700, "STRAIGHT_TRIPLE": 500, "BOX_3WAY": 232, "BOX_6WAY": 116, "STRAIGHT_BOX": { "straight": 350, "box": 82 }, "COMBO_6WAY": 700 },
+            "WIN4": { "STRAIGHT": 5000, "BOX_24WAY": 200, "BOX_1COUPLE": 400, "BOX_DOUBLECOUPLE": 800, "BOX_TRIPLE": 1200, "STRAIGHT_OTHER_ST": 2500, "BOX_OTHER_ST": 100 },
+            "VENEZUELA": { "QUINIELA_PRIMERA": 55, "QUINIELA_SEGUNDA": 15, "QUINIELA_TERCERA": 10, "PALE_FULL": 700, "PALE_BOX": 175 },
+            "PULITO": { "STRAIGHT": 80, "BOX": 40 },
+            "SD": { "QUINIELA_PRIMERA": 56, "QUINIELA_SEGUNDA": 12, "QUINIELA_TERCERA": 4, "PALE_FULL": 1300, "PALE_PARCIAL": 200, "PALE_BOX": 325 }
+        },
+        "plays": [
+            { "_id": "p1", "userId": "user1", "date": "2024-07-28", "state": "NY", "draw": "Midday", "game": "PICK3", "betType": "STRAIGHT", "numbers": "123", "wager": 1 },
+            { "_id": "p2", "userId": "user1", "date": "2024-07-28", "state": "NY", "draw": "Midday", "game": "PICK3", "betType": "BOX_6WAY", "numbers": "456", "wager": 2 },
+            { "_id": "p3", "userId": "user2", "date": "2024-07-28", "state": "VE", "draw": "Noche", "game": "VENEZUELA", "betType": "QUINIELA_PRIMERA", "numbers": "78", "wager": 5 },
+            { "_id": "p4", "userId": "user2", "date": "2024-07-28", "state": "SD", "draw": "Noche", "game": "PULITO", "betType": "STRAIGHT", "numbers": "15", "wager": 1, "extra": { "position": 1 } },
+            { "_id": "p5", "userId": "user3", "date": "2024-07-29", "state": "FL", "draw": "Evening", "game": "WIN4", "betType": "STRAIGHT", "numbers": "7777", "wager": 0.5 }
+        ],
+        "winners": [
+            { "date": "2024-07-28", "state": "NY", "draw": "Midday", "game": "PICK3", "numbers": "123" },
+            { "date": "2024-07-28", "state": "VE", "draw": "Noche", "game": "VENEZUELA", "numbers": "78-42-11" },
+            { "date": "2024-07-28", "state": "SD", "draw": "Noche", "game": "PULITO", "numbers": "15-30-45" },
+            { "date": "2024-07-29", "state": "FL", "draw": "Evening", "game": "WIN4", "numbers": "7777" }
+        ],
+        "calculatedPrizes": []
+    }
+    </script>
+
+    <script type="module">
+        // --- Constants & State ---
+        const SEED_DATA = JSON.parse(document.getElementById('seed-data').textContent);
+        const TABS_NAVIGATION_EL = document.getElementById('tabs-navigation');
+        const TAB_CONTENT_AREA_EL = document.getElementById('tab-content-area');
+        const EDIT_WINNER_MODAL_EL = document.getElementById('editWinnerModal');
+        const EDIT_WINNER_FORM_EL = document.getElementById('editWinnerForm');
+        const ADD_WINNER_MODAL_EL = document.getElementById('addWinnerModal');
+        const ADD_WINNER_FORM_EL = document.getElementById('addWinnerForm');
+        const ADD_PLAY_FORM_EL = document.getElementById('addPlayForm');
+        const UPLOAD_PLAYS_FORM_EL = document.getElementById('uploadPlaysForm');
+
+
+        let currentPrizeTable = {};
+        let currentPlays = [];
+        let currentWinners = [];
+        let currentCalculatedPrizes = [];
+        let activeTab = '';
+
+        // --- Storage Service ---
+        class StorageService {
+            static getItem(key) {
+                // TODO: Replace localStorage with actual backend integration
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : null;
+            }
+            static setItem(key, value) {
+                // TODO: Replace localStorage with actual backend integration
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+            static initStorage() {
+                currentPrizeTable = StorageService.getItem('prizeTable') || SEED_DATA.prizeTable;
+                currentPlays = StorageService.getItem('plays') || SEED_DATA.plays;
+                currentWinners = StorageService.getItem('winners') || SEED_DATA.winners;
+                currentCalculatedPrizes = StorageService.getItem('calculatedPrizes') || SEED_DATA.calculatedPrizes;
+                StorageService.saveAll();
+            }
+            static saveAll() {
+                StorageService.setItem('prizeTable', currentPrizeTable);
+                StorageService.setItem('plays', currentPlays);
+                StorageService.setItem('winners', currentWinners);
+                StorageService.setItem('calculatedPrizes', currentCalculatedPrizes);
+            }
+        }
+
+        // --- Theme Toggle ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+        
+        // --- Helper Functions ---
+        function generateUniqueId() {
+            return `play_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        }
+
+        function getPermutations(inputStr) {
+            const str = String(inputStr); 
+            if (str.length === 0) return [''];
+            if (str.length === 1) return [str];
+            const result = new Set(); 
+
+            function permute(arr, l, r) {
+                if (l === r) {
+                    result.add(arr.join(''));
+                } else {
+                    for (let i = l; i <= r; i++) {
+                        [arr[l], arr[i]] = [arr[i], arr[l]]; 
+                        permute(arr, l + 1, r);
+                        [arr[l], arr[i]] = [arr[i], arr[l]]; 
+                    }
+                }
+            }
+            permute(str.split(''), 0, str.length - 1);
+            return Array.from(result);
+        }
+
+        function sortStringChars(str) {
+            return String(str).split('').sort().join('');
+        }
+
+        // --- Prize Calculation Engine ---
+        function calculatePrize(play, winner) {
+            if (play.date !== winner.date || play.state !== winner.state || play.draw !== winner.draw || play.game !== winner.game) {
+                return { hit: false, amount: 0, details: "No match on date/state/draw/game" };
+            }
+            const gameRules = currentPrizeTable[play.game];
+            if (!gameRules) return { hit: false, amount: 0, details: `No prize rules for game ${play.game}` };
+            const betRule = gameRules[play.betType];
+            if (betRule === undefined) return { hit: false, amount: 0, details: `No prize rule for bet type ${play.betType} in ${play.game}` };
+
+            let hit = false;
+            let multiplier = 0;
+            let prizeDetails = "";
+            const playNumbers = String(play.numbers);
+            const winnerNumbersRaw = String(winner.numbers);
+
+            switch (play.game) {
+                case "PICK3": {
+                    const wn = winnerNumbersRaw;
+                    if (wn.length !== 3) return { hit: false, amount: 0, details: "Invalid PICK3 winner format" };
+                    switch (play.betType) {
+                        case "STRAIGHT":
+                            if (playNumbers === wn) { hit = true; multiplier = betRule; prizeDetails = "Straight Hit"; }
+                            break;
+                        case "STRAIGHT_TRIPLE":
+                            if (playNumbers === wn && playNumbers[0] === playNumbers[1] && playNumbers[1] === playNumbers[2]) {
+                                hit = true; multiplier = betRule; prizeDetails = "Straight Triple Hit";
+                            } else if (playNumbers === wn) {
+                                hit = true; multiplier = gameRules["STRAIGHT"] || 0; prizeDetails = "Straight Hit (not triple)";
+                            }
+                            break;
+                        case "BOX_3WAY": 
+                        case "BOX_6WAY": 
+                            if (sortStringChars(playNumbers) === sortStringChars(wn) && playNumbers !== wn) {
+                                hit = true; multiplier = betRule; prizeDetails = `${play.betType} Hit`;
+                            }
+                            break;
+                        case "STRAIGHT_BOX":
+                            if (playNumbers === wn) { 
+                                hit = true; multiplier = betRule.straight; prizeDetails = "Straight/Box - Straight Hit";
+                            } else if (sortStringChars(playNumbers) === sortStringChars(wn)) { 
+                                hit = true; multiplier = betRule.box; prizeDetails = "Straight/Box - Box Hit";
+                            }
+                            break;
+                        case "COMBO_6WAY": 
+                            if (getPermutations(playNumbers).includes(wn)) {
+                                hit = true; multiplier = betRule; prizeDetails = "Combo Hit";
+                            }
+                            break;
+                    }
+                    break;
+                }
+                case "WIN4": {
+                    const wn = winnerNumbersRaw; 
+                     if (wn.length !== 4) return { hit: false, amount: 0, details: "Invalid WIN4 winner format" };
+                    const isNY = play.state === "NY";
+                    switch (play.betType) {
+                        case "STRAIGHT":
+                            multiplier = isNY ? betRule : (gameRules["STRAIGHT_OTHER_ST"] || betRule);
+                            if (playNumbers === wn) { hit = true; prizeDetails = "Straight Hit"; }
+                            break;
+                        case "BOX_24WAY": 
+                        case "BOX_1COUPLE": 
+                        case "BOX_DOUBLECOUPLE": 
+                        case "BOX_TRIPLE": 
+                            multiplier = isNY ? betRule : (gameRules["BOX_OTHER_ST"] || betRule);
+                             if (sortStringChars(playNumbers) === sortStringChars(wn) && playNumbers !== wn) { 
+                                hit = true; prizeDetails = `${play.betType} Hit`;
+                            }
+                            break;
+                    }
+                    break;
+                }
+                case "VENEZUELA":
+                case "SD": 
+                case "PULITO": { 
+                    const winnerParts = winnerNumbersRaw.split('-');
+                    let W1 = winnerParts[0];
+                    let W2 = winnerParts.length > 1 ? winnerParts[1] : null;
+                    let W3 = winnerParts.length > 2 ? winnerParts[2] : null;
+
+                    if (play.game === "PULITO") {
+                        const targetPosition = play.extra?.position;
+                        if (!targetPosition || ![1, 2, 3].includes(targetPosition)) return { hit: false, amount: 0, details: "Invalid position for Pulito" };
+                        const targetWinnerNum = winnerParts.length === 3 ? winnerParts[targetPosition - 1] : (targetPosition === 1 ? winnerNumbersRaw : null);
+                        if (targetWinnerNum === null) return { hit: false, amount: 0, details: "Could not determine Pulito winner for position."};
+
+                        if (play.betType === "STRAIGHT") {
+                            if (playNumbers === targetWinnerNum) { hit = true; multiplier = betRule; prizeDetails = `Pulito Straight Hit (Pos ${targetPosition})`; }
+                        } else if (play.betType === "BOX") {
+                            if (sortStringChars(playNumbers) === sortStringChars(targetWinnerNum)) { 
+                                hit = true; multiplier = betRule; prizeDetails = `Pulito Box Hit (Pos ${targetPosition})`;
+                            }
+                        }
+                    } else { // VENEZUELA or SD
+                        if (winnerParts.length < 1 && (play.betType.startsWith("QUINIELA") || play.betType.startsWith("PALE"))) {
+                             return { hit: false, amount: 0, details: `Invalid ${play.game} winner format (expected at least 1 part)` };
+                        }
+                        if (winnerParts.length < 2 && (play.betType === "PALE_FULL" || play.betType === "PALE_BOX" || play.betType === "PALE_PARCIAL")) {
+                             return { hit: false, amount: 0, details: `Invalid ${play.game} winner format (expected at least 2 parts for Pale)` };
+                        }
+                         if (winnerParts.length < 3 && play.betType === "PALE_PARCIAL" && play.game === "SD") {
+                             return { hit: false, amount: 0, details: `Invalid ${play.game} winner format (expected 3 parts for SD Pale Parcial)` };
+                        }
+
+                        const playedPaleNumbers = playNumbers.includes('-') ? playNumbers.split('-') : [playNumbers];
+                        const P1 = playedPaleNumbers[0];
+                        const P2 = playedPaleNumbers.length > 1 ? playedPaleNumbers[1] : null;
+
+                        switch (play.betType) {
+                            case "QUINIELA_PRIMERA":
+                                if (P1 === W1) { hit = true; multiplier = betRule; prizeDetails = "Quiniela 1st"; }
+                                break;
+                            case "QUINIELA_SEGUNDA":
+                                if (W2 && P1 === W2) { hit = true; multiplier = betRule; prizeDetails = "Quiniela 2nd"; }
+                                break;
+                            case "QUINIELA_TERCERA":
+                                if (W3 && P1 === W3) { hit = true; multiplier = betRule; prizeDetails = "Quiniela 3rd"; }
+                                break;
+                            case "PALE_FULL":
+                                if (P1 && P2 && W1 && W2 && P1 === W1 && P2 === W2) {
+                                    hit = true; multiplier = betRule; prizeDetails = "Pale Full (W1, W2)";
+                                }
+                                break;
+                            case "PALE_BOX": 
+                                if (P1 && P2 && W1 && W2 && ((P1 === W1 && P2 === W2) || (P1 === W2 && P2 === W1))) {
+                                    hit = true; multiplier = betRule; prizeDetails = "Pale Box (W1, W2)";
+                                }
+                                break;
+                            case "PALE_PARCIAL": 
+                                if (play.game === "SD" && P1 && P2 && W1 && W2 && W3) { 
+                                    const isFullHit = (P1 === W1 && P2 === W2); 
+                                    if (!isFullHit) { 
+                                        if ( (P1 === W1 && P2 === W3) || (P1 === W3 && P2 === W1) ||
+                                             (P1 === W2 && P2 === W3) || (P1 === W3 && P2 === W2) ) {
+                                           hit = true; multiplier = betRule; prizeDetails = "Pale Parcial Hit";
+                                        }
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                    break;
+                }
+            }
+            return { hit, amount: hit ? play.wager * multiplier : 0, details: prizeDetails || (hit ? "Hit" : "No Hit") };
+        }
+        
+        function recalculateAllPrizes() {
+            const newCalculatedPrizes = [];
+            currentPlays.forEach(play => {
+                const relevantWinners = currentWinners.filter(w => 
+                    w.date === play.date && w.state === play.state && w.draw === play.draw && w.game === play.game
+                );
+                relevantWinners.forEach(winner => {
+                    const result = calculatePrize(play, winner);
+                    if (result.hit && result.amount > 0) {
+                        newCalculatedPrizes.push({
+                            playId: play._id, userId: play.userId, playDetails: play, winnerDetails: winner,
+                            prizeAmount: result.amount, prizeDetails: result.details, status: "pre-authorized"
+                        });
+                    }
+                });
+            });
+            currentCalculatedPrizes = newCalculatedPrizes;
+            StorageService.saveAll();
+            renderActiveTabContent(); 
+            showCustomAlert("Premios recalculados.", "success");
+        }
+
+        // --- Custom Alert ---
+        function showCustomAlert(message, type = 'info') { // types: info, success, error
+            const alertContainer = document.createElement('div');
+            alertContainer.style.cssText = `
+                position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+                padding: 12px 20px; border-radius: 8px; color: white; z-index: 1000;
+                font-size: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                opacity: 0; transition: opacity 0.3s ease, top 0.3s ease; text-align: center;
+            `;
+            if (document.documentElement.classList.contains('dark')) {
+                alertContainer.style.backgroundColor = type === 'success' ? 'var(--color-neon-verde-dark)' : type === 'error' ? 'var(--color-neon-morado-dark)' : 'var(--color-neon-cian-dark)';
+                alertContainer.style.color = 'var(--button-text-on-neon-dark)';
+                alertContainer.style.textShadow = `0 0 3px ${type === 'success' || type === 'error' ? '#000' : alertContainer.style.backgroundColor}`;
+            } else {
+                 alertContainer.style.backgroundColor = type === 'success' ? 'var(--success-light)' : type === 'error' ? 'var(--danger-light)' : 'var(--primary-light)';
+            }
+            alertContainer.textContent = message;
+            document.body.appendChild(alertContainer);
+            
+            setTimeout(() => { alertContainer.style.opacity = '1'; alertContainer.style.top = '30px';}, 10);
+            setTimeout(() => {
+                alertContainer.style.opacity = '0'; alertContainer.style.top = '20px';
+                setTimeout(() => alertContainer.remove(), 300);
+            }, 3000 + (message.length * 30)); // Longer display for longer messages
+        }
+
+
+        // --- UI Rendering ---
+        function renderTabs() {
+            const gameTypes = Object.keys(currentPrizeTable);
+            if (!activeTab && gameTypes.length > 0) activeTab = gameTypes[0];
+            TABS_NAVIGATION_EL.innerHTML = gameTypes.map(game => `
+                <button class="tab-button ${activeTab === game ? 'active' : ''}" data-tab="${game}">${game}</button>
+            `).join('');
+            TABS_NAVIGATION_EL.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    activeTab = button.dataset.tab;
+                    renderTabs(); 
+                    renderActiveTabContent();
+                });
+            });
+        }
+
+        function renderActiveTabContent() {
+            if (!activeTab) {
+                TAB_CONTENT_AREA_EL.innerHTML = `<p class="text-center text-opacity-75">Seleccione un juego para ver los detalles.</p>`;
+                return;
+            }
+            TAB_CONTENT_AREA_EL.innerHTML = `
+                <div class="space-y-8">
+                    ${renderPrizeTableSection(activeTab)} ${renderWinnersSection(activeTab)}
+                    ${renderPlaysSection(activeTab)} ${renderCalculatedPrizesSection(activeTab)}
+                    ${renderMetricsSection(activeTab)}
+                </div>`;
+            attachEditableListeners(); attachWinnerActionListeners(); attachPrizeActionListeners();
+        }
+
+        function renderPrizeTableSection(gameType) {
+            const rules = currentPrizeTable[gameType];
+            if (!rules) return '<p>No hay tabla de premios para este juego.</p>';
+            let tableRows = '';
+            for (const betType in rules) {
+                const value = rules[betType];
+                let valueDisplay = typeof value === 'object' ? Object.entries(value).map(([sk, sv]) => `${sk}: <span class="table-cell-editable" contenteditable="true" data-game="${gameType}" data-bettype="${betType}" data-subkey="${sk}">${sv}</span>`).join(', ') 
+                                   : `<span class="table-cell-editable" contenteditable="true" data-game="${gameType}" data-bettype="${betType}">${value}</span>`;
+                tableRows += `<tr class="border-b dark:border-[var(--color-border-dark)]"><td class="px-4 py-3 font-medium">${betType}</td><td class="px-4 py-3">${valueDisplay}</td></tr>`;
+            }
+            return `<section class="card"><h2 class="text-2xl font-semibold mb-4">Tabla de Premios: ${gameType}</h2><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b-2 dark:border-[var(--color-border-dark)]"><tr><th class="px-4 py-2">Tipo de Apuesta</th><th class="px-4 py-2">Multiplicador</th></tr></thead><tbody>${tableRows}</tbody></table></div></section>`;
+        }
+        
+        function renderWinnersSection(gameType) {
+            const filtered = currentWinners.filter(w => w.game === gameType || gameType === 'TODOS');
+            let rows = filtered.map((w, i) => `<tr class="border-b dark:border-[var(--color-border-dark)]"><td class="px-4 py-3">${w.date}</td><td class="px-4 py-3">${w.state}</td><td class="px-4 py-3">${w.draw}</td><td class="px-4 py-3">${w.game}</td><td class="px-4 py-3 font-mono">${w.numbers}</td><td class="px-4 py-3"><button class="btn-edit-winner text-sm btn btn-outline mr-2" data-index="${currentWinners.indexOf(w)}"><i class="fas fa-edit mr-1"></i>Editar</button><button class="btn-delete-winner text-sm btn btn-danger" data-index="${currentWinners.indexOf(w)}"><i class="fas fa-trash mr-1"></i>Borrar</button></td></tr>`).join('');
+            if (filtered.length === 0) rows = `<tr><td colspan="6" class="text-center py-4 text-opacity-75">No hay ganadores para ${gameType}.</td></tr>`;
+            return `<section class="card"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-semibold">Ganadores (${gameType})</h2><button id="add-winner-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Agregar</button></div><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b-2 dark:border-[var(--color-border-dark)]"><tr><th class="px-4 py-2">Fecha</th><th class="px-4 py-2">Estado</th><th class="px-4 py-2">Sorteo</th><th class="px-4 py-2">Juego</th><th class="px-4 py-2">Números</th><th class="px-4 py-2">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+        }
+
+        function renderPlaysSection(gameType) {
+            const filtered = currentPlays.filter(p => p.game === gameType);
+            let rows = filtered.map(p => `<tr class="border-b dark:border-[var(--color-border-dark)]"><td class="px-4 py-3">${p._id}</td><td class="px-4 py-3">${p.date}</td><td class="px-4 py-3">${p.state}/${p.draw}</td><td class="px-4 py-3">${p.betType}${p.extra?.position?` (Pos ${p.extra.position})`:''}</td><td class="px-4 py-3 font-mono">${p.numbers}</td><td class="px-4 py-3 text-right">$${p.wager.toFixed(2)}</td></tr>`).join('');
+            if (filtered.length === 0) rows = `<tr><td colspan="6" class="text-center py-4 text-opacity-75">No hay jugadas para ${gameType}.</td></tr>`;
+            return `<section class="card"><h2 class="text-2xl font-semibold mb-4">Jugadas (${gameType})</h2><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b-2 dark:border-[var(--color-border-dark)]"><tr><th class="px-4 py-2">ID</th><th class="px-4 py-2">Fecha</th><th class="px-4 py-2">Lotería</th><th class="px-4 py-2">Tipo</th><th class="px-4 py-2">Números</th><th class="px-4 py-2 text-right">Apostado</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+        }
+
+        function renderCalculatedPrizesSection(gameType) {
+            const filtered = currentCalculatedPrizes.filter(p => p.playDetails.game === gameType);
+            let rows = filtered.map((p, i) => `<tr class="border-b dark:border-[var(--color-border-dark)] ${p.status==='confirmed'?'bg-green-500/10 dark:bg-green-500/20':p.status==='discarded'?'bg-red-500/10 dark:bg-red-500/20':''}"><td class="px-4 py-3">${p.playDetails.numbers} (${p.playDetails.betType})</td><td class="px-4 py-3 font-mono">${p.winnerDetails.numbers}</td><td class="px-4 py-3 text-right">$${p.prizeAmount.toFixed(2)}</td><td class="px-4 py-3">${p.prizeDetails}</td><td class="px-4 py-3 capitalize">${p.status}</td><td class="px-4 py-3">${p.status==='pre-authorized'?`<button class="btn-confirm-prize text-sm btn btn-success mr-2" data-index="${currentCalculatedPrizes.indexOf(p)}"><i class="fas fa-check mr-1"></i>Confirmar</button><button class="btn-discard-prize text-sm btn btn-danger" data-index="${currentCalculatedPrizes.indexOf(p)}"><i class="fas fa-times mr-1"></i>Descartar</button>`:''}</td></tr>`).join('');
+            if (filtered.length === 0) rows = `<tr><td colspan="6" class="text-center py-4 text-opacity-75">No hay premios para ${gameType}.</td></tr>`;
+            return `<section class="card"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-semibold">Premios (${gameType})</h2><button id="export-prizes-btn" class="btn btn-outline" data-gametype="${gameType}"><i class="fas fa-file-excel mr-2"></i>Exportar</button></div><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b-2 dark:border-[var(--color-border-dark)]"><tr><th class="px-4 py-2">Jugada</th><th class="px-4 py-2">Ganador</th><th class="px-4 py-2 text-right">Premio</th><th class="px-4 py-2">Detalle</th><th class="px-4 py-2">Estado</th><th class="px-4 py-2">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+        }
+        
+        function renderMetricsSection(gameType) {
+            const plays = currentPlays.filter(p => p.game === gameType);
+            const prizes = currentCalculatedPrizes.filter(p => p.playDetails.game === gameType && (p.status === 'pre-authorized' || p.status === 'confirmed'));
+            const wagered = plays.reduce((s, p) => s + p.wager, 0);
+            const toPay = prizes.reduce((s, p) => s + p.prizeAmount, 0);
+            const roi = wagered > 0 ? ((toPay - wagered) / wagered) * 100 : 0;
+            return `<section class="card"><h2 class="text-2xl font-semibold mb-4">Métricas (${gameType})</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center"><div class="p-4 bg-[var(--app-bg)] dark:bg-slate-700/20 rounded-lg"><p class="text-sm opacity-75">Total Apostado</p><p class="text-2xl font-bold">$${wagered.toFixed(2)}</p></div><div class="p-4 bg-[var(--app-bg)] dark:bg-slate-700/20 rounded-lg"><p class="text-sm opacity-75">Total a Pagar</p><p class="text-2xl font-bold text-emerald-500 dark:text-[var(--color-neon-verde-dark)]">$${toPay.toFixed(2)}</p></div><div class="p-4 bg-[var(--app-bg)] dark:bg-slate-700/20 rounded-lg"><p class="text-sm opacity-75">ROI</p><p class="text-2xl font-bold ${roi>=0?'text-green-500 dark:text-[var(--color-neon-verde-dark)]':'text-red-500 dark:text-[var(--color-neon-morado-dark)]'}">${roi.toFixed(2)}%</p></div></div></section>`;
+        }
+
+        // --- Event Listeners & UI Interaction ---
+        function attachEditableListeners() {
+            document.querySelectorAll('.table-cell-editable').forEach(cell => {
+                cell.addEventListener('blur', (e) => {
+                    const {game, bettype, subkey} = e.target.dataset;
+                    let newVal = e.target.textContent.trim();
+                    if (!isNaN(newVal) && newVal !== '') newVal = parseFloat(newVal);
+                    if (subkey) currentPrizeTable[game][bettype][subkey] = newVal;
+                    else currentPrizeTable[game][bettype] = newVal;
+                    StorageService.saveAll();
+                    e.target.classList.add('border-green-500', 'dark:border-green-400');
+                    setTimeout(() => e.target.classList.remove('border-green-500', 'dark:border-green-400'), 1000);
+                });
+            });
+        }
+
+        function attachWinnerActionListeners() {
+            document.querySelectorAll('.btn-edit-winner').forEach(btn => btn.onclick = (e) => {
+                const winner = currentWinners[parseInt(e.currentTarget.dataset.index)];
+                Object.assign(EDIT_WINNER_FORM_EL.elements, {winnerEditIndex:{value:parseInt(e.currentTarget.dataset.index)}, date:{value:winner.date}, state:{value:winner.state}, draw:{value:winner.draw}, game:{value:winner.game}, numbers:{value:winner.numbers}});
+                EDIT_WINNER_MODAL_EL.classList.add('active');
+            });
+            document.querySelectorAll('.btn-delete-winner').forEach(btn => btn.onclick = (e) => {
+                 // TODO: Replace with custom modal confirmation
+                if (confirm('¿Está seguro de eliminar este ganador?')) {
+                    currentWinners.splice(parseInt(e.currentTarget.dataset.index), 1);
+                    StorageService.saveAll(); renderActiveTabContent();
+                    showCustomAlert('Ganador eliminado.', 'success');
+                }
+            });
+            const addBtn = document.getElementById('add-winner-btn');
+            if(addBtn) addBtn.onclick = () => { 
+                ADD_WINNER_FORM_EL.reset(); 
+                ADD_WINNER_FORM_EL.elements.game.value = activeTab; 
+                ADD_WINNER_MODAL_EL.classList.add('active'); 
+            };
+        }
+        
+        function attachPrizeActionListeners() {
+            document.querySelectorAll('.btn-confirm-prize').forEach(btn => btn.onclick=(e)=>{
+                currentCalculatedPrizes[parseInt(e.currentTarget.dataset.index)].status = 'confirmed';
+                StorageService.saveAll(); renderActiveTabContent();
+                showCustomAlert('Premio confirmado.', 'success');
+            });
+            document.querySelectorAll('.btn-discard-prize').forEach(btn => btn.onclick=(e)=>{
+                currentCalculatedPrizes[parseInt(e.currentTarget.dataset.index)].status = 'discarded';
+                StorageService.saveAll(); renderActiveTabContent();
+                showCustomAlert('Premio descartado.', 'info');
+            });
+            const exportBtn = document.getElementById('export-prizes-btn');
+            if(exportBtn) exportBtn.onclick = (e) => exportPrizesToExcel(e.currentTarget.dataset.gametype);
+        }
+
+        EDIT_WINNER_MODAL_EL.querySelector('#cancelEditWinner').onclick = () => EDIT_WINNER_MODAL_EL.classList.remove('active');
+        ADD_WINNER_MODAL_EL.querySelector('#cancelAddWinner').onclick = () => ADD_WINNER_MODAL_EL.classList.remove('active');
+
+        EDIT_WINNER_FORM_EL.onsubmit = (e) => {
+            e.preventDefault(); const data = Object.fromEntries(new FormData(e.target));
+            currentWinners[parseInt(data.winnerEditIndex)] = {date:data.date, state:data.state, draw:data.draw, game:data.game, numbers:data.numbers};
+            StorageService.saveAll(); EDIT_WINNER_MODAL_EL.classList.remove('active'); renderActiveTabContent();
+            showCustomAlert('Ganador actualizado.', 'success');
+        };
+        ADD_WINNER_FORM_EL.onsubmit = (e) => {
+            e.preventDefault(); const data = Object.fromEntries(new FormData(e.target));
+            currentWinners.push({date:data.date, state:data.state, draw:data.draw, game:data.game, numbers:data.numbers});
+            StorageService.saveAll(); ADD_WINNER_MODAL_EL.classList.remove('active'); renderActiveTabContent();
+            showCustomAlert('Ganador agregado.', 'success');
+        };
+
+        // --- Add Play Functionality ---
+        ADD_PLAY_FORM_EL.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(ADD_PLAY_FORM_EL);
+            const newPlay = {
+                _id: formData.get('_id') || generateUniqueId(),
+                userId: formData.get('userId'),
+                date: formData.get('date'),
+                state: formData.get('state'),
+                draw: formData.get('draw'),
+                game: formData.get('game'),
+                betType: formData.get('betType'),
+                numbers: formData.get('numbers'),
+                wager: parseFloat(formData.get('wager')),
+            };
+            const extraPosition = formData.get('extraPosition');
+            if (extraPosition && (newPlay.game === 'PULITO' || newPlay.game === 'VENEZUELA' || newPlay.game === 'SD')) {
+                newPlay.extra = { position: parseInt(extraPosition) };
+            }
+
+            // Basic Validation (can be expanded)
+            if (!newPlay.userId || !newPlay.date || !newPlay.state || !newPlay.draw || !newPlay.game || !newPlay.betType || !newPlay.numbers || isNaN(newPlay.wager) || newPlay.wager <= 0) {
+                showCustomAlert('Por favor, complete todos los campos obligatorios de la jugada.', 'error');
+                return;
+            }
+
+            currentPlays.push(newPlay);
+            StorageService.saveAll();
+            ADD_PLAY_FORM_EL.reset();
+            renderActiveTabContent(); // Re-render to show the new play in the list
+            showCustomAlert('Jugada agregada manualmente.', 'success');
+            recalculateAllPrizes(); // Optionally recalculate prizes after adding a play
+        });
+
+        UPLOAD_PLAYS_FORM_EL.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('csvFile');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showCustomAlert('Por favor, seleccione un archivo CSV.', 'error');
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                try {
+                    const data = event.target.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonPlays = XLSX.utils.sheet_to_json(worksheet, { raw: true }); // Use raw:true for dates
+
+                    let addedCount = 0;
+                    let skippedCount = 0;
+
+                    jsonPlays.forEach(row => {
+                        // --- CSV to Play Object Mapping ---
+                        // This mapping needs to be robust and match YOUR CSV structure.
+                        // Example mapping based on a common structure:
+                        // Column names in CSV should be mapped to `Play` object keys.
+                        // Dates might need parsing if not in YYYY-MM-DD.
+                        // Numbers might need formatting.
+                        // Wager needs to be a number.
+                        // Game and BetType might need translation from CSV values.
+
+                        const playDate = typeof row.FECHA === 'number' ? excelSerialDateToJSDate(row.FECHA) : parseDateString(row.FECHA);
+
+                        const newPlay = {
+                            _id: String(row.SERIAL || row.ID_JUGADA || generateUniqueId()),
+                            userId: String(row.ID_USER || 'csv_user'),
+                            date: playDate, // Asegúrate que esté en formato YYYY-MM-DD
+                            state: String(row.ESTADO || '').toUpperCase(), // Ej: NY, FL, VE, SD
+                            draw: String(row.HORA || row.SORTEO || '').toUpperCase(), // Ej: MIDDAY, NOCHE
+                            game: String(row.JUEGO || '').toUpperCase(), // Ej: PICK3, VENEZUELA
+                            betType: String(row.MODO || row.TIPO_APUESTA || '').toUpperCase(),
+                            numbers: String(row.NUMERO || ''),
+                            wager: parseFloat(row.MONTO || 0),
+                            extra: (row.POSICION && (String(row.JUEGO).toUpperCase() === 'PULITO' || String(row.JUEGO).toUpperCase() === 'SD')) 
+                                   ? { position: parseInt(row.POSICION) } 
+                                   : undefined
+                        };
+                        
+                        // Adjust game/state based on common patterns if needed
+                        // Example: If row.LOTERIA is "NY PICK 3"
+                        if (row.LOTERIA) {
+                            const loteriaLower = String(row.LOTERIA).toLowerCase();
+                            if (loteriaLower.includes("pick 3") || loteriaLower.includes("pick3")) newPlay.game = "PICK3";
+                            else if (loteriaLower.includes("pick 4") || loteriaLower.includes("win 4") || loteriaLower.includes("win4")) newPlay.game = "WIN4";
+                            else if (loteriaLower.includes("venezuela")) newPlay.game = "VENEZUELA";
+                            else if (loteriaLower.includes("pulito")) newPlay.game = "PULITO";
+                            else if (loteriaLower.includes("santo domingo") || loteriaLower.includes("sd lotto")) newPlay.game = "SD";
+
+                            if (loteriaLower.includes("ny") || loteriaLower.includes("new york")) newPlay.state = "NY";
+                            else if (loteriaLower.includes("fl") || loteriaLower.includes("florida")) newPlay.state = "FL";
+                            else if (loteriaLower.includes("ve") || loteriaLower.includes("venezuela")) newPlay.state = "VE";
+                             else if (loteriaLower.includes("sd") || loteriaLower.includes("santo domingo")) newPlay.state = "SD";
+                            // Add more state mappings as needed
+                        }
+
+
+                        if (newPlay.userId && newPlay.date && newPlay.state && newPlay.draw && newPlay.game && newPlay.betType && newPlay.numbers && !isNaN(newPlay.wager) && newPlay.wager > 0) {
+                            currentPlays.push(newPlay);
+                            addedCount++;
+                        } else {
+                            console.warn("Jugada omitida desde CSV por datos incompletos/inválidos:", row, newPlay);
+                            skippedCount++;
+                        }
+                    });
+
+                    if (addedCount > 0) {
+                        StorageService.saveAll();
+                        renderActiveTabContent();
+                        recalculateAllPrizes();
+                    }
+                    showCustomAlert(`${addedCount} jugada(s) agregada(s) desde CSV. ${skippedCount} omitida(s).`, addedCount > 0 ? 'success' : 'info');
+
+                } catch (error) {
+                    console.error("Error procesando archivo CSV:", error);
+                    showCustomAlert('Error al procesar el archivo CSV. Verifique el formato y la consola.', 'error');
+                } finally {
+                    UPLOAD_PLAYS_FORM_EL.reset(); // Reset form after processing
+                }
+            };
+            reader.onerror = function() {
+                showCustomAlert('Error al leer el archivo.', 'error');
+                UPLOAD_PLAYS_FORM_EL.reset();
+            };
+            reader.readAsBinaryString(file); // Use readAsBinaryString for XLSX.js
+        });
+
+        function excelSerialDateToJSDate(excelSerialDate) {
+            const  unixTimestamp = (excelSerialDate - 25569) * 86400 * 1000;
+            const date = new Date(unixTimestamp);
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        function parseDateString(dateStr) { // Handles DD/MM/YYYY or MM/DD/YYYY (tries to infer) or YYYY-MM-DD
+            if (!dateStr || typeof dateStr !== 'string') return new Date().toISOString().slice(0,10); // Default to today if invalid
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr; // Already YYYY-MM-DD
+
+            const parts = dateStr.split(/[\/\-]/);
+            if (parts.length === 3) {
+                let day, month, year;
+                // Try DD/MM/YYYY first as it's common in some regions
+                if (parseInt(parts[1]) <= 12 && parseInt(parts[0]) <=31) { // Potentially DD/MM/YYYY
+                    day = parseInt(parts[0]);
+                    month = parseInt(parts[1]);
+                    year = parseInt(parts[2]);
+                } else if (parseInt(parts[0]) <= 12 && parseInt(parts[1]) <= 31) { // Potentially MM/DD/YYYY
+                     day = parseInt(parts[1]);
+                     month = parseInt(parts[0]);
+                     year = parseInt(parts[2]);
+                } else {
+                    return new Date().toISOString().slice(0,10); // Cannot determine
+                }
+                if (year < 100) year += 2000; // Assume 21st century for 2-digit years
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                    try {
+                        return new Date(year, month - 1, day).toISOString().slice(0,10);
+                    } catch (e) { /* fall through */ }
+                }
+            }
+            return new Date().toISOString().slice(0,10); // Default if parsing fails
+        }
+
+
+        document.getElementById('recalculate-all-btn').onclick = recalculateAllPrizes;
+
+        function exportPrizesToExcel(gameType) {
+            const data = currentCalculatedPrizes.filter(p => p.playDetails.game === gameType).map(p => ({
+                'ID Jugada': p.playId, 'Usuario': p.userId, 'Fecha Jugada': p.playDetails.date, 
+                'Estado/País': p.playDetails.state, 'Sorteo': p.playDetails.draw, 'Juego': p.playDetails.game, 
+                'Tipo Apuesta': p.playDetails.betType, 'Números Jugados': p.playDetails.numbers, 
+                'Apostado ($)': p.playDetails.wager, 'Números Ganadores': p.winnerDetails.numbers, 
+                'Premio ($)': p.prizeAmount, 'Detalle Premio': p.prizeDetails, 'Estado Premio': p.status
+            }));
+            if (data.length === 0) return showCustomAlert(`No hay premios para exportar (${gameType}).`, 'error');
+            try {
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `Premios ${gameType}`);
+                XLSX.writeFile(wb, `premios_${gameType}_${new Date().toISOString().slice(0,10)}.xlsx`); 
+                showCustomAlert(`Premios exportados para ${gameType}.`, 'success');
+            } catch (err) { console.error("Excel export error:", err); showCustomAlert("Error al exportar Excel.", 'error');}
+        }
+
+        // --- Initialization ---
+        function initApp() {
+            if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+            StorageService.initStorage();
+            if (Object.keys(currentPrizeTable).length > 0) activeTab = Object.keys(currentPrizeTable)[0];
+            renderTabs(); renderActiveTabContent();
+        }
+        initApp();
+    </script>
+</body>
+</html>

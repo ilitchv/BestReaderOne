@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba Cash App Pay</title>
+    <script type="text/javascript" src="https://js.squareup.com/v2/paymentform"></script>
+</head>
+<body>
+    <form id="payment-form">
+        <div id="cash-app-pay"></div>
+    </form>
+    <div id="payment-status-container"></div>
+
+    <script>
+        const applicationId = 'sandbox-sq0idb-p0swM4gk8BWYR12HlUj4SQ'; // Reemplaza con tu Application ID
+        const locationId = 'L66P47FWVDFJS'; // Reemplaza con tu Location ID
+
+        async function initializeCashAppPay() {
+            try {
+                const payments = window.Square.payments(applicationId, locationId);
+
+                const referenceId = 'ref-' + Date.now();
+
+                const paymentRequest = payments.paymentRequest({
+                    countryCode: 'US',
+                    currencyCode: 'USD',
+                    total: {
+                        amount: '1.00',
+                        label: 'Total',
+                    },
+                });
+
+                const options = {
+                    redirectURL: `${window.location.origin}${window.location.pathname}?payment_status={payment_status}&reference_id=${referenceId}`,
+                    referenceId: referenceId,
+                };
+
+                const cashAppPay = await payments.cashAppPay(paymentRequest, options);
+
+                cashAppPay.addEventListener('ontokenization', async (event) => {
+                    const { tokenResult } = event.detail;
+
+                    if (tokenResult.status === 'OK') {
+                        const token = tokenResult.token;
+                        console.log('Tokenización exitosa:', token);
+                        // Aquí puedes enviar el token a tu backend para procesar el pago
+                    } else if (tokenResult.status === 'CANCEL') {
+                        console.log('El usuario canceló el pago.');
+                    } else if (tokenResult.errors) {
+                        const errorMessages = tokenResult.errors.map(err => err.message).join(', ');
+                        console.error('Errores en la tokenización del pago:', errorMessages);
+                    } else {
+                        console.error('Error desconocido en la tokenización del pago:', tokenResult);
+                    }
+                });
+
+                const buttonOptions = {
+                    shape: 'semiround',
+                    width: 'full',
+                };
+                await cashAppPay.attach('#cash-app-pay', buttonOptions);
+                console.log('Cash App Pay adjuntado al contenedor.');
+            } catch (error) {
+                console.error('Error al inicializar Cash App Pay:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeCashAppPay);
+    </script>
+</body>
+</html>
