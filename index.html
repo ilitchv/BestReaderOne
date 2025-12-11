@@ -1487,7 +1487,7 @@
         // --- CLOUD SYNC CONFIG ---
         const API_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
             ? 'http://localhost:3000/api'
-            : 'https://sniper-backend.onrender.com/api'; // Replace with your Render URL
+            : '/api'; // Relative path for Vercel (same domain)
 
         async function syncToCloud(rows, isManual = false) {
             try {
