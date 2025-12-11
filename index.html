@@ -697,6 +697,11 @@
                         onclick="manualCloudSync()">
                         ☁️ Save Cloud
                     </button>
+                    <button
+                        class="px-3 py-1 bg-teal-700 hover:bg-teal-600 text-white rounded text-[10px] font-bold uppercase shadow-lg shadow-teal-900/50 transition-all border border-teal-500 admin-only"
+                        onclick="openAdminDataModal()">
+                        🛡️ Manager
+                    </button>
                     <button class="btn-reset" onclick="resetAllData()">
                         ⚠️ Reset
                     </button>
@@ -760,8 +765,28 @@
             </div>
 
             <!-- FILTERS (Dynamic) -->
-            <div class="flex gap-2 overflow-x-auto pb-2" id="filterContainer">
-                <!-- Filters generated via JS -->
+            <div class="flex flex-col gap-2 mb-2">
+                <div class="flex gap-2 items-center flex-wrap">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase">Tracks:</span>
+                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar" id="filterContainer">
+                        <!-- Filters generated via JS -->
+                    </div>
+                </div>
+                <!-- DATE RANGE FILTER -->
+                <div class="flex gap-2 items-center border-t border-slate-800 pt-2">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase">Rango:</span>
+                    <input type="date" id="simStartDate"
+                        class="bg-slate-900 border border-slate-700 rounded text-[10px] px-1 text-cyan-500 h-6"
+                        onchange="runSimulation()">
+                    <span class="text-[10px] text-slate-600">➜</span>
+                    <input type="date" id="simEndDate"
+                        class="bg-slate-900 border border-slate-700 rounded text-[10px] px-1 text-cyan-500 h-6"
+                        onchange="runSimulation()">
+                    <button class="text-[10px] text-slate-500 hover:text-white underline ml-2"
+                        onclick="clearDateFilter()">Limpiar</button>
+                    <span class="text-[10px] text-slate-600 italic ml-auto">(Filtra visualización, mantiene cálculos de
+                        Gaps)</span>
+                </div>
             </div>
 
         </div>
@@ -1787,6 +1812,16 @@
                 if (!tracksState[row.lottery]) tracksState[row.lottery] = { gap: 0, step: 0, balance: 0 };
                 let t = tracksState[row.lottery];
 
+                // DATE FILTER CHECK
+                const sDate = el('simStartDate').value;
+                const eDate = el('simEndDate').value;
+                let inRange = true;
+                if (sDate || eDate) {
+                    const rDate = new Date(row.date);
+                    if (sDate && rDate < new Date(sDate)) inRange = false;
+                    if (eDate && rDate > new Date(eDate)) inRange = false;
+                }
+
                 const p3 = row.p3.padStart(3, '0');
                 const w4 = row.w4.padStart(4, '0');
                 const isP1 = p3[1] === p3[2];
@@ -1794,8 +1829,11 @@
                 const isP3 = w4[2] === w4[3];
                 const isManualTrigger = row.isManualTrigger === true; // Flag set by explicit user action
 
-                stats.totalDraws++;
-                if (isP1) stats.h1++; if (isP2) stats.h2++; if (isP3) stats.h3++;
+                // Only count stats if in range
+                if (inRange) {
+                    stats.totalDraws++;
+                    if (isP1) stats.h1++; if (isP2) stats.h2++; if (isP3) stats.h3++;
+                }
 
                 let unit = 0, cost = 0, win = 0, net = 0; let dStep = t.step;
 
@@ -1818,40 +1856,57 @@
 
                     unit = getNextStake(t.step, globalBal + 1000);
                     cost = unit * CONFIG.numbersPlayed;
-                    stats.totalInvest += cost;
+
+                    if (inRange) stats.totalInvest += cost; // STAT
+
                     if (isP1) win += unit * CONFIG.payouts.p1;
                     if (isP2) win += unit * CONFIG.payouts.p2;
                     if (isP3) win += unit * CONFIG.payouts.p3;
 
-                    stats.totalGrossWin += win;
-                    net = win - cost; t.balance += net; globalBal += net;
+                    if (inRange) stats.totalGrossWin += win; // STAT
 
-                    if (globalBal > stats.peakBalance) stats.peakBalance = globalBal;
-                    let dd = globalBal - stats.peakBalance; if (dd < stats.mdd) stats.mdd = dd;
+                    net = win - cost; t.balance += net;
+
+                    if (inRange) globalBal += net; // STAT & Balance Flow
+
+                    if (inRange) {
+                        if (globalBal > stats.peakBalance) stats.peakBalance = globalBal;
+                        let dd = globalBal - stats.peakBalance; if (dd < stats.mdd) stats.mdd = dd;
+                    }
 
                     if (isP1) {
-                        stats.gaps.push(t.gap); stats.cycles++; stats.wins++; stats.stepsForWin.push(t.step);
+                        if (inRange) { stats.gaps.push(t.gap); stats.cycles++; stats.wins++; stats.stepsForWin.push(t.step); }
                         t.gap = 0; t.step = 0;
                     }
                     else if (t.step >= CONFIG.stopLoss) {
-                        stats.cycles++; stats.losses++; stats.gaps.push(t.gap);
+                        if (inRange) { stats.cycles++; stats.losses++; stats.gaps.push(t.gap); }
                         t.gap = 0; t.step = 0;
                     }
                     else {
                         t.step++; t.gap++;
-                        if (t.gap > stats.maxGap) stats.maxGap = t.gap;
+                        if (inRange && t.gap > stats.maxGap) stats.maxGap = t.gap;
                     }
                 } else {
                     // Just monitoring gaps
-                    if (isP1) { stats.gaps.push(t.gap); t.gap = 0; }
-                    else { t.gap++; if (t.gap > stats.maxGap) stats.maxGap = t.gap; }
+                    if (isP1) {
+                        if (inRange) stats.gaps.push(t.gap);
+                        t.gap = 0;
+                    }
+                    else {
+                        t.gap++;
+                        if (inRange && t.gap > stats.maxGap) stats.maxGap = t.gap;
+                    }
                 }
 
-                renderRow(row, index, t.gap, dStep, unit, cost, win, net, globalBal, isP1, isP2, isP3);
+                if (inRange) {
+                    renderRow(row, index, t.gap, dStep, unit, cost, win, net, globalBal, isP1, isP2, isP3);
+                }
             });
 
             updateStats(stats, globalBal); updateReel(); ui.btnDl.disabled = false;
         }
+
+        window.clearDateFilter = () => { el('simStartDate').value = ''; el('simEndDate').value = ''; runSimulation(); };
 
         function updateReel() {
             activeOpportunities = [];
@@ -2119,6 +2174,172 @@
 
         window.openTicketModal = () => el('ticketModal').classList.remove('hidden'); window.closeTicketModal = () => el('ticketModal').classList.add('hidden');
         window.addEventListener('load', loadLocalData);
+    </script>
+    <!-- ADMIN DATA MANAGER MODAL -->
+    <div id="adminDataModal"
+        class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-4xl h-[80vh] rounded-xl flex flex-col shadow-2xl">
+            <!-- Header -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-amber-500 font-bold font-tech uppercase tracking-wider text-sm flex items-center gap-2">
+                    <span>🛡️</span> Admin Data Manager (MongoDB)
+                </h3>
+                <button class="text-slate-400 hover:text-white" onclick="closeAdminDataModal()">✕</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-800/20">
+                <div>
+                    <label class="text-[10px] text-slate-400">Desde</label>
+                    <input type="date" id="admStart"
+                        class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-cyan-400">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400">Hasta</label>
+                    <input type="date" id="admEnd"
+                        class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-cyan-400">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400">Lotería</label>
+                    <input type="text" id="admLottery" placeholder="Ej: New York"
+                        class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-white">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="admSearch()"
+                        class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-1 rounded text-xs font-bold uppercase shadow-lg shadow-cyan-900/50 transition-all">
+                        🔍 Buscar en Nube
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="flex-1 overflow-auto p-4">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-950 text-slate-500 text-[10px] uppercase sticky top-0">
+                        <tr>
+                            <th class="p-2 border-b border-slate-800">Date/Time</th>
+                            <th class="p-2 border-b border-slate-800">Lottery</th>
+                            <th class="p-2 border-b border-slate-800">P3 / W4</th>
+                            <th class="p-2 border-b border-slate-800 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admTableBody" class="text-xs text-slate-300 font-mono">
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-slate-600">Busca para ver datos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer Action -->
+            <div class="p-4 border-t border-slate-800 flex justify-end gap-2 bg-slate-900/50">
+                <span id="admStatus" class="text-xs text-slate-500 self-center mr-auto"></span>
+                <button onclick="admLoadToSim()"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold uppercase shadow-lg shadow-indigo-900/50">
+                    📥 Cargar a Simulación
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ADMIN MANAGER LOGIC ---
+        function openAdminDataModal() {
+            el('adminDataModal').classList.remove('hidden');
+            // Set default dates (Current Month)
+            const today = new Date();
+            el('admEnd').value = today.toISOString().split('T')[0];
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            el('admStart').value = firstDay.toISOString().split('T')[0];
+        }
+        function closeAdminDataModal() { el('adminDataModal').classList.add('hidden'); }
+
+        let admCachedRows = [];
+
+        async function admSearch() {
+            const start = el('admStart').value;
+            const end = el('admEnd').value;
+            const lot = el('admLottery').value;
+            const userId = localStorage.getItem('sniper_user_id');
+
+            el('admStatus').textContent = "Buscando...";
+            el('admTableBody').innerHTML = '<tr><td colspan="4" class="p-4 text-center text-cyan-500 animate-pulse">Consultando MongoDB...</td></tr>';
+
+            try {
+                const params = new URLSearchParams({ userId, startDate: start, endDate: end, lottery: lot || 'ALL' });
+                const res = await fetch(`${API_URL}/data/search?${params}`);
+                const data = await res.json();
+
+                admCachedRows = data;
+                renderAdmTable(data);
+                el('admStatus').textContent = `${data.length} registros encontrados.`;
+            } catch (e) {
+                console.error(e);
+                el('admStatus').textContent = "Error de conexión.";
+                el('admTableBody').innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error al buscar.</td></tr>';
+            }
+        }
+
+        function renderAdmTable(rows) {
+            const tbody = el('admTableBody');
+            tbody.innerHTML = '';
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-600">No se encontraron resultados.</td></tr>';
+                return;
+            }
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-800 hover:bg-slate-800/50";
+                tr.innerHTML = `
+                    <td class="p-2 text-slate-400">${new Date(r.date).toLocaleDateString()} ${r.time}</td>
+                    <td class="p-2 text-cyan-300 font-bold">${r.lottery}</td>
+                    <td class="p-2"><span class="text-amber-400">${r.p3}</span> / <span class="text-purple-400">${r.w4}</span></td>
+                    <td class="p-2 text-right gap-2">
+                        <button onclick="admDelete('${r._id || r.id}')" class="text-red-500 hover:text-red-400 text-[10px] border border-red-900 px-1 rounded">DEL</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function admDelete(id) {
+            if (!confirm("¿Eliminar este registro permanentemente de la Base de Datos?")) return;
+            try {
+                await fetch(`${API_URL}/data/${id}`, { method: 'DELETE' });
+                // Remove from UI immediately
+                admCachedRows = admCachedRows.filter(r => (r._id !== id && r.id !== id));
+                renderAdmTable(admCachedRows);
+            } catch (e) { alert("Error eliminando: " + e.message); }
+        }
+
+        function admLoadToSim() {
+            if (admCachedRows.length === 0) return alert("No hay datos para cargar.");
+
+            // Map MongoDB format back to App format
+            const mapped = admCachedRows.map(r => ({
+                id: r._id || r.id,
+                lottery: r.lottery,
+                date: r.date,
+                time: r.time,
+                track: r.trackName || r.track || r.lottery, // Fallbacks
+                p3: r.p3,
+                w4: r.w4,
+                // App logic will recalc sort/priority/gaps
+            }));
+
+            // Load into Global App State
+            globalRawRows = mapped;
+
+            // Re-Init App Logic
+            mapped.forEach(r => {
+                if (!r.priority) { const i = getTrackInfo(r.lottery, r.time); r.priority = i.priority; r.track = i.name; }
+            });
+
+            runSimulation();
+            closeAdminDataModal();
+            el('fileName').textContent = `${mapped.length} Registros Cargados (Admin)`;
+            alert(`✅ ${mapped.length} registros cargados a la simulación.`);
+        }
     </script>
 </body>
 
