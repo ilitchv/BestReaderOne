@@ -58,6 +58,14 @@
         }
 
         /* TABLE */
+        .admin-only {
+            transition: opacity 0.3s;
+        }
+
+        body.user-mode .admin-only {
+            display: none !important;
+        }
+
         .table-section {
             background: #0f172a;
             border: 1px solid #334155;
@@ -576,7 +584,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
                 <!-- 1. DATA LOADER -->
-                <div class="glass-card p-4 flex flex-col justify-between h-36">
+                <div class="glass-card p-4 flex flex-col justify-between h-36 admin-only">
                     <div class="flex justify-between items-center mb-1">
                         <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cargar Tracks</h3>
                         <div class="w-1.5 h-1.5 rounded-full bg-slate-600" id="dataDot"></div>
@@ -674,7 +682,7 @@
 
             <!-- DATA TOOLS & SUMMARY -->
             <div class="mb-4 flex flex-col gap-2">
-                <div class="flex gap-2 justify-end items-center mb-2" id="dataTools">
+                <div class="flex gap-2 justify-end items-center mb-2 admin-only" id="dataTools">
                     <button id="btnAdd" class="btn-add" onclick="openManualEntry()">
                         ➕ ADD
                     </button>
@@ -853,7 +861,7 @@
                 <div class="flex gap-3">
                     <button onclick="closeTicketModal()"
                         class="flex-1 py-3 border border-slate-700 rounded-lg text-slate-400 hover:bg-slate-800 text-xs font-bold uppercase">Abortar</button>
-                    <button onclick="closeTicketModal()"
+                    <button onclick="activeTriggerDispatch()"
                         class="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold uppercase shadow-lg shadow-red-900/50">CONFIRMAR</button>
                 </div>
             </div>
@@ -1078,6 +1086,51 @@
             gapTrigger: 5, stopLoss: 12, numbersPlayed: 10,
             payouts: { p1: 55, p2: 15, p3: 10 }
         };
+
+        // --- USER MODE & SETTINGS ---
+        const IS_USER_MODE = new URLSearchParams(window.location.search).get('mode') === 'user';
+
+        if (IS_USER_MODE) {
+            document.body.classList.add('user-mode');
+            // Override Config from LocalStorage
+            const saved = localStorage.getItem('sniper_user_config');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    CONFIG = { ...CONFIG, ...parsed }; // Merge defaults with saved
+                    // Update UI Label
+                    const el = (id) => document.getElementById(id); // Helper re-defined or use global if available (global el is defined later, risky. Use document.getElementById)
+                    const sum = document.getElementById('configSummary');
+                    if (sum) sum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
+                } catch (e) { console.error("Error loading user settings", e); }
+            }
+        }
+
+        // Trigger External Event
+        function dispatchTicketEvent(track, step, totalAmount) {
+            // Numbers 00-99
+            const numbers = Array.from({ length: 100 }, (_, i) => i.toString().padStart(2, '0'));
+
+            const eventData = {
+                event: 'sniperTrigger',
+                timestamp: new Date().toISOString(),
+                data: {
+                    track: track,
+                    step: step,
+                    total_amount: parseFloat(totalAmount),
+                    numbers: numbers,
+                    stake_per_number: parseFloat(totalAmount) / 100 // Example distribution
+                }
+            };
+
+            // Dispatch Custom Event for internal listeners
+            window.dispatchEvent(new CustomEvent('sniperTrigger', { detail: eventData }));
+
+            // Post Message for iframe/parent communication
+            window.parent.postMessage(eventData, '*');
+
+            console.log("Creating Ticket Event:", eventData);
+        }
 
         const FIBONACCI_SEQ = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610];
 
@@ -1659,7 +1712,7 @@
 
                 if (shouldPlay) {
                     // If starting new cycle (step 0), set to 1
-                    if (t.step === 0) t.step = 1;
+                    if (t.step === 0) { t.step = 1; dStep = 1; }
 
                     unit = getNextStake(t.step, globalBal + 1000);
                     cost = unit * CONFIG.numbersPlayed;
@@ -1843,6 +1896,11 @@
             CONFIG.baseStake = parseFloat(el('confStake').value); CONFIG.gapTrigger = parseInt(el('confGap').value);
             CONFIG.stopLoss = parseInt(el('confSL').value); CONFIG.strategyType = el('confStrategy').value;
             CONFIG.strategyParam = parseFloat(el('confParam').value);
+
+            if (IS_USER_MODE) {
+                localStorage.setItem('sniper_user_config', JSON.stringify(CONFIG));
+            }
+
             ui.confSum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
             closeSettings(); if (globalRawRows.length) runSimulation();
         }
@@ -1862,6 +1920,28 @@
             // Clean state when switching
             activeOpportunities = [];
             runSimulation();
+        };
+
+        // Trigger Dispatch Wrapper
+        window.activeTriggerDispatch = () => {
+            const track = el('tTrackName').textContent;
+            const step = el('tStep').textContent;
+            const total = el('tTotal').textContent.replace('$', '');
+
+            dispatchTicketEvent(track, step, total);
+            closeTicketModal();
+
+            // Visual feedback
+            const btn = el('btnGenerate');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span>✅</span> ENVIADO';
+                btn.classList.add('bg-green-600');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('bg-green-600');
+                }, 2000);
+            }
         };
 
         window.confirmTicket = (trackName, step) => {
