@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Beast Strategy Sniper v5.3 (3D Reel)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b1120;
+            --bg-card: #151e32;
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            --accent: #06b6d4;
+            --sniper-red: #ef4444;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            touch-action: pan-y; /* Mejor manejo táctil */
+        }
+
+        .font-tech { font-family: 'Orbitron', sans-serif; }
+
+        /* LAYOUT */
+        .main-layout { flex: 1; display: flex; flex-direction: column; padding: 20px; }
+        .top-section { margin-bottom: 20px; }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px);
+            border: 1px solid #334155; border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        /* TABLE */
+        .table-section {
+            background: #0f172a; border: 1px solid #334155; border-radius: 12px; overflow: visible;
+        }
+        .custom-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .custom-table th {
+            position: sticky; top: 0; background-color: #1e293b; z-index: 50;
+            padding: 10px; font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; color: #94a3b8; border-bottom: 2px solid #334155;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center;
+        }
+        .custom-table td {
+            padding: 8px 10px; border-bottom: 1px solid #1e293b;
+            font-family: 'Roboto Mono', monospace; font-size: 0.85rem; white-space: nowrap;
+        }
+        .custom-table tr:hover td { background-color: rgba(6, 182, 212, 0.05); }
+
+        /* BUTTONS & BADGES */
+        .btn-download {
+            background: linear-gradient(90deg, #22d3ee, #d946ef); color: white; font-weight: bold;
+            border-radius: 9999px; transition: all 0.3s; border: none; display: flex;
+            align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+        }
+        .btn-download:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-download:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+
+        .btn-sniper {
+            background: linear-gradient(135deg, #dc2626, #991b1b); color: white;
+            transition: all 0.2s; border: 1px solid #f87171;
+        }
+        .btn-sniper:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 0 20px rgba(220, 38, 38, 0.4); }
+        .btn-sniper:disabled { background: #1e293b; border-color: #334155; color: #475569; }
+
+        .lottery-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; }
+        .badge-ny { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-ga { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-fl { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+        
+        .filter-pill {
+            padding: 6px 16px; border-radius: 999px; font-size: 0.75rem; font-weight: bold;
+            border: 1px solid #334155; color: #94a3b8; cursor: pointer; transition: all 0.2s;
+            background: #0f172a; margin-right: 8px;
+        }
+        .filter-pill:hover { border-color: var(--accent); color: var(--accent); }
+        .filter-pill.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+        /* --- NUEVO MOTOR SNIPER REEL 3D (QUIRÚRGICO) --- */
+        .reel-3d-viewport {
+            perspective: 800px; /* Profundidad de cámara */
+            height: 100%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            user-select: none;
+            touch-action: none; /* Importante para arrastrar */
+        }
+
+        .reel-spinner {
+            transform-style: preserve-3d;
+            width: 100%;
+            height: 60px; /* Altura base de una carta */
+            position: relative;
+            transition: transform 0.0s; /* Controlado por JS para física */
+        }
+
+        .reel-face {
+            position: absolute;
+            width: 100%;
+            height: 60px;
+            left: 0;
+            top: 0;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            /* Estilo Glass Card para cada item */
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        .reel-face.active-face {
+            background: rgba(6, 182, 212, 0.15); /* Cyan tint */
+            border-color: rgba(6, 182, 212, 0.6);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+        }
+
+        /* SONAR EFFECT (Cuando no hay datos) */
+        .sonar-container {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none;
+        }
+        .sonar-wave {
+            position: absolute;
+            border: 2px solid rgba(6, 182, 212, 0.5);
+            border-radius: 50%;
+            opacity: 0;
+            animation: sonarRipple 2s linear infinite;
+        }
+        .sonar-wave:nth-child(2) { animation-delay: 0.6s; }
+        .sonar-wave:nth-child(3) { animation-delay: 1.2s; }
+
+        @keyframes sonarRipple {
+            0% { width: 10px; height: 10px; opacity: 0.8; border-width: 3px; }
+            100% { width: 150px; height: 150px; opacity: 0; border-width: 0px; }
+        }
+
+        /* CONTROLES TÁCTILES LATERALES */
+        .control-zone {
+            position: absolute;
+            width: 100%;
+            height: 30px;
+            left: 0;
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .control-top { top: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent); }
+        .control-bottom { bottom: 0; background: linear-gradient(to top, rgba(0,0,0,0.4), transparent); }
+        .control-arrow {
+            color: rgba(148, 163, 184, 0.3);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .control-zone:hover .control-arrow {
+            color: var(--accent);
+            transform: scale(1.5);
+            text-shadow: 0 0 10px var(--accent);
+        }
+        .control-zone:active .control-arrow {
+            color: white;
+            transform: scale(1.2);
+        }
+
+        .balance-gradient { background: -webkit-linear-gradient(right, #22d3ee, #e2e8f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .settings-gear { font-size: 28px; color: var(--text-muted); cursor: pointer; transition: all 0.3s; }
+        .settings-gear:hover { color: var(--accent); transform: rotate(90deg); }
+        
+        select { appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 0.7rem top 50%; background-size: 0.65rem auto; }
+    
+        /* ACORDEON STATS */
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; opacity: 0; }
+        .accordion-content.open { opacity: 1; overflow: visible; }
+        .tooltip { visibility: hidden; width: 200px; background-color: rgba(15,23,42,0.95); color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 100; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 0.7rem; border: 1px solid #334155; pointer-events: none; }
+        .stat-row:hover .tooltip { visibility: visible; opacity: 1; }
+        .stat-group-title { background: #1e293b; padding: 6px 10px; font-size: 0.7rem; font-weight: bold; color: #06b6d4; text-transform: uppercase; border-bottom: 1px solid #334155; }
+        .stat-row { display: flex; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid #1e293b; position: relative; cursor: help; }
+        .stat-row:hover { background: #1e293b; }
+
+        /* Highlight Double */
+        .double-highlight { color: #facc15; font-weight: bold; text-shadow: 0 0 5px rgba(250, 204, 21, 0.4); } 
+    </style>
+</head>
+<body>
+
+    <div class="main-layout">
+        
+        <!-- HEADER -->
+        <div class="top-section">
+            <div class="flex justify-between items-end mb-4 px-1">
+                <div class="flex items-center gap-3">
+                    <div class="settings-gear" onclick="openSettings()" title="Configuración">⚙️</div>
+                    <div>
+                        <h1 class="text-xl font-bold font-tech tracking-wider text-white flex items-center gap-2">
+                            <span class="text-cyan-500">SNIPER</span> DASHBOARD v5.3
+                        </h1>
+                        <p class="text-[10px] text-slate-500 font-mono mt-1" id="configSummary">CONF: GAP 5 | SL 12 | STAKE $0.17 | MULTI-TRACK</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-wider block">P&L GLOBAL</span>
+                    <span class="text-2xl font-bold font-tech balance-gradient" id="totalBalance">$0.00</span>
+                </div>
+            </div>
+
+            <!-- CONTROL PANEL -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                
+                <!-- 1. DATA LOADER -->
+                <div class="glass-card p-4 flex flex-col justify-between h-36">
+                    <div class="flex justify-between items-center mb-1">
+                        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cargar Tracks</h3>
+                        <div class="w-1.5 h-1.5 rounded-full bg-slate-600" id="dataDot"></div>
+                    </div>
+                    
+                    <div class="flex gap-2 mb-2">
+                        <select id="lotterySelect" class="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1 w-full focus:outline-none focus:border-cyan-500">
+                            <option value="New York">New York</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Florida">Florida</option>
+                            <option value="Texas">Texas</option>
+                            <option value="Custom">Archivo Personalizado</option>
+                        </select>
+                    </div>
+
+                    <label class="flex-1 flex flex-col items-center justify-center border border-dashed border-slate-700 rounded bg-slate-800/30 hover:bg-slate-800 hover:border-cyan-500/50 cursor-pointer transition group mb-2 min-h-[30px]">
+                        <span id="fileName" class="text-xs font-medium text-slate-400 group-hover:text-cyan-400 truncate w-full text-center px-2">+ Añadir CSV</span>
+                        <input type="file" id="csvInput" accept=".csv" class="hidden">
+                    </label>
+                    <button id="btnDownload" class="btn-download py-1.5 px-4 text-[10px] uppercase tracking-wide w-full" disabled onclick="downloadCSV()">
+                        <span>📥</span> Exportar Data
+                    </button>
+                </div>
+
+                <!-- 2. SNIPER REEL 3D (MEJORADO) -->
+                <div class="glass-card h-36 relative overflow-hidden flex flex-col p-0">
+                    <div id="pulseBg" class="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl transition-colors duration-500 z-0"></div>
+                    
+                    <!-- Header interno pequeño -->
+                    <div class="absolute top-2 left-4 z-20 pointer-events-none">
+                        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Radar de Oportunidades</h3>
+                    </div>
+                    <div class="absolute top-2 right-4 z-20 pointer-events-none">
+                        <span class="text-[10px] text-cyan-400 font-mono" id="activeCount">0 Activas</span>
+                    </div>
+
+                    <!-- VIEWPORT 3D -->
+                    <div class="reel-3d-viewport" id="reelViewport">
+                        <!-- El Spinner se inyecta vía JS -->
+                        <div id="reelSpinner" class="reel-spinner"></div>
+                        
+                        <!-- Sonar Animation (Default) -->
+                        <div id="sonarEffect" class="sonar-container">
+                            <div class="sonar-wave"></div>
+                            <div class="sonar-wave"></div>
+                            <div class="sonar-wave"></div>
+                            <div class="text-center text-slate-600 text-xs italic mt-12 font-mono">ESCANEO ACTIVO...</div>
+                        </div>
+                    </div>
+
+                    <!-- ZONAS DE CONTROL TÁCTIL (Invisible pero funcional) -->
+                    <div class="control-zone control-top" onclick="triggerSpin(-1)">
+                        <span class="control-arrow">▲</span>
+                    </div>
+                    <div class="control-zone control-bottom" onclick="triggerSpin(1)">
+                        <span class="control-arrow">▼</span>
+                    </div>
+                </div>
+
+                <!-- 3. ACTION -->
+                <div class="glass-card p-4 flex flex-col justify-between h-36 border-l-2 border-l-slate-700" id="actionCard">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Siguiente Disparo</h3>
+                        <span class="text-xs font-mono text-amber-500" id="nextStakeLabel">--</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <div id="actionText" class="text-xs font-bold text-slate-600 tracking-wide text-center">ESPERANDO SEÑAL...</div>
+                        <div id="actionSubtext" class="text-[10px] text-slate-500 mt-1 font-mono text-center"></div>
+                    </div>
+                    <button id="btnGenerate" class="btn-sniper w-full py-2.5 rounded text-xs font-bold font-tech uppercase tracking-widest flex items-center justify-center gap-2" disabled onclick="openTicketModal()">
+                        <span>🎯</span> DISPARAR
+                    </button>
+                </div>
+            </div>
+
+            <!-- EXECUTIVE SUMMARY -->
+            <div class="mb-4">
+                <button class="w-full py-2 px-4 rounded-lg border border-cyan-900 text-cyan-500 font-tech text-xs font-bold uppercase tracking-wider flex justify-between items-center hover:bg-slate-900 transition mb-2" onclick="toggleAccordion()">
+                    <span>📊 Executive Summary</span>
+                    <span id="accIcon">▼</span>
+                </button>
+                <div class="accordion-content bg-slate-900 rounded-lg border border-slate-800" id="accContent">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-slate-800 border border-slate-800">
+                        
+                        <!-- Col 1 -->
+                        <div class="bg-[#151e32] flex flex-col">
+                            <div class="stat-group-title">I. Riesgo</div>
+                            <div class="stat-row"><span class="stat-label">Promedio Gap</span><span class="stat-value text-cyan-400" id="statAvgGap">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Max Gap</span><span class="stat-value text-amber-500" id="statMaxGap">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Total Ciclos</span><span class="stat-value" id="statTotalCycles">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Pasos Promedio</span><span class="stat-value" id="statAvgSteps">--</span></div>
+                        </div>
+
+                        <!-- Col 2 -->
+                        <div class="bg-[#151e32] flex flex-col">
+                            <div class="stat-group-title">II. Eficiencia</div>
+                            <div class="stat-row"><span class="stat-label">Ganados (TP)</span><span class="stat-value text-green-400" id="statWins">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Perdidos (SL)</span><span class="stat-value text-red-400" id="statLosses">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Win Rate</span><span class="stat-value" id="statWinRate">--%</span></div>
+                        </div>
+
+                        <!-- Col 3 -->
+                        <div class="bg-[#151e32] flex flex-col">
+                            <div class="stat-group-title">III. Hits</div>
+                            <div class="stat-row"><span class="stat-label">P1 (Gatillo)</span><span class="stat-value text-cyan-200" id="statHitsP1">--</span></div>
+                            <div class="stat-row"><span class="stat-label">P2 (Bono)</span><span class="stat-value" id="statHitsP2">--</span></div>
+                            <div class="stat-row"><span class="stat-label">P3 (Bono)</span><span class="stat-value" id="statHitsP3">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Frecuencia P1</span><span class="stat-value text-slate-400" id="statFreqP1">--%</span></div>
+                        </div>
+
+                        <!-- Col 4 -->
+                        <div class="bg-[#151e32] flex flex-col">
+                            <div class="stat-group-title">R. Finanzas</div>
+                            <div class="stat-row"><span class="stat-label">P&L Neto</span><span class="stat-value" id="statPnL">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Total Premios</span><span class="stat-value text-green-400" id="statGrossWin">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Max Drawdown</span><span class="stat-value text-red-500" id="statMDD">--</span></div>
+                            <div class="stat-row"><span class="stat-label">Inversión Total</span><span class="stat-value text-slate-300" id="statInvTotal">--</span></div>
+                            <div class="stat-row"><span class="stat-label">ROI</span><span class="stat-value" id="statROI">--%</span></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FILTERS -->
+            <div class="flex gap-2 overflow-x-auto pb-2" id="filterContainer">
+                <div class="filter-pill active" onclick="applyFilter('ALL', this)">ALL TRACKS</div>
+            </div>
+
+        </div>
+
+        <!-- TABLE SECTION -->
+        <div class="table-section">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th class="w-20 text-left pl-4">Track</th>
+                        <th class="w-24 text-left">Fecha</th>
+                        <th class="w-20 text-left">Hora</th>
+                        <th>Resultados</th>
+                        <th class="w-12 text-center">Gap</th>
+                        <th class="w-12 text-center">Paso</th>
+                        <th class="w-24 text-right">Unit</th>
+                        <th class="w-24 text-right">Total</th>
+                        <th class="w-24 text-right">Premio</th>
+                        <th class="w-24 text-right">Neto</th>
+                        <th class="w-28 text-right pr-4">Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <tr><td colspan="11" class="text-center py-20 text-slate-600 text-sm italic">Sube archivos CSV de diferentes loterías para combinarlos.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-xl p-6 shadow-2xl">
+            <h2 class="text-white font-bold mb-6 flex items-center gap-2">⚙️ Ajustes</h2>
+            <div class="space-y-5 text-sm">
+                <div><label class="text-slate-400 block mb-1">Stake Inicial Unitario ($)</label><input type="number" id="confStake" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono" step="0.01"></div>
+                <div>
+                    <label class="text-slate-400 block mb-1">Estrategia</label>
+                    <select id="confStrategy" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono" onchange="toggleStrategyParams()">
+                        <option value="MARTINGALE">Martingala</option>
+                        <option value="FIBONACCI">Fibonacci</option>
+                        <option value="KELLY">Criterio de Kelly</option>
+                    </select>
+                </div>
+                <div id="paramContainer">
+                    <label class="text-slate-400 block mb-1" id="paramLabel">Multiplicador</label>
+                    <input type="number" id="confParam" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono" step="0.1" value="1.7">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-slate-400 block mb-1">Gap Trigger</label><input type="number" id="confGap" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"></div>
+                    <div><label class="text-slate-400 block mb-1">Stop Loss</label><input type="number" id="confSL" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"></div>
+                </div>
+                <button onclick="saveSettings()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded mt-2">Guardar Cambios</button>
+                <button onclick="closeSettings()" class="w-full text-slate-500 hover:text-white py-2 text-xs">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TICKET MODAL -->
+    <div id="ticketModal" class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="bg-slate-900 border border-red-500/50 w-full max-w-sm rounded-2xl p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: linear-gradient(#ef4444 1px, transparent 1px), linear-gradient(90deg, #ef4444 1px, transparent 1px); background-size: 20px 20px;"></div>
+            <div class="relative z-10">
+                <div class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-red-500 animate-pulse">🎯</div>
+                <h2 class="text-2xl font-bold font-tech text-white mb-1">DISPARAR</h2>
+                <p class="text-slate-400 text-xs mb-4" id="tTrackName"></p>
+                
+                <div class="bg-black/40 rounded-lg p-4 mb-6 border border-slate-800 text-left space-y-2 mt-4">
+                    <div class="flex justify-between text-sm"><span class="text-slate-400">Paso</span><span class="font-bold text-amber-500 font-mono" id="tStep">#</span></div>
+                    <div class="flex justify-between items-center border-t border-slate-800 pt-2 mt-2">
+                        <span class="text-slate-300 font-bold text-xs uppercase">Costo Total Ticket</span>
+                        <span class="text-2xl font-bold text-green-400 font-tech" id="tTotal">$0.00</span>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="closeTicketModal()" class="flex-1 py-3 border border-slate-700 rounded-lg text-slate-400 hover:bg-slate-800 text-xs font-bold uppercase">Abortar</button>
+                    <button onclick="closeTicketModal()" class="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold uppercase shadow-lg shadow-red-900/50">CONFIRMAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG GLOBAL
+        let CONFIG = {
+            baseStake: 0.17, strategyType: 'MARTINGALE', strategyParam: 1.7,
+            gapTrigger: 5, stopLoss: 12, numbersPlayed: 10,
+            payouts: { p1: 55, p2: 15, p3: 10 }
+        };
+
+        // ALMACÉN DE DATA
+        let globalRawRows = [];
+        let tracksState = {}; 
+        let currentReelIndex = 0;
+        let activeOpportunities = [];
+        const FIBONACCI_SEQ = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610];
+        
+        // PRIORIDAD CRONOLÓGICA
+        const DRAW_PRIORITY = {
+            "Georgia Midday": 10, "New York Midday": 20, "Florida Midday": 30, "Texas Midday": 35,
+            "Georgia Evening": 60, "New York Evening": 70, "Florida Evening": 80, "Texas Evening": 85
+        };
+
+        const el = (id) => document.getElementById(id);
+        const ui = {
+            table: el('historyBody'), balance: el('totalBalance'), 
+            // NUEVOS ELEMENTOS REEL
+            reelViewport: el('reelViewport'), reelSpinner: el('reelSpinner'), sonar: el('sonarEffect'),
+            activeCount: el('activeCount'), btn: el('btnGenerate'),
+            btnDl: el('btnDownload'), 
+            statusText: el('actionText'), statusSub: el('actionSubtext'), statusCard: el('actionCard'),
+            lotterySel: el('lotterySelect'), filters: el('filterContainer'),
+            // Stats (referencias igual que antes)
+            sGap: el('statAvgGap'), sMax: el('statMaxGap'), sCyc: el('statTotalCycles'), sStep: el('statAvgSteps'),
+            sWin: el('statWins'), sLoss: el('statLosses'), sRate: el('statWinRate'),
+            sH1: el('statHitsP1'), sH2: el('statHitsP2'), sH3: el('statHitsP3'), sFreq: el('statFreqP1'),
+            sPnL: el('statPnL'), sGross: el('statGrossWin'), sMDD: el('statMDD'), sInv: el('statInvTotal'), sROI: el('statROI'),
+            // Inputs
+            iStake: el('confStake'), iStrat: el('confStrategy'), iParam: el('confParam'), iGap: el('confGap'), iSL: el('confSL'), lParam: el('paramLabel'), cParam: el('paramContainer'),
+            // Modal Elements
+            mStep: el('tStep'), mTotal: el('tTotal'), mTrack: el('tTrackName'),
+            confSum: el('configSummary')
+        };
+
+        // --- 1. LÓGICA DE REEL 3D & FÍSICA ---
+        // Variables de estado del motor 3D
+        let currentAngle = 0;
+        let cellAngle = 0; // Se calcula dinámicamente según items
+        let radius = 110; // Radio del cilindro
+        let isDragging = false;
+        let startY = 0;
+        let startAngle = 0;
+        let currentVelocity = 0;
+        let animationFrameId;
+
+        // Inicializar Eventos Táctiles/Mouse
+        const vp = ui.reelViewport;
+        vp.addEventListener('mousedown', startDrag);
+        vp.addEventListener('touchstart', startDrag, {passive: false});
+        window.addEventListener('mousemove', moveDrag);
+        window.addEventListener('touchmove', moveDrag, {passive: false});
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            if(activeOpportunities.length < 2) return; // No arrastrar si hay 0 o 1 item
+            isDragging = true;
+            cancelAnimationFrame(animationFrameId); // Detener inercia previa
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            startY = y;
+            startAngle = currentAngle;
+            currentVelocity = 0;
+            ui.reelSpinner.style.transition = 'none'; // Respuesta inmediata
+        }
+
+        function moveDrag(e) {
+            if(!isDragging) return;
+            e.preventDefault(); // Evitar scroll de página
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            const deltaY = y - startY;
+            // Sensibilidad: 1px = 0.5 grados
+            currentAngle = startAngle + (deltaY * 0.8);
+            updateSpinnerTransform();
+            // Calcular velocidad simple
+            currentVelocity = deltaY * 0.1;
+        }
+
+        function endDrag(e) {
+            if(!isDragging) return;
+            isDragging = false;
+            applyInertia();
+        }
+
+        function applyInertia() {
+            // Fricción simulada
+            currentVelocity *= 0.95;
+            currentAngle += currentVelocity;
+            updateSpinnerTransform();
+
+            if (Math.abs(currentVelocity) > 0.1) {
+                animationFrameId = requestAnimationFrame(applyInertia);
+            } else {
+                snapToGrid();
+            }
+        }
+
+        function snapToGrid() {
+            // Alinear al ángulo de celda más cercano
+            const index = Math.round(currentAngle / cellAngle);
+            const targetAngle = index * cellAngle;
+            
+            ui.reelSpinner.style.transition = 'transform 0.4s cubic-bezier(0.17, 0.67, 0.14, 1.2)'; // Efecto rebote suave
+            currentAngle = targetAngle;
+            updateSpinnerTransform();
+
+            // Calcular qué item quedó seleccionado
+            // El índice es negativo porque arrastrar abajo (positivo) rota visualmente hacia items anteriores
+            let normIndex = (-index) % activeOpportunities.length;
+            if (normIndex < 0) normIndex += activeOpportunities.length;
+            currentReelIndex = normIndex;
+            
+            // Actualizar UI del ticket
+            updateActiveFaceStyle();
+            updateActionCard(activeOpportunities[currentReelIndex]);
+        }
+
+        function updateSpinnerTransform() {
+            ui.reelSpinner.style.transform = `rotateX(${currentAngle}deg)`;
+        }
+
+        // Control por botones (Flechas)
+        window.triggerSpin = (direction) => {
+            if(activeOpportunities.length === 0) return;
+            // direction: 1 (Abajo/Next), -1 (Arriba/Prev)
+            const targetIndex = Math.round(currentAngle / cellAngle) + (direction * -1);
+            
+            ui.reelSpinner.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            currentAngle = targetIndex * cellAngle;
+            updateSpinnerTransform();
+            
+            // Actualizar lógica tras la transición
+            setTimeout(() => {
+                let normIndex = (-targetIndex) % activeOpportunities.length;
+                if (normIndex < 0) normIndex += activeOpportunities.length;
+                currentReelIndex = normIndex;
+                updateActiveFaceStyle();
+                updateActionCard(activeOpportunities[currentReelIndex]);
+            }, 300);
+        };
+
+        function updateActiveFaceStyle() {
+            // Limpiar clases
+            const faces = document.querySelectorAll('.reel-face');
+            faces.forEach(f => f.classList.remove('active-face'));
+            // Calcular cual cara está al frente (aprox)
+            // Dado que rotamos el contenedor, las caras son estáticas relativas a él.
+            // Simplemente resaltamos la cara 'i' que corresponde al índice actual.
+            if(faces[currentReelIndex]) faces[currentReelIndex].classList.add('active-face');
+        }
+
+        // --- FIN LÓGICA 3D ---
+
+
+        // CARGA DE ARCHIVO ACUMULATIVA
+        el('csvInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => { 
+                processNewFile(ev.target.result); 
+                el('fileName').textContent = `+ ${file.name} (Cargado)`;
+            };
+            reader.readAsText(file);
+        });
+
+        function processNewFile(csvText) {
+            const rows = csvText.trim().split('\n');
+            const selectedLottery = ui.lotterySel.value; 
+            const startIndex = rows[0].toLowerCase().includes('date') ? 1 : 0;
+
+            for(let i = startIndex; i < rows.length; i++) {
+                const rowStr = rows[i].trim();
+                if(!rowStr) continue;
+                const cols = rowStr.split(',');
+                if(cols.length < 4) continue;
+
+                const rawTime = cols[1].trim(); 
+                let drawTime = "Evening"; 
+                if (rawTime.toLowerCase().includes("mid")) drawTime = "Midday";
+                else if (rawTime.toLowerCase().includes("eve")) drawTime = "Evening";
+                else if (rawTime.toLowerCase().includes("day")) drawTime = "Midday";
+                else if (rawTime.toLowerCase().includes("night")) drawTime = "Evening";
+
+                const fullTrackName = `${selectedLottery} ${drawTime}`;
+                
+                globalRawRows.push({
+                    track: fullTrackName,
+                    lottery: selectedLottery,
+                    date: cols[0].trim(),
+                    time: rawTime,
+                    p3: cols[2].trim(),
+                    w4: cols[3].trim()
+                });
+            }
+
+            globalRawRows.sort((a, b) => {
+                const da = new Date(a.date);
+                const db = new Date(b.date);
+                if (da < db) return -1;
+                if (da > db) return 1;
+                const pa = DRAW_PRIORITY[a.track] || 99;
+                const pb = DRAW_PRIORITY[b.track] || 99;
+                return pa - pb;
+            });
+
+            runSimulation();
+        }
+
+        function runSimulation() {
+            ui.table.innerHTML = '';
+            tracksState = {}; 
+            let globalBal = 0;
+            let stats = { gaps:[], maxGap:0, cycles:0, wins:0, losses:0, stepsForWin:[], h1:0, h2:0, h3:0, totalDraws:0, totalInvest:0, totalGrossWin:0, mdd:0, peakBalance:0 };
+            
+            const uniqueLotteries = [...new Set(globalRawRows.map(r => r.lottery))];
+            updateFiltersUI(uniqueLotteries);
+
+            globalRawRows.forEach(row => {
+                if (!tracksState[row.lottery]) tracksState[row.lottery] = { gap: 0, step: 0, balance: 0 };
+                let t = tracksState[row.lottery];
+
+                const p3 = row.p3.padStart(3,'0');
+                const w4 = row.w4.padStart(4,'0');
+                const isP1 = p3[1] === p3[2];
+                const isP2 = w4[0] === w4[1];
+                const isP3 = w4[2] === w4[3];
+
+                stats.totalDraws++;
+                if(isP1) stats.h1++; if(isP2) stats.h2++; if(isP3) stats.h3++;
+
+                let unit = 0, cost = 0, win = 0, net = 0;
+                let dStep = t.step;
+
+                if (t.step > 0) {
+                    unit = getNextStake(t.step, globalBal + 1000);
+                    cost = unit * CONFIG.numbersPlayed;
+                    stats.totalInvest += cost;
+
+                    if(isP1) win += unit * CONFIG.payouts.p1;
+                    if(isP2) win += unit * CONFIG.payouts.p2;
+                    if(isP3) win += unit * CONFIG.payouts.p3;
+
+                    stats.totalGrossWin += win;
+                    net = win - cost;
+                    t.balance += net;
+                    globalBal += net;
+
+                    if(globalBal > stats.peakBalance) stats.peakBalance = globalBal;
+                    let dd = globalBal - stats.peakBalance;
+                    if(dd < stats.mdd) stats.mdd = dd;
+
+                    if(isP1) {
+                        stats.gaps.push(t.gap); stats.cycles++; stats.wins++;
+                        stats.stepsForWin.push(t.step);
+                        t.gap = 0; t.step = 0;
+                    } else if(t.step >= CONFIG.stopLoss) {
+                        stats.cycles++; stats.losses++;
+                        stats.gaps.push(t.gap);
+                        t.gap = 0; t.step = 0;
+                    } else {
+                        t.step++; t.gap++;
+                        if(t.gap > stats.maxGap) stats.maxGap = t.gap;
+                    }
+
+                } else {
+                    if(isP1) {
+                        stats.gaps.push(t.gap); t.gap = 0;
+                    } else {
+                        t.gap++;
+                        if(t.gap > stats.maxGap) stats.maxGap = t.gap;
+                        if(t.gap >= CONFIG.gapTrigger) t.step = 1;
+                    }
+                }
+                renderRow(row, t.gap, dStep, unit, cost, win, net, globalBal, isP1, isP2, isP3);
+            });
+
+            updateStats(stats, globalBal);
+            updateReel(); // Llama a la construcción 3D
+            ui.btnDl.disabled = false;
+        }
+
+        // --- RENDERIZADO 3D (CONSTRUCTOR) ---
+        function updateReel() {
+            activeOpportunities = [];
+            for (const [name, state] of Object.entries(tracksState)) {
+                if (state.step > 0) {
+                    let u = getNextStake(state.step, parseFloat(ui.balance.innerText.replace('$',''))+1000);
+                    activeOpportunities.push({ name, step: state.step, gap: state.gap, cost: u*CONFIG.numbersPlayed });
+                }
+            }
+            activeOpportunities.sort((a,b) => b.step - a.step);
+            ui.activeCount.textContent = `${activeOpportunities.length} Activas`;
+            
+            // Lógica Sonar vs Spinner
+            if (activeOpportunities.length === 0) {
+                ui.reelSpinner.innerHTML = '';
+                ui.sonar.style.display = 'flex';
+                updateActionCard(null);
+                return;
+            } else {
+                ui.sonar.style.display = 'none';
+            }
+
+            // Construir Caras del Cilindro
+            ui.reelSpinner.innerHTML = '';
+            
+            // Ajustar geometría según cantidad de items
+            // Si hay pocos items (ej. 1 o 2), clonarlos para llenar el cilindro visualmente y evitar errores de geometría
+            let displayItems = [...activeOpportunities];
+            if (displayItems.length === 1) displayItems = [...displayItems, ...displayItems, ...displayItems, ...displayItems]; 
+            else if (displayItems.length === 2) displayItems = [...displayItems, ...displayItems];
+            else if (displayItems.length === 3) displayItems = [...displayItems, ...displayItems]; // Minimo 6 caras para ver bien el cilindro
+
+            const count = displayItems.length;
+            cellAngle = 360 / count;
+            // Radio = (ancho_cara / 2) / tan(angulo / 2)
+            // Usamos altura de cara (60px)
+            radius = Math.round( (60 / 2) / Math.tan( Math.PI / count ) );
+            
+            // Resetear rotación
+            currentAngle = 0;
+            currentReelIndex = 0;
+            ui.reelSpinner.style.transform = `translateZ(-${radius}px) rotateX(0deg)`;
+
+            displayItems.forEach((op, index) => {
+                const face = document.createElement('div');
+                face.className = 'reel-face';
+                // Posicionar cara en 3D
+                const angle = cellAngle * index;
+                face.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
+                
+                face.innerHTML = `
+                    <div class="text-cyan-400 font-bold text-[10px] mb-0.5 uppercase tracking-wider">${op.name}</div>
+                    <div class="text-2xl font-bold font-tech text-white leading-none">PASO ${op.step}</div>
+                    <div class="text-[9px] text-slate-500 mt-0.5">GAP: <span class="text-amber-500">${op.gap}</span></div>
+                `;
+                ui.reelSpinner.appendChild(face);
+            });
+
+            // Ajuste inicial de profundidad del spinner completo
+            // Necesitamos empujarlo hacia atrás para que la cara frontal esté en Z=0 (o cerca)
+            // Pero como las caras se empujan +Radius, el centro del spinner está en 0.
+            // Para rotar sobre el centro, no necesitamos translateZ extra en el container, 
+            // pero el punto de pivote (transform-origin) es center center (defecto).
+            
+            updateActiveFaceStyle();
+            updateActionCard(activeOpportunities[0]);
+        }
+
+        function updateActionCard(op) {
+            if(op) {
+                ui.statusText.innerHTML = `<span class="text-emerald-400 animate-pulse">● LISTO PARA DISPARO</span>`;
+                ui.statusSub.innerHTML = `<span class="text-white font-bold">${op.name}</span><br>Paso ${op.step} • $${op.cost.toFixed(2)}`;
+                ui.btn.disabled = false;
+                ui.btn.classList.remove('opacity-50');
+                ui.statusCard.style.borderColor = 'var(--sniper-red)';
+                ui.mTrack.textContent = op.name;
+                ui.mStep.textContent = op.step;
+                ui.mTotal.textContent = `$${op.cost.toFixed(2)}`;
+            } else {
+                ui.statusText.innerHTML = "ESCANEO ACTIVO...";
+                ui.statusSub.innerHTML = "";
+                ui.btn.disabled = true;
+                ui.btn.classList.add('opacity-50');
+                ui.statusCard.style.borderColor = '#334155';
+            }
+        }
+
+        // --- RENDERIZADO TABLA (CORREGIDO) ---
+        function renderRow(row, gap, step, unit, cost, win, net, bal, isP1, isP2, isP3) {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-lottery', row.lottery);
+            
+            let badgeClass = "bg-slate-700 text-slate-300";
+            if(row.lottery === "New York") badgeClass = "bg-blue-900/30 text-blue-400 border border-blue-800";
+            if(row.lottery === "Georgia") badgeClass = "bg-green-900/30 text-green-400 border border-green-800";
+            if(row.lottery === "Florida") badgeClass = "bg-orange-900/30 text-orange-400 border border-orange-800";
+
+            const cNet = net > 0 ? 'text-emerald-400 font-bold' : (net < 0 ? 'text-red-500 font-bold' : 'text-slate-600');
+            const cWin = win > 0 ? 'text-emerald-400' : 'text-slate-600';
+            const cBal = bal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-500 font-bold';
+
+            // HIGHLIGHT FIX: Solo los dos últimos dígitos (el doble) en amarillo
+            const dP3 = row.p3.padStart(3, '0'); // Asegurar 3 dígitos para visualización correcta
+            const p3Html = isP1 
+                ? `<span class="text-slate-500">${dP3[0]}</span><span class="double-highlight">${dP3.substring(1)}</span>` 
+                : `<span class="text-slate-500">${dP3}</span>`;
+
+            const w4Part1 = isP2 ? `<span class="double-highlight">${row.w4.substring(0,2)}</span>` : `<span class="text-slate-500">${row.w4.substring(0,2)}</span>`;
+            const w4Part2 = isP3 ? `<span class="double-highlight">${row.w4.substring(2)}</span>` : `<span class="text-slate-500">${row.w4.substring(2)}</span>`;
+
+            tr.innerHTML = `
+                <td class="pl-4"><span class="lottery-badge ${badgeClass}">${row.track}</span></td>
+                <td class="text-slate-400 text-xs">${row.date}</td>
+                <td class="text-slate-500 text-[10px] uppercase">${row.time}</td>
+                <td class="font-mono text-sm text-slate-300">${p3Html} | ${w4Part1}${w4Part2}</td>
+                <td class="text-center font-bold text-slate-500">${gap}</td>
+                <td class="text-center font-bold ${step>0?'text-amber-500':'text-slate-700'}">${step>0?step:'-'}</td>
+                <td class="text-right text-slate-400 text-xs font-mono">${unit>0?unit.toFixed(2):'-'}</td>
+                <td class="text-right text-xs font-bold text-slate-400 font-mono">${cost>0?cost.toFixed(2):'-'}</td>
+                <td class="text-right text-xs font-mono ${cWin}">${win>0?win.toFixed(2):'-'}</td>
+                <td class="text-right text-xs font-mono ${cNet}">${net!==0?(net>0?'+':'')+net.toFixed(2):'-'}</td>
+                <td class="text-right text-xs font-bold font-mono pr-4 ${cBal}">${bal.toFixed(2)}</td>
+            `;
+            ui.table.appendChild(tr);
+        }
+
+        function updateFiltersUI(lotteries) {
+            ui.filters.innerHTML = `<div class="filter-pill active" onclick="applyFilter('ALL', this)">ALL TRACKS</div>`;
+            lotteries.forEach(l => {
+                const pill = document.createElement('div');
+                pill.className = 'filter-pill';
+                pill.textContent = l;
+                pill.onclick = () => applyFilter(l, pill);
+                ui.filters.appendChild(pill);
+            });
+        }
+
+        window.applyFilter = (filter, btn) => {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const rows = ui.table.querySelectorAll('tr');
+            rows.forEach(row => {
+                if (filter === 'ALL' || row.getAttribute('data-lottery') === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        };
+
+        // --- MATH & HELPERS (SIN CAMBIOS) ---
+        function getNextStake(step, bankroll) {
+            if(step<=0) return 0;
+            if(CONFIG.strategyType === 'MARTINGALE') {
+                return step===1 ? CONFIG.baseStake : CONFIG.baseStake * Math.pow(CONFIG.strategyParam, step-1);
+            }
+            if(CONFIG.strategyType === 'FIBONACCI') {
+                return CONFIG.baseStake * FIBONACCI_SEQ[Math.min(step-1, FIBONACCI_SEQ.length-1)];
+            }
+            return CONFIG.baseStake; 
+        }
+
+        function updateStats(s, bal) {
+            const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2) : 0;
+            const pct = (part, total) => total ? ((part/total)*100).toFixed(2)+'%' : '0%';
+            ui.sGap.innerText = avg(s.gaps); ui.sMax.innerText = s.maxGap; ui.sCyc.innerText = s.cycles;
+            ui.sStep.innerText = avg(s.stepsForWin); 
+            ui.sWin.innerText = s.wins; ui.sLoss.innerText = s.losses; ui.sRate.innerText = pct(s.wins, s.cycles);
+            ui.sH1.innerText = s.h1; ui.sH2.innerText = s.h2; ui.sH3.innerText = s.h3;
+            ui.sFreq.innerText = pct(s.h1, s.totalDraws); 
+            ui.sPnL.innerText = (bal>=0?'+':'-') + '$' + Math.abs(bal).toFixed(2);
+            ui.sPnL.className = 'stat-value ' + (bal>=0?'text-emerald-400':'text-red-500');
+            ui.sGross.innerText = '$'+s.totalGrossWin.toFixed(2); ui.sMDD.innerText = '-$'+Math.abs(s.mdd).toFixed(2);
+            ui.sInv.innerText = '$'+s.totalInvest.toFixed(2); 
+            ui.balance.innerText = ui.sPnL.innerText; ui.balance.className = 'text-2xl font-bold font-tech ' + (bal>=0?'text-emerald-400':'text-red-500');
+            
+            let roi = s.totalInvest ? ((bal / s.totalInvest) * 100).toFixed(2) : 0;
+            ui.sROI.innerText = (roi>=0?'+':'') + roi + '%';
+            ui.sROI.className = 'stat-value ' + (roi>=0?'text-emerald-400':'text-red-500');
+        }
+
+        window.openSettings = () => { el('confStake').value=CONFIG.baseStake; el('confGap').value=CONFIG.gapTrigger; el('confSL').value=CONFIG.stopLoss; el('settingsModal').classList.remove('hidden'); }
+        window.closeSettings = () => el('settingsModal').classList.add('hidden');
+        window.saveSettings = () => {
+            CONFIG.baseStake = parseFloat(el('confStake').value); CONFIG.gapTrigger = parseInt(el('confGap').value);
+            CONFIG.stopLoss = parseInt(el('confSL').value); CONFIG.strategyType = el('confStrategy').value;
+            CONFIG.strategyParam = parseFloat(el('confParam').value);
+            ui.confSum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
+            closeSettings(); if(globalRawRows.length) runSimulation();
+        }
+        function toggleStrategyParams() {
+             const val = el('confStrategy').value;
+             if (val === 'MARTINGALE') { ui.cParam.style.display = 'block'; ui.lParam.textContent = 'Multiplicador'; ui.iParam.value = 1.7; }
+             else { ui.cParam.style.display = 'none'; }
+        }
+        function downloadCSV() { /* Export logic */ }
+        function toggleAccordion() {
+            const c = el('accContent');
+            const icon = el('accIcon');
+            if (c.classList.contains('open')) {
+                c.style.maxHeight = null;
+                c.classList.remove('open');
+                icon.innerText = '▼';
+            } else {
+                c.classList.add('open');
+                c.style.maxHeight = c.scrollHeight + 'px';
+                icon.innerText = '▲';
+            }
+        }
+        window.openTicketModal = () => el('ticketModal').classList.remove('hidden'); window.closeTicketModal = () => el('ticketModal').classList.add('hidden');
+    </script>
+</body>
+</html>

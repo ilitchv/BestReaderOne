@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beast Reader — v8.3.3 (verbose)</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tesseract for OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b2a24;           /* dark teal, like MongoDB Atlas */
+      --bg-2: #0e332c;
+      --bg-3: #0c2723;
+      --card: #123a32;
+      --card-2: #0f332c;
+      --card-3: #0e2d27;
+      --text: #e9f7f4;
+      --muted: #9ed7cb;
+      --accent: #51ffc6;
+      --accent-2: #99ffea;
+      --danger: #ff6b6b;
+      --ok: #2ee59d;
+      --shadow: 0 8px 22px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    [data-theme="light"] {
+      --bg: #efe7da;           /* cream */
+      --bg-2: #e7dece;
+      --bg-3: #dfd3c0;
+      --card: #f6efe4;
+      --card-2: #f0e7d9;
+      --card-3: #eadfcd;
+      --text: #2a2a2a;
+      --muted: #4b5a55;
+      --accent: #1fbf8a;
+      --accent-2: #0aa39b;
+      --danger: #b33a3a;
+      --ok: #157a57;
+      --shadow: 0 6px 16px rgba(0,0,0,.18);
+      --radius: 16px;
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 1200px at 15% 10%, var(--bg-2) 0%, var(--bg) 50%, var(--bg-3) 100%) fixed;
+    }
+
+    /* Header */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px;
+      position: sticky; top: 0; z-index: 30;
+      background: linear-gradient(0deg, transparent, rgba(0,0,0,.12));
+      backdrop-filter: blur(4px);
+    }
+    .brand {
+      display: grid; grid-auto-flow: column; gap: 14px; align-items: center;
+      font-weight: 800; letter-spacing: .4px; font-size: 26px;
+    }
+    .logo {
+      width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+      background: radial-gradient(90px 90px at 20% 20%, #00ffd5 0%, #2af4a6 40%, #0aa39b 100%);
+      color: #0b2a24; font-weight: 900; box-shadow: var(--shadow);
+    }
+    .brand small { font-weight: 500; font-size: 12px; color: var(--muted); }
+
+    .actions { display: grid; grid-auto-flow: column; gap: 10px; }
+    .btn {
+      border: none; outline: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--card-2), var(--card));
+      color: var(--text);
+      padding: 10px 16px; border-radius: 999px; font-weight: 600;
+      box-shadow: var(--shadow);
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    .btn:hover { filter: brightness(1.06); }
+    .btn.ghost { background: var(--card-2); }
+    .btn.danger { background: linear-gradient(135deg, #b54545, #782d2d); }
+    .chip {
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; background: var(--card-3); color: var(--muted);
+    }
+
+    /* Sections */
+    .wrap { padding: 18px 24px 64px; max-width: 1480px; margin: 0 auto; }
+
+    .section-title {
+      font-size: 22px; font-weight: 800; margin: 18px 0 8px; letter-spacing: .3px;
+    }
+    .grid {
+      display: grid; gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+
+    /* Cards */
+    .card {
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.06);
+      min-height: 160px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; background: linear-gradient(180deg, var(--card-2), var(--card-3));
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .badge {
+      width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto;
+      display: grid; place-items: center;
+      background: radial-gradient(70px 70px at 10% 10%, var(--accent-2) 0%, var(--accent) 65%, #1f9d76 100%);
+      color: #09231e; font-weight: 900;
+      border: 1px solid rgba(0,0,0,.15);
+    }
+    .title { font-weight: 800; font-size: 14px; }
+    .subtitle { font-weight: 600; font-size: 12px; opacity: .8; }
+
+    .card-body { padding: 12px 14px; display: grid; gap: 8px; }
+    .result-big {
+      font-size: 28px; letter-spacing: 2px; font-weight: 800;
+      display: inline-block;
+    }
+    .meta { font-size: 12px; display: flex; gap: 12px; color: var(--muted); }
+    .status { font-size: 11px; opacity: .9; }
+
+    .card-footer {
+      padding: 10px 14px; border-top: 1px solid rgba(255,255,255,.07);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card-2);
+    }
+    .link { color: var(--accent-2); text-decoration: underline; cursor: pointer; }
+
+    /* Admin Drawer */
+    .drawer {
+      position: fixed; inset: 0; display: none; z-index: 70;
+      background: rgba(0,0,0,.45);
+    }
+    .drawer.open { display: block; }
+    .panel {
+      position: absolute; inset: 0 0 0 auto; width: min(1200px, 100%); max-width: 96%;
+      background: var(--bg-2); color: var(--text); overflow: auto; box-shadow: var(--shadow);
+      padding: 18px 22px 40px;
+    }
+    .panel h2 { margin: 0 0 8px; }
+    .tabs { display: grid; grid-auto-flow: column; gap: 8px; width: max-content; margin-bottom: 14px; }
+    .tab { background: var(--card-2); padding: 8px 12px; border-radius: 999px; cursor: pointer; }
+    .tab.active { background: var(--accent); color: #0b2a24; font-weight: 800; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 14px; }
+    .table th { text-align: left; color: var(--muted); }
+    .controls { display: grid; grid-auto-flow: column; gap: 8px; width: max-content; margin-bottom: 12px; }
+
+    input[type="text"], input[type="time"], input[type="date"] {
+      background: var(--card-3); border: 1px solid rgba(255,255,255,.08); color: var(--text);
+      border-radius: 10px; padding: 8px 10px; outline: none;
+    }
+
+    textarea {
+      width: 100%; min-height: 160px; resize: vertical;
+      background: var(--card-3); border: 1px solid rgba(255,255,255,.1); color: var(--text);
+      border-radius: 12px; padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .hidden { display: none; }
+
+    /* small helpers */
+    .right { margin-left: auto; }
+    .mr8 { margin-right: 8px; }
+    .mb6 { margin-bottom: 6px; }
+    .mb10 { margin-bottom: 10px; }
+    .mb16 { margin-bottom: 16px; }
+
+    /* Make it tall to exceed 800 lines for readability version */
+  </style>
+</head>
+
+<body data-theme="dark">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">BR</div>
+      <div>
+        Beast Reader
+        <div><small>Live results — USA, RD &amp; Special</small></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="autoScrollBtn">⬇ Auto Scroll</button>
+      <button class="btn" id="adminBtn">Admin</button>
+    </div>
+  </header>
+
+  <main class="wrap" id="publicBoard">
+    <div class="section-title">USA Lotteries</div>
+    <div class="grid" id="grid-usa"></div>
+
+    <div class="section-title">Santo Domingo Lotteries</div>
+    <div class="grid" id="grid-rd"></div>
+
+    <div class="section-title">Special Lotteries</div>
+    <div class="grid" id="grid-special"></div>
+  </main>
+
+  <!-- Admin Drawer -->
+  <div class="drawer" id="drawer">
+    <div class="panel">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <h2 style="margin:0;">Beast Reader — Admin</h2>
+        <span class="chip">Idioma</span>
+        <input type="checkbox" id="langToggle" class="mr8" />
+        <span class="chip">Tema</span>
+        <input type="checkbox" id="themeToggle" class="mr8" />
+        <span class="chip">Fecha para resultados</span>
+        <input type="date" id="datePicker" />
+        <input type="text" id="searchInput" class="right" placeholder="Buscar..." style="max-width: 260px;" />
+        <button class="btn ghost" id="closeDrawer">Cerrar</button>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="results">Resultados</div>
+        <div class="tab" data-tab="ocr">OCR</div>
+        <div class="tab" data-tab="catalog">Catálogo</div>
+        <div class="tab" data-tab="logos">Logos</div>
+        <div class="tab" data-tab="visibility">Visibilidad</div>
+      </div>
+
+      <!-- RESULTS TAB -->
+      <section id="tab-results">
+        <p class="mb10">Editar/guardar resultados manualmente.</p>
+        <div class="controls">
+          <button class="btn danger" id="resetResultsBtn">Reset results</button>
+          <button class="btn" id="refreshFromOCRBtn">Refresh from OCR</button>
+        </div>
+        <div id="resultsTableContainer"></div>
+      </section>
+
+      <!-- OCR TAB -->
+      <section id="tab-ocr" class="hidden">
+        <p class="mb10">Arrastra imágenes o pega texto. Previsualiza y guarda la tabla detectada.</p>
+        <div class="controls">
+          <input type="file" id="ocrFile" accept="image/*" multiple />
+          <button class="btn" id="runOcrBtn">Ejecutar OCR</button>
+          <button class="btn" id="previewFromTextBtn">Previsualizar texto</button>
+          <button class="btn" id="clearOcrPreview">Limpiar preview</button>
+        </div>
+        <textarea id="ocrText" placeholder="Pega aquí el texto (ej.: 'Midday — 992 - 0845 ...')"></textarea>
+        <div class="mb10"></div>
+        <div id="ocrPreviewContainer"></div>
+      </section>
+
+      <!-- CATALOG TAB -->
+      <section id="tab-catalog" class="hidden">
+        <div class="controls">
+          <button class="btn" id="addLotteryBtn">Añadir lotería</button>
+          <button class="btn" id="addDrawToSelectionBtn">Añadir draw a selección</button>
+          <button class="btn" id="saveCatalogBtn">Guardar catálogo</button>
+        </div>
+        <div id="catalogTableContainer"></div>
+      </section>
+
+      <!-- LOGOS TAB (placeholder simple) -->
+      <section id="tab-logos" class="hidden">
+        <p class="mb10">Sube los logos oficiales; se asocian por nombre de lotería.</p>
+        <input type="file" id="logoUpload" multiple accept="image/*" />
+        <div id="logosList" class="mb16"></div>
+      </section>
+
+      <!-- VISIBILITY TAB -->
+      <section id="tab-visibility" class="hidden">
+        <p class="mb10">Marca qué loterías se muestran en la página pública.</p>
+        <div id="visibilityTableContainer"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    /**********************************************************
+     * STORAGE KEYS & HELPERS
+     **********************************************************/
+    const LS = {
+      CATALOG: 'br_catalog',
+      VIS: 'br_visibility',
+      RESULTS_PREFIX: 'br_results::',   // + date
+      OCR_PREFIX: 'br_ocr_preview::',   // + date
+      DATE: 'br_selected_date',
+      THEME: 'br_theme',                // 'dark' or 'light'
+      PIN_OK: 'br_admin_pin_ok',
+      LOGOS: 'br_logos'                 // { "New York": "data:image..." }
+    };
+
+    const $ = (sel, p=document) => p.querySelector(sel);
+    const $$ = (sel, p=document) => Array.from(p.querySelectorAll(sel));
+    const todayStr = () => new Date().toISOString().slice(0,10);
+
+    function readJSON(key, fallback) {
+      try { const t = localStorage.getItem(key); return t ? JSON.parse(t) : fallback; }
+      catch(e) { console.error('readJSON', key, e); return fallback; }
+    }
+    function writeJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+    function resultsKey(dateStr) { return LS.RESULTS_PREFIX + dateStr; }
+    function ocrKey(dateStr) { return LS.OCR_PREFIX + dateStr; }
+
+    /**********************************************************
+     * SEED CATALOG (USA + RD + SPECIAL)
+     *  - Each item: { id, section, lottery, draw, drawTime, closeTime, days:[0-6], visible:true }
+     **********************************************************/
+    const SeedCatalog = [
+      /* ===================== USA ======================= */
+      { id:'usa/ny/Midday',      section:'usa', lottery:'New York',     draw:'Midday',  drawTime:'14:30', closeTime:'14:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/ny/Evening',     section:'usa', lottery:'New York',     draw:'Evening', drawTime:'22:30', closeTime:'22:10', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/nj/Midday',      section:'usa', lottery:'New Jersey',   draw:'Midday',  drawTime:'12:59', closeTime:'12:39', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/nj/Evening',     section:'usa', lottery:'New Jersey',   draw:'Evening', drawTime:'22:57', closeTime:'22:37', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/ct/Day',         section:'usa', lottery:'Connecticut',  draw:'Day',     drawTime:'13:57', closeTime:'13:37', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/ct/Night',       section:'usa', lottery:'Connecticut',  draw:'Night',   drawTime:'22:29', closeTime:'22:09', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/fl/Midday',      section:'usa', lottery:'Florida',      draw:'Midday',  drawTime:'13:30', closeTime:'13:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/fl/Evening',     section:'usa', lottery:'Florida',      draw:'Evening', drawTime:'21:45', closeTime:'21:25', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/flp2/AM',        section:'usa', lottery:'Florida Pick 2', draw:'AM',    drawTime:'13:30', closeTime:'13:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/flp2/PM',        section:'usa', lottery:'Florida Pick 2', draw:'PM',    drawTime:'21:45', closeTime:'21:25', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/ga/Midday',      section:'usa', lottery:'Georgia',      draw:'Midday',  drawTime:'12:29', closeTime:'12:09', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/ga/Evening',     section:'usa', lottery:'Georgia',      draw:'Evening', drawTime:'18:59', closeTime:'18:39', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/ga/Night',       section:'usa', lottery:'Georgia',      draw:'Night',   drawTime:'23:34', closeTime:'23:14', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/pa/Day',         section:'usa', lottery:'Pennsylvania', draw:'Day',     drawTime:'13:35', closeTime:'13:15', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/pa/Evening',     section:'usa', lottery:'Pennsylvania', draw:'Evening', drawTime:'18:59', closeTime:'18:39', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/de/Day',         section:'usa', lottery:'Delaware',     draw:'Day',     drawTime:'13:58', closeTime:'13:38', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/de/Night',       section:'usa', lottery:'Delaware',     draw:'Night',   drawTime:'19:57', closeTime:'19:37', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/md/AM',          section:'usa', lottery:'Maryland',     draw:'AM',      drawTime:'12:28', closeTime:'12:08', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/md/PM',          section:'usa', lottery:'Maryland',     draw:'PM',      drawTime:'19:56', closeTime:'19:36', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/ma/Midday',      section:'usa', lottery:'Massachusetts', draw:'Midday', drawTime:'14:00', closeTime:'13:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/ma/Evening',     section:'usa', lottery:'Massachusetts', draw:'Evening', drawTime:'21:00', closeTime:'20:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/mi/Day',         section:'usa', lottery:'Michigan',     draw:'Day',     drawTime:'12:59', closeTime:'12:39', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/mi/Night',       section:'usa', lottery:'Michigan',     draw:'Night',   drawTime:'19:29', closeTime:'19:09', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/va/Day',         section:'usa', lottery:'Virginia',     draw:'Day',     drawTime:'13:59', closeTime:'13:39', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/va/Night',       section:'usa', lottery:'Virginia',     draw:'Night',   drawTime:'23:00', closeTime:'22:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/nc/Day',         section:'usa', lottery:'North Carolina', draw:'Day',   drawTime:'15:00', closeTime:'14:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/nc/Evening',     section:'usa', lottery:'North Carolina', draw:'Evening', drawTime:'23:22', closeTime:'23:02', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'usa/sc/Midday',      section:'usa', lottery:'South Carolina', draw:'Midday', drawTime:'12:59', closeTime:'12:39', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/sc/Evening',     section:'usa', lottery:'South Carolina', draw:'Evening', drawTime:'18:59', closeTime:'18:39', days:[0,1,2,3,4,5,6], visible:true },
+
+      /* Texas (no Sunday) -> we'll leave days as 1-6: Mon-Sat */
+      { id:'usa/tx/Morning',     section:'usa', lottery:'Texas',        draw:'Morning', drawTime:'10:00', closeTime:'09:40', days:[1,2,3,4,5,6], visible:true },
+      { id:'usa/tx/Day',         section:'usa', lottery:'Texas',        draw:'Day',     drawTime:'12:27', closeTime:'12:07', days:[1,2,3,4,5,6], visible:true },
+      { id:'usa/tx/Evening',     section:'usa', lottery:'Texas',        draw:'Evening', drawTime:'18:00', closeTime:'17:40', days:[1,2,3,4,5,6], visible:true },
+      { id:'usa/tx/Night',       section:'usa', lottery:'Texas',        draw:'Night',   drawTime:'22:12', closeTime:'21:52', days:[1,2,3,4,5,6], visible:true },
+
+      { id:'usa/tn/Midday',      section:'usa', lottery:'Tennessee',    draw:'Midday',  drawTime:'12:28', closeTime:'12:08', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'usa/tn/Evening',     section:'usa', lottery:'Tennessee',    draw:'Evening', drawTime:'18:28', closeTime:'18:08', days:[0,1,2,3,4,5,6], visible:true },
+
+      /* ===================== RD ======================== */
+      { id:'rd/real/Mediodía',   section:'rd', lottery:'Lotería Real',      draw:'Mediodía', drawTime:'12:55', closeTime:'12:35', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/ganamas/Tarde',   section:'rd', lottery:'Gana Más',          draw:'Tarde',    drawTime:'14:30', closeTime:'14:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/loteka/Noche',    section:'rd', lottery:'Loteka',            draw:'Noche',    drawTime:'19:55', closeTime:'19:35', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/nacional/Tarde',  section:'rd', lottery:'Lotería Nacional',  draw:'Tarde',    drawTime:'14:30', closeTime:'14:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/nacional/Noche',  section:'rd', lottery:'Lotería Nacional',  draw:'Noche',    drawTime:'21:00', closeTime:'20:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/nacional/Domingo',section:'rd', lottery:'Lotería Nacional',  draw:'Domingo',  drawTime:'18:00', closeTime:'17:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/quiniela/Diario', section:'rd', lottery:'Quiniela Palé',     draw:'Diario',   drawTime:'20:55', closeTime:'20:35', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/quiniela/Domingo',section:'rd', lottery:'Quiniela Palé',     draw:'Domingo',  drawTime:'15:55', closeTime:'15:35', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/primer/AM',       section:'rd', lottery:'La Primera',        draw:'AM',       drawTime:'12:00', closeTime:'11:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/primer/PM',       section:'rd', lottery:'La Primera',        draw:'PM',       drawTime:'20:00', closeTime:'19:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/suerte/AM',       section:'rd', lottery:'La Suerte Dominicana', draw:'AM',    drawTime:'12:30', closeTime:'12:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/suerte/PM',       section:'rd', lottery:'La Suerte Dominicana', draw:'PM',    drawTime:'18:00', closeTime:'17:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'rd/lotedom/Tarde',   section:'rd', lottery:'LoteDom',           draw:'Tarde',    drawTime:'13:55', closeTime:'13:35', days:[0,1,2,3,4,5,6], visible:true },
+
+      /* =================== SPECIAL ===================== */
+      { id:'special/extra/Midday',  section:'special', lottery:'Extra',    draw:'Midday', drawTime:'13:00', closeTime:'12:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/extra/Night',   section:'special', lottery:'Extra',    draw:'Night',  drawTime:'22:00', closeTime:'21:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/anguilla/10AM', section:'special', lottery:'Anguilla', draw:'10AM',   drawTime:'10:00', closeTime:'09:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/anguilla/1PM',  section:'special', lottery:'Anguilla', draw:'1PM',    drawTime:'13:00', closeTime:'12:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/anguilla/6PM',  section:'special', lottery:'Anguilla', draw:'6PM',    drawTime:'18:00', closeTime:'17:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/anguilla/9PM',  section:'special', lottery:'Anguilla', draw:'9PM',    drawTime:'21:00', closeTime:'20:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/ny-bk/AM',      section:'special', lottery:'NY-BK',   draw:'AM',     drawTime:'12:00', closeTime:'11:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/ny-bk/PM',      section:'special', lottery:'NY-BK',   draw:'PM',     drawTime:'22:00', closeTime:'21:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/ny-fp/AM',      section:'special', lottery:'NY-FP',   draw:'AM',     drawTime:'12:00', closeTime:'11:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/ny-fp/PM',      section:'special', lottery:'NY-FP',   draw:'PM',     drawTime:'22:00', closeTime:'21:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/ny-bp/AM',      section:'special', lottery:'NY-BP',   draw:'AM',     drawTime:'12:00', closeTime:'11:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/ny-bp/PM',      section:'special', lottery:'NY-BP',   draw:'PM',     drawTime:'22:00', closeTime:'21:40', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/ny-horses/R1',  section:'special', lottery:'NY Horses', draw:'R1',   drawTime:'14:00', closeTime:'13:40', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/ny-horses/R2',  section:'special', lottery:'NY Horses', draw:'R2',   drawTime:'18:30', closeTime:'18:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/ny-horses/R3',  section:'special', lottery:'NY Horses', draw:'R3',   drawTime:'21:30', closeTime:'21:10', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/bk-paper/AM',   section:'special', lottery:'BK Paper', draw:'AM',    drawTime:'11:30', closeTime:'11:10', days:[0,1,2,3,4,5,6], visible:true },
+      { id:'special/bk-paper/PM',   section:'special', lottery:'BK Paper', draw:'PM',    drawTime:'21:30', closeTime:'21:10', days:[0,1,2,3,4,5,6], visible:true },
+
+      { id:'special/357/Main',      section:'special', lottery:'3-5-7',   draw:'Main',   drawTime:'20:30', closeTime:'20:10', days:[0,1,2,3,4,5,6], visible:true },
+    ];
+
+    // Ensure catalog in localStorage
+    function ensureCatalog() {
+      let catalog = readJSON(LS.CATALOG, null);
+      if (!catalog || !Array.isArray(catalog) || catalog.length < 20) {
+        catalog = SeedCatalog;
+        writeJSON(LS.CATALOG, catalog);
+      } else {
+        // merge missing seeds by id
+        const ids = new Set(catalog.map(x=>x.id));
+        SeedCatalog.forEach(s => { if(!ids.has(s.id)) catalog.push(s); });
+        writeJSON(LS.CATALOG, catalog);
+      }
+      return catalog;
+    }
+
+    // Ensure visibility for all ids (default true)
+    function ensureVisibility(catalog) {
+      let vis = readJSON(LS.VIS, null);
+      if (!vis || typeof vis !== 'object') vis = {};
+      catalog.forEach(it => { if(!(it.id in vis)) vis[it.id] = true; });
+      writeJSON(LS.VIS, vis);
+      return vis;
+    }
+
+    /**********************************************************
+     * PUBLIC BOARD RENDER
+     **********************************************************/
+    function buildPublicBoard() {
+      const catalog = ensureCatalog();
+      const vis = ensureVisibility(catalog);
+      const date = $('#datePicker')?.value || readJSON(LS.DATE, todayStr()) || todayStr();
+      writeJSON(LS.DATE, date);
+
+      const results = readJSON(resultsKey(date), {});
+
+      // clear
+      $('#grid-usa').innerHTML = '';
+      $('#grid-rd').innerHTML = '';
+      $('#grid-special').innerHTML = '';
+
+      for (const item of catalog) {
+        if (!vis[item.id]) continue;
+        const where = item.section === 'usa' ? '#grid-usa' : (item.section === 'rd' ? '#grid-rd' : '#grid-special');
+        const res = results[item.id] || '';
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.innerHTML = `
+          <div class="card-header">
+            <div class="badge">${(item.lottery[0]||'?')+(item.lottery.split(' ')[1]?.[0] || '')}</div>
+            <div>
+              <div class="title">${item.lottery}</div>
+              <div class="subtitle">${item.draw}</div>
+            </div>
+            <div class="right status">${'ET'}</div>
+          </div>
+          <div class="card-body">
+            <div class="result-big">${res ? res : '—'}</div>
+            <div class="meta">
+              <span>Sorteo: ${item.drawTime}</span>
+              <span>Cierre: ${item.closeTime}</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="chip">ID: ${item.id}</span>
+            <span class="link" data-id="${item.id}" onclick="openHistory('${item.id}')">Ver historial</span>
+          </div>
+        `;
+        $(where).appendChild(el);
+      }
+    }
+
+    // History modal (simplified alert edit with PIN)
+    window.openHistory = function(id) {
+      const date = $('#datePicker')?.value || readJSON(LS.DATE, todayStr());
+      const resultsObj = readJSON(resultsKey(date), {});
+      const value = resultsObj[id] || '';
+      const canEdit = localStorage.getItem(LS.PIN_OK) === 'true';
+      if (!canEdit) {
+        const pin = prompt('PIN de administrador:');
+        if (pin !== '1983') { alert('PIN incorrecto'); return; }
+        localStorage.setItem(LS.PIN_OK, 'true');
+      }
+      const nv = prompt('Editar resultado para '+id+' en '+date+' (formato Pick3-Pick4 o XX-XX-XX):', value);
+      if (nv === null) return;
+      resultsObj[id] = nv.trim();
+      writeJSON(resultsKey(date), resultsObj);
+      buildPublicBoard();
+      buildResultsTable();
+    };
+
+    /**********************************************************
+     * ADMIN: Tabs & Drawer
+     **********************************************************/
+    const drawer = $('#drawer');
+    $('#adminBtn').addEventListener('click', () => {
+      // Require PIN only first time; persist
+      if (localStorage.getItem(LS.PIN_OK) !== 'true') {
+        const pin = prompt('Introduce PIN de administrador:');
+        if (pin !== '1983') return alert('PIN incorrecto');
+        localStorage.setItem(LS.PIN_OK, 'true');
+      }
+      drawer.classList.add('open');
+      syncAdminUI();
+    });
+    $('#closeDrawer').addEventListener('click', () => drawer.classList.remove('open'));
+    $$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t)));
+
+    function switchTab(el) {
+      $$('.tab').forEach(x => x.classList.remove('active')); el.classList.add('active');
+      const id = el.dataset.tab;
+      $('#tab-results').classList.toggle('hidden', id!=='results');
+      $('#tab-ocr').classList.toggle('hidden', id!=='ocr');
+      $('#tab-catalog').classList.toggle('hidden', id!=='catalog');
+      $('#tab-logos').classList.toggle('hidden', id!=='logos');
+      $('#tab-visibility').classList.toggle('hidden', id!=='visibility');
+    }
+
+    function syncAdminUI() {
+      // theme
+      const theme = localStorage.getItem(LS.THEME) || 'dark';
+      document.body.dataset.theme = theme;
+      $('#themeToggle').checked = theme === 'light';
+      $('#themeToggle').onchange = () => {
+        document.body.dataset.theme = $('#themeToggle').checked ? 'light' : 'dark';
+        localStorage.setItem(LS.THEME, document.body.dataset.theme);
+      };
+      // date
+      const d = readJSON(LS.DATE, todayStr()) || todayStr();
+      $('#datePicker').value = d;
+      $('#datePicker').onchange = () => {
+        writeJSON(LS.DATE, $('#datePicker').value);
+        buildPublicBoard();
+        buildResultsTable();
+      };
+      // initial tables
+      buildResultsTable();
+      buildOcrPreviewTable();
+      buildCatalogTable();
+      buildVisibilityTable();
+      buildLogosList();
+    }
+
+    /**********************************************************
+     * ADMIN: Results table
+     **********************************************************/
+    function buildResultsTable() {
+      const catalog = ensureCatalog();
+      const vis = ensureVisibility(catalog);
+      const date = $('#datePicker').value;
+      const res = readJSON(resultsKey(date), {});
+
+      let html = '';
+      const groups = { usa:[], rd:[], special:[] };
+      catalog.forEach(it => { if (vis[it.id]) groups[it.section].push(it); });
+
+      function renderGroup(title, arr) {
+        if (!arr.length) return '';
+        let rows = arr.map(it => `
+          <tr data-id="${it.id}">
+            <td>${it.section.toUpperCase()}</td>
+            <td>${it.lottery}</td>
+            <td>${it.draw}</td>
+            <td>${it.drawTime}</td>
+            <td>${it.closeTime}</td>
+            <td><input type="text" value="${res[it.id]||''}" data-res /></td>
+            <td><button class="btn saveOne">Save</button></td>
+          </tr>
+        `).join('');
+        return `
+          <h3 class="mb6">${title}</h3>
+          <table class="table">
+            <thead>
+              <tr><th>Sección</th><th>Lotería</th><th>Draw</th><th>Hora sorteo</th><th>Hora cierre</th><th>Resultado</th><th></th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      html += renderGroup('USA Lotteries', groups.usa);
+      html += renderGroup('Santo Domingo Lotteries', groups.rd);
+      html += renderGroup('Special Lotteries', groups.special);
+      $('#resultsTableContainer').innerHTML = html;
+
+      // Save per row
+      $$('.saveOne', $('#resultsTableContainer')).forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          const tr = ev.target.closest('tr');
+          const id = tr.dataset.id;
+          const input = $('[data-res]', tr);
+          const date = $('#datePicker').value;
+          const obj = readJSON(resultsKey(date), {});
+          obj[id] = input.value.trim();
+          writeJSON(resultsKey(date), obj);
+          buildPublicBoard();
+        });
+      });
+
+      // reset
+      $('#resetResultsBtn').onclick = () => {
+        if (!confirm('¿Borrar todos los resultados del día seleccionado?')) return;
+        writeJSON(resultsKey($('#datePicker').value), {});
+        buildResultsTable(); buildPublicBoard();
+      };
+    }
+
+    /**********************************************************
+     * ADMIN: OCR
+     **********************************************************/
+    const OCR_MAP = [
+      // USA mappings
+      { pat:/\b(mid(?:day)?|am)\b/i, target:'usa/ny/Midday' },
+      { pat:/\b(ny|state)\b.*\b(pm|evening|night)\b/i, target:'usa/ny/Evening' },
+      { pat:/\bnj\s*(am|mid)\b/i, target:'usa/nj/Midday' },
+      { pat:/\bnj\s*(pm|eve|night)\b/i, target:'usa/nj/Evening' },
+      { pat:/\bct\s*(am|day)\b/i, target:'usa/ct/Day' },
+      { pat:/\bct\s*(pm|night)\b/i, target:'usa/ct/Night' },
+      { pat:/\bfl(?:orida)?\s*am\b/i, target:'usa/fl/Midday' },
+      { pat:/\bfl(?:orida)?\s*pm\b/i, target:'usa/fl/Evening' },
+      { pat:/\bfl\s*pick\s*2\s*am\b/i, target:'usa/flp2/AM' },
+      { pat:/\bfl\s*pick\s*2\s*pm\b/i, target:'usa/flp2/PM' },
+      { pat:/\bga(?:\s*am|.*midday)\b/i, target:'usa/ga/Midday' },
+      { pat:/\bga(?:\s*pm|.*evening)\b/i, target:'usa/ga/Evening' },
+      { pat:/\bga\b.*night\b/i, target:'usa/ga/Night' },
+      { pat:/\bpa\s*am\b/i, target:'usa/pa/Day' },
+      { pat:/\bpa\s*pm\b/i, target:'usa/pa/Evening' },
+      { pat:/\bde(?:laware)?\s*am\b/i, target:'usa/de/Day' },
+      { pat:/\bde(?:laware)?\s*pm\b/i, target:'usa/de/Night' },
+      { pat:/\bmd\s*am\b/i, target:'usa/md/AM' },
+      { pat:/\bmd\s*pm\b/i, target:'usa/md/PM' },
+      { pat:/\bma.*midday\b/i, target:'usa/ma/Midday' },
+      { pat:/\bma.*evening\b/i, target:'usa/ma/Evening' },
+      { pat:/\bmi(ch)?\s*day\b/i, target:'usa/mi/Day' },
+      { pat:/\bmi(ch)?\s*night\b/i, target:'usa/mi/Night' },
+      { pat:/\bva\s*day\b/i, target:'usa/va/Day' },
+      { pat:/\bva\s*night\b/i, target:'usa/va/Night' },
+      { pat:/\bnc\s*(am|day)\b/i, target:'usa/nc/Day' },
+      { pat:/\bnc\s*(pm|night)\b/i, target:'usa/nc/Evening' },
+      { pat:/\bsc\s*(mid|am)\b/i, target:'usa/sc/Midday' },
+      { pat:/\bsc\s*(pm|eve)\b/i, target:'usa/sc/Evening' },
+      { pat:/\btx\s*morn/i, target:'usa/tx/Morning' },
+      { pat:/\btx\s*day\b/i, target:'usa/tx/Day' },
+      { pat:/\btx\s*eve/i, target:'usa/tx/Evening' },
+      { pat:/\btx\s*night\b/i, target:'usa/tx/Night' },
+      { pat:/\btn\s*(mid|am)\b/i, target:'usa/tn/Midday' },
+      { pat:/\btn\s*(pm|eve)\b/i, target:'usa/tn/Evening' },
+
+      // RD
+      { pat:/\breal\b/i, target:'rd/real/Mediodía' },
+      { pat:/\bgan(a)?\s*mas\b/i, target:'rd/ganamas/Tarde' },
+      { pat:/\bloteka\b/i, target:'rd/loteka/Noche' },
+      { pat:/\bnacional\b.*tarde\b/i, target:'rd/nacional/Tarde' },
+      { pat:/\bnacional\b.*noche\b/i, target:'rd/nacional/Noche' },
+      { pat:/\bnacional\b.*domingo\b/i, target:'rd/nacional/Domingo' },
+      { pat:/\bquiniela\b.*pal[eé]\b/i, target:'rd/quiniela/Diario' },
+      { pat:/\bpal[eé]\b.*domingo\b/i, target:'rd/quiniela/Domingo' },
+      { pat:/\bprimera\b.*am\b/i, target:'rd/primer/AM' },
+      { pat:/\bprimera\b.*pm\b/i, target:'rd/primer/PM' },
+      { pat:/\bsuerte\b.*am\b/i, target:'rd/suerte/AM' },
+      { pat:/\bsuerte\b.*pm\b/i, target:'rd/suerte/PM' },
+      { pat:/\blote\s*dom\b/i, target:'rd/lotedom/Tarde' },
+
+      // Special
+      { pat:/\bextra\b.*mid/i, target:'special/extra/Midday' },
+      { pat:/\bextra\b.*night/i, target:'special/extra/Night' },
+      { pat:/\banguilla.*10\b/i, target:'special/anguilla/10AM' },
+      { pat:/\banguilla.*1\s*pm\b/i, target:'special/anguilla/1PM' },
+      { pat:/\banguilla.*6\s*pm\b/i, target:'special/anguilla/6PM' },
+      { pat:/\banguilla.*9\s*pm\b/i, target:'special/anguilla/9PM' },
+      { pat:/\bny[-\s]?bk\b.*am\b/i, target:'special/ny-bk/AM' },
+      { pat:/\bny[-\s]?bk\b.*pm\b/i, target:'special/ny-bk/PM' },
+      { pat:/\bny[-\s]?fp\b.*am\b/i, target:'special/ny-fp/AM' },
+      { pat:/\bny[-\s]?fp\b.*pm\b/i, target:'special/ny-fp/PM' },
+      { pat:/\bny[-\s]?bp\b.*am\b/i, target:'special/ny-bp/AM' },
+      { pat:/\bny[-\s]?bp\b.*pm\b/i, target:'special/ny-bp/PM' },
+      { pat:/\bhorses?.*r1\b/i, target:'special/ny-horses/R1' },
+      { pat:/\bhorses?.*r2\b/i, target:'special/ny-horses/R2' },
+      { pat:/\bhorses?.*r3\b/i, target:'special/ny-horses/R3' },
+      { pat:/\bbk\s*paper\b.*am\b/i, target:'special/bk-paper/AM' },
+      { pat:/\bbk\s*paper\b.*pm\b/i, target:'special/bk-paper/PM' },
+      { pat:/\b3[\s-]?5[\s-]?7\b/i, target:'special/357/Main' },
+    ];
+
+    // Parse numeric result like: "992 - 0845" or "22 - 24 - 94" or "241-0611" or "284-4373"
+    function extractResultNumbers(str) {
+      // Remove weird characters, keep digits and dashes/spaces
+      const s = str.replace(/[^\dx\- ]+/gi, ' ').trim();
+      // Patterns: pick3-pick4 -> 3 and 4 digits
+      const m1 = s.match(/(\d{3})\D+(\d{4})/);
+      if (m1) return `${m1[1]}-${m1[2]}`;
+      // RD triple pairs -> xx-xx-xx
+      const m2 = s.match(/(\d{2})\D+(\d{2})\D+(\d{2})/);
+      if (m2) return `${m2[1]}-${m2[2]}-${m2[3]}`;
+      // NY Horses can be 3 or 4; accept raw digits up to 4
+      const m3 = s.match(/\b(\d{3,4})\b/);
+      if (m3) return m3[1];
+      // fallback: return cleaned digits
+      const d = s.replace(/\D+/g, '');
+      return d || '';
+    }
+
+    function previewTextToTable(text) {
+      const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      const rows = [];
+      for (const line of lines) {
+        // Find target by regex map
+        let targetId = '';
+        for (const r of OCR_MAP) {
+          if (r.pat.test(line)) { targetId = r.target; break; }
+        }
+        const value = extractResultNumbers(line);
+        rows.push({ source: line, targetId, value });
+      }
+      return rows;
+    }
+
+    function buildOcrPreviewTable() {
+      const date = $('#datePicker').value;
+      const snap = readJSON(ocrKey(date), []);
+      let html = `
+        <table class="table">
+          <thead>
+            <tr><th>Abbrev.</th><th>Map</th><th>Detected</th><th>Value</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+      `;
+      html += snap.map((r,i)=>`
+        <tr data-i="${i}">
+          <td>${r.source}</td>
+          <td>${r.targetId||'—'}</td>
+          <td>${extractResultNumbers(r.source)}</td>
+          <td><input type="text" value="${r.value||''}" data-val /></td>
+          <td><button class="btn saveRow">Save</button></td>
+        </tr>
+      `).join('');
+      html += `</tbody></table>`;
+      $('#ocrPreviewContainer').innerHTML = html;
+
+      // Save changes to preview
+      $$('.saveRow', $('#ocrPreviewContainer')).forEach(btn => {
+        btn.addEventListener('click', (ev)=>{
+          const tr = ev.target.closest('tr');
+          const i = +tr.dataset.i;
+          const val = $('[data-val]', tr).value.trim();
+          const arr = readJSON(ocrKey($('#datePicker').value), []);
+          if (arr[i]) { arr[i].value = val; writeJSON(ocrKey($('#datePicker').value), arr); }
+          alert('Fila actualizada en la previsualización.');
+        });
+      });
+    }
+
+    $('#previewFromTextBtn').onclick = () => {
+      const rows = previewTextToTable($('#ocrText').value);
+      writeJSON(ocrKey($('#datePicker').value), rows);
+      buildOcrPreviewTable();
+      alert('Texto previsualizado y guardado.');
+    };
+
+    $('#clearOcrPreview').onclick = () => {
+      writeJSON(ocrKey($('#datePicker').value), []);
+      buildOcrPreviewTable();
+    };
+
+    $('#runOcrBtn').onclick = async () => {
+      const files = $('#ocrFile').files;
+      if (!files || !files.length) return alert('Selecciona 1 o más imágenes.');
+      const worker = await Tesseract.createWorker('eng');
+      const rows = readJSON(ocrKey($('#datePicker').value), []);
+      for (const f of files) {
+        const { data } = await worker.recognize(f);
+        const lines = data.text || '';
+        const arr = previewTextToTable(lines);
+        rows.push(...arr);
+      }
+      await worker.terminate();
+      writeJSON(ocrKey($('#datePicker').value), rows);
+      buildOcrPreviewTable();
+      alert('OCR completado y previsualización actualizada.');
+    };
+
+    /**********************************************************
+     * Import from OCR -> Results
+     **********************************************************/
+    $('#refreshFromOCRBtn').onclick = () => {
+      const date = $('#datePicker').value;
+      const cat = ensureCatalog();
+      const idSet = new Set(cat.map(x=>x.id));
+      const snap = readJSON(ocrKey(date), []);
+      if (!snap.length) { alert('No hay previsualización guardada en OCR.'); return; }
+      const res = readJSON(resultsKey(date), {});
+      let loaded=0, skipped=0;
+      for (const r of snap) {
+        if (!r.targetId || !idSet.has(r.targetId)) { skipped++; continue; }
+        if (!r.value) { skipped++; continue; }
+        res[r.targetId] = r.value.trim();
+        loaded++;
+      }
+      writeJSON(resultsKey(date), res);
+      buildResultsTable(); buildPublicBoard();
+      alert(`Importación desde OCR completada.\nCargados: ${loaded}\nSaltados: ${skipped}`);
+    };
+
+    /**********************************************************
+     * ADMIN: Catalog
+     **********************************************************/
+    function buildCatalogTable() {
+      const cat = ensureCatalog();
+      let rows = cat.map((it, idx)=>`
+        <tr data-id="${it.id}" data-idx="${idx}">
+          <td>${it.section}</td>
+          <td>${it.lottery}</td>
+          <td><input type="checkbox" ${it.visible?'checked':''} data-vis /></td>
+          <td><input type="text" value="${it.draw}" data-draw /></td>
+          <td><input type="time" value="${it.drawTime}" data-drawtime /></td>
+          <td><input type="time" value="${it.closeTime}" data-closetime /></td>
+          <td><input type="text" value="${it.days.join(',')}" data-days /></td>
+          <td><button class="btn danger delRow">Eliminar draw</button></td>
+        </tr>
+      `).join('');
+
+      $('#catalogTableContainer').innerHTML = `
+        <table class="table">
+          <thead>
+            <tr><th>Sección</th><th>Lotería</th><th>Visible</th><th>Draw</th><th>Hora sorteo</th><th>Hora cierre</th><th>Días (0-6)</th><th></th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      // Delete row
+      $$('.delRow', $('#catalogTableContainer')).forEach(btn => {
+        btn.addEventListener('click', (ev)=>{
+          const tr = ev.target.closest('tr');
+          const id = tr.dataset.id;
+          let cat = ensureCatalog().filter(x=>x.id !== id);
+          writeJSON(LS.CATALOG, cat);
+          buildCatalogTable(); buildVisibilityTable(); buildResultsTable(); buildPublicBoard();
+        });
+      });
+
+      // Save catalog changes
+      $('#saveCatalogBtn').onclick = () => {
+        const cat = ensureCatalog();
+        $$('#catalogTableContainer tbody tr').forEach(tr => {
+          const id = tr.dataset.id;
+          const item = cat.find(x=>x.id===id);
+          if (!item) return;
+          item.visible = $('[data-vis]', tr).checked;
+          item.draw = $('[data-draw]', tr).value.trim();
+          item.drawTime = $('[data-drawtime]', tr).value;
+          item.closeTime = $('[data-closetime]', tr).value;
+          item.days = $('[data-days]', tr).value.split(',').map(x=>+x.trim()).filter(x=>!isNaN(x));
+        });
+        writeJSON(LS.CATALOG, cat);
+        // also refresh visibility table (visibility defaults are per LS.VIS, but item.visible also used)
+        buildVisibilityTable(); buildPublicBoard(); buildResultsTable();
+        alert('Catálogo guardado.');
+      };
+
+      // Add blank
+      $('#addLotteryBtn').onclick = () => {
+        const sec = prompt('Sección (usa/rd/special):','usa'); if(!sec) return;
+        const lot = prompt('Nombre lotería:','Nueva Lotería'); if(!lot) return;
+        const draw = prompt('Nombre draw:','Midday'); if(!draw) return;
+        const id = `${sec}/${lot.toLowerCase().replace(/\s+/g,'-')}/${draw}`;
+        const item = { id, section:sec, lottery:lot, draw, drawTime:'12:00', closeTime:'11:40', days:[0,1,2,3,4,5,6], visible:true };
+        const cat = ensureCatalog(); cat.push(item); writeJSON(LS.CATALOG, cat);
+        buildCatalogTable(); buildVisibilityTable(); buildResultsTable(); buildPublicBoard();
+      };
+
+      $('#addDrawToSelectionBtn').onclick = () => {
+        alert('Selecciona manualmente desde el Catálogo por ahora.');
+      };
+    }
+
+    /**********************************************************
+     * ADMIN: Visibility
+     **********************************************************/
+    function buildVisibilityTable() {
+      const cat = ensureCatalog();
+      const vis = ensureVisibility(cat);
+      let rows = cat.map(it=>`
+        <tr data-id="${it.id}">
+          <td>${it.section}</td>
+          <td>${it.lottery}</td>
+          <td>${it.draw}</td>
+          <td style="text-align:center;"><input type="checkbox" ${vis[it.id]?'checked':''} /></td>
+        </tr>
+      `).join('');
+      $('#visibilityTableContainer').innerHTML = `
+        <table class="table">
+          <thead><tr><th>Sección</th><th>Lotería</th><th>Draw</th><th>Visible</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+      // hook
+      $$('#visibilityTableContainer input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', (ev)=>{
+          const id = ev.target.closest('tr').dataset.id;
+          const vis = readJSON(LS.VIS, {});
+          vis[id] = ev.target.checked;
+          writeJSON(LS.VIS, vis);
+          buildPublicBoard(); buildResultsTable();
+        });
+      });
+    }
+
+    /**********************************************************
+     * LOGOS (simple per-name preview)
+     **********************************************************/
+    function buildLogosList() {
+      const logos = readJSON(LS.LOGOS, {});
+      const cat = ensureCatalog();
+      const byLottery = {};
+      cat.forEach(it => byLottery[it.lottery] = byLottery[it.lottery] || logos[it.lottery]);
+      $('#logosList').innerHTML = Object.keys(byLottery).map(name => `
+        <div class="mb6"><strong>${name}</strong> — ${byLottery[name] ? '✓ cargado' : '—'}</div>
+      `).join('');
+
+      $('#logoUpload').onchange = async (ev) => {
+        const files = Array.from(ev.target.files || []);
+        if (!files.length) return;
+        const logos = readJSON(LS.LOGOS, {});
+        for (const f of files) {
+          // file name like "New York.png" => lottery name
+          const name = f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim();
+          const data = await fToDataURL(f);
+          logos[name] = data;
+        }
+        writeJSON(LS.LOGOS, logos);
+        buildLogosList(); buildPublicBoard();
+      };
+    }
+
+    function fToDataURL(file) {
+      return new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); });
+    }
+
+    /**********************************************************
+     * THEME & AUTOSCROLL
+     **********************************************************/
+    (function initTheme(){
+      const t = localStorage.getItem(LS.THEME) || 'dark';
+      document.body.dataset.theme = t;
+    })();
+
+    let autoScrollTimer=null, dir=1;
+    $('#autoScrollBtn').onclick = () => {
+      if (autoScrollTimer) { clearInterval(autoScrollTimer); autoScrollTimer = null; $('#autoScrollBtn').textContent='⬇ Auto Scroll'; return; }
+      $('#autoScrollBtn').textContent='⏸ Auto Scroll';
+      autoScrollTimer = setInterval(()=>{
+        window.scrollBy({ top: 0.6*dir, behavior:'auto' });  // slow
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 2) dir = -1;
+        if (window.scrollY <= 0) dir = 1;
+      }, 16);
+    };
+
+    /**********************************************************
+     * INIT
+     **********************************************************/
+    (function init() {
+      // Ensure a date
+      const d = readJSON(LS.DATE, todayStr()) || todayStr();
+      writeJSON(LS.DATE, d);
+
+      // Render public
+      buildPublicBoard();
+
+      // Admin date
+      const dp = $('#datePicker');
+      if (dp) dp.value = d;
+    })();
+  </script>
+</body>
+</html>
