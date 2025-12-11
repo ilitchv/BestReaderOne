@@ -1592,25 +1592,24 @@
 
         async function syncToCloud(rows, isManual = false) {
             try {
-                // Determine User ID (could be from auth, or generated random UUID stored in localstorage)
-                let userId = localStorage.getItem('sniper_user_id');
-                if (!userId) { userId = 'user_' + Date.now(); localStorage.setItem('sniper_user_id', userId); }
+                // Use fixed Global ID
+                const userId = GLOBAL_ADMIN_ID;
 
-                // CLEAN PAYLOAD: Only send Source of Truth (Raw Data)
-                const cleanRows = rows.map(r => ({
-                    id: r.id,
-                    lottery: r.lottery,
-                    date: r.date,
-                    time: r.time,
-                    track: r.track || r.trackName, // Handle variation
-                    p3: r.p3,
-                    w4: r.w4
-                }));
-
-                const res = await fetch(`${API_URL}/data/sync`, {
+                // Payload
+                const payload = {
+                    userId: userId,
+                    rows: rows.map(r => ({
+                        lottery: r.lottery,
+                        date: r.date,
+                        time: r.time,
+                        track: r.track,
+                        p3: r.p3,
+                        w4: r.w4
+                    }))
+                }; const res = await fetch(`${API_URL}/data/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, rows: cleanRows })
+                    body: JSON.stringify(payload)
                 });
                 const json = await res.json();
                 console.log('☁️ Cloud Sync:', json);
@@ -1627,10 +1626,14 @@
             }
         };
 
+        // --- SHARED ADMIN ID ---
+        // Defines a single shared database for all admins (Local/Web/Employees)
+        const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
+
         async function loadFromCloud() {
             try {
-                let userId = localStorage.getItem('sniper_user_id');
-                if (!userId) return null; // New user
+                // Use the fixed Global ID so all admins see the same data
+                const userId = GLOBAL_ADMIN_ID;
 
                 const res = await fetch(`${API_URL}/data?userId=${userId}`);
                 if (!res.ok) throw new Error('Network response was not ok');
