@@ -2,7 +2,7 @@ name: Auto-Pilot Scraper
 
 on:
   schedule:
-    - cron: '0 * * * *' # Every hour
+    - cron: '*/20 * * * *' # Every 20 minutes
   workflow_dispatch: # Allow manual trigger button
 
 jobs:
