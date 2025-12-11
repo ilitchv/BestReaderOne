@@ -30,7 +30,7 @@ const TrackSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-const Track = mongoose.model('Track', TrackSchema);
+const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 
 // Routes
 
