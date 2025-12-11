@@ -1485,9 +1485,9 @@
         window.downloadStagedCSV = () => { alert("Por favor carga a la app primero."); };
 
         // --- CLOUD SYNC CONFIG ---
-        const API_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-            ? 'http://localhost:3000/api'
-            : '/api'; // Relative path for Vercel (same domain)
+        // --- CLOUD SYNC CONFIG ---
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+        const API_URL = isLocal ? 'http://localhost:3000/api' : '/api';
 
         async function syncToCloud(rows, isManual = false) {
             try {
@@ -1495,10 +1495,21 @@
                 let userId = localStorage.getItem('sniper_user_id');
                 if (!userId) { userId = 'user_' + Date.now(); localStorage.setItem('sniper_user_id', userId); }
 
+                // CLEAN PAYLOAD: Only send Source of Truth (Raw Data)
+                const cleanRows = rows.map(r => ({
+                    id: r.id,
+                    lottery: r.lottery,
+                    date: r.date,
+                    time: r.time,
+                    track: r.track || r.trackName, // Handle variation
+                    p3: r.p3,
+                    w4: r.w4
+                }));
+
                 const res = await fetch(`${API_URL}/data/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, rows })
+                    body: JSON.stringify({ userId, rows: cleanRows })
                 });
                 const json = await res.json();
                 console.log('☁️ Cloud Sync:', json);

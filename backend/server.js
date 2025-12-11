@@ -21,12 +21,10 @@ const TrackSchema = new mongoose.Schema({
     lottery: String,
     date: Date,
     time: String,
-    trackName: String, // e.g. "New York Evening"
+    trackName: String,
     p3: String,
     w4: String,
-    gap: Number,
-    step: Number,
-    // Add other fields as needed
+    // gap/step removed from persistence as they are dynamic
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -61,9 +59,7 @@ app.post('/api/data/sync', async (req, res) => {
                     $set: {
                         p3: row.p3,
                         w4: row.w4,
-                        trackName: row.track,
-                        gap: row.gap || 0, // specific state if we want to save it
-                        step: row.step || 0
+                        trackName: row.track
                     }
                 },
                 upsert: true
@@ -103,6 +99,53 @@ app.get('/api/data', async (req, res) => {
     } catch (error) {
         console.error("Load Error:", error);
         res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// ADMIN MANAGER ENDPOINTS
+
+// SEARCH
+app.get('/api/data/search', async (req, res) => {
+    try {
+        const { startDate, endDate, lottery, userId } = req.query;
+        let query = { userId: userId || 'default' };
+
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) query.date.$gte = new Date(startDate);
+            if (endDate) query.date.$lte = new Date(endDate);
+        }
+        if (lottery && lottery !== 'ALL') {
+            query.lottery = new RegExp(lottery, 'i'); // Case insensitive search
+        }
+
+        const stats = await Track.find(query).sort({ date: -1 }).limit(1000); // Limit 1000 for performance
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// EDIT
+app.put('/api/data/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        await Track.findByIdAndUpdate(id, updateData);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE
+app.delete('/api/data/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Track.findByIdAndDelete(id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
