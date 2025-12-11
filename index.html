@@ -480,6 +480,12 @@
             overflow: visible;
         }
 
+        /* FORCE CALENDAR ICON WHITE */
+        ::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
         .tooltip {
             visibility: hidden;
             width: 200px;
@@ -700,7 +706,7 @@
                     <button
                         class="px-3 py-1 bg-teal-700 hover:bg-teal-600 text-white rounded text-[10px] font-bold uppercase shadow-lg shadow-teal-900/50 transition-all border border-teal-500 admin-only"
                         onclick="openAdminDataModal()">
-                        🛡️ Manager
+                        🛡️ DATA
                     </button>
                     <button class="btn-reset" onclick="resetAllData()">
                         ⚠️ Reset
