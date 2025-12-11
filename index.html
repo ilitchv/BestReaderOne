@@ -1115,6 +1115,76 @@
         </div>
     </div>
 
+    <!-- ADMIN EDIT MODAL (Cloud Data) -->
+    <div id="adminEditModal"
+        class="modal-overlay fixed inset-0 hidden z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="bg-slate-900 border border-indigo-600 w-full max-w-sm rounded-xl p-6 shadow-2xl">
+            <h2 class="text-lg font-bold font-tech text-white mb-4 flex items-center gap-2">
+                <span class="text-indigo-500">✏️</span> EDITAR REGISTRO
+            </h2>
+            <div class="space-y-4 text-xs">
+                <input type="hidden" id="admEditId">
+                <div>
+                    <label class="text-slate-400 block mb-1">Lotería / Track</label>
+                    <select id="admEditLottery"
+                        class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
+                        <option value="Texas">Texas</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Florida">Florida</option>
+                        <option value="New York">New York</option>
+                        <option value="NY-BK">NY Brooklyn</option>
+                        <option value="Maryland">Maryland</option>
+                        <option value="South Carolina">South Carolina</option>
+                        <option value="New Jersey">New Jersey</option>
+                        <option value="Pennsylvania">Pennsylvania</option>
+                        <option value="Connecticut">Connecticut</option>
+                        <option value="Delaware">Delaware</option>
+                        <option value="Virginia">Virginia</option>
+                        <option value="North Carolina">North Carolina</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-slate-400 block mb-1">Fecha</label>
+                        <input type="date" id="admEditDate"
+                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1">Hora / Sorteo</label>
+                        <select id="admEditTime"
+                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
+                            <option value="Morning">Morning</option>
+                            <option value="Midday">Midday</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-slate-400 block mb-1">Resultados (P3 | W4)</label>
+                    <div
+                        class="flex gap-4 justify-center items-center bg-slate-950/50 p-2 rounded border border-slate-800">
+                        <input type="text" id="admEditP3" maxlength="3"
+                            class="w-20 bg-slate-900 border border-slate-600 rounded p-2 text-center text-white font-mono text-lg tracking-widest focus:border-indigo-500 outline-none"
+                            placeholder="000">
+                        <span class="text-slate-500 font-bold">|</span>
+                        <input type="text" id="admEditW4" maxlength="4"
+                            class="w-24 bg-slate-900 border border-slate-600 rounded p-2 text-center text-white font-mono text-lg tracking-widest focus:border-indigo-500 outline-none"
+                            placeholder="0000">
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="closeAdminEditModal()"
+                        class="flex-1 py-2 border border-slate-700 text-slate-400 rounded hover:bg-slate-800">Cancelar</button>
+                    <button onclick="saveAdminEdit()"
+                        class="flex-1 bg-indigo-700 hover:bg-indigo-600 text-white rounded font-bold uppercase shadow-lg shadow-indigo-900/50">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // CONFIG GLOBAL
         let CONFIG = {
@@ -1763,19 +1833,26 @@
         };
 
         function updateToolbar() {
+            // Debug:
+            // console.log(`Selection: ${selectedRowIds.size}`);
+
             // Show Delete if selection > 0
             if (selectedRowIds.size > 0) {
                 ui.btnDel.classList.remove('hidden');
+                ui.btnDel.style.display = 'block'; // Force visibility
                 ui.btnDel.textContent = `🗑️ Eliminar (${selectedRowIds.size})`;
             } else {
                 ui.btnDel.classList.add('hidden');
+                ui.btnDel.style.display = 'none';
             }
 
             // Show Edit ONLY if exactly 1 selection
             if (selectedRowIds.size === 1) {
                 ui.btnEdit.classList.remove('hidden');
+                ui.btnEdit.style.display = 'block'; // Force visibility
             } else {
                 ui.btnEdit.classList.add('hidden');
+                ui.btnEdit.style.display = 'none';
             }
         }
 
@@ -2333,27 +2410,62 @@
             const row = admCachedRows.find(r => (r._id === id || r.id === id));
             if (!row) return;
 
-            const newP3 = prompt("Editar Pick 3:", row.p3);
-            if (newP3 === null) return;
+            // Open Full Modal
+            el('admEditId').value = id;
+            el('admEditLottery').value = row.lottery;
 
-            const newW4 = prompt("Editar Win 4:", row.w4);
-            if (newW4 === null) return;
+            // Fix Date format for Input (YYYY-MM-DD)
+            const d = new Date(row.date);
+            // Handle TZ potential offset issues by using UTC or local string logic carefully
+            // Simple approach: Use ISO split if it's correct date object
+            const dateStr = d.toISOString().split('T')[0];
+            el('admEditDate').value = dateStr;
 
-            if (newP3 === row.p3 && newW4 === row.w4) return; // No changes
+            el('admEditTime').value = row.time;
+            el('admEditP3').value = row.p3;
+            el('admEditW4').value = row.w4;
+
+            el('adminEditModal').classList.remove('hidden');
+        }
+
+        window.closeAdminEditModal = () => el('adminEditModal').classList.add('hidden');
+
+        async function saveAdminEdit() {
+            const id = el('admEditId').value;
+            const newLot = el('admEditLottery').value;
+            const newDate = el('admEditDate').value;
+            const newTime = el('admEditTime').value;
+            const newP3 = el('admEditP3').value;
+            const newW4 = el('admEditW4').value;
+
+            if (!newDate || !newP3 || !newW4) return alert("Completa todos los campos");
 
             try {
                 const res = await fetch(`${API_URL}/data/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ p3: newP3, w4: newW4 })
+                    body: JSON.stringify({
+                        lottery: newLot,
+                        date: newDate,
+                        time: newTime,
+                        p3: newP3,
+                        w4: newW4
+                    })
                 });
 
                 if (res.ok) {
                     alert("✅ Registro actualizado.");
                     // Update Cache Locally
-                    row.p3 = newP3;
-                    row.w4 = newW4;
+                    const row = admCachedRows.find(r => (r._id === id || r.id === id));
+                    if (row) {
+                        row.lottery = newLot;
+                        row.date = newDate;
+                        row.time = newTime;
+                        row.p3 = newP3;
+                        row.w4 = newW4;
+                    }
                     renderAdmTable(admCachedRows);
+                    closeAdminEditModal();
                 } else {
                     const err = await res.json();
                     alert("❌ Error al actualizar: " + err.error);
