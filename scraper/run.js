@@ -1,6 +1,9 @@
 import { scrapeState } from './engine.js';
 import { MongoClient } from 'mongodb';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '../backend/.env') });
 
 // --- CONFIGURATION ---
 const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
