@@ -1480,7 +1480,18 @@
         window.downloadStagedCSV = () => { alert("Por favor carga a la app primero."); };
 
         // --- LOCAL STORAGE & CORE ---
-        function saveLocalData() { localStorage.setItem('sniper_data_v5', JSON.stringify(globalRawRows)); }
+        function saveLocalData() {
+            try {
+                localStorage.setItem('sniper_data_v5', JSON.stringify(globalRawRows));
+            } catch (e) {
+                console.warn("Local Storage Full/Error:", e);
+                // Optional: Alert user once or just fail silently regarding persistence
+                if (e.name === 'QuotaExceededError') {
+                    // Logic to avoid spamming alerts could be added, or just basic console warn
+                    console.error("Storage Quota Exceeded. Data will work in-memory but may not persist fully.");
+                }
+            }
+        }
         function loadLocalData() {
             const saved = localStorage.getItem('sniper_data_v5');
             if (saved) {
