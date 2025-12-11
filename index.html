@@ -2182,7 +2182,7 @@
             <!-- Header -->
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                 <h3 class="text-amber-500 font-bold font-tech uppercase tracking-wider text-sm flex items-center gap-2">
-                    <span>🛡️</span> Admin Data Manager (MongoDB)
+                    <span>📂</span> REGISTRO HISTÓRICO (MongoDB)
                 </h3>
                 <button class="text-slate-400 hover:text-white" onclick="closeAdminDataModal()">✕</button>
             </div>
@@ -2201,8 +2201,23 @@
                 </div>
                 <div>
                     <label class="text-[10px] text-slate-400">Lotería</label>
-                    <input type="text" id="admLottery" placeholder="Ej: New York"
+                    <select id="admLottery"
                         class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-white">
+                        <option value="ALL">TODAS</option>
+                        <option value="Texas">Texas</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Florida">Florida</option>
+                        <option value="New York">New York</option>
+                        <option value="NY-BK">NY Brooklyn</option>
+                        <option value="Maryland">Maryland</option>
+                        <option value="South Carolina">South Carolina</option>
+                        <option value="New Jersey">New Jersey</option>
+                        <option value="Pennsylvania">Pennsylvania</option>
+                        <option value="Connecticut">Connecticut</option>
+                        <option value="Delaware">Delaware</option>
+                        <option value="Virginia">Virginia</option>
+                        <option value="North Carolina">North Carolina</option>
+                    </select>
                 </div>
                 <div class="flex items-end">
                     <button onclick="admSearch()"
@@ -2246,11 +2261,16 @@
         // --- ADMIN MANAGER LOGIC ---
         function openAdminDataModal() {
             el('adminDataModal').classList.remove('hidden');
-            // Set default dates (Current Month)
+            // Set default dates (Last Month -> Today)
             const today = new Date();
             el('admEnd').value = today.toISOString().split('T')[0];
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            el('admStart').value = firstDay.toISOString().split('T')[0];
+
+            const past = new Date();
+            past.setMonth(today.getMonth() - 1);
+            el('admStart').value = past.toISOString().split('T')[0];
+
+            // Auto Search
+            admSearch();
         }
         function closeAdminDataModal() { el('adminDataModal').classList.add('hidden'); }
 
