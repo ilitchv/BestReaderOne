@@ -2235,13 +2235,13 @@
 
             <!-- Table -->
             <div class="flex-1 overflow-auto p-4">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-950 text-slate-500 text-[10px] uppercase sticky top-0">
+                <table class="w-full text-left border-collapse relative">
+                    <thead class="bg-slate-950 text-slate-500 text-[10px] uppercase sticky top-0 z-20 shadow-md">
                         <tr>
-                            <th class="p-2 border-b border-slate-800">Date/Time</th>
-                            <th class="p-2 border-b border-slate-800">Lottery</th>
-                            <th class="p-2 border-b border-slate-800">P3 / W4</th>
-                            <th class="p-2 border-b border-slate-800 text-right">Actions</th>
+                            <th class="p-2 border-b border-slate-800 bg-slate-950">Date/Time</th>
+                            <th class="p-2 border-b border-slate-800 bg-slate-950">Lottery</th>
+                            <th class="p-2 border-b border-slate-800 bg-slate-950">P3 / W4</th>
+                            <th class="p-2 border-b border-slate-800 bg-slate-950 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="admTableBody" class="text-xs text-slate-300 font-mono">
@@ -2320,12 +2320,47 @@
                     <td class="p-2 text-slate-400">${new Date(r.date).toLocaleDateString()} ${r.time}</td>
                     <td class="p-2 text-cyan-300 font-bold">${r.lottery}</td>
                     <td class="p-2"><span class="text-amber-400">${r.p3}</span> / <span class="text-purple-400">${r.w4}</span></td>
-                    <td class="p-2 text-right gap-2">
+                    <td class="p-2 text-right gap-1 flex justify-end">
+                        <button onclick="admEdit('${r._id || r.id}')" class="text-cyan-500 hover:text-cyan-400 text-[10px] border border-cyan-900 px-1 rounded mr-1">EDIT</button>
                         <button onclick="admDelete('${r._id || r.id}')" class="text-red-500 hover:text-red-400 text-[10px] border border-red-900 px-1 rounded">DEL</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        async function admEdit(id) {
+            const row = admCachedRows.find(r => (r._id === id || r.id === id));
+            if (!row) return;
+
+            const newP3 = prompt("Editar Pick 3:", row.p3);
+            if (newP3 === null) return;
+
+            const newW4 = prompt("Editar Win 4:", row.w4);
+            if (newW4 === null) return;
+
+            if (newP3 === row.p3 && newW4 === row.w4) return; // No changes
+
+            try {
+                const res = await fetch(`${API_URL}/data/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ p3: newP3, w4: newW4 })
+                });
+
+                if (res.ok) {
+                    alert("✅ Registro actualizado.");
+                    // Update Cache Locally
+                    row.p3 = newP3;
+                    row.w4 = newW4;
+                    renderAdmTable(admCachedRows);
+                } else {
+                    const err = await res.json();
+                    alert("❌ Error al actualizar: " + err.error);
+                }
+            } catch (e) {
+                alert("❌ Error de conexión");
+            }
         }
 
         async function admDelete(id) {
