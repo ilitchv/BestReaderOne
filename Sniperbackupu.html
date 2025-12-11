@@ -692,6 +692,11 @@
                     <button id="btnDelete" class="btn-danger hidden" onclick="deleteSelected()">
                         🗑️ Eliminar
                     </button>
+                    <button id="btnCloudSave"
+                        class="px-3 py-1 bg-indigo-700 hover:bg-indigo-600 text-white rounded text-[10px] font-bold uppercase shadow-lg shadow-indigo-900/50 transition-all border border-indigo-500"
+                        onclick="manualCloudSync()">
+                        ☁️ Save Cloud
+                    </button>
                     <button class="btn-reset" onclick="resetAllData()">
                         ⚠️ Reset
                     </button>
@@ -1479,29 +1484,104 @@
 
         window.downloadStagedCSV = () => { alert("Por favor carga a la app primero."); };
 
+        // --- CLOUD SYNC CONFIG ---
+        const API_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api'
+            : 'https://sniper-backend.onrender.com/api'; // Replace with your Render URL
+
+        async function syncToCloud(rows, isManual = false) {
+            try {
+                // Determine User ID (could be from auth, or generated random UUID stored in localstorage)
+                let userId = localStorage.getItem('sniper_user_id');
+                if (!userId) { userId = 'user_' + Date.now(); localStorage.setItem('sniper_user_id', userId); }
+
+                const res = await fetch(`${API_URL}/data/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, rows })
+                });
+                const json = await res.json();
+                console.log('☁️ Cloud Sync:', json);
+                if (isManual) alert(`✅ ÉXITO: ${json.message || 'Sincronización completada'}`);
+            } catch (e) {
+                console.warn('⚠️ Cloud Sync failed (Offline?):', e);
+                if (isManual) alert(`❌ ERROR: No se pudo conectar con el servidor.\n${e.message}`);
+            }
+        }
+
+        window.manualCloudSync = () => {
+            if (confirm('¿Subir toda la data actual a la Base de Datos (Cloud)?\nEsto sobrescribirá o actualizará los registros en tu cuenta.')) {
+                syncToCloud(globalRawRows, true);
+            }
+        };
+
+        async function loadFromCloud() {
+            try {
+                let userId = localStorage.getItem('sniper_user_id');
+                if (!userId) return null; // New user
+
+                const res = await fetch(`${API_URL}/data?userId=${userId}`);
+                if (!res.ok) throw new Error('Network response was not ok');
+                const rows = await res.json();
+                console.log('☁️ Loaded from Cloud:', rows.length);
+                return rows;
+            } catch (e) {
+                console.warn('⚠️ Could not load from cloud:', e);
+                return null;
+            }
+        }
+
         // --- LOCAL STORAGE & CORE ---
         function saveLocalData() {
             try {
+                // 1. Local Persistence (Fast/Backup)
                 localStorage.setItem('sniper_data_v5', JSON.stringify(globalRawRows));
+
+                // 2. Cloud Persistence (Async)
+                syncToCloud(globalRawRows);
             } catch (e) {
                 console.warn("Local Storage Full/Error:", e);
-                // Optional: Alert user once or just fail silently regarding persistence
                 if (e.name === 'QuotaExceededError') {
-                    // Logic to avoid spamming alerts could be added, or just basic console warn
-                    console.error("Storage Quota Exceeded. Data will work in-memory but may not persist fully.");
+                    console.error("Storage Quota Exceeded. Data will work in-memory.");
                 }
             }
         }
-        function loadLocalData() {
-            const saved = localStorage.getItem('sniper_data_v5');
-            if (saved) {
+        async function loadLocalData() {
+            // Priority: Cloud -> Local -> Empty
+            let loadedRows = null;
+
+            // Try Cloud First
+            const cloudRows = await loadFromCloud();
+            if (cloudRows && cloudRows.length > 0) {
+                loadedRows = cloudRows;
+                console.log("Using Cloud Data");
+            } else {
+                // Fallback to Local
+                const saved = localStorage.getItem('sniper_data_v5');
+                if (saved) {
+                    try { loadedRows = JSON.parse(saved); console.log("Using Local Data"); } catch (e) { }
+                }
+            }
+
+            if (loadedRows) {
                 try {
-                    globalRawRows = JSON.parse(saved);
-                    globalRawRows.forEach(r => { if (!r.id) r.id = Date.now() + Math.random(); if (!r.priority) { const i = getTrackInfo(r.lottery, r.time); r.priority = i.priority; r.track = i.name; } });
+                    globalRawRows = loadedRows;
+                    globalRawRows.forEach(r => {
+                        if (!r.id) r.id = Date.now() + Math.random();
+                        if (!r.priority) { const i = getTrackInfo(r.lottery, r.time); r.priority = i.priority; r.track = i.name; }
+                    });
                     runSimulation();
                     el('fileName').textContent = `${globalRawRows.length} Registros Recuperados`;
-                } catch (e) { console.error("Error loading storage", e); }
+
+                    // Update UI Config Label if User Mode
+                    updateConfigUI();
+                } catch (e) { console.error("Error processing data", e); }
             }
+        }
+
+        function updateConfigUI() {
+            const sum = document.getElementById('configSummary');
+            if (sum) sum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
         }
 
         // --- 3D REEL (Visuals) ---
