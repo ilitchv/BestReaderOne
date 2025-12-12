@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Scraper Dependencies
         working-directory: ./scraper
-        run: npm install
+        run: npm install --force
 
       - name: Run Scraper
         working-directory: ./scraper

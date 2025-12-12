@@ -3,7 +3,13 @@ import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '../backend/.env') });
+// Try to load local .env (for development), continue if missing (for CI/GitHub Actions)
+try {
+    const envPath = path.resolve(process.cwd(), '../backend/.env');
+    dotenv.config({ path: envPath });
+} catch (e) {
+    console.log("⚠️ No local .env file found or path invalid. Relying on System ENV.");
+}
 
 // --- CONFIGURATION ---
 const GLOBAL_ADMIN_ID = "sniper_global_master_v1";

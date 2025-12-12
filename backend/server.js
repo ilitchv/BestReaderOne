@@ -114,7 +114,11 @@ app.get('/api/data/search', async (req, res) => {
         if (startDate || endDate) {
             query.date = {};
             if (startDate) query.date.$gte = new Date(startDate);
-            if (endDate) query.date.$lte = new Date(endDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setUTCHours(23, 59, 59, 999);
+                query.date.$lte = end;
+            }
         }
         if (lottery && lottery !== 'ALL') {
             query.lottery = new RegExp(lottery, 'i'); // Case insensitive search

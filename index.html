@@ -1211,6 +1211,7 @@
             gapTrigger: 5, stopLoss: 12, numbersPlayed: 10,
             payouts: { p1: 55, p2: 15, p3: 10 }
         };
+        const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
 
         // --- USER MODE & SETTINGS ---
         const IS_USER_MODE = new URLSearchParams(window.location.search).get('mode') === 'user';
@@ -1667,7 +1668,7 @@
 
         // --- SHARED ADMIN ID ---
         // Defines a single shared database for all admins (Local/Web/Employees)
-        const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
+
 
         async function loadFromCloud() {
             try {
@@ -2405,7 +2406,7 @@
             const start = el('admStart').value;
             const end = el('admEnd').value;
             const lot = el('admLottery').value;
-            const userId = localStorage.getItem('sniper_user_id');
+            const userId = GLOBAL_ADMIN_ID;
 
             el('admStatus').textContent = "Buscando...";
             el('admTableBody').innerHTML = '<tr><td colspan="4" class="p-4 text-center text-cyan-500 animate-pulse">Consultando MongoDB...</td></tr>';
