@@ -12,8 +12,8 @@ app.use(cors()); // Allow all origins for now (adjust for production)
 app.use(express.json({ limit: '10mb' })); // Support large payloads
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('✅ MongoDB Connected'))
+mongoose.connect(process.env.MONGODB_URI, { dbName: 'beastbet' })
+    .then(() => console.log('✅ MongoDB Connected to BEASTBET'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // Mongoose Model
@@ -123,6 +123,8 @@ app.get('/api/data/search', async (req, res) => {
         if (lottery && lottery !== 'ALL') {
             query.lottery = new RegExp(lottery, 'i'); // Case insensitive search
         }
+
+        console.log("🔍 Search Query:", JSON.stringify(query, null, 2)); // DEBUG LOG
 
         const stats = await Track.find(query).sort({ date: -1 }).limit(1000); // Limit 1000 for performance
         res.json(stats);
