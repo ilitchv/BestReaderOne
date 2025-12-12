@@ -1948,8 +1948,8 @@
                     if (eDate && rDate > new Date(eDate)) inRange = false;
                 }
 
-                const p3 = row.p3.padStart(3, '0');
-                const w4 = row.w4.padStart(4, '0');
+                const p3 = (row.p3 || "").toString().padStart(3, '0');
+                const w4 = (row.w4 || "").toString().padStart(4, '0');
                 const isP1 = p3[1] === p3[2];
                 const isP2 = w4[0] === w4[1];
                 const isP3 = w4[2] === w4[3];
