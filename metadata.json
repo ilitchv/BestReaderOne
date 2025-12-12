@@ -1,0 +1,8 @@
+{
+  "name": "Copy of BackUp Estable Beast Reader Lott5",
+  "description": "An interactive and gamified lottery betting application that allows users to easily place bets, use a powerful 'Wizard' for quick entries, and even capture tickets via image recognition with AI.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

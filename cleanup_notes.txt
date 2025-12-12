@@ -1,0 +1,8 @@
+
+// This script is to be run manually if needed, or I can just delete via tools.
+// Deleting legacy 'sniper' folder content is risky if I missed something.
+// But the user said "Deploy... within Admin Dashboard... another instance within User Dashboard".
+// And "Strictly replace or implement only the 'Strategy' module".
+// I have copied the essential parts.
+// I will NOT delete the original 'sniper' folder immediately, to be safe.
+// But I should remove the 'Strategy' placeholder from the User Dashboard (done).
