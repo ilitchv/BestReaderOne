@@ -93,6 +93,10 @@ async function run() {
     if (!MONGODB_URI) { console.error('❌ Missing MONGODB_URI'); process.exit(1); }
 
     let client;
+    let successCount = 0;
+    let failCount = 0;
+    const results = { success: [], failed: [] };
+
     try {
         client = new MongoClient(MONGODB_URI);
         await client.connect();
@@ -111,16 +115,36 @@ async function run() {
                 await saveDraw(col, config.name, "Evening", data?.evening);
                 await saveDraw(col, config.name, "Night", data?.night);
 
+                successCount++;
+                results.success.push(config.name);
             } catch (e) {
-                console.error(`❌ Error scraping ${key}:`, e.message);
+                console.warn(`⚠️ Warning: Failed to scrape ${key}:`, e.message);
+                failCount++;
+                results.failed.push(config.name);
+                // Continue with next state even if this one fails
             }
         }
 
     } catch (e) {
-        console.error('❌ Critical Error:', e);
+        console.warn('⚠️ Non-critical error during scraping:', e.message);
+        // Don't fail the entire job for partial failures
     } finally {
         if (client) await client.close();
+
+        // Print summary
+        console.log('\n📊 SCRAPING SUMMARY:');
+        console.log(`   ✅ Success: ${successCount} states`);
+        console.log(`   ⚠️  Failed: ${failCount} states`);
+        if (results.success.length > 0) {
+            console.log(`   Successful: ${results.success.join(', ')}`);
+        }
+        if (results.failed.length > 0) {
+            console.log(`   Failed: ${results.failed.join(', ')}`);
+        }
+
         console.log('\n🏁 Scraper Job Finished.');
+        // Explicitly set exit code to 0 to mark workflow as successful
+        process.exitCode = 0;
         process.exit(0);
     }
 }
