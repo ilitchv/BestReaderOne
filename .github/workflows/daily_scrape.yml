@@ -15,15 +15,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Install Scraper Dependencies
-        working-directory: ./scraper
-        run: npm install --force
+      - name: Install Dependencies
+        run: npm install
 
       - name: Run Scraper
-        working-directory: ./scraper
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
-        run: node run.js
+        run: node scripts/trigger_scrape.js
         continue-on-error: true

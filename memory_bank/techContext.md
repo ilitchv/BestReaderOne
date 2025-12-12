@@ -42,3 +42,15 @@
 - **Frontend:** La aplicación se desarrolla y ejecuta en un entorno que provee las dependencias a través de un `importmap` en `index.html`.
 - **Backend:** Es un proyecto Node.js estándar, gestionado con `package.json`. Se ejecuta con el comando `node server.js`.
 - **API Key:** La clave de la API de Gemini se obtiene de `process.env.API_KEY` en el frontend, asumida como configurada en el entorno de ejecución. La URI de la base de datos se gestiona a través de un archivo `.env` en el backend.
+
+## Lecciones de Despliegue (Vercel)
+
+- **Plataforma:** Vercel (Migrado desde Cloud Run conceptualmente).
+- **Configuración:**
+    - `vercel.json` maneja rewrites para SPA y API.
+    - `api/index.js` delega a `server.js` (Root) como Serverless Function.
+    - **Importante:** Todos los archivos (especialmente `package.json` y `package-lock.json`) deben estar trackeados en Git para que los builds automáticos funcionen.
+- **Dependencias:**
+    - Conflicto detectado entre `react@19` y `lucide-react` (requiere React 16-18). Solución: Downgrade a `react@18.2.0`.
+- **Variables de Entorno:**
+    - `MONGODB_URI` debe configurarse manualmente en Vercel Project Settings (no se sube en `.env`).

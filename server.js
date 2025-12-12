@@ -144,6 +144,7 @@ app.get('/api/data', async (req, res) => {
 });
 
 // 3. ADMIN SEARCH
+// POST version (Complex queries)
 app.post('/api/data/search', async (req, res) => {
     try {
         const { query, limit } = req.body;
@@ -156,6 +157,44 @@ app.post('/api/data/search', async (req, res) => {
 
         res.json(results);
     } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET version (Simple queries for compatibility)
+app.get('/api/data/search', async (req, res) => {
+    try {
+        const { startDate, endDate, lottery, userId } = req.query;
+        let query = { userId: userId || 'default' };
+
+        // Date Range
+        if (startDate || endDate) {
+            query.date = {};
+            // Assuming date is stored as Date object or String ISO8601
+            // If stored as Date object:
+            if (startDate) query.date.$gte = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setUTCHours(23, 59, 59, 999);
+                query.date.$lte = end;
+            }
+        }
+
+        // Lottery Filter
+        if (lottery && lottery !== 'ALL') {
+            // Case insensitive search
+            query.lottery = new RegExp(lottery, 'i');
+        }
+
+        // console.log("🔍 GET Search Query:", JSON.stringify(query));
+
+        const results = await Track.find(query)
+            .sort({ date: -1, time: -1 })
+            .limit(1000);
+
+        res.json(results);
+    } catch (e) {
+        console.error("GET /api/data/search Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
