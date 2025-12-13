@@ -19,7 +19,9 @@ const ticketSchema = new mongoose.Schema({
     plays: [playSchema],
     ticketImage: { type: String }, // Low-res base64 for quick preview
 }, {
-    timestamps: true 
+    timestamps: true,
+    bufferCommands: false, // Critical for Vercel
+    autoCreate: false
 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);
