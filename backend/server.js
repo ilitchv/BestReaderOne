@@ -22,19 +22,50 @@ app.use(cors()); // Allow all origins for now (adjust for production)
 app.use(express.json({ limit: '50mb' })); // Support large payloads (images)
 
 // MongoDB Connection
+// MongoDB Connection Strategy for Serverless (Vercel)
+let cachedDb = null;
+
 const connectDB = async () => {
+    if (cachedDb && mongoose.connection.readyState === 1) {
+        return cachedDb;
+    }
+
+    if (!process.env.MONGODB_URI) {
+        console.error("❌ MONGODB_URI is missing in environment variables!");
+        throw new Error("MONGODB_URI is missing");
+    }
+
     try {
-        if (!process.env.MONGODB_URI) {
-            console.error("❌ MONGODB_URI is undefined");
-            return;
-        }
-        await mongoose.connect(process.env.MONGODB_URI, { dbName: 'beastbet' });
+        console.log('🔌 Connecting to MongoDB...');
+        // Only avoid strict query warning if needed, usually defaults are fine
+        const db = await mongoose.connect(process.env.MONGODB_URI, {
+            dbName: 'beastbet',
+            bufferCommands: false, // Disable Mongoose buffering to fail fast if not connected
+            serverSelectionTimeoutMS: 5000 // Fail fast if DB unreachable
+        });
+
+        cachedDb = db;
         console.log('✅ MongoDB Connected to BEASTBET');
+        return db;
     } catch (err) {
         console.error('❌ MongoDB Connection Error:', err);
+        throw err;
     }
 };
-connectDB();
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+    // Skip DB connection for simple health checks if possible, but for simplicity we allow it
+    if (req.path === '/api/health') return next();
+
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error("DB Middleware Error:", error);
+        res.status(500).json({ error: "Database Connection Failed", details: error.message });
+    }
+});
 
 // Mongoose Model
 const TrackSchema = new mongoose.Schema({
