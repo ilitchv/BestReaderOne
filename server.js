@@ -300,7 +300,12 @@ if (fs.existsSync(distPath)) {
     console.log(`✅ Serving static files from: ${distPath}`);
     // Serve static assets normally (long cache)
     app.use(express.static(distPath, {
-        index: false // Don't serve index.html automatically, we handle it below
+        index: false, // Don't serve index.html automatically, we handle it below
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            }
+        }
     }));
 } else {
     console.error(`❌ CRITICAL: 'dist' directory not found. 'npm run build' might have failed.`);

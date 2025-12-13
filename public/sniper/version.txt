@@ -1,0 +1,4 @@
+Deployment V2 - Fix Frontend Crash
+Timestamp: 2025-12-12T18:25:00
+Patch Applied: YES
+Cache Bust: YES

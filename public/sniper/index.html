@@ -2134,10 +2134,12 @@
             const cWin = win > 0 ? 'text-emerald-400' : 'text-slate-600';
             const cBal = bal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-500 font-bold';
 
-            const dP3 = row.p3.padStart(3, '0');
+            const sP3 = (row.p3 || "").toString().padStart(3, '0');
+            const sW4 = (row.w4 || "").toString().padStart(4, '0');
+            const dP3 = sP3;
             const p3Html = isP1 ? `<span class="text-slate-500">${dP3[0]}</span><span class="double-highlight">${dP3.substring(1)}</span>` : `<span class="text-slate-500">${dP3}</span>`;
-            const w4Part1 = isP2 ? `<span class="double-highlight">${row.w4.substring(0, 2)}</span>` : `<span class="text-slate-500">${row.w4.substring(0, 2)}</span>`;
-            const w4Part2 = isP3 ? `<span class="double-highlight">${row.w4.substring(2)}</span>` : `<span class="text-slate-500">${row.w4.substring(2)}</span>`;
+            const w4Part1 = isP2 ? `<span class="double-highlight">${sW4.substring(0, 2)}</span>` : `<span class="text-slate-500">${sW4.substring(0, 2)}</span>`;
+            const w4Part2 = isP3 ? `<span class="double-highlight">${sW4.substring(2)}</span>` : `<span class="text-slate-500">${sW4.substring(2)}</span>`;
 
             tr.innerHTML = `
                 <td class="text-center px-2"><input type="checkbox" class="row-checkbox" ${selectedRowIds.has(row.id) ? 'checked' : ''} onclick="toggleRowSelection(${row.id}, this)"></td>

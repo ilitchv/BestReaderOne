@@ -3,13 +3,14 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { GoogleGenAI, SchemaType: Type } = require("@google/genai"); // Check if SchemaType or Type is exported
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(cors()); // Allow all origins for now (adjust for production)
-app.use(express.json({ limit: '10mb' })); // Support large payloads
+app.use(express.json({ limit: '50mb' })); // Support large payloads (images)
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, { dbName: 'beastbet' })
@@ -31,28 +32,309 @@ const TrackSchema = new mongoose.Schema({
 
 const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 
-// Routes
+// --- AI CONFIGURATION ---
+const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const MODEL_NAME = 'gemini-2.0-flash'; // Updated to latest flash model if available, or 1.5-flash
 
+// Prompts & Constants
+const TRACK_CATEGORIES_PRELOADED = [
+    // We might need to pass this from frontend or duplicate logic. 
+    // For now, let's keep the prompt generic or expect the frontend to pass context if critical.
+    // But the prompt in geminiService.ts had a hardcoded list. 
+    // Let's use a simplified generic list or ask frontend to send it if it changes often.
+    // For now, I'll copy the core prompt structure.
+];
+
+const UPER_PROMPT_FOR_BEAST_READER = `
+Eres Beast Reader, un experto auditor de lotería políglota (Español, Inglés, Creole Haitiano). Tu trabajo es digitalizar tickets manuscritos con precisión.
+
+1. ESQUEMA DE SALIDA OBLIGATORIO (JSON)
+{
+  "detectedDate": "YYYY-MM-DD",
+  "detectedTracks": ["Track Name"],
+  "plays": [
+    { "betNumber": "123", "straightAmount": 1.00, "boxAmount": 0.50, "comboAmount": 0.00 }
+  ]
+}
+
+2. REGLAS CRÍTICAS DE INTERPRETACIÓN
+
+2.1. DETECCIÓN DE TRACKS (SORTEOS)
+- Busca marcas (checks, X) en las listas impresas.
+- Traduce abreviaturas manuscritas a los nombres OFICIALES.
+- "NYS", "NY NIGHT", "NY EVE" -> "New York Evening"
+- "MIDDAY" (solo), "NY M" -> "New York Mid Day"
+- "PALE" -> "Quiniela Pale" (si es contexto RD) o "Palé" (si es USA).
+- **IMPORTANTE:** Si no hay marca explícita, NO inventes tracks.
+
+2.2. LECTURA DE JUGADAS (Sintaxis: Número - Straight - Box)
+El formato más común es horizontal:
+**[NÚMERO]** ... separador ... **[MONTO STRAIGHT]** ... separador ... **[MONTO BOX]**
+
+**DETECCIÓN DE BOX (CRÍTICO):**
+El monto BOX suele estar al final de la línea, a la derecha del straight.
+Busca estos indicadores visuales para el Box:
+1. **Símbolo de División/Caja:**  '⟌', '[', ']', '/'
+2. **Paréntesis o "C":** A veces escriben '(1' o 'C1' (C de Combo/Cubierto). **Esto significa Box.**
+3. **Posición:** Si ves "1234 - 5  1", el 5 es Straight y el 1 es Box. NO ignores el número final.
+
+2.3. RANGOS Y SECUENCIAS (RUN DOWNS) - **REGLA PRIORITARIA**
+- **Vertical (CRÍTICO):** Si ves un número ARRIBA (ej: '000') y otro ABAJO (ej: '999') que parecen definir el inicio y fin de un bloque (conectados por línea, flecha, o simplemente alineados indicando secuencia):
+  - **NO** los leas como dos jugadas separadas.
+  - **FUSIÓNALOS** en un solo registro con guion: "000-999".
+- **Horizontal:** Si ves "120-129" o "120 al 129", devuélvelo como "120-129".
+- **Wildcards:** "12X" -> "12X".
+- **IMPORTANTE:** NO expandas la secuencia. Solo transcribe el rango ("Inicio-Fin") en el campo 'betNumber'. El sistema lo expandirá.
+
+3. REGLAS GENERALES
+- **NO CALCULAR:** Tu trabajo es leer lo escrito. No sumes totales. No valides matemáticamente.
+- **NO SUMAR VALORES:** Si ves "5" y luego "1", son 5 straight y 1 box. NO es 6.
+- **Centavos:** 50 -> 0.50, 75 -> 0.75. Pero 5, 10, 20 suelen ser dólares enteros.
+- **Idiomas:** Interpreta notas en Español, Inglés o Creole Haitiano sin problemas.
+`;
+
+// --- AI ENDPOINTS ---
+
+// 1. Interpret Ticket Image
+app.post('/api/ai/interpret-ticket', async (req, res) => {
+    try {
+        const { base64Image } = req.body;
+        if (!base64Image) return res.status(400).json({ error: "Missing base64Image" });
+        if (!process.env.API_KEY) return res.status(500).json({ error: "Server API Key not configured" });
+
+        const imagePart = {
+            inlineData: {
+                mimeType: 'image/jpeg',
+                data: base64Image.replace(/^data:image\/\w+;base64,/, ''),
+            },
+        };
+        const textPart = { text: UPER_PROMPT_FOR_BEAST_READER };
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Safe default
+
+        const result = await model.generateContent({
+            contents: { role: "user", parts: [imagePart, textPart] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        detectedDate: { type: Type.STRING },
+                        detectedTracks: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        plays: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    betNumber: { type: Type.STRING },
+                                    straightAmount: { type: Type.NUMBER },
+                                    boxAmount: { type: Type.NUMBER },
+                                    comboAmount: { type: Type.NUMBER }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const jsonString = result.response.text();
+        res.json(JSON.parse(jsonString));
+
+    } catch (error) {
+        console.error("AI Ticket Error:", error);
+        res.status(500).json({ error: error.message || "AI Interpretation Failed" });
+    }
+});
+
+// 2. Interpret Natural Language
+app.post('/api/ai/interpret-text', async (req, res) => {
+    try {
+        const { prompt: userPrompt } = req.body;
+        if (!userPrompt) return res.status(400).json({ error: "Missing prompt" });
+
+        const systemInstruction = `
+            You are a multilingual lottery assistant (English, Spanish, Haitian Creole). 
+            Extract plays from natural language.
+            Understand terms like:
+            - "Straight", "Directo", "Dirèk" -> straightAmount
+            - "Box", "Candado", "Kouvri" -> boxAmount
+            - "Combo", "Combinado" -> comboAmount
+            - "Pale", "Maryaj" -> Bets with two numbers (e.g., 12-34)
+            - "Run down", "Del 0 al 9", "12X" -> Keep ranges intact in 'betNumber' field (e.g., return "12X", do not expand).
+            
+            Rules:
+            1. If amounts > 50 are used without currency keywords, assume they are cents (e.g. "75" -> 0.75).
+            2. Output strictly a JSON array of objects.
+            3. Ignore conversational filler.
+        `;
+
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            systemInstruction: systemInstruction
+        });
+
+        const result = await model.generateContent({
+            contents: { role: "user", parts: [{ text: userPrompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            betNumber: { type: Type.STRING },
+                            straightAmount: { type: Type.NUMBER },
+                            boxAmount: { type: Type.NUMBER },
+                            comboAmount: { type: Type.NUMBER }
+                        }
+                    }
+                }
+            }
+        });
+
+        res.json(JSON.parse(result.response.text()));
+
+    } catch (error) {
+        console.error("AI Text Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 3. Batch Handwriting
+app.post('/api/ai/interpret-batch', async (req, res) => {
+    try {
+        const { base64Image } = req.body;
+        const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } };
+
+        const prompt = `
+        Analyze this image which contains a compilation of handwritten lottery plays (one or more lines).
+        Read EVERY line as a separate play.
+        Interpret handwriting styles:
+        - "123 5 5" -> Bet: 123, Straight: 5, Box: 5
+        - "1234 - 10" -> Bet: 1234, Straight: 10
+        - "564 / 1/2" -> Bet: 564, Straight: 1, Box: 2
+        - "75" usually means 0.75 cents if implied by context, but output raw number here.
+        - "Run downs" like "12X" or "000-999" -> Keep format intact (e.g., "12X") for post-processing.
+        Return strictly a JSON array of objects.
+        `;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent({
+            contents: { role: "user", parts: [imagePart, { text: prompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            betNumber: { type: Type.STRING },
+                            straightAmount: { type: Type.NUMBER },
+                            boxAmount: { type: Type.NUMBER },
+                            comboAmount: { type: Type.NUMBER }
+                        }
+                    }
+                }
+            }
+        });
+        res.json(JSON.parse(result.response.text()));
+    } catch (error) {
+        console.error("AI Batch Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 4. Interpret Winning Results (Image)
+app.post('/api/ai/interpret-results-image', async (req, res) => {
+    try {
+        const { base64Image, catalogIds } = req.body;
+        const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } };
+
+        const prompt = `
+        You are a Lottery Result Auditor. Analyze this image which contains lottery results.
+        I need you to extract the lottery name/draw and the winning numbers found.
+        CATALOG_IDS: ${JSON.stringify(catalogIds)}
+        STRICT MAPPING RULES (Detail in system prompt or here):
+        1. "State" / "State Evening" -> Map STRICTLY to "usa/ny/Evening".
+        2. "N.Y." / "N.Y" -> "special/ny-horses/R1".
+        RULES:
+        1. Extract source, targetId, value.
+        2. Output JSON Array.
+        `;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent({
+            contents: { role: "user", parts: [imagePart, { text: prompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            source: { type: Type.STRING },
+                            targetId: { type: Type.STRING },
+                            value: { type: Type.STRING }
+                        }
+                    }
+                }
+            }
+        });
+        res.json(JSON.parse(result.response.text()));
+    } catch (error) {
+        console.error("AI Results Image Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 5. Interpret Winning Results (Text)
+app.post('/api/ai/interpret-results-text', async (req, res) => {
+    try {
+        const { text, catalogIds } = req.body;
+
+        const prompt = `
+        You are a Lottery Result Parser for TABULAR TEXT input.
+        CATALOG_IDS: ${JSON.stringify(catalogIds)}
+        RAW TEXT INPUT: """ ${text.substring(0, 10000)} """
+        YOUR TASK: Match source to targetId, extract value.
+        OUTPUT JSON ARRAY.
+        `;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent({
+            contents: { role: "user", parts: [{ text: prompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            source: { type: Type.STRING },
+                            targetId: { type: Type.STRING },
+                            value: { type: Type.STRING }
+                        }
+                    }
+                }
+            }
+        });
+        res.json(JSON.parse(result.response.text()));
+    } catch (error) {
+        console.error("AI Results Text Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Routes
 // 1. SYNC (Bulk Save)
-// Receives the full list of rows (or delta) and updates the DB.
-// For simplicity in this version, we might do a full replace or smart upsert.
 app.post('/api/data/sync', async (req, res) => {
     try {
         const { rows, userId } = req.body;
         if (!rows || !Array.isArray(rows)) return res.status(400).json({ error: "Invalid data format" });
 
-        console.log(`📥 Syncing ${rows.length} rows for user: ${userId || 'default'}`);
+        // console.log(`📥 Syncing ${rows.length} rows for user: ${userId || 'default'}`);
 
-        // STRATEGY: Delete all for user and re-insert? (Easiest for sync)
-        // OR Upsert based on ID.
-        // Let's use Upsert based on 'id' if provided, or mapped properties.
-        // Client sends "globalRawRows".
-
-        // Faster approach for "Snapshot" sync:
-        // 1. Delete all records for this user (Warning: destructive if concurrent sessions)
-        // 2. Insert new batch.
-
-        // safer: BulkWrite
         const ops = rows.map(row => ({
             updateOne: {
                 filter: { userId: userId || 'default', date: row.date, time: row.time, lottery: row.lottery }, // Unique composite key
@@ -84,16 +366,15 @@ app.get('/api/data', async (req, res) => {
         const userId = req.query.userId || 'default';
         const tracks = await Track.find({ userId });
 
-        // Transform back to client format if needed
         const formatted = tracks.map(t => ({
-            id: t._id, // or generate random on client if mostly read-only
+            id: t._id,
             lottery: t.lottery,
-            date: t.date, // Client needs to format this
+            date: t.date,
             time: t.time,
             track: t.trackName,
             p3: t.p3,
             w4: t.w4,
-            priority: 0 // Client calculates priority normally
+            priority: 0
         }));
 
         res.json(formatted);
@@ -102,8 +383,6 @@ app.get('/api/data', async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
-
-// ADMIN MANAGER ENDPOINTS
 
 // SEARCH
 app.get('/api/data/search', async (req, res) => {
@@ -121,12 +400,10 @@ app.get('/api/data/search', async (req, res) => {
             }
         }
         if (lottery && lottery !== 'ALL') {
-            query.lottery = new RegExp(lottery, 'i'); // Case insensitive search
+            query.lottery = new RegExp(lottery, 'i');
         }
 
-        console.log("🔍 Search Query:", JSON.stringify(query, null, 2)); // DEBUG LOG
-
-        const stats = await Track.find(query).sort({ date: -1 }).limit(1000); // Limit 1000 for performance
+        const stats = await Track.find(query).sort({ date: -1 }).limit(1000);
         res.json(stats);
     } catch (error) {
         res.status(500).json({ error: error.message });
