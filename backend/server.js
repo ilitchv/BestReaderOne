@@ -6,6 +6,10 @@ if (process.env.NODE_ENV !== 'production') {
 
 const express = require('express');
 const mongoose = require('mongoose');
+// -- CRITICAL CONFIGURATION BEFORE MODELS --
+mongoose.set('strictQuery', false);
+mongoose.set('bufferCommands', false); // Disable buffering globally
+
 const cors = require('cors');
 const { GoogleGenAI, SchemaType: Type } = require("@google/genai");
 
@@ -23,9 +27,7 @@ app.use(express.json({ limit: '50mb' })); // Support large payloads (images)
 
 // MongoDB Connection
 // MongoDB Connection Strategy for Serverless (Vercel)
-mongoose.set('strictQuery', false);
-// Disable global buffering effectively to fail fast on connection issues
-mongoose.set('bufferCommands', false);
+// Configuration moved to top
 
 let cachedDb = null;
 
