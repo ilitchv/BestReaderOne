@@ -72,11 +72,28 @@ app.use(async (req, res, next) => {
 
     // ROOT API CHECK - Specialized Handler to debug
     if (req.path === '/api') {
+        let connectError = null;
+        if (mongoose.connection.readyState !== 1) {
+            try {
+                // Force a connection attempt to capture the error
+                await connectDB();
+            } catch (e) {
+                connectError = e.message;
+            }
+        }
+
+        const uri = process.env.MONGODB_URI || '';
+        const uriStart = uri.substring(0, 8); // 'mongodb+'
+        const uriEnd = uri.substring(uri.length - 5);
+
         return res.json({
-            status: 'online',
+            status: mongoose.connection.readyState === 1 ? 'online' : 'offline',
             message: 'Beast Reader API Root',
             dbState: mongoose.connection.readyState,
-            envCheck: !!process.env.MONGODB_URI ? 'Has URI' : 'Missing URI'
+            envCheck: !!uri ? 'Has URI' : 'Missing URI',
+            uriPrefix: uriStart,
+            uriSuffix: uriEnd, // Check for trailing quote
+            lastError: connectError
         });
     }
 
