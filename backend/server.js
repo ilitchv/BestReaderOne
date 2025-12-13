@@ -23,47 +23,71 @@ app.use(express.json({ limit: '50mb' })); // Support large payloads (images)
 
 // MongoDB Connection
 // MongoDB Connection Strategy for Serverless (Vercel)
+mongoose.set('strictQuery', false);
+// Disable global buffering effectively to fail fast on connection issues
+mongoose.set('bufferCommands', false);
+
 let cachedDb = null;
 
 const connectDB = async () => {
+    // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
     if (cachedDb && mongoose.connection.readyState === 1) {
         return cachedDb;
     }
 
     if (!process.env.MONGODB_URI) {
-        console.error("❌ MONGODB_URI is missing in environment variables!");
+        console.error("❌ CRTICAL: MONGODB_URI is missing in environment!");
         throw new Error("MONGODB_URI is missing");
     }
 
     try {
-        console.log('🔌 Connecting to MongoDB...');
-        // Only avoid strict query warning if needed, usually defaults are fine
+        console.log(`🔌 Connecting to MongoDB (current state: ${mongoose.connection.readyState})...`);
+
+        // Attempt connection with aggressive timeouts
         const db = await mongoose.connect(process.env.MONGODB_URI, {
             dbName: 'beastbet',
-            bufferCommands: false, // Disable Mongoose buffering to fail fast if not connected
-            serverSelectionTimeoutMS: 5000 // Fail fast if DB unreachable
+            // Increase timeout slightly for initial connect, but fail operation fast
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
         });
 
         cachedDb = db;
-        console.log('✅ MongoDB Connected to BEASTBET');
+        console.log(`✅ MongoDB Connected (state: ${mongoose.connection.readyState})`);
         return db;
     } catch (err) {
-        console.error('❌ MongoDB Connection Error:', err);
+        console.error('❌ MongoDB Connection Failed:', err);
+        // Reset cache on failure
+        cachedDb = null;
         throw err;
     }
 };
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
-    // Skip DB connection for simple health checks if possible, but for simplicity we allow it
+    // Allow Health Check without potentially failing DB logic if desired, 
+    // but usually we want to know DB status.
     if (req.path === '/api/health') return next();
+
+    // ROOT API CHECK - Specialized Handler to debug
+    if (req.path === '/api') {
+        return res.json({
+            status: 'online',
+            message: 'Beast Reader API Root',
+            dbState: mongoose.connection.readyState,
+            envCheck: !!process.env.MONGODB_URI ? 'Has URI' : 'Missing URI'
+        });
+    }
 
     try {
         await connectDB();
         next();
     } catch (error) {
         console.error("DB Middleware Error:", error);
-        res.status(500).json({ error: "Database Connection Failed", details: error.message });
+        res.status(500).json({
+            error: "Database Connection Failed",
+            details: error.message,
+            state: mongoose.connection.readyState
+        });
     }
 });
 
