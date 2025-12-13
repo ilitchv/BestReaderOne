@@ -1,9 +1,18 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+// Only load dotenv if we are not in production (or explicitly requested)
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { GoogleGenAI, SchemaType: Type } = require("@google/genai"); // Check if SchemaType or Type is exported
+const { GoogleGenAI, SchemaType: Type } = require("@google/genai");
+
+// Import Models (Assuming models folder sits in root, so ../models)
+const Ticket = require('../models/Ticket');
+const LotteryResult = require('../models/LotteryResult');
+// const Track = require('../models/Track'); // Keeping inline Track for now to respect previous logic
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -13,9 +22,19 @@ app.use(cors()); // Allow all origins for now (adjust for production)
 app.use(express.json({ limit: '50mb' })); // Support large payloads (images)
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'beastbet' })
-    .then(() => console.log('✅ MongoDB Connected to BEASTBET'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+const connectDB = async () => {
+    try {
+        if (!process.env.MONGODB_URI) {
+            console.error("❌ MONGODB_URI is undefined");
+            return;
+        }
+        await mongoose.connect(process.env.MONGODB_URI, { dbName: 'beastbet' });
+        console.log('✅ MongoDB Connected to BEASTBET');
+    } catch (err) {
+        console.error('❌ MongoDB Connection Error:', err);
+    }
+};
+connectDB();
 
 // Mongoose Model
 const TrackSchema = new mongoose.Schema({
@@ -35,6 +54,15 @@ const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 // --- AI CONFIGURATION ---
 const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const MODEL_NAME = 'gemini-2.0-flash'; // Updated to latest flash model if available, or 1.5-flash
+
+// ROOT API CHECK
+app.get('/api', (req, res) => {
+    res.json({
+        status: 'online',
+        message: 'Beast Reader API Root',
+        dbState: mongoose.connection.readyState
+    });
+});
 
 // Prompts & Constants
 const TRACK_CATEGORIES_PRELOADED = [
@@ -323,6 +351,92 @@ app.post('/api/ai/interpret-results-text', async (req, res) => {
     } catch (error) {
         console.error("AI Results Text Error:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// ==========================================
+// LEGACY / DASHBOARD API ROUTES (Ported)
+// ==========================================
+
+app.get('/api/health', (req, res) => {
+    const dbState = mongoose.connection.readyState;
+    const statusMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+
+    res.status(200).json({
+        server: 'online',
+        database: statusMap[dbState] || 'unknown',
+        env: process.env.NODE_ENV || 'production',
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/api/results', async (req, res) => {
+    try {
+        const { date, resultId } = req.query;
+        const query = {};
+
+        if (date) query.drawDate = date;
+        if (resultId) query.resultId = resultId;
+
+        const results = await LotteryResult.find(query).sort({ drawDate: -1, country: 1, lotteryName: 1 });
+        res.json(results);
+    } catch (error) {
+        console.error("Error fetching results:", error);
+        res.status(500).json({ error: 'Failed to fetch results from DB' });
+    }
+});
+
+app.get('/api/tickets', async (req, res) => {
+    try {
+        const tickets = await Ticket.find({}).sort({ transactionDateTime: -1 }).limit(500);
+        res.json(tickets);
+    } catch (error) {
+        console.error("Error fetching tickets:", error);
+        res.status(500).json({ error: 'Failed to fetch tickets from DB' });
+    }
+});
+
+app.post('/api/tickets', async (req, res) => {
+    try {
+        const ticketData = req.body;
+        if (!ticketData.ticketNumber || !ticketData.plays || ticketData.plays.length === 0) {
+            return res.status(400).json({ message: 'Invalid ticket data provided.' });
+        }
+        const newTicket = new Ticket(ticketData);
+        await newTicket.save();
+        console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
+        res.status(201).json({ message: 'Ticket saved successfully.', ticketId: ticketData.ticketNumber });
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({ message: 'Ticket number already exists.' });
+        }
+        console.error('Error saving ticket:', error);
+        res.status(500).json({ message: 'An error occurred.', error: error.message });
+    }
+});
+
+app.get('/ver-db', async (req, res) => {
+    try {
+        const tickets = await Ticket.find({}).sort({ createdAt: -1 }).limit(50).lean();
+        const results = await LotteryResult.find({}).sort({ createdAt: -1 }).limit(50).lean();
+
+        let html = `
+        <html><body style="background:#111; color:#eee; font-family:monospace; padding:20px;">
+        <h1 style="color:#00ff00">Admin DB Viewer</h1>
+        <p>Status: <strong>${mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Disconnected ❌'}</strong></p>
+        <hr style="border-color:#333"/>
+        <h2>Last 50 Tickets</h2>
+        <div style="background:#222; padding:10px; border-radius:5px; overflow:auto; max-height:400px;">
+            <pre>${JSON.stringify(tickets, null, 2)}</pre>
+        </div>
+        <h2>Recent Results</h2>
+        <div style="background:#222; padding:10px; border-radius:5px; overflow:auto; max-height:400px;">
+            <pre>${JSON.stringify(results, null, 2)}</pre>
+        </div>
+        </body></html>`;
+        res.send(html);
+    } catch (e) {
+        res.status(500).send(e.message);
     }
 });
 

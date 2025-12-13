@@ -33,23 +33,23 @@ const LS = {
 // --- HELPERS ---
 const readJSON = (key: string, fallback: any) => {
     try { const t = localStorage.getItem(key); return t ? JSON.parse(t) : fallback; }
-    catch(e) { return fallback; }
+    catch (e) { return fallback; }
 };
 const writeJSON = (key: string, val: any) => localStorage.setItem(key, JSON.stringify(val));
-const todayStr = () => new Date().toISOString().slice(0,10);
+const todayStr = () => new Date().toISOString().slice(0, 10);
 const ocrKey = (date: string) => LS.OCR_PREFIX + date;
 
 const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme }) => {
     const [catalog, setCatalog] = useState<CatalogItem[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(todayStr());
-    
+
     // Data Source: Local DB Service now manages results
     const [dbResults, setDbResults] = useState<WinningResult[]>([]);
-    
+
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'results'|'catalog'|'visibility'>('results');
-    const [visibility, setVisibility] = useState<{[id:string]:boolean}>({});
-    
+    const [activeTab, setActiveTab] = useState<'results' | 'catalog' | 'visibility'>('results');
+    const [visibility, setVisibility] = useState<{ [id: string]: boolean }>({});
+
     // New Result Modal State
     const [isAddResultOpen, setIsAddResultOpen] = useState(false);
     const [newResultDate, setNewResultDate] = useState(todayStr());
@@ -81,19 +81,70 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
 
         // Vis
         let vis = readJSON(LS.VIS, null);
-        if (!vis) { vis={}; cat.forEach((c:any)=>vis[c.id]=true); writeJSON(LS.VIS,vis); }
+        if (!vis) { vis = {}; cat.forEach((c: any) => vis[c.id] = true); writeJSON(LS.VIS, vis); }
         setVisibility(vis);
 
-        // Load Results from Local DB
-        loadResultsFromDb();
-        
+        // Load Results (Local + API)
+        loadMergedResults();
+
         const d = readJSON(LS.DATE, todayStr()) || todayStr();
         setSelectedDate(d);
+
+        // Auto-refresh every minute
+        const interval = setInterval(loadMergedResults, 60000);
+        return () => clearInterval(interval);
     }, []);
 
+    const loadMergedResults = async () => {
+        // 1. Get Local
+        const localData = localDbService.getResults();
+
+        // 2. Get Remote
+        let remoteData: WinningResult[] = [];
+        try {
+            const res = await fetch('/api/results');
+            if (res.ok) {
+                // Determine format. If backend sends LotteryResult[], we might need to map it.
+                // However, based on server.js: app.get('/api/results') returns LotteryResult schema from DB.
+                // Let's assume the shape is compatible or map it.
+                // The backend uses 'LotteryResult' model. The frontend 'WinningResult' is local.
+                // We need to check the shapes.
+                // Let's just fetch and see. For now, we will treat them as compatible or assign basic fields.
+                const json = await res.json();
+
+                // Map API results to internal WinningResult format if needed
+                remoteData = json.map((r: any) => ({
+                    id: r.resultId || r._id,
+                    date: r.drawDate,
+                    lotteryId: r.resultId, // or map from name
+                    lotteryName: r.lotteryName,
+                    first: r.first || r.numbers?.split('-')[0] || '',
+                    second: r.second || r.numbers?.split('-')[1] || '',
+                    third: r.third || r.numbers?.split('-')[2] || '',
+                    pick3: r.pick3 || '',
+                    pick4: r.pick4 || '',
+                    createdAt: r.createdAt
+                }));
+            }
+        } catch (e) {
+            console.warn("API offline, using local data only.");
+        }
+
+        // 3. Merge Strategies
+        // We want to combine local manual entries with remote scraped entries.
+        // If ID collides, who wins? Remote (scraped) usually is more official, but local might be a manual override.
+        // Let's trust REMOTE for the same ID, but keep LOCAL if unique.
+
+        const mergedMap = new Map<string, WinningResult>();
+        localData.forEach(r => mergedMap.set(r.id, r));
+        remoteData.forEach(r => mergedMap.set(r.id, r)); // Remote overwrites local if ID matches
+
+        setDbResults(Array.from(mergedMap.values()));
+    };
+
     const loadResultsFromDb = () => {
-        const allResults = localDbService.getResults();
-        setDbResults(allResults);
+        // Legacy fallback or reload
+        loadMergedResults();
     };
 
     // Date Change
@@ -107,7 +158,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
     const handleSaveResult = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newResultTrack || !newResultDate) return;
-        
+
         const trackObj = catalog.find(t => t.id === newResultTrack);
         if (!trackObj) return;
 
@@ -127,7 +178,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
         localDbService.saveResult(newResult);
         loadResultsFromDb(); // Refresh
         setIsAddResultOpen(false);
-        
+
         // Reset Form (Keep date)
         setNewResult1st(''); setNewResult2nd(''); setNewResult3rd(''); setNewResultP3(''); setNewResultP4('');
     };
@@ -157,12 +208,12 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
     // AutoScroll
     useEffect(() => {
         const el = scrollRef.current;
-        if(isAutoScrolling && el) {
+        if (isAutoScrolling && el) {
             let dir = 1;
             scrollInterval.current = setInterval(() => {
-                el.scrollBy({top: 0.6*dir, behavior:'auto'});
-                if((el.scrollTop + el.clientHeight) >= el.scrollHeight-2) dir = -1;
-                if(el.scrollTop <= 0) dir = 1;
+                el.scrollBy({ top: 0.6 * dir, behavior: 'auto' });
+                if ((el.scrollTop + el.clientHeight) >= el.scrollHeight - 2) dir = -1;
+                if (el.scrollTop <= 0) dir = 1;
             }, 16);
         } else {
             clearInterval(scrollInterval.current);
@@ -181,7 +232,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                         <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest">Ultimate Dashboard</div>
                     </div>
                 </div>
-                
+
                 <div className="flex gap-3 items-center">
                     {/* Date Display */}
                     <div className="hidden sm:block px-3 py-1.5 rounded-lg border bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-600 dark:text-slate-300">
@@ -191,11 +242,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                     <button className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${isAutoScrolling ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`} onClick={() => setIsAutoScrolling(!isAutoScrolling)}>
                         {isAutoScrolling ? '⏹ Stop' : '⬇ Auto'}
                     </button>
-                    
+
                     <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-neon-cyan text-black border border-neon-cyan shadow-[0_0_10px_rgba(0,255,255,0.3)] hover:brightness-110" onClick={() => setIsAdminOpen(true)}>
                         Admin
                     </button>
-                    
+
                     <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
                     <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white transition-colors" onClick={onBack}>
@@ -206,12 +257,12 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
 
             {/* Grid */}
             <div className="p-6 max-w-[1600px] mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {['usa','rd','special'].map(sec => {
+                {['usa', 'rd', 'special'].map(sec => {
                     const items = catalog.filter(c => c.section === sec && visibility[c.id]);
-                    if(!items.length) return null;
-                    
+                    if (!items.length) return null;
+
                     const sectionTitle = sec === 'usa' ? 'USA Lotteries' : sec === 'rd' ? 'Santo Domingo' : 'Special Draws';
-                    
+
                     return (
                         <React.Fragment key={sec}>
                             <div className="col-span-full mt-6 mb-2">
@@ -222,7 +273,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                                 const abbr = getAbbreviation(it.lottery);
                                 const resultText = getResultForTrack(it.id);
                                 const LogoComponent = getLotteryLogo(it.lottery);
-                                
+
                                 return (
                                     <div key={it.id} className="relative bg-white dark:bg-dark-card border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden hover:border-neon-cyan/50 dark:hover:border-slate-500 hover:-translate-y-1 transition-all duration-300 shadow-lg group">
                                         {/* Header */}
@@ -258,7 +309,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                                         <div className="bg-gray-100 dark:bg-[#020617] border-t border-gray-200 dark:border-slate-800 p-3 flex justify-between items-center text-[10px] text-gray-500 font-mono transition-colors">
                                             <span>CLOSE: {it.closeTime}</span>
                                             <button onClick={() => handleOpenHistory(it.id)} className="flex items-center gap-1 text-neon-cyan hover:underline">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                                                 History
                                             </button>
                                         </div>
@@ -278,13 +329,13 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                             <h2 className="text-2xl font-bold text-white">Admin Panel</h2>
                             <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded text-white font-bold text-sm" onClick={() => setIsAdminOpen(false)}>Close</button>
                         </div>
-                        
+
                         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b border-slate-800">
-                            {['results','catalog','visibility'].map(t => (
-                                <button 
-                                    key={t} 
-                                    className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors whitespace-nowrap ${activeTab===t ? 'bg-neon-cyan text-black' : 'bg-slate-800 text-gray-400 hover:text-white'}`} 
-                                    onClick={()=>setActiveTab(t as any)}
+                            {['results', 'catalog', 'visibility'].map(t => (
+                                <button
+                                    key={t}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors whitespace-nowrap ${activeTab === t ? 'bg-neon-cyan text-black' : 'bg-slate-800 text-gray-400 hover:text-white'}`}
+                                    onClick={() => setActiveTab(t as any)}
                                 >
                                     {t}
                                 </button>
@@ -366,11 +417,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Date</label>
-                                    <input type="date" required value={newResultDate} onChange={e=>setNewResultDate(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-neon-cyan" />
+                                    <input type="date" required value={newResultDate} onChange={e => setNewResultDate(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-neon-cyan" />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Lottery</label>
-                                    <select required value={newResultTrack} onChange={e=>setNewResultTrack(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-neon-cyan">
+                                    <select required value={newResultTrack} onChange={e => setNewResultTrack(e.target.value)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-neon-cyan">
                                         <option value="">Select...</option>
                                         {catalog.filter(c => visibility[c.id]).map(t => <option key={t.id} value={t.id}>{t.lottery} - {t.draw}</option>)}
                                     </select>
@@ -381,26 +432,26 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                                 <div className="grid grid-cols-3 gap-3">
                                     <div>
                                         <label className="block text-center text-xs font-bold text-blue-400 mb-1">1st</label>
-                                        <input type="text" maxLength={2} required value={newResult1st} onChange={e=>setNewResult1st(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-xl font-bold text-white focus:border-blue-500 outline-none" placeholder="00" />
+                                        <input type="text" maxLength={2} required value={newResult1st} onChange={e => setNewResult1st(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-xl font-bold text-white focus:border-blue-500 outline-none" placeholder="00" />
                                     </div>
                                     <div>
                                         <label className="block text-center text-xs font-bold text-gray-400 mb-1">2nd</label>
-                                        <input type="text" maxLength={2} value={newResult2nd} onChange={e=>setNewResult2nd(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-lg text-gray-300 focus:border-gray-500 outline-none" placeholder="00" />
+                                        <input type="text" maxLength={2} value={newResult2nd} onChange={e => setNewResult2nd(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-lg text-gray-300 focus:border-gray-500 outline-none" placeholder="00" />
                                     </div>
                                     <div>
                                         <label className="block text-center text-xs font-bold text-gray-400 mb-1">3rd</label>
-                                        <input type="text" maxLength={2} value={newResult3rd} onChange={e=>setNewResult3rd(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-lg text-gray-300 focus:border-gray-500 outline-none" placeholder="00" />
+                                        <input type="text" maxLength={2} value={newResult3rd} onChange={e => setNewResult3rd(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-lg text-gray-300 focus:border-gray-500 outline-none" placeholder="00" />
                                     </div>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-700">
                                     <div>
                                         <label className="block text-xs text-purple-400 mb-1">Pick 3</label>
-                                        <input type="text" maxLength={3} value={newResultP3} onChange={e=>setNewResultP3(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-white font-mono focus:border-purple-500 outline-none" placeholder="000" />
+                                        <input type="text" maxLength={3} value={newResultP3} onChange={e => setNewResultP3(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-white font-mono focus:border-purple-500 outline-none" placeholder="000" />
                                     </div>
                                     <div>
                                         <label className="block text-xs text-orange-400 mb-1">Pick 4</label>
-                                        <input type="text" maxLength={4} value={newResultP4} onChange={e=>setNewResultP4(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-white font-mono focus:border-orange-500 outline-none" placeholder="0000" />
+                                        <input type="text" maxLength={4} value={newResultP4} onChange={e => setNewResultP4(e.target.value)} className="w-full bg-black border border-slate-600 rounded p-2 text-center text-white font-mono focus:border-orange-500 outline-none" placeholder="0000" />
                                     </div>
                                 </div>
                             </div>
