@@ -121,6 +121,10 @@ const TrackSchema = new mongoose.Schema({
     w4: String,
     // gap/step removed from persistence as they are dynamic
     createdAt: { type: Date, default: Date.now }
+}, {
+    // Critical for Serverless: Disable buffering to force immediate failure if not connected
+    bufferCommands: false,
+    autoCreate: false
 });
 
 const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
@@ -446,6 +450,7 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/results', async (req, res) => {
     try {
+        await connectDB(); // Critical: Ensure connection is ready before querying
         const { date, resultId } = req.query;
         const query = {};
 
@@ -462,6 +467,7 @@ app.get('/api/results', async (req, res) => {
 
 app.get('/api/tickets', async (req, res) => {
     try {
+        await connectDB();
         const tickets = await Ticket.find({}).sort({ transactionDateTime: -1 }).limit(500);
         res.json(tickets);
     } catch (error) {
@@ -472,6 +478,7 @@ app.get('/api/tickets', async (req, res) => {
 
 app.post('/api/tickets', async (req, res) => {
     try {
+        await connectDB();
         const ticketData = req.body;
         if (!ticketData.ticketNumber || !ticketData.plays || ticketData.plays.length === 0) {
             return res.status(400).json({ message: 'Invalid ticket data provided.' });
@@ -491,6 +498,7 @@ app.post('/api/tickets', async (req, res) => {
 
 app.get('/ver-db', async (req, res) => {
     try {
+        await connectDB();
         const tickets = await Ticket.find({}).sort({ createdAt: -1 }).limit(50).lean();
         const results = await LotteryResult.find({}).sort({ createdAt: -1 }).limit(50).lean();
 
@@ -518,6 +526,7 @@ app.get('/ver-db', async (req, res) => {
 // 1. SYNC (Bulk Save)
 app.post('/api/data/sync', async (req, res) => {
     try {
+        await connectDB();
         const { rows, userId } = req.body;
         if (!rows || !Array.isArray(rows)) return res.status(400).json({ error: "Invalid data format" });
 
@@ -551,6 +560,7 @@ app.post('/api/data/sync', async (req, res) => {
 // LOAD
 app.get('/api/data', async (req, res) => {
     try {
+        await connectDB();
         const userId = req.query.userId || 'default';
         const tracks = await Track.find({ userId });
 
@@ -575,6 +585,7 @@ app.get('/api/data', async (req, res) => {
 // SEARCH
 app.get('/api/data/search', async (req, res) => {
     try {
+        await connectDB();
         const { startDate, endDate, lottery, userId } = req.query;
         let query = { userId: userId || 'default' };
 
