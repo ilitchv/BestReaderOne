@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "rm -rf backend/node_modules && vite build",
     "vercel-build": "rm -rf backend/node_modules && vite build",
     "gcp-build": "npm run build",
     "start": "npm run build && node server.js",
