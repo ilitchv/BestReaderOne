@@ -20,7 +20,6 @@ const lotteryResultSchema = new mongoose.Schema({
     closeTime: { type: String }     // Display time e.g. "22:10"
 }, {
     timestamps: true,
-    bufferCommands: false, // Critical for Vercel: Fail fast if no connection
     autoCreate: false // Don't try to create collection if not exists (permissions issue often)
 });
 

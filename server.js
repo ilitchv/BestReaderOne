@@ -24,7 +24,7 @@ const BeastLedger = require('./models/BeastLedger'); // NEW
 
 const app = express();
 // Google Cloud Run injects the PORT environment variable
-const PORT = process.env.PORT || 8080;
+const PORT = parseInt(process.env.PORT) || 8080;
 
 // 1. Connect to Database (Lazy/Cached for Serverless)
 // Removed top-level fire-and-forget call
