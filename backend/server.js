@@ -132,7 +132,7 @@ const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 // --- AI CONFIGURATION ---
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
-const MODEL_NAME = 'gemini-2.0-flash'; // Updated to latest flash model if available, or 1.5-flash
+const MODEL_NAME = 'gemini-1.5-flash-latest'; // Use latest stable alias
 
 // ROOT API CHECK
 app.get('/api', (req, res) => {
@@ -217,7 +217,7 @@ app.post('/api/ai/interpret-ticket', async (req, res) => {
         };
         const textPart = { text: UPER_PROMPT_FOR_BEAST_READER };
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Safe default
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
         const result = await model.generateContent({
             contents: { role: "user", parts: [imagePart, textPart] },
@@ -277,7 +277,7 @@ app.post('/api/ai/interpret-text', async (req, res) => {
         `;
 
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: MODEL_NAME,
             systemInstruction: systemInstruction
         });
 
@@ -326,7 +326,7 @@ app.post('/api/ai/interpret-batch', async (req, res) => {
         Return strictly a JSON array of objects.
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
         const result = await model.generateContent({
             contents: { role: "user", parts: [imagePart, { text: prompt }] },
             generationConfig: {
@@ -370,7 +370,7 @@ app.post('/api/ai/interpret-results-image', async (req, res) => {
         2. Output JSON Array.
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
         const result = await model.generateContent({
             contents: { role: "user", parts: [imagePart, { text: prompt }] },
             generationConfig: {
@@ -408,7 +408,7 @@ app.post('/api/ai/interpret-results-text', async (req, res) => {
         OUTPUT JSON ARRAY.
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
         const result = await model.generateContent({
             contents: { role: "user", parts: [{ text: prompt }] },
             generationConfig: {
@@ -611,16 +611,30 @@ app.get('/api/data/search', async (req, res) => {
 });
 
 // GET /api/results (For Ultimate Dashboard)
+// GET /api/results (For Ultimate Dashboard & Admin Sync)
 app.get('/api/results', async (req, res) => {
     try {
         await connectDB();
-        const { country, date } = req.query;
+        const { country, date, startDate, endDate, limit } = req.query;
         let query = {};
 
         if (country) query.country = country; // Filter by USA, RD, etc.
-        if (date) query.drawDate = date;
 
-        const results = await LotteryResult.find(query).sort({ drawDate: -1, scrapedAt: -1 }).limit(100);
+        // Date Logic
+        if (date) {
+            query.drawDate = date;
+        } else if (startDate || endDate) {
+            query.drawDate = {};
+            if (startDate) query.drawDate.$gte = startDate;
+            if (endDate) query.drawDate.$lte = endDate;
+        }
+
+        const limitVal = parseInt(limit) || 100;
+
+        const results = await LotteryResult.find(query)
+            .sort({ drawDate: -1, scrapedAt: -1 })
+            .limit(limitVal);
+
         res.json(results);
     } catch (e) {
         res.status(500).json({ error: e.message });
