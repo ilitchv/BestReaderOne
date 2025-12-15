@@ -11,7 +11,7 @@ mongoose.set('strictQuery', false);
 mongoose.set('bufferCommands', false); // Disable buffering globally
 
 const cors = require('cors');
-const { GoogleGenAI, SchemaType: Type } = require("@google/genai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Import Models (Assuming models folder sits in root, so ../models)
 const Ticket = require('../models/Ticket');
@@ -131,7 +131,7 @@ const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 
 // --- AI CONFIGURATION ---
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-const genAI = new GoogleGenAI({ apiKey });
+const genAI = new GoogleGenerativeAI(apiKey);
 const MODEL_NAME = 'gemini-2.0-flash'; // Updated to latest flash model if available, or 1.5-flash
 
 // ROOT API CHECK
