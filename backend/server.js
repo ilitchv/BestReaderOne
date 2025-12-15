@@ -130,7 +130,8 @@ const TrackSchema = new mongoose.Schema({
 const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 
 // --- AI CONFIGURATION ---
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+const genAI = new GoogleGenAI({ apiKey });
 const MODEL_NAME = 'gemini-2.0-flash'; // Updated to latest flash model if available, or 1.5-flash
 
 // ROOT API CHECK
@@ -206,7 +207,7 @@ app.post('/api/ai/interpret-ticket', async (req, res) => {
     try {
         const { base64Image } = req.body;
         if (!base64Image) return res.status(400).json({ error: "Missing base64Image" });
-        if (!process.env.API_KEY) return res.status(500).json({ error: "Server API Key not configured" });
+        if (!apiKey) return res.status(500).json({ error: "Server API Key not configured" });
 
         const imagePart = {
             inlineData: {
@@ -606,6 +607,23 @@ app.get('/api/data/search', async (req, res) => {
         res.json(stats);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/results (For Ultimate Dashboard)
+app.get('/api/results', async (req, res) => {
+    try {
+        await connectDB();
+        const { country, date } = req.query;
+        let query = {};
+
+        if (country) query.country = country; // Filter by USA, RD, etc.
+        if (date) query.drawDate = date;
+
+        const results = await LotteryResult.find(query).sort({ drawDate: -1, scrapedAt: -1 }).limit(100);
+        res.json(results);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
