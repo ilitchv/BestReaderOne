@@ -11,7 +11,7 @@ mongoose.set('strictQuery', false);
 mongoose.set('bufferCommands', false); // Disable buffering globally
 
 const cors = require('cors');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenerativeAI, SchemaType: Type } = require("@google/generative-ai");
 
 // Import Models (Assuming models folder sits in root, so ../models)
 const Ticket = require('../models/Ticket');
