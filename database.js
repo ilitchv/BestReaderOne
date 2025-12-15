@@ -1,34 +1,51 @@
 const mongoose = require('mongoose');
 
-// Fallback to the known Atlas cluster if env var is missing
-// BUT relying on this fallback in Vercel often fails due to IP Whitelisting
 const DEFAULT_URI = "mongodb+srv://BeastBetTwo:Amiguito2468@beastbet.lleyk.mongodb.net/beastbetdb?retryWrites=true&w=majority&appName=Beastbet";
+const MONGODB_URI = process.env.MONGODB_URI || DEFAULT_URI;
 
-const connectDB = async () => {
-    try {
-        const uri = process.env.MONGODB_URI || DEFAULT_URI;
+if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable');
+}
 
-        console.log("🔌 Attempting to connect to MongoDB...");
-        // Log stripped URI for debug (hide password)
-        console.log(`Target: ${uri.split('@')[1] || 'Local/Malformatted'}`);
+/**
+ * Global is used here to maintain a cached connection across hot reloads
+ * in development. This prevents connections growing exponentially
+ * during API Route usage.
+ */
+let cached = global.mongoose;
 
-        const conn = await mongoose.connect(uri, {
-            serverSelectionTimeoutMS: 5000
-        });
-        console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    } catch (error) {
-        console.error(`❌ Error connecting to MongoDB: ${error.message}`);
-        // In serverless, we might want to throw so the request fails cleanly
-        // throw error; 
+if (!cached) {
+    cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+    if (cached.conn) {
+        console.log("✅ Using cached MongoDB connection");
+        return cached.conn;
     }
-};
 
-mongoose.connection.on('disconnected', () => {
-    console.log('⚠️ MongoDB disconnected');
-});
+    if (!cached.promise) {
+        const opts = {
+            bufferCommands: false, // Disable buffering to fail fast if not connected
+            serverSelectionTimeoutMS: 5000,
+        };
 
-mongoose.connection.on('connected', () => {
-    console.log('✅ MongoDB connected event received');
-});
+        console.log("🔌 Creating new MongoDB connection...");
+        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+            console.log("✅ New MongoDB connection established");
+            return mongoose;
+        });
+    }
+
+    try {
+        cached.conn = await cached.promise;
+    } catch (e) {
+        cached.promise = null;
+        console.error("❌ MongoDB Connection Error:", e);
+        throw e;
+    }
+
+    return cached.conn;
+}
 
 module.exports = connectDB;

@@ -26,13 +26,18 @@ const app = express();
 // Google Cloud Run injects the PORT environment variable
 const PORT = process.env.PORT || 8080;
 
-// 1. Connect to Database
-connectDB();
+// 1. Connect to Database (Lazy/Cached for Serverless)
+// Removed top-level fire-and-forget call
+// connectDB(); 
 
 // 2. Start Background Jobs
 try {
-    scraperService.startResultScheduler();
-    console.log("✅ Scraper service initialized");
+    if (process.env.NODE_ENV !== 'production') {
+        // Only run scraper scheduler in long-running processes, not serverless functions usually
+        // OR assume this server.js is also used for a worker
+        scraperService.startResultScheduler();
+        console.log("✅ Scraper service initialized");
+    }
 } catch (err) {
     console.error("⚠️ Failed to start scraper:", err);
 }
@@ -40,6 +45,23 @@ try {
 // 3. Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// DATABASE CONNECTION MIDDLEWARE
+// Ensures DB is connected before any route handler runs
+app.use(async (req, res, next) => {
+    // Skip for static files or non-api
+    if (req.path.startsWith('/api')) {
+        try {
+            await connectDB();
+            next();
+        } catch (e) {
+            console.error("MIDDLEWARE DB ERROR:", e);
+            res.status(500).json({ error: 'Database Connection Failed', details: e.message });
+        }
+    } else {
+        next();
+    }
+});
 
 // Logger Middleware
 app.use((req, res, next) => {
