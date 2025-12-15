@@ -41,7 +41,6 @@ async function connectDB() {
 
     // If execution reaches here, we need to create a new connection
     const opts = {
-        bufferCommands: false, // Disable buffering to fail fast
         serverSelectionTimeoutMS: 5000,
     };
 
