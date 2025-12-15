@@ -50,8 +50,24 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [selectedTracks, setSelectedTracks] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem(STORAGE_KEYS.TRACKS);
-            return saved ? JSON.parse(saved) : [];
-        } catch (e) { return []; }
+            const parsed = saved ? JSON.parse(saved) : [];
+
+            // Smart Default Logic if storage is empty
+            if (parsed.length === 0) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+
+                // Logic: Cutoff is roughly 2:30 PM (14:30)
+                // If it's before 14:30, select AM. Otherwise PM.
+                if (currentHour < 14 || (currentHour === 14 && currentMinute < 30)) {
+                    return ['New York AM'];
+                } else {
+                    return ['New York PM'];
+                }
+            }
+            return parsed;
+        } catch (e) { return ['New York PM']; }
     });
 
     const [selectedDates, setSelectedDates] = useState<string[]>(() => {
@@ -67,7 +83,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             return saved ? JSON.parse(saved) : [];
         } catch (e) { return []; }
     });
-    
+
     // --- PLAYBACK INITIALIZATION ---
     useEffect(() => {
         if (initialTicket) {
@@ -85,7 +101,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [selectedPlayIds, setSelectedPlayIds] = useState<number[]>([]);
     const [lastAddedPlayId, setLastAddedPlayId] = useState<number | null>(null);
     const [copiedWagers, setCopiedWagers] = useState<CopiedWagers | null>(null);
-    
+
     // Modals
     const [isOcrOpen, setIsOcrOpen] = useState(false);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -170,7 +186,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             boxAmount: null,
             comboAmount: null
         };
-        setPlays(prev => [...prev, newPlay]);
+        setPlays(prev => [newPlay, ...prev]);
         setLastAddedPlayId(newId);
     }, [plays.length]);
 
@@ -206,9 +222,9 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const updatePlay = (id: number, updatedPlay: Partial<Play>) => {
         setPlays(prev => prev.map(p => {
             if (p.id !== id) return p;
-            
+
             const merged = { ...p, ...updatedPlay };
-            
+
             // Auto-detect game mode if betNumber changed
             if (updatedPlay.betNumber !== undefined) {
                 const mode = determineGameMode(updatedPlay.betNumber, selectedTracks, pulitoPositions);
@@ -251,14 +267,14 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             boxAmount: p.boxAmount,
             comboAmount: p.comboAmount
         }));
-        
+
         if (result.detectedDate) {
             if (!selectedDates.includes(result.detectedDate)) {
                 setSelectedDates(prev => [...prev, result.detectedDate!].sort());
             }
         }
-        
-        setPlays(prev => [...prev, ...newPlays]);
+
+        setPlays(prev => [...newPlays, ...prev]);
     };
 
     const handleAddWizardPlays = (wizardPlays: WizardPlay[]) => {
@@ -270,7 +286,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             boxAmount: p.box,
             comboAmount: p.combo
         }));
-        setPlays(prev => [...prev, ...newPlays]);
+        setPlays(prev => [...newPlays, ...prev]);
         setIsWizardOpen(false);
     };
 
@@ -280,12 +296,12 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         if (selectedTracks.length === 0) errors.push("Select at least one track.");
         if (selectedDates.length === 0) errors.push("Select at least one date.");
         if (plays.length === 0) errors.push("Add at least one play.");
-        
-        const validPlays = plays.filter(p => 
-            p.betNumber && p.gameMode !== '-' && 
+
+        const validPlays = plays.filter(p =>
+            p.betNumber && p.gameMode !== '-' &&
             calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount) > 0
         );
-        
+
         // Validation Checks
         plays.forEach((p, idx) => {
             // 1. Single Action Generic Check
@@ -311,7 +327,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         if (selectedTracks.includes('New York Horses') && plays.some(p => p.gameMode === 'Venezuela')) {
             errors.push("Error: El track 'New York Horses' no admite jugadas tipo 'Venezuela'. Por favor elimine las jugadas de Venezuela o deseleccione Horses.");
         }
-        
+
         if (validPlays.length === 0 && plays.length > 0) errors.push("No valid plays found (check amounts or bet numbers).");
 
         if (errors.length > 0) {
@@ -321,16 +337,16 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         }
 
         if (validPlays.length < plays.length) {
-            if(!confirm(`Found ${plays.length - validPlays.length} invalid plays. Proceed with only valid plays?`)) return;
+            if (!confirm(`Found ${plays.length - validPlays.length} invalid plays. Proceed with only valid plays?`)) return;
         }
-        
+
         setIsTicketModalOpen(true);
     };
 
     const handleSaveTicketToDb = async (ticketData: any) => {
         setIsSaving(true);
         setLastSaveStatus(null);
-        
+
         // --- OPTIMIZATION: Remove Image for DB Storage ---
         // We create a lightweight payload without the Base64 image string to save space/bandwidth
         const { ticketImage, ...ticketDataForDb } = ticketData;
@@ -365,10 +381,10 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
 
     // Calculate totals
     const baseTotal = plays.reduce((sum, p) => sum + calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount), 0);
-    
+
     // Grand Total Logic Refinement for Single Action
     let effectiveTrackCount = selectedTracks.length;
-    
+
     const isSingleActionPresent = plays.some(p => p.gameMode.startsWith('Single Action'));
     const isPulitoSelected = selectedTracks.includes('Pulito');
     const otherUsaTracksCount = selectedTracks.filter(t => t !== 'Pulito' && t !== 'Venezuela').length;
@@ -383,23 +399,23 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     return (
         <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-gray-900 dark:text-gray-100 flex flex-col transition-colors duration-300">
             <Header theme={theme} toggleTheme={toggleTheme} onClose={onClose} onHome={onHome} />
-            
+
             <main className="flex-grow p-2 sm:p-4 overflow-y-auto space-y-4 max-w-7xl mx-auto w-full">
-                
+
                 {/* DatePicker */}
                 <DatePicker selectedDates={selectedDates} onDatesChange={setSelectedDates} />
 
                 {/* Tracks */}
-                <TrackSelector 
-                    selectedTracks={selectedTracks} 
-                    onSelectionChange={setSelectedTracks} 
+                <TrackSelector
+                    selectedTracks={selectedTracks}
+                    onSelectionChange={setSelectedTracks}
                     selectedDates={selectedDates}
                     pulitoPositions={pulitoPositions}
                     onPulitoPositionsChange={setPulitoPositions}
                 />
 
                 {/* Actions */}
-                <ActionsPanel 
+                <ActionsPanel
                     onAddPlay={handleAddPlay}
                     onDeleteSelected={handleDeleteSelected}
                     onReset={handleReset}
@@ -423,9 +439,9 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                             title={isMuted ? "Unmute" : "Mute"}
                         >
                             {isMuted ? (
-                                <svg data-lucide="volume-x" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/></svg>
+                                <svg data-lucide="volume-x" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" x2="17" y1="9" y2="15" /><line x1="17" x2="23" y1="9" y2="15" /></svg>
                             ) : (
-                                <svg data-lucide="volume-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                <svg data-lucide="volume-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg>
                             )}
                         </button>
                         <button
@@ -433,10 +449,10 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                             className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-neon-cyan transition-colors"
                             title="Prize Calculator"
                         >
-                            <svg data-lucide="calculator" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="14"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+                            <svg data-lucide="calculator" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="14" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>
                         </button>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 pr-2">
                         <div className={`w-2 h-2 rounded-full ${serverHealth === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                         <span className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">
@@ -446,7 +462,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 </div>
 
                 {/* Plays Table */}
-                <PlaysTable 
+                <PlaysTable
                     plays={plays}
                     updatePlay={updatePlay}
                     deletePlay={deletePlay}
@@ -460,19 +476,19 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 />
 
                 {/* Total Display - MOVED HERE (Restored Position) */}
-                <TotalDisplay 
-                    baseTotal={baseTotal} 
-                    trackMultiplier={trackMultiplier} 
-                    dateMultiplier={selectedDates.length} 
-                    grandTotal={grandTotal} 
+                <TotalDisplay
+                    baseTotal={baseTotal}
+                    trackMultiplier={trackMultiplier}
+                    dateMultiplier={selectedDates.length}
+                    grandTotal={grandTotal}
                 />
 
             </main>
 
             {/* Modals */}
-            <OcrModal 
-                isOpen={isOcrOpen} 
-                onClose={() => setIsOcrOpen(false)} 
+            <OcrModal
+                isOpen={isOcrOpen}
+                onClose={() => setIsOcrOpen(false)}
                 onSuccess={handleAddOcrResults}
                 interpretTicketImage={interpretTicketImage}
                 fileToBase64={fileToBase64}
@@ -523,7 +539,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 errors={validationErrors}
             />
 
-            <CalculatorModal 
+            <CalculatorModal
                 isOpen={isCalculatorOpen}
                 onClose={() => setIsCalculatorOpen(false)}
             />
