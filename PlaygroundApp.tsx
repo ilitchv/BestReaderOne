@@ -111,6 +111,9 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+    // Payment Flow State
+    const [isPaymentRequired, setIsPaymentRequired] = useState(false);
+
     // Ticket State
     const [ticketNumber, setTicketNumber] = useState('');
     const [isTicketConfirmed, setIsTicketConfirmed] = useState(false);
@@ -209,6 +212,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         setCopiedWagers(null);
         setLastAddedPlayId(null);
         setLastSaveStatus(null);
+        setIsPaymentRequired(false);
         setValidationErrors([]);
         setIsValidationErrorOpen(false);
 
@@ -369,7 +373,13 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             if (res.ok) {
                 setLastSaveStatus('success');
             } else {
-                setLastSaveStatus('error');
+                const errorData = await res.json();
+                if (res.status === 400 && (errorData.message === 'Insufficient funds' || errorData.message.includes('funds'))) {
+                    setIsPaymentRequired(true);
+                    setLastSaveStatus('error'); // Triggers retry UI, but we'll override in Modal with Payment UI
+                } else {
+                    setLastSaveStatus('error');
+                }
             }
         } catch (error) {
             console.error("Save failed", error);
@@ -531,6 +541,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 isSaving={isSaving}
                 serverHealth={serverHealth}
                 lastSaveStatus={lastSaveStatus}
+                isPaymentRequired={isPaymentRequired}
             />
 
             <ValidationErrorModal

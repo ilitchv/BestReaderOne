@@ -104,7 +104,8 @@ const CT_LABEL_RE = {
     Day: /(day(?:time)?)/i,
     Night: /(night)/i,
     Midday: /(midday|day(?:time)?)/i,
-    Evening: /(evening|night)/i
+    Evening: /(evening|night)/i,
+    Morning: /(morning)/i
 };
 
 function extractFirstInLatest($, n) {
@@ -182,6 +183,8 @@ function extractRowByLabel($, label, n) {
 }
 
 async function tryUrls(urls, label, n, tag) {
+    if (!urls || urls.length === 0) return { digits: null, date: null }; // Guard clause
+
     for (const u of urls) {
         try {
             const html = await fetchHtml(u);
@@ -191,6 +194,9 @@ async function tryUrls(urls, label, n, tag) {
             const isCtDedicated = /\/connecticut\/(midday|night)-[34]\//i.test(u) || (label === 'Night' && /\/connecticut\/play-[34]\//i.test(u));
             const isGA = /\/georgia\//i.test(u);
             const isGaDedicated = /\/georgia\/(midday-[34]|cash-[34](?:-evening)?\/?)$/i.test(u);
+
+            // Generic dedicated page check (if url ends in specific draw name)
+            const isDedicated = isCtDedicated || isGaDedicated || /morning|midday|evening|night/i.test(u.split('/').pop());
 
             let digits = null, date = null;
 
@@ -202,6 +208,10 @@ async function tryUrls(urls, label, n, tag) {
             } else if (isGA && isGaDedicated) {
                 digits = extractFirstInLatest($, n);
                 date = parseDateFromText($.root().text()) || null;
+            } else if (isDedicated) {
+                // Aggressive first match for dedicated pages
+                digits = extractFirstInLatest($, n);
+                date = parseDateFromText($.root().text());
             } else {
                 ({ digits, date } = extractByLabel($, label, n));
             }
@@ -216,41 +226,61 @@ async function tryUrls(urls, label, n, tag) {
 
 // ── Main Export ───────────────────────────────────────────────────────────
 async function scrapeState(stateKey, config) {
+    // 1. Define Jobs for Standard Draws
     const jobs = [
-        tryUrls(config.p3.mid.urls, config.p3.mid.label, 3, `${stateKey}.p3.mid`),
-        tryUrls(config.p3.eve.urls, config.p3.eve.label, 3, `${stateKey}.p3.eve`),
-        tryUrls(config.p4.mid.urls, config.p4.mid.label, 4, `${stateKey}.p4.mid`),
-        tryUrls(config.p4.eve.urls, config.p4.eve.label, 4, `${stateKey}.p4.eve`)
+        tryUrls(config.p3.mid?.urls, config.p3.mid?.label || 'Midday', 3, `${stateKey}.p3.mid`),
+        tryUrls(config.p3.eve?.urls, config.p3.eve?.label || 'Evening', 3, `${stateKey}.p3.eve`),
+        tryUrls(config.p4.mid?.urls, config.p4.mid?.label || 'Midday', 4, `${stateKey}.p4.mid`),
+        tryUrls(config.p4.eve?.urls, config.p4.eve?.label || 'Evening', 4, `${stateKey}.p4.eve`)
     ];
 
+    // 2. Add Night Support
     let hasNight = config.p3.ngt && config.p4.ngt;
     if (hasNight) {
         jobs.push(
             tryUrls(config.p3.ngt.urls, config.p3.ngt.label, 3, `${stateKey}.p3.ngt`),
             tryUrls(config.p4.ngt.urls, config.p4.ngt.label, 4, `${stateKey}.p4.ngt`)
         );
+    } else {
+        jobs.push(Promise.resolve({ digits: null, date: null }), Promise.resolve({ digits: null, date: null }));
+    }
+
+    // 3. Add Morning Support (Texas)
+    let hasMorning = config.p3.mor && config.p4.mor;
+    if (hasMorning) {
+        jobs.push(
+            tryUrls(config.p3.mor.urls, config.p3.mor.label, 3, `${stateKey}.p3.mor`),
+            tryUrls(config.p4.mor.urls, config.p4.mor.label, 4, `${stateKey}.p4.mor`)
+        );
+    } else {
+        jobs.push(Promise.resolve({ digits: null, date: null }), Promise.resolve({ digits: null, date: null }));
     }
 
     const results = await Promise.all(jobs);
     const ok = (s, n) => typeof s === 'string' && /^\d+$/.test(s) && s.length === n;
 
-    const [mid3, eve3, mid4, eve4, n3, n4] = hasNight ? results : [...results, { digits: null, date: null }, { digits: null, date: null }];
+    // Destructure results [Mid, Eve, Night, Morning]
+    const [mid3, eve3, mid4, eve4, n3, n4, mor3, mor4] = results;
 
-    const m3 = ok(mid3.digits, 3) ? mid3.digits : null;
-    const m4 = ok(mid4.digits, 4) ? mid4.digits : null;
-    const e3 = ok(eve3.digits, 3) ? eve3.digits : null;
-    const e4 = ok(eve4.digits, 4) ? eve4.digits : null;
-    const nn3 = ok(n3.digits, 3) ? n3.digits : null;
-    const nn4 = ok(n4.digits, 4) ? n4.digits : null;
+    const m3 = ok(mid3?.digits, 3) ? mid3.digits : null;
+    const m4 = ok(mid4?.digits, 4) ? mid4.digits : null;
+    const e3 = ok(eve3?.digits, 3) ? eve3.digits : null;
+    const e4 = ok(eve4?.digits, 4) ? eve4.digits : null;
+    const nn3 = ok(n3?.digits, 3) ? n3.digits : null;
+    const nn4 = ok(n4?.digits, 4) ? n4.digits : null;
+    const mo3 = ok(mor3?.digits, 3) ? mor3.digits : null;
+    const mo4 = ok(mor4?.digits, 4) ? mor4.digits : null;
 
-    const dateISO_midday = (m3 && m4) ? maxISO(mid3.date, mid4.date) : null;
-    const dateISO_evening = (e3 && e4) ? maxISO(eve3.date, eve4.date) : null;
-    const dateISO_night = (nn3 && nn4) ? maxISO(n3?.date, n4?.date) : null;
+    const dateISO_mid = (m3 && m4) ? maxISO(mid3.date, mid4.date) : null;
+    const dateISO_eve = (e3 && e4) ? maxISO(eve3.date, eve4.date) : null;
+    const dateISO_ngt = (nn3 && nn4) ? maxISO(n3?.date, n4?.date) : null;
+    const dateISO_mor = (mo3 && mo4) ? maxISO(mor3?.date, mor4?.date) : null;
 
     return {
-        midday: (m3 && m4) ? { p3: m3, w4: m4, date: dateISO_midday } : null,
-        evening: (e3 && e4) ? { p3: e3, w4: e4, date: dateISO_evening } : null,
-        night: (nn3 && nn4) ? { p3: nn3, w4: nn4, date: dateISO_night } : null
+        midday: (m3 && m4) ? { p3: m3, w4: m4, date: dateISO_mid } : null,
+        evening: (e3 && e4) ? { p3: e3, w4: e4, date: dateISO_eve } : null,
+        night: (nn3 && nn4) ? { p3: nn3, w4: nn4, date: dateISO_ngt } : null,
+        morning: (mo3 && mo4) ? { p3: mo3, w4: mo4, date: dateISO_mor } : null
     };
 }
 

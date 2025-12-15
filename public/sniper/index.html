@@ -586,6 +586,14 @@
                 </div>
             </div>
 
+            <!-- LATEST RESULTS TICKER (RD/USA) -->
+            <div id="latestResultsTicker"
+                class="mb-4 p-2 bg-slate-900/50 border border-slate-700 rounded-lg flex gap-4 overflow-x-auto items-center min-h-[50px] custom-scrollbar">
+                <div class="flex items-center gap-2 text-xs text-slate-500 animate-pulse px-2">
+                    <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span> Cargando Resultados en Vivo...
+                </div>
+            </div>
+
             <!-- CONTROL PANEL -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
@@ -1628,7 +1636,7 @@
         // --- CLOUD SYNC CONFIG ---
         // --- CLOUD SYNC CONFIG ---
         const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
-        const API_URL = isLocal ? 'http://localhost:3000/api' : '/api';
+        const API_URL = isLocal ? 'http://localhost:8080/api' : '/api';
 
         async function syncToCloud(rows, isManual = false) {
             try {
@@ -2332,7 +2340,15 @@
                     <select id="admLottery"
                         class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-white">
                         <option value="ALL">TODAS</option>
-                        <option value="Texas">Texas</option>
+                        <option value="New York">New York</option>
+                        <option value="Gana Mas">Gana Más (RD)</option>
+                        <option value="Loteria Nacional">Nacional (RD)</option>
+                        <option value="Loteka">Loteka (RD)</option>
+                        <option value="Quiniela Pale">Quiniela Palé (RD)</option>
+                        <option value="La Primera">La Primera (RD)</option>
+                        <option value="Lotedom">Lotedom (RD)</option>
+                        <option value="La Suerte">La Suerte (RD)</option>
+                        <option value="Loteria Real">Real (RD)</option>
                         <option value="Georgia">Georgia</option>
                         <option value="Florida">Florida</option>
                         <option value="New York">New York</option>
@@ -2347,10 +2363,18 @@
                         <option value="North Carolina">North Carolina</option>
                     </select>
                 </div>
+                <div class="flex items-end gap-2 text-white">
+                    <label
+                        class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1 cursor-pointer w-full justify-center">
+                        <span class="text-[9px] font-bold text-slate-400">DATA:</span>
+                        <input type="checkbox" id="admSourceToggle" class="accent-cyan-500 w-3 h-3">
+                        <span class="text-[9px] font-bold text-cyan-400">OFFICIAL</span>
+                    </label>
+                </div>
                 <div class="flex items-end">
                     <button onclick="admSearch()"
                         class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-1 rounded text-xs font-bold uppercase shadow-lg shadow-cyan-900/50 transition-all">
-                        🔍 Buscar en Nube
+                        🔍 Buscar
                     </button>
                 </div>
             </div>
@@ -2386,6 +2410,79 @@
     </div>
 
     <script>
+        // --- NEW RESULT INTEGRATION (RD/USA) ---
+        async function loadLatestResults() {
+            const ticker = document.getElementById('latestResultsTicker');
+            if (!ticker) return;
+
+            try {
+                // Fetch RD Results (Default view)
+                const res = await fetch(`${API_URL}/results?country=RD`);
+                if (!res.ok) throw new Error("API Error");
+                const data = await res.json(); // Array of LotteryResult
+
+                if (data.length === 0) {
+                    ticker.innerHTML = '<div class="text-[10px] text-slate-500 px-2">No hay resultados recientes.</div>';
+                    return;
+                }
+
+                ticker.innerHTML = '';
+
+                // Group by Lottery Name to show latest only per lottery
+                const uniqueLatest = [];
+                const seen = new Set();
+                data.forEach(r => {
+                    const key = r.lotteryName;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueLatest.push(r);
+                    }
+                });
+
+                uniqueLatest.forEach(r => {
+                    // Badge Color Logic
+                    let badgeColor = "bg-slate-700 text-slate-300";
+                    if (r.country === 'RD') badgeColor = "bg-blue-900/40 text-blue-300 border-blue-800";
+                    if (r.country === 'USA') badgeColor = "bg-red-900/40 text-red-300 border-red-800";
+
+                    // Format Numbers
+                    const p3 = r.pick3 || r.first || '—';
+                    const p4 = r.pick4 || (r.second && r.third ? r.second + r.third : '—');
+
+                    const el = document.createElement('div');
+                    el.className = `flex flex-col min-w-[100px] p-2 rounded border border-slate-700/50 bg-slate-800/50 flex-shrink-0`;
+                    el.innerHTML = `
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[9px] font-bold px-1 rounded border border-transparent ${badgeColor}">${r.lotteryName}</span>
+                            <span class="text-[8px] text-slate-500">${new Date(r.drawDate).toLocaleDateString()}</span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                             <div class="text-center">
+                                <div class="text-[8px] text-slate-500 uppercase">Major</div>
+                                <div class="text-sm font-bold font-mono text-white">${r.first || '--'}</div>
+                             </div>
+                             <div class="text-center">
+                                <div class="text-[8px] text-slate-500 uppercase">Pick3</div>
+                                <div class="text-sm font-bold font-mono text-purple-400">${r.pick3 || '--'}</div>
+                             </div>
+                             <div class="text-center">
+                                <div class="text-sm font-bold font-mono text-orange-400">${r.pick4 || '--'}</div>
+                                <div class="text-[8px] text-slate-500 uppercase">Win4</div>
+                             </div>
+                        </div>
+                    `;
+                    ticker.appendChild(el);
+                });
+
+            } catch (e) {
+                console.warn("Could not load latest results", e);
+                ticker.innerHTML = '<div class="text-[10px] text-red-500 px-2">Offline / Error de Carga</div>';
+            }
+        }
+
+        // Initial Load
+        window.addEventListener('load', loadLatestResults);
+
         // --- ADMIN MANAGER LOGIC ---
         function openAdminDataModal() {
             el('adminDataModal').classList.remove('hidden');
@@ -2409,24 +2506,54 @@
             const end = el('admEnd').value;
             const lot = el('admLottery').value;
             const userId = GLOBAL_ADMIN_ID;
+            const toggle = document.getElementById('admSourceToggle');
+            const isOfficial = toggle ? toggle.checked : false;
 
-            console.log("🔍 AdmSearch Triggered:", { start, end, lot, userId });
-            el('admStatus').textContent = "Buscando...";
+            console.log("🔍 AdmSearch Triggered:", { start, end, lot, userId, isOfficial });
+            el('admStatus').textContent = isOfficial ? "Buscando Resultados Oficiales..." : "Buscando Tracks Sniper...";
             el('admTableBody').innerHTML = '<tr><td colspan="4" class="p-4 text-center text-cyan-500 animate-pulse">Consultando MongoDB...</td></tr>';
 
             try {
-                const params = new URLSearchParams({ userId, startDate: start, endDate: end, lottery: lot || 'ALL' });
-                const url = `${API_URL}/data/search?${params}`;
+                let url;
+                if (isOfficial) {
+                    // Search Official Results Collection
+                    // Pass params to leverage backend filtering
+                    const searchParams = new URLSearchParams({
+                        limit: '500', // Fetch more to be safe
+                        startDate: start,
+                        endDate: end
+                    });
+
+                    // If specific lottery selected, client-side filter or backend? 
+                    // Backend supports 'country' but not fuzzy name search yet.
+                    // We'll filter name client-side.
+
+                    url = `${API_URL}/results?${searchParams.toString()}`;
+                } else {
+                    // Search Tracks (Existing)
+                    const params = new URLSearchParams({ userId, startDate: start, endDate: end, lottery: lot || 'ALL' });
+                    url = `${API_URL}/data/search?${params}`;
+                }
+
                 console.log("🔍 Fetching URL:", url);
 
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
-                const data = await res.json();
+                let data = await res.json();
+
+                // Client-side filtering
+                if (isOfficial) {
+                    // Filter by Lottery Name if selected
+                    if (lot && lot !== 'ALL') {
+                        data = data.filter(r => r.lotteryName.toLowerCase().includes(lot.toLowerCase()));
+                    }
+                }
+
                 console.log("✅ Search Result:", data);
 
                 admCachedRows = data;
-                renderAdmTable(data);
+                renderAdmTable(data, isOfficial);
                 el('admStatus').textContent = `${data.length} registros encontrados.`;
             } catch (e) {
                 console.error("❌ AdmSearch Error:", e);
@@ -2435,7 +2562,7 @@
             }
         }
 
-        function renderAdmTable(rows) {
+        function renderAdmTable(rows, isOfficial) {
             const tbody = el('admTableBody');
             tbody.innerHTML = '';
             if (rows.length === 0) {
@@ -2445,15 +2572,31 @@
             rows.forEach(r => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-800 hover:bg-slate-800/50";
-                tr.innerHTML = `
-                    <td class="p-2 text-slate-400">${new Date(r.date).toLocaleDateString()} ${r.time}</td>
-                    <td class="p-2 text-cyan-300 font-bold">${r.lottery}</td>
-                    <td class="p-2"><span class="text-amber-400">${r.p3}</span> / <span class="text-purple-400">${r.w4}</span></td>
-                    <td class="p-2 text-right gap-1 flex justify-end">
-                        <button onclick="admEdit('${r._id || r.id}')" class="text-cyan-500 hover:text-cyan-400 text-[10px] border border-cyan-900 px-1 rounded mr-1">EDIT</button>
-                        <button onclick="admDelete('${r._id || r.id}')" class="text-red-500 hover:text-red-400 text-[10px] border border-red-900 px-1 rounded">DEL</button>
-                    </td>
-                `;
+
+                if (isOfficial) {
+                    tr.innerHTML = `
+                        <td class="p-2 text-slate-400 font-mono text-[10px]">${new Date(r.drawDate).toLocaleDateString()}</td>
+                        <td class="p-2 text-cyan-300 font-bold text-xs">${r.lotteryName}</td>
+                        <td class="p-2 font-mono text-xs">
+                            <span class="text-white font-bold">${r.first || '--'}</span> | 
+                            <span class="text-purple-400">${r.pick3 || '--'}</span> | 
+                            <span class="text-orange-400">${r.pick4 || '--'}</span>
+                        </td>
+                        <td class="p-2 text-right gap-1 flex justify-end">
+                            <button class="text-slate-500 cursor-not-allowed text-[10px] border border-slate-700 px-1 rounded">LOCKED</button>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td class="p-2 text-slate-400">${new Date(r.date).toLocaleDateString()} ${r.time}</td>
+                        <td class="p-2 text-cyan-300 font-bold">${r.lottery}</td>
+                        <td class="p-2"><span class="text-amber-400">${r.p3}</span> / <span class="text-purple-400">${r.w4}</span></td>
+                        <td class="p-2 text-right gap-1 flex justify-end">
+                            <button onclick="admEdit('${r._id || r.id}')" class="text-cyan-500 hover:text-cyan-400 text-[10px] border border-cyan-900 px-1 rounded mr-1">EDIT</button>
+                            <button onclick="admDelete('${r._id || r.id}')" class="text-red-500 hover:text-red-400 text-[10px] border border-red-900 px-1 rounded">DEL</button>
+                        </td>
+                    `;
+                }
                 tbody.appendChild(tr);
             });
         }

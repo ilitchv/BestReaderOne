@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import type { Play, ServerHealth, WinningResult } from '../types';
 import { calculateRowTotal } from '../utils/helpers';
@@ -31,15 +30,17 @@ interface TicketModalProps {
     lastSaveStatus: 'success' | 'error' | null;
     variant?: 'default' | 'admin' | 'results-only';
     resultsContext?: WinningResult[]; // Optional context for Admin/User view to calculate winnings
+    isPaymentRequired?: boolean; // Payment Flow
 }
 
-const TicketModal: React.FC<TicketModalProps> = ({ 
-    isOpen, onClose, plays, selectedTracks, selectedDates, grandTotal, 
-    isConfirmed, setIsConfirmed, ticketNumber, setTicketNumber, 
+const TicketModal: React.FC<TicketModalProps> = ({
+    isOpen, onClose, plays, selectedTracks, selectedDates, grandTotal,
+    isConfirmed, setIsConfirmed, ticketNumber, setTicketNumber,
     ticketImageBlob, setTicketImageBlob, terminalId, cashierId,
     onSaveTicket, isSaving, serverHealth, lastSaveStatus,
     variant = 'default',
-    resultsContext = []
+    resultsContext = [],
+    isPaymentRequired = false
 }) => {
     const ticketContentRef = useRef<HTMLDivElement>(null);
     const qrCodeRef = useRef<HTMLDivElement>(null);
@@ -61,7 +62,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
         const length = 10;
         const randomValues = new Uint8Array(length);
         window.crypto.getRandomValues(randomValues);
-        
+
         let result = 'T-';
         for (let i = 0; i < length; i++) {
             result += chars[randomValues[i] % chars.length];
@@ -100,7 +101,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
         const newTicketNumber = generateSecureTicketId();
         setIsConfirmed(true);
         setTicketNumber(newTicketNumber);
-    
+
         setTimeout(async () => {
             const ticketElement = ticketContentRef.current;
             if (ticketElement && qrCodeRef.current) {
@@ -110,36 +111,36 @@ const TicketModal: React.FC<TicketModalProps> = ({
                     width: 128,
                     height: 128,
                 });
-                
+
                 await new Promise(resolve => setTimeout(resolve, 50));
 
                 try {
                     // --- Step 1: Capture High-Res for User ---
-                    const canvas = await html2canvas(ticketElement, { 
-                        scale: 3, 
+                    const canvas = await html2canvas(ticketElement, {
+                        scale: 3,
                         backgroundColor: '#ffffff',
                         useCORS: true,
                     });
-    
+
                     const { jsPDF } = jspdf;
-                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9);
                     const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
                     const pdfWidth = pdf.internal.pageSize.getWidth();
                     const pdfHeight = pdf.internal.pageSize.getHeight();
                     const imgProps = pdf.getImageProperties(imgData);
                     const aspectRatio = imgProps.height / imgProps.width;
-                    let finalImgWidth = pdfWidth - 20; 
+                    let finalImgWidth = pdfWidth - 20;
                     let finalImgHeight = finalImgWidth * aspectRatio;
                     if (finalImgHeight > pdfHeight - 20) {
                         finalImgHeight = pdfHeight - 20;
                         finalImgWidth = finalImgHeight / aspectRatio;
                     }
                     const x = (pdfWidth - finalImgWidth) / 2;
-                    const y = 10; 
+                    const y = 10;
                     pdf.addImage(imgData, 'JPEG', x, y, finalImgWidth, finalImgHeight);
                     const pdfBlob = pdf.output('blob');
                     setTicketImageBlob(pdfBlob);
-                    
+
                     // --- Step 1.5: Auto Download (Restore Legacy Behavior) ---
                     // Only auto-download if we are in default mode (transactional)
                     if (variant === 'default') {
@@ -162,28 +163,28 @@ const TicketModal: React.FC<TicketModalProps> = ({
                             totalAmount: calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount),
                             jugadaNumber: i + 1
                         })),
-                        ticketImage: optimizedImageBase64 
+                        ticketImage: optimizedImageBase64
                     };
-                    
+
                     onSaveTicket(ticketData);
-    
+
                 } catch (error) {
                     console.error("Error generating ticket image/pdf:", error);
                 }
             }
         }, 200);
     };
-    
+
     const handleRetrySave = async () => {
         const ticketElement = ticketContentRef.current;
         if (ticketElement) {
             try {
-                 const canvas = await html2canvas(ticketElement, { 
-                    scale: 1, 
+                const canvas = await html2canvas(ticketElement, {
+                    scale: 1,
                     backgroundColor: '#ffffff'
                 });
                 const optimizedImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                
+
                 const ticketData = {
                     ticketNumber: ticketNumber,
                     transactionDateTime: new Date(),
@@ -198,7 +199,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                     ticketImage: optimizedImageBase64
                 };
                 onSaveTicket(ticketData);
-            } catch(e) {
+            } catch (e) {
                 console.error("Retry failed", e);
             }
         }
@@ -245,7 +246,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
             'Florida AM': 'usa/fl/Midday', 'Florida PM': 'usa/fl/Evening',
             'Connect AM': 'usa/ct/Day', 'Connect PM': 'usa/ct/Night',
             'Pennsylvania AM': 'usa/pa/Day', 'Pennsylvania PM': 'usa/pa/Evening',
-            
+
             // USA New
             'Texas Morning': 'usa/tx/Morning', 'Texas Day': 'usa/tx/Day', 'Texas Evening': 'usa/tx/Evening', 'Texas Night': 'usa/tx/Night',
             'Maryland AM': 'usa/md/AM', 'Maryland PM': 'usa/md/PM',
@@ -271,7 +272,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
             'New York Horses': 'special/ny-horses/R1',
             'Brooklyn Midday': 'special/ny-bk/AM', 'Brooklyn Evening': 'special/ny-bk/PM',
             'Front Midday': 'special/ny-fp/AM', 'Front Evening': 'special/ny-fp/PM',
-            'Venezuela': 'special/venezuela', 
+            'Venezuela': 'special/venezuela',
             'Pulito': 'special/pulito',
         };
         return map[trackName];
@@ -283,10 +284,9 @@ const TicketModal: React.FC<TicketModalProps> = ({
 
     return (
         <div ref={modalRef} className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fade-in" onClick={onClose}>
-            <div 
-                className={`bg-light-card dark:bg-dark-card rounded-xl shadow-lg w-full flex flex-col overflow-hidden max-h-[85vh] transition-all duration-300 ${
-                    showAdminLayout ? 'max-w-6xl' : 'max-w-[350px]'
-                }`}
+            <div
+                className={`bg-light-card dark:bg-dark-card rounded-xl shadow-lg w-full flex flex-col overflow-hidden max-h-[85vh] transition-all duration-300 ${showAdminLayout ? 'max-w-6xl' : 'max-w-[350px]'
+                    }`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header (Fixed) */}
@@ -296,14 +296,14 @@ const TicketModal: React.FC<TicketModalProps> = ({
                         {isConfirmed && <span className="text-[10px] text-gray-500 uppercase font-bold">{formatTime()}</span>}
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-                        <svg data-lucide="x" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg data-lucide="x" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                     </button>
                 </div>
-                
+
                 {/* Content Area */}
                 <div className="flex-grow min-h-0 overflow-y-auto overscroll-contain bg-gray-50 dark:bg-black/20">
                     <div className={`h-full ${showAdminLayout && !showResultsOnly ? 'grid grid-cols-1 md:grid-cols-2' : ''}`}>
-                        
+
                         {/* LEFT COLUMN: VISUAL TICKET (THERMAL VIEW) */}
                         {/* Hidden entirely in 'results-only' mode */}
                         {!showResultsOnly && (
@@ -318,8 +318,8 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                     </div>
 
                                     <div className="space-y-2 mb-3 text-[11px]">
-                                        <p><span className="font-bold">BET DATES</span><br/>{selectedDates.join(', ')}</p>
-                                        <p><span className="font-bold">TRACKS</span><br/>{displayTracks.join(', ')}</p>
+                                        <p><span className="font-bold">BET DATES</span><br />{selectedDates.join(', ')}</p>
+                                        <p><span className="font-bold">TRACKS</span><br />{displayTracks.join(', ')}</p>
                                     </div>
 
                                     <div className="border-t border-b border-dashed border-gray-400 py-2">
@@ -352,7 +352,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                             </tbody>
                                         </table>
                                     </div>
-                                    
+
                                     <div className="text-center mt-4 space-y-2">
                                         <p className="font-bold text-base">GRAND TOTAL: ${grandTotal.toFixed(2)}</p>
                                         <div ref={qrCodeRef} className="flex justify-center pt-2 min-h-[128px]"></div>
@@ -368,7 +368,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                 <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Bet Dates</p>
-                                        <p className="text-white font-bold">{selectedDates.length > 2 ? `${selectedDates[0]} +${selectedDates.length-1}` : selectedDates.join(', ')}</p>
+                                        <p className="text-white font-bold">{selectedDates.length > 2 ? `${selectedDates[0]} +${selectedDates.length - 1}` : selectedDates.join(', ')}</p>
                                     </div>
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Tracks</p>
@@ -411,10 +411,10 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                 if (resultsContext.length > 0) {
                                                     selectedTracks.forEach(track => {
                                                         const resultId = getResultId(track);
-                                                        
+
                                                         // Iterate dates
                                                         selectedDates.forEach(d => {
-                                                            const result = resultsContext.find(r => 
+                                                            const result = resultsContext.find(r =>
                                                                 (r.lotteryId === resultId || r.lotteryName === track) && r.date === d
                                                             );
                                                             if (result) {
@@ -433,7 +433,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
 
                                                 let status = 'PENDING';
                                                 let badgeClass = 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50';
-                                                
+
                                                 if (isWinner) {
                                                     status = 'WINNER';
                                                     badgeClass = 'bg-green-500/20 text-green-400 border-green-500/50';
@@ -475,29 +475,60 @@ const TicketModal: React.FC<TicketModalProps> = ({
 
                 {/* Footer with Action Buttons (Fixed) */}
                 <div className="p-3 sm:p-4 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 space-y-3 bg-light-card dark:bg-dark-card z-10 pb-safe">
-                    
+
                     {/* CONFIRMED STATE (Step 2) */}
                     {isConfirmed ? (
                         <div className="space-y-3">
-                             {/* LARGE STATUS INDICATORS */}
+                            {/* LARGE STATUS INDICATORS */}
                             {isSaving && !showResultsOnly && (
                                 <div className="w-full bg-blue-500/20 border border-blue-500 rounded-lg p-3 text-center">
                                     <p className="text-sm text-blue-400 font-bold animate-pulse">Saving...</p>
                                 </div>
                             )}
-                            
+
                             {!isSaving && lastSaveStatus === 'success' && !showResultsOnly && (
                                 <div className="w-full bg-green-500/20 border border-green-500 rounded-lg p-3 text-center">
                                     <p className="text-sm text-green-500 font-bold flex items-center justify-center gap-2">
-                                        <svg data-lucide="check" className="w-4 h-4"/> Saved to Database
+                                        <svg data-lucide="check" className="w-4 h-4" /> Saved to Database
                                     </p>
                                 </div>
                             )}
 
-                            {!isSaving && lastSaveStatus === 'error' && !showResultsOnly && (
+                            {/* PAYMENT REQUIRED STATE */}
+                            {!isSaving && isPaymentRequired && !showResultsOnly && (
+                                <div className="w-full bg-yellow-500/20 border border-yellow-500 rounded-lg p-3 text-center space-y-3">
+                                    <p className="text-sm text-yellow-500 font-bold flex items-center justify-center gap-2">
+                                        <svg data-lucide="alert-circle" className="w-4 h-4" /> Insufficient Funds
+                                    </p>
+                                    <p className="text-xs text-gray-400">Your balance is too low for this ticket.</p>
+
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch('/api/payment/invoice', { method: 'POST' });
+                                                const data = await res.json();
+                                                if (data.checkoutLink) {
+                                                    window.open(data.checkoutLink, '_blank');
+                                                } else {
+                                                    alert('Error setting up payment.');
+                                                }
+                                            } catch (e) { console.error(e); alert('Connection failed'); }
+                                        }}
+                                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded shadow-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <svg data-lucide="bitcoin" className="w-4 h-4" /> Pay with Bitcoin
+                                    </button>
+
+                                    <button onClick={handleRetrySave} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded shadow-lg transition-colors">
+                                        Check Balance & Retry
+                                    </button>
+                                </div>
+                            )}
+
+                            {!isSaving && lastSaveStatus === 'error' && !isPaymentRequired && !showResultsOnly && (
                                 <div className="w-full bg-red-500/20 border border-red-500 rounded-lg p-3 text-center space-y-2">
                                     <p className="text-sm text-red-500 font-bold flex items-center justify-center gap-2">
-                                        <svg data-lucide="wifi-off" className="w-4 h-4"/> Failed (Offline)
+                                        <svg data-lucide="wifi-off" className="w-4 h-4" /> Failed (Offline)
                                     </p>
                                     <button onClick={handleRetrySave} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded shadow-lg transition-colors">
                                         RETRY
@@ -505,22 +536,10 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-3 w-full">
-                                {/* Renamed "Close Viewer" to "Done" per request */}
-                                <button onClick={onClose} className="w-full px-4 py-3 rounded-lg bg-gray-600 text-white font-bold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
-                                    {variant === 'default' ? 'Done' : 'Close Viewer'}
-                                </button>
-                                {/* Share Button - Hidden in Results Only Mode */}
-                                {!showResultsOnly && (
-                                    <button onClick={handleShare} disabled={!ticketImageBlob} className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-neon-cyan to-neon-pink text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                                        Share
-                                    </button>
-                                )}
-                            </div>
                         </div>
                     ) : (
-                    /* PRE-CONFIRM STATE (Step 1) */
-                         <div className="space-y-3">
+                        /* PRE-CONFIRM STATE (Step 1) */
+                        <div className="space-y-3">
                             {/* BIG VISIBLE SERVER STATUS */}
                             {!isOnline && (
                                 <div className="w-full bg-red-500/10 border border-red-500/50 rounded-lg p-2 flex items-center justify-center gap-2">
@@ -541,10 +560,24 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                 </button>
                                 {/* Renamed "Confirm" to "Print" per request */}
                                 <button onClick={handleConfirmAndPrint} className="w-full px-2 py-3 rounded-lg bg-neon-green text-black font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-sm">
-                                    <svg data-lucide="printer" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+                                    <svg data-lucide="printer" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" /></svg>
                                     Print
                                 </button>
                             </div>
+                        </div>
+                    )}
+
+                    {/* FOOTER BUTTONS (DONE / SHARE) - MOVED OUTSIDE OF CONDITIONS TO BE ALWAYS VISIBLE IF CONFIRMED */}
+                    {isConfirmed && (
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                            <button onClick={onClose} className="w-full px-4 py-3 rounded-lg bg-gray-600 text-white font-bold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+                                {variant === 'default' ? 'Done' : 'Close Viewer'}
+                            </button>
+                            {!showResultsOnly && (
+                                <button onClick={handleShare} disabled={!ticketImageBlob} className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-neon-cyan to-neon-pink text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                    Share
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

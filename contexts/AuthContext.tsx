@@ -1,17 +1,13 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { localDbService } from '../services/localDbService';
 
-// Define User Interface (Extensible for Firebase User later)
+// Define User Interface (Matches Server Model)
 export interface User {
-    id: string;
+    id: string; // MongoDB _id
     email: string;
     name: string;
     balance: number;
-    pendingBalance: number;
     role: 'user' | 'admin';
     status?: 'active' | 'suspended';
-    avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -20,6 +16,7 @@ interface AuthContextType {
     logout: () => void;
     isAuthenticated: boolean;
     loading: boolean;
+    refreshBalance: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,80 +25,96 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Helper to Fetch User Data
+    const fetchUser = async (userId: string) => {
+        try {
+            const res = await fetch(`/api/auth/me?userId=${userId}`, {
+                headers: { 'x-user-id': userId }
+            });
+            if (res.ok) {
+                const userData = await res.json();
+                // Map _id to id for frontend consistency logic
+                return { ...userData, id: userData.id || userData._id };
+            }
+        } catch (e) {
+            console.error("Auth Fetch Error", e);
+        }
+        return null;
+    };
+
     // Init: Check for persisted session
     useEffect(() => {
-        const storedUser = localStorage.getItem('beast_user_session');
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Session parse error", e);
-                localStorage.removeItem('beast_user_session');
+        const initAuth = async () => {
+            const storedUserId = localStorage.getItem('beast_user_id');
+            if (storedUserId) {
+                const userData = await fetchUser(storedUserId);
+                if (userData) {
+                    setUser(userData);
+                } else {
+                    localStorage.removeItem('beast_user_id'); // Invalid session
+                }
             }
-        }
-        setLoading(false);
+            setLoading(false);
+        };
+        initAuth();
     }, []);
 
     // --- REAL-TIME SYNC (THE HEARTBEAT) ---
-    // This allows the user's balance to update automatically if the Admin changes it
-    // while the user is still logged in.
+    // Polls the server every 5 seconds to keep balance updated
     useEffect(() => {
         if (!user) return;
 
-        const syncInterval = setInterval(() => {
-            // 1. Fetch fresh data from the "Server" (Local DB)
-            const allUsers = localDbService.getUsers();
-            const freshUser = allUsers.find(u => u.id === user.id);
-
+        const syncInterval = setInterval(async () => {
+            const freshUser = await fetchUser(user.id);
             if (freshUser) {
-                // 2. Check for discrepancies (Money or Status)
-                const hasBalanceChanged = freshUser.balance !== user.balance;
-                const hasPendingChanged = freshUser.pendingBalance !== user.pendingBalance;
-                const hasStatusChanged = freshUser.status !== user.status;
-
-                // 3. Update State if needed
-                if (hasBalanceChanged || hasPendingChanged || hasStatusChanged) {
-                    console.log(`♻️ Syncing User Data: Balance ${user.balance} -> ${freshUser.balance}`);
-                    setUser(freshUser);
-                    localStorage.setItem('beast_user_session', JSON.stringify(freshUser));
+                if (freshUser.balance !== user.balance) {
+                    console.log(`♻️ Syncing Balance: $${user.balance} -> $${freshUser.balance}`);
+                    setUser(prev => prev ? { ...prev, balance: freshUser.balance } : freshUser);
                 }
             } else {
-                // Edge case: User was deleted by admin while logged in
+                // Session invalid (e.g. user deleted)
                 logout();
             }
-        }, 2000); // Check every 2 seconds for snappier updates
+        }, 5000);
 
         return () => clearInterval(syncInterval);
-    }, [user]); // Re-establish listener if user object reference changes
+    }, [user?.id, user?.balance]); // Dep on primitives to avoid loops
 
     const login = async (email: string, pass: string): Promise<boolean> => {
-        // --- REAL MOCK LOGIC (LOCAL DB) ---
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Get fresh list of users from the service
-                const users = localDbService.getUsers();
-                // Find matching user (Case insensitive email, sensitive password)
-                const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: pass })
+            });
 
-                if (foundUser) {
-                    setUser(foundUser);
-                    localStorage.setItem('beast_user_session', JSON.stringify(foundUser));
-                    resolve(true);
-                } else {
-                    resolve(false);
-                }
-            }, 800); // Simulate network delay
-        });
+            if (res.ok) {
+                const userData = await res.json();
+                const normalizedUser = { ...userData, id: userData.id || userData._id };
+                setUser(normalizedUser);
+                localStorage.setItem('beast_user_id', normalizedUser.id);
+                return true;
+            }
+        } catch (e) {
+            console.error("Login Error", e);
+        }
+        return false;
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('beast_user_session');
-        // Clear specific app settings if needed, but keep tickets/results for now
+        localStorage.removeItem('beast_user_id');
+    };
+
+    const refreshBalance = async () => {
+        if (user) {
+            const fresh = await fetchUser(user.id);
+            if (fresh) setUser(fresh);
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, refreshBalance }}>
             {children}
         </AuthContext.Provider>
     );

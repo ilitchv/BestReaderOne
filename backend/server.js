@@ -132,7 +132,7 @@ const Track = mongoose.model('Track', TrackSchema, 'sniper_records');
 // --- AI CONFIGURATION ---
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
-const MODEL_NAME = 'gemini-1.5-flash-002'; // Specific stable version
+const MODEL_NAME = 'gemini-2.0-flash'; // Confirmed available model
 
 // ROOT API CHECK
 app.get('/api', (req, res) => {

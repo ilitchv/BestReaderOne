@@ -62,3 +62,11 @@ Este enfoque evita la navegación entre páginas y mantiene toda la experiencia 
 - **Tema Dual:** Soporta modo claro y oscuro.
 - **Estética "Neón" / Futurista:** Uso de colores vibrantes, gradientes y efectos de "glassmorphism".
 - **Feedback al Usuario:** Uso de modales para confirmaciones, errores y flujos de trabajo complejos. Animaciones para indicar estados de carga.
+
+## 6. Lecciones Aprendidas y Arquitectura de Despliegue (Critical)
+- **Monorepo Implícito:** Vercel trata la carpeta `backend/` como parte del todo. **NUNCA** crear `package.json` dentro de `backend/` si no es un monorepo real. Provoca conflictos de versión ("Doppelgänger Dependency").
+- **Mongoose Serverless:**
+  1. `bufferCommands: false` es obligatorio.
+  2. `await connectDB()` debe invocarse **dentro** de cada handler, no solo al inicio del archivo.
+  3. Los Schemas deben tener `bufferCommands: false` explícito.
+- **Limpieza de Cache:** En scripts de build, usar `rm -rf backend/node_modules` para evitar residuos zombies en Vercel.
