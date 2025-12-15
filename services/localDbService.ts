@@ -14,15 +14,15 @@ export const localDbService = {
         try {
             const existingStr = localStorage.getItem(TICKETS_KEY);
             const existing: TicketData[] = existingStr ? JSON.parse(existingStr) : [];
-            
+
             if (!existing.some((t) => t.ticketNumber === ticket.ticketNumber)) {
                 // Ensure plays have default payment status
-                const ticketWithMeta: TicketData = { 
-                    ...ticket, 
-                    syncStatus: 'local', 
+                const ticketWithMeta: TicketData = {
+                    ...ticket,
+                    syncStatus: 'local',
                     savedAt: new Date().toISOString(),
                     // FIX: Privacy - Detach from Demo User. Default to 'guest-session' if no user is logged in.
-                    userId: ticket.userId || 'guest-session', 
+                    userId: ticket.userId || 'guest-session',
                     plays: ticket.plays.map(p => ({ ...p, paymentStatus: 'unpaid' }))
                 };
                 const updated = [ticketWithMeta, ...existing];
@@ -38,12 +38,12 @@ export const localDbService = {
         try {
             const existingStr = localStorage.getItem(TICKETS_KEY);
             const tickets: TicketData[] = existingStr ? JSON.parse(existingStr) : [];
-            
+
             // Migration: Ensure userId and paymentStatus exist
             return tickets.map(t => ({
                 ...t,
                 // FIX: Privacy - Default old/orphan tickets to 'guest-session' instead of Demo User
-                userId: t.userId || 'guest-session', 
+                userId: t.userId || 'guest-session',
                 plays: t.plays.map(p => ({
                     ...p,
                     paymentStatus: p.paymentStatus || 'unpaid'
@@ -60,7 +60,7 @@ export const localDbService = {
         try {
             const tickets = localDbService.getTickets();
             const ticketIndex = tickets.findIndex(t => t.ticketNumber === ticketNumber);
-            
+
             if (ticketIndex !== -1) {
                 const ticket = tickets[ticketIndex];
                 let somethingChanged = false;
@@ -91,27 +91,27 @@ export const localDbService = {
         try {
             const existingStr = localStorage.getItem(RESULTS_KEY);
             let existing: WinningResult[] = existingStr ? JSON.parse(existingStr) : [];
-            
+
             // Check if exists to determine Action Type
             const previousIndex = existing.findIndex(r => r.id === result.id);
             const isUpdate = previousIndex !== -1;
-            
+
             // Remove existing result for same lottery+date if exists
             if (isUpdate) {
                 existing.splice(previousIndex, 1);
             }
-            
+
             const updated = [result, ...existing];
             localStorage.setItem(RESULTS_KEY, JSON.stringify(updated));
-            
+
             // LOG AUDIT
             localDbService.logAction({
                 id: Date.now().toString(),
                 timestamp: new Date().toISOString(),
                 action: isUpdate ? 'UPDATE' : 'CREATE',
                 targetId: result.id,
-                details: isUpdate 
-                    ? `Updated result for ${result.lotteryName} (${result.date}). New val: ${result.first}-${result.second}-${result.third}` 
+                details: isUpdate
+                    ? `Updated result for ${result.lotteryName} (${result.date}). New val: ${result.first}-${result.second}-${result.third}`
                     : `Created result for ${result.lotteryName} (${result.date}). Val: ${result.first}-${result.second}-${result.third}`,
                 user: 'Admin'
             });
@@ -138,7 +138,7 @@ export const localDbService = {
             if (existingStr) {
                 const existing: WinningResult[] = JSON.parse(existingStr);
                 const target = existing.find(r => r.id === id);
-                
+
                 if (target) {
                     const updated = existing.filter(r => r.id !== id);
                     localStorage.setItem(RESULTS_KEY, JSON.stringify(updated));
@@ -184,20 +184,20 @@ export const localDbService = {
         try {
             const usersStr = localStorage.getItem(USERS_KEY);
             let users: User[] = usersStr ? JSON.parse(usersStr) : [];
-            
+
             // MOCK DATA INITIALIZATION & MIGRATION
             // Check if we need to seed initial users or new demo users
             const hasDemo = users.some(u => u.id === 'u-12345');
             const hasMaria = users.some(u => u.id === 'u-maria');
-            
+
             if (!hasDemo || !hasMaria) {
                 const newUsers = [];
-                
+
                 if (!hasDemo) {
                     newUsers.push({
                         id: 'u-12345',
                         email: 'user@demo.com',
-                        password: '123', 
+                        password: '123',
                         name: 'Demo Player',
                         role: 'user',
                         status: 'active',
@@ -270,7 +270,7 @@ export const localDbService = {
             const users = localDbService.getUsers();
             const index = users.findIndex(u => u.id === user.id);
             let isNew = false;
-            
+
             if (index >= 0) {
                 users[index] = user;
             } else {
@@ -285,8 +285,8 @@ export const localDbService = {
                 timestamp: new Date().toISOString(),
                 action: isNew ? 'USER_CREATE' : 'USER_UPDATE',
                 targetId: user.id,
-                details: isNew 
-                    ? `Created new user: ${user.name} (${user.email})` 
+                details: isNew
+                    ? `Created new user: ${user.name} (${user.email})`
                     : `Updated profile for: ${user.name}`,
                 user: 'Admin'
             });
@@ -302,7 +302,7 @@ export const localDbService = {
         try {
             const users = localDbService.getUsers();
             const index = users.findIndex(u => u.id === userId);
-            
+
             if (index >= 0) {
                 const user = users[index];
                 const oldBalance = user.balance;
@@ -324,7 +324,7 @@ export const localDbService = {
                     timestamp: new Date().toISOString(),
                     action: type === 'WIN' ? 'PAYOUT' : 'FINANCE',
                     targetId: userId,
-                    details: `${type}: ${user.name}. Amt: $${amount.toFixed(2)}. Old: $${oldBalance.toFixed(2)} -> New: $${newBalance.toFixed(2)}. Note: ${note}`,
+                    details: `${type}: ${user.name}. Amt: $${(amount || 0).toFixed(2)}. Old: $${(oldBalance || 0).toFixed(2)} -> New: $${(newBalance || 0).toFixed(2)}. Note: ${note}`,
                     user: 'Admin',
                     amount: amount
                 });
@@ -344,7 +344,7 @@ export const localDbService = {
             const target = users.find(u => u.id === userId);
             const filtered = users.filter(u => u.id !== userId);
             localStorage.setItem(USERS_KEY, JSON.stringify(filtered));
-            
+
             // Audit Log
             if (target) {
                 localDbService.logAction({
@@ -384,7 +384,7 @@ export const localDbService = {
         localStorage.removeItem(USERS_KEY);
         // NOTE: AUDIT LOG IS NOT CLEARED HERE TO PRESERVE INTEGRITY
     },
-    
+
     getStats: () => {
         const tickets = localDbService.getTickets();
         const totalSales = tickets.reduce((acc, t) => acc + t.grandTotal, 0);

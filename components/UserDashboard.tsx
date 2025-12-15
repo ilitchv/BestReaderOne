@@ -141,7 +141,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                                         <div>
                                             <p className="text-gray-400 text-xs font-bold tracking-widest uppercase mb-1">Total Balance</p>
                                             <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg">
-                                                ${user.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                ${(user.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                             </h2>
                                         </div>
                                         <div className="p-2 bg-white/5 rounded-lg border border-white/10">
@@ -167,7 +167,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                                 <div className="bg-[#151e32] p-5 rounded-2xl border border-white/5 flex items-center justify-between">
                                     <div>
                                         <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">In Play (Pending)</p>
-                                        <p className="text-2xl font-bold text-yellow-400">${user.pendingBalance.toFixed(2)}</p>
+                                        <p className="text-2xl font-bold text-yellow-400">${(user.pendingBalance || 0).toFixed(2)}</p>
                                     </div>
                                     <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
@@ -249,7 +249,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                                                         <td className="p-4 text-white">{new Date(ticket.transactionDateTime).toLocaleDateString()}</td>
                                                         <td className="p-4 max-w-xs truncate">{ticket.tracks.filter(t => !['Venezuela', 'Pulito'].includes(t)).length > 2 ? `${ticket.tracks.filter(t => !['Venezuela', 'Pulito'].includes(t))[0]} +${ticket.tracks.filter(t => !['Venezuela', 'Pulito'].includes(t)).length - 1}` : ticket.tracks.filter(t => !['Venezuela', 'Pulito'].includes(t)).join(', ')}</td>
                                                         <td className="p-4 text-center">{ticket.plays.length}</td>
-                                                        <td className="p-4 text-right font-bold text-white">${ticket.grandTotal.toFixed(2)}</td>
+                                                        <td className="p-4 text-right font-bold text-white">${(ticket.grandTotal || 0).toFixed(2)}</td>
                                                         <td className="p-4 text-right">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); handlePlayback(ticket); }}

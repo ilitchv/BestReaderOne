@@ -212,7 +212,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
             try {
                 await navigator.share({
                     title: `Lotto Ticket ${ticketNumber}`,
-                    text: `Here is my ticket for a total of $${grandTotal.toFixed(2)}`,
+                    text: `Here is my ticket for a total of $${(grandTotal || 0).toFixed(2)}`,
                     files: [file],
                 });
             } catch (error) {
@@ -346,7 +346,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                         <td className="py-1 px-0 text-[11px] align-top !text-black text-right">{play.straightAmount ? play.straightAmount.toFixed(2) : '-'}</td>
                                                         <td className="py-1 px-0 text-[11px] align-top !text-black text-right">{play.boxAmount ? play.boxAmount.toFixed(2) : '-'}</td>
                                                         <td className="py-1 px-0 text-[11px] align-top !text-black text-right">{play.comboAmount ? play.comboAmount.toFixed(2) : '-'}</td>
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black text-right font-bold">${calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount).toFixed(2)}</td>
+                                                        <td className="py-1 px-0 text-[11px] align-top !text-black text-right font-bold">${(calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount) || 0).toFixed(2)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -354,7 +354,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                     </div>
 
                                     <div className="text-center mt-4 space-y-2">
-                                        <p className="font-bold text-base">GRAND TOTAL: ${grandTotal.toFixed(2)}</p>
+                                        <p className="font-bold text-base">GRAND TOTAL: ${(grandTotal || 0).toFixed(2)}</p>
                                         <div ref={qrCodeRef} className="flex justify-center pt-2 min-h-[128px]"></div>
                                         <p className="text-[10px] pt-2">Please check your ticket, no claims for errors.</p>
                                     </div>
@@ -376,7 +376,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                     </div>
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Grand Total</p>
-                                        <p className="text-green-400 font-bold text-lg">${grandTotal.toFixed(2)}</p>
+                                        <p className="text-green-400 font-bold text-lg">${(grandTotal || 0).toFixed(2)}</p>
                                     </div>
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Total Plays</p>
@@ -452,7 +452,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                         <td className="p-3 text-right font-mono">{play.boxAmount?.toFixed(2) || '-'}</td>
                                                         <td className="p-3 text-right font-mono">{play.comboAmount?.toFixed(2) || '-'}</td>
                                                         <td className="p-3 text-right font-bold text-white">
-                                                            ${calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount).toFixed(2)}
+                                                            ${(calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount) || 0).toFixed(2)}
                                                         </td>
                                                         <td className="p-3 text-center">
                                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}`}>
@@ -460,7 +460,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                             </span>
                                                         </td>
                                                         <td className="p-3 text-right font-bold text-green-400">
-                                                            {totalWin > 0 ? `$${totalWin.toFixed(2)}` : '-'}
+                                                            {totalWin > 0 ? `$${(totalWin || 0).toFixed(2)}` : '-'}
                                                         </td>
                                                     </tr>
                                                 );

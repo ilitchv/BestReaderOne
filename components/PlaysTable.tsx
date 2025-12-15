@@ -180,7 +180,7 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
     // Grey out if disabled to give visual feedback
     const disabledClasses = isDisabled ? "opacity-30 cursor-not-allowed bg-gray-200 dark:bg-gray-800" : "";
 
-    const tooltipText = isOverLimit && limit !== null ? `Max wager is $${limit.toFixed(2)}` : '';
+    const tooltipText = isOverLimit && limit !== null ? `Max wager is $${(Number(limit) || 0).toFixed(2)}` : '';
 
     return (
       <input
@@ -279,7 +279,7 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
                         className="w-full h-full p-1.5 rounded-md font-bold text-center hover:bg-neon-cyan/20 dark:hover:bg-neon-cyan/10 transition-colors flex items-center justify-center gap-2 group text-gray-900 dark:text-gray-200"
                         title="Copy wagers from this row"
                       >
-                        <span>${calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount).toFixed(2)}</span>
+                        <span>${(Number(calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount)) || 0).toFixed(2)}</span>
                         <svg data-lucide="copy" className="w-3 h-3 text-gray-400 dark:text-gray-500 group-hover:text-neon-cyan transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
                       </button>
                     </td>

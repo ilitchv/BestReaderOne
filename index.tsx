@@ -16,9 +16,9 @@ type Language = 'en' | 'es' | 'ht';
 const MainAppContent: React.FC = () => {
     const [view, setView] = useState<ViewState>('HOME');
     const [language, setLanguage] = useState<Language>('en');
-    const [theme, setTheme] = useState<'light'|'dark'>('dark');
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const { isAuthenticated, user, logout } = useAuth();
-    
+
     // Playback State: Holds ticket data to be loaded into Playground
     const [playbackTicket, setPlaybackTicket] = useState<TicketData | null>(null);
 
@@ -60,16 +60,16 @@ const MainAppContent: React.FC = () => {
         setPlaybackTicket(null); // Clear any previous playback data
         setView('PLAYGROUND');
     };
-    
+
     const handleClosePlayground = () => {
         setPlaybackTicket(null);
         if (isAuthenticated) {
             setView('USER_DASHBOARD');
         } else {
-            setView('PRODUCT'); 
+            setView('PRODUCT');
         }
     };
-    
+
     // Smart Navigation: If logged in, skip login page and go straight to dashboard
     const handleNavigateToProduct = () => {
         if (isAuthenticated) {
@@ -82,7 +82,7 @@ const MainAppContent: React.FC = () => {
     const handleNavigateToResults = () => setView('RESULTS');
     const handleBackToHome = () => setView('HOME');
     const handleAdminAccess = () => setView('ADMIN');
-    
+
     // Real Logout Action
     const handleUserLogout = () => {
         logout(); // 1. Clear Auth State
@@ -93,7 +93,7 @@ const MainAppContent: React.FC = () => {
         setPlaybackTicket(ticket);
         setView('PLAYGROUND');
     };
-    
+
     const toggleTheme = () => {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
@@ -101,8 +101,8 @@ const MainAppContent: React.FC = () => {
     return (
         <>
             {view === 'HOME' && (
-                <LandingPage 
-                    onNavigateToProduct={handleNavigateToProduct} 
+                <LandingPage
+                    onNavigateToProduct={handleNavigateToProduct}
                     onNavigateToResults={handleNavigateToResults}
                     language={language}
                     setLanguage={setLanguage}
@@ -113,7 +113,7 @@ const MainAppContent: React.FC = () => {
             )}
 
             {view === 'RESULTS' && (
-                <ResultsPage 
+                <ResultsPage
                     onBack={handleBackToHome}
                     theme={theme}
                     toggleTheme={toggleTheme}
@@ -121,8 +121,8 @@ const MainAppContent: React.FC = () => {
             )}
 
             {view === 'PRODUCT' && (
-                <ProductPage 
-                    onOpenPlayground={handleOpenPlayground} 
+                <ProductPage
+                    onOpenPlayground={handleOpenPlayground}
                     onBack={handleBackToHome}
                     language={language}
                     setLanguage={setLanguage}
@@ -132,9 +132,9 @@ const MainAppContent: React.FC = () => {
             )}
 
             {view === 'USER_DASHBOARD' && (
-                <UserDashboard 
+                <UserDashboard
                     onOpenPlayground={handleOpenPlayground}
-                    onLogout={handleUserLogout} 
+                    onLogout={handleUserLogout}
                     onHome={handleBackToHome}
                     onPlayback={handlePlayback}
                 />
@@ -142,10 +142,10 @@ const MainAppContent: React.FC = () => {
 
             {view === 'PLAYGROUND' && (
                 <div className="fixed inset-0 z-50 bg-light-bg dark:bg-dark-bg overflow-y-auto">
-                    <PlaygroundApp 
-                        onClose={handleClosePlayground} 
+                    <PlaygroundApp
+                        onClose={handleClosePlayground}
                         onHome={isAuthenticated ? () => setView('USER_DASHBOARD') : handleBackToHome}
-                        language={language} 
+                        language={language}
                         initialTicket={playbackTicket}
                     />
                 </div>
@@ -160,18 +160,22 @@ const MainAppContent: React.FC = () => {
     );
 };
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 const MainApp: React.FC = () => (
     <AuthProvider>
-        <MainAppContent />
+        <ErrorBoundary>
+            <MainAppContent />
+        </ErrorBoundary>
     </AuthProvider>
 );
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <MainApp />
-    </React.StrictMode>
-  );
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+        <React.StrictMode>
+            <MainApp />
+        </React.StrictMode>
+    );
 }

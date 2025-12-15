@@ -46,21 +46,10 @@ try {
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// DATABASE CONNECTION MIDDLEWARE
-// Ensures DB is connected before any route handler runs
-app.use(async (req, res, next) => {
-    // Skip for static files or non-api
-    if (req.path.startsWith('/api')) {
-        try {
-            await connectDB();
-            next();
-        } catch (e) {
-            console.error("MIDDLEWARE DB ERROR:", e);
-            res.status(500).json({ error: 'Database Connection Failed', details: e.message });
-        }
-    } else {
-        next();
-    }
+// DATABASE CONNECTION MIDDLEWARE REMOVED
+// We now connect explicitly in each route handler to ensure reliability in serverless environments.
+app.use((req, res, next) => {
+    next();
 });
 
 // Logger Middleware
@@ -75,7 +64,8 @@ app.use((req, res, next) => {
 // 4. API ROUTES (PRIORITY #1)
 // ==========================================
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+    await connectDB();
     const dbState = mongoose.connection.readyState;
     const statusMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
 
@@ -89,6 +79,7 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/results', async (req, res) => {
     try {
+        await connectDB();
         const { date, resultId } = req.query;
         const query = {};
         if (date) query.drawDate = date;
@@ -108,6 +99,7 @@ app.get('/api/results', async (req, res) => {
 // A. AUTHENTICATION (Simple Mock for Prototype)
 app.post('/api/auth/login', async (req, res) => {
     try {
+        await connectDB();
         const { email } = req.body;
         // In real app: verify password hash
         const user = await User.findOne({ email });
@@ -133,6 +125,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', async (req, res) => {
     try {
+        await connectDB();
         const userId = req.headers['x-user-id'] || req.query.userId;
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -154,6 +147,7 @@ app.get('/api/auth/me', async (req, res) => {
 // B. ADMIN CREDITS (Manual Top-up)
 app.post('/api/admin/credit', async (req, res) => {
     try {
+        await connectDB();
         const { adminId, targetUserId, amount, note } = req.body;
 
         // Verify Admin (Simple check)
@@ -178,6 +172,7 @@ app.post('/api/admin/credit', async (req, res) => {
 // C. TICKET CREATION (LEDGER PROTECTED)
 // Replaces the old /api/tickets logic for SECURE creation
 app.post('/api/tickets', async (req, res) => {
+    await connectDB();
     const session = await mongoose.startSession();
     try {
         const ticketData = req.body;
@@ -217,6 +212,7 @@ app.post('/api/tickets', async (req, res) => {
 // D. PAYMENT ROUTES (BTCPay)
 app.post('/api/payment/invoice', async (req, res) => {
     try {
+        await connectDB();
         const { amount, currency, orderId, buyerEmail } = req.body;
 
         // Default values for quick testing
@@ -240,6 +236,7 @@ app.post('/api/payment/invoice', async (req, res) => {
 });
 
 app.post('/api/payment/webhook', async (req, res) => {
+    await connectDB();
     // Verify Signature
     const signature = req.headers['btcpay-sig'];
     const isValid = require('./services/paymentService').verifyWebhook(req.body, signature);
@@ -266,6 +263,7 @@ app.post('/api/payment/webhook', async (req, res) => {
 
 // E. LEDGER AUDIT
 app.get('/api/ledger/verify', async (req, res) => {
+    await connectDB();
     const result = await ledgerService.verifyIntegrity();
     res.json(result);
 });
@@ -276,6 +274,7 @@ app.get('/api/ledger/verify', async (req, res) => {
 
 app.post('/api/data/sync', async (req, res) => {
     try {
+        await connectDB();
         const { userId, records } = req.body;
         if (!records || !Array.isArray(records)) return res.status(400).json({ error: 'Invalid payload' });
 
@@ -296,6 +295,7 @@ app.post('/api/data/sync', async (req, res) => {
 
 app.get('/api/data', async (req, res) => {
     try {
+        await connectDB();
         const { userId, limit } = req.query;
         const data = await Track.find({ userId: userId || 'default' }).sort({ date: -1, time: -1 }).limit(parseInt(limit) || 1000);
         res.json(data);
@@ -306,6 +306,7 @@ app.get('/api/data', async (req, res) => {
 
 app.post('/api/data/search', async (req, res) => {
     try {
+        await connectDB();
         const { query, limit } = req.body;
         const results = await Track.find(query || {}).sort({ date: -1, time: -1 }).limit(limit || 100);
         res.json(results);
@@ -316,6 +317,7 @@ app.post('/api/data/search', async (req, res) => {
 
 app.get('/api/data/search', async (req, res) => {
     try {
+        await connectDB();
         const { startDate, endDate, lottery, userId } = req.query;
         let query = { userId: userId || 'default' };
         if (startDate || endDate) {
@@ -337,6 +339,7 @@ app.get('/api/data/search', async (req, res) => {
 
 app.post('/api/data/entry', async (req, res) => {
     try {
+        await connectDB();
         const entry = req.body;
         if (!entry.id) return res.status(400).json({ error: 'ID required' });
         await Track.updateOne({ id: entry.id }, { $set: entry }, { upsert: true });
@@ -346,6 +349,7 @@ app.post('/api/data/entry', async (req, res) => {
 
 app.put('/api/data/:id', async (req, res) => {
     try {
+        await connectDB();
         await Track.updateOne({ id: req.params.id }, { $set: req.body });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -353,6 +357,7 @@ app.put('/api/data/:id', async (req, res) => {
 
 app.delete('/api/data/:id', async (req, res) => {
     try {
+        await connectDB();
         await Track.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -361,6 +366,7 @@ app.delete('/api/data/:id', async (req, res) => {
 // Admin DB Viewer
 app.get('/ver-db', async (req, res) => {
     try {
+        await connectDB();
         const tickets = await Ticket.find({}).sort({ createdAt: -1 }).limit(50).lean();
         const results = await LotteryResult.find({}).sort({ createdAt: -1 }).limit(50).lean(); // Fixed results
         const users = await User.find({}).lean();
