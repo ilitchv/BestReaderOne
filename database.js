@@ -19,23 +19,37 @@ if (!cached) {
 }
 
 async function connectDB() {
-    if (cached.conn) {
-        console.log("✅ Using cached MongoDB connection");
+    // Check if we have a connection AND it's actually ready (readyState 1 = connected)
+    if (cached.conn && mongoose.connection.readyState === 1) {
+        // console.log("✅ Using cached MongoDB connection");
         return cached.conn;
     }
 
-    if (!cached.promise) {
-        const opts = {
-            bufferCommands: false, // Disable buffering to fail fast if not connected
-            serverSelectionTimeoutMS: 5000,
-        };
-
-        console.log("🔌 Creating new MongoDB connection...");
-        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-            console.log("✅ New MongoDB connection established");
-            return mongoose;
-        });
+    // If we have a promise but connection isn't ready, await it
+    if (cached.promise) {
+        try {
+            // console.log("⏳ Awaiting existing connection promise...");
+            cached.conn = await cached.promise;
+            if (mongoose.connection.readyState === 1) {
+                return cached.conn;
+            }
+        } catch (e) {
+            console.error("⚠️ Cached promise failed, retrying...");
+            cached.promise = null; // Reset promise on failure
+        }
     }
+
+    // If execution reaches here, we need to create a new connection
+    const opts = {
+        bufferCommands: false, // Disable buffering to fail fast
+        serverSelectionTimeoutMS: 5000,
+    };
+
+    console.log("🔌 Creating new MongoDB connection...");
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+        console.log("✅ New MongoDB connection established");
+        return mongoose;
+    });
 
     try {
         cached.conn = await cached.promise;
