@@ -100,7 +100,12 @@ app.post('/api/auth/login', async (req, res) => {
             balance: user.balance
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error("❌ LOGIN ERROR:", e); // Log for Vercel Functions Console
+        res.status(500).json({
+            error: 'Server Error during Login',
+            details: e.message,
+            stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
+        });
     }
 });
 
