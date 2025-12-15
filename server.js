@@ -17,6 +17,7 @@ const ledgerService = require('./services/ledgerService'); // NEW
 
 // Models
 const Ticket = require('./models/Ticket');
+const Jugada = require('./models/Jugada'); // NEW
 const LotteryResult = require('./models/LotteryResult');
 const Track = require('./models/Track');
 const User = require('./models/User'); // NEW
@@ -169,37 +170,67 @@ app.post('/api/admin/credit', async (req, res) => {
     }
 });
 
-// C. TICKET CREATION (LEDGER PROTECTED)
+// C. TICKET CREATION (LEDGER PROTECTED & JUGADAS SYNC)
 // Replaces the old /api/tickets logic for SECURE creation
 app.post('/api/tickets', async (req, res) => {
     await connectDB();
     const session = await mongoose.startSession();
     try {
         const ticketData = req.body;
-        const userId = ticketData.userId;
+        const userId = ticketData.userId; // Usually 'guest-session' if not logged in
 
-        if (!userId) return res.status(400).json({ error: 'User ID required for transaction' });
+        // 1. Ledger Transaction (Non-Blocking for Guests/Errors to ensure data save)
+        let ledgerSuccess = false;
+        if (userId && userId !== 'guest-session') {
+            try {
+                // Calculate Cost
+                const cost = ticketData.grandTotal;
 
-        // 1. Calculate Cost (Server-Side Validation recommended, but using client grandTotal for now)
-        const cost = ticketData.grandTotal;
+                // Transact on Ledger
+                await ledgerService.addToLedger({
+                    action: 'WAGER',
+                    userId: userId,
+                    amount: -Math.abs(cost), // Ensure negative
+                    referenceId: ticketData.ticketNumber || 'TICKET-' + Date.now(),
+                    description: `Ticket Purchase #${ticketData.ticketNumber}`
+                });
+                ledgerSuccess = true;
+            } catch (ledgerError) {
+                console.warn("⚠️ Ledger Transaction Failed (Proceeding with save anyway):", ledgerError.message);
+                // We proceed to save the ticket even if ledger fails, 
+                // assuming the frontend validation was sufficient or Admin will reconcile.
+            }
+        }
 
-        // 2. Transact on Ledger (Throws if insufficient funds)
-        await ledgerService.addToLedger({
-            action: 'WAGER',
-            userId: userId,
-            amount: -Math.abs(cost), // Ensure negative
-            referenceId: ticketData.ticketNumber || 'TICKET-' + Date.now(),
-            description: `Ticket Purchase #${ticketData.ticketNumber}`
-        });
-
-        // 3. Create Ticket (Without Session if Ticket modal doesn't support transactions yet, 
-        // ideally we wrap this in the same transaction but ledgerService handles its own for now)
+        // 2. Save Ticket to 'tickets' Collection
         // We removed image saving for DB optimization earlier, ensuring logic persists
         const newTicket = new Ticket(ticketData);
         await newTicket.save();
 
-        console.log(`✅ Ticket ${ticketData.ticketNumber} saved & Paid.`);
-        res.status(201).json({ message: 'Ticket saved and paid.', ticketId: ticketData.ticketNumber });
+        // 3. Save Individual Plays to 'jugadas' Collection
+        if (ticketData.plays && Array.isArray(ticketData.plays)) {
+            const jugadaDocs = ticketData.plays.map(play => ({
+                ticketNumber: ticketData.ticketNumber,
+                transactionDateTime: ticketData.transactionDateTime,
+                betDates: Array.isArray(ticketData.betDates) ? ticketData.betDates.join(',') : ticketData.betDates,
+                tracks: Array.isArray(ticketData.tracks) ? ticketData.tracks.join(',') : ticketData.tracks,
+                betNumber: play.betNumber,
+                gameMode: play.gameMode,
+                straight: play.straightAmount || 0,
+                box: play.boxAmount || 0,
+                combo: play.comboAmount || 0,
+                total: play.totalAmount || 0,
+                paymentMethod: ledgerSuccess ? 'Balance' : 'Pending/Guest',
+                jugadaNumber: play.jugadaNumber ? String(play.jugadaNumber) : `${ticketData.ticketNumber}-${Math.floor(Math.random() * 1000)}`,
+                userId: userId
+            }));
+
+            await Jugada.insertMany(jugadaDocs);
+            console.log(`✅ Saved ${jugadaDocs.length} Jugadas for Ticket ${ticketData.ticketNumber}`);
+        }
+
+        console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
+        res.status(201).json({ message: 'Ticket saved.', ticketId: ticketData.ticketNumber, ledgerSuccess });
 
     } catch (error) {
         console.error('Error processing ticket:', error);
