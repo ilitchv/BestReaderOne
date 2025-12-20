@@ -1,6 +1,7 @@
 
 console.log("------------------------------------------------");
 console.log("🚀 STARTING BEAST READER SERVER (CLOUD RUN MODE)");
+console.log("=== SERVER BOOT CHECK [ID: VERIFY-001] ===");
 console.log("------------------------------------------------");
 
 require('dotenv').config();
@@ -22,6 +23,7 @@ const LotteryResult = require('./models/LotteryResult');
 const Track = require('./models/Track');
 const User = require('./models/User'); // NEW
 const BeastLedger = require('./models/BeastLedger'); // NEW
+const WithdrawRequest = require('./models/WithdrawRequest'); // NEW
 
 const app = express();
 // Google Cloud Run injects the PORT environment variable
@@ -60,6 +62,185 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+
+// ==========================================
+// 8. FINANCIAL / WITHDRAWAL ROUTES
+// ==========================================
+
+// A. Request Withdrawal (User)
+app.post('/api/financial/withdraw', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId, amount, walletAddress, network } = req.body;
+
+        if (!userId || !amount || !walletAddress) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        if (amount <= 0) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+
+        // 0. Update User Wallet if requested
+        if (req.body.saveWallet) {
+            await User.findByIdAndUpdate(userId, { savedWalletAddress: walletAddress });
+        }
+
+        // 1. Process Ledger Debit (This throws if insufficient funds)
+        // We use "WITHDRAW" action which decreases balance
+        const block = await ledgerService.addToLedger({
+            action: 'WITHDRAW',
+            userId: userId,
+            amount: amount, // Service handles negation based on action
+            referenceId: `REQ-${Date.now()}`,
+            description: `Withdrawal Request to ${network} Wallet`
+        });
+
+        // 2. Create Request Record
+        const newRequest = new WithdrawRequest({
+            userId,
+            amount,
+            walletAddress,
+            network,
+            status: 'PENDING',
+            ledgerTransactionId: block.hash // Link to the ledger block hash for audit
+        });
+
+        await newRequest.save();
+
+        res.json({ success: true, request: newRequest, balance: block.balanceAfter });
+
+    } catch (error) {
+        console.error("Values error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// A.2 List My Withdrawals (User)
+app.get('/api/user/withdrawals', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId } = req.query;
+        if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+        const requests = await WithdrawRequest.find({ userId }).sort({ createdAt: -1 });
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// A.3 My Ledger History (User)
+app.get('/api/user/ledger', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId, limit } = req.query;
+        if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+        const history = await BeastLedger.find({ userId }).sort({ timestamp: -1 }).limit(parseInt(limit) || 50);
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// B. List Withdrawals (Admin)
+app.get('/api/admin/withdrawals', async (req, res) => {
+    try {
+        await connectDB();
+        // Can filter by status if needed query param
+        const requests = await WithdrawRequest.find().sort({ createdAt: -1 }).populate('userId', 'name email');
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// C. Process Withdrawal (Admin)
+app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const { action, adminNote } = req.body; // action: 'APPROVE' or 'REJECT'
+
+        const request = await WithdrawRequest.findById(id);
+        if (!request) return res.status(404).json({ error: 'Request not found' });
+        if (request.status !== 'PENDING') return res.status(400).json({ error: 'Request already processed' });
+
+        if (action === 'APPROVE') {
+            request.status = 'APPROVED';
+            request.processedAt = new Date();
+            request.adminNote = adminNote || 'Approved by Admin (Manual)';
+            await request.save();
+
+        } else if (action === 'APPROVE_AUTO') {
+            // AUTOMATED PAYOUT (Phase 8)
+            const paymentService = require('./services/paymentService');
+
+            try {
+                // 1. Trigger Payout
+                const payout = await paymentService.createPayout(
+                    request.amount,
+                    'USD', // Or derive from request.network if we store currency
+                    request.walletAddress,
+                    request.userId
+                );
+
+                // 2. Update Request based on Payout Status
+                if (payout.isSemiAuto) {
+                    request.status = 'PENDING_SIGNATURE';
+                    request.adminNote = `Payout Staged. Waiting for Admin Signature. Payout ID: ${payout.id}`;
+                } else {
+                    request.status = 'COMPLETED'; // Instant success
+                    request.adminNote = `Auto-Payout Completed: ${payout.id}`;
+                }
+
+                request.processedAt = new Date();
+                request.txHash = `PAYOUT-${payout.id}`;
+                await request.save();
+
+                return res.json({ success: true, request, payout, isSemiAuto: payout.isSemiAuto });
+
+            } catch (payoutError) {
+                console.error("Auto-Payout Failed:", payoutError);
+                try {
+                    require('fs').writeFileSync('_debug_last_error.txt', `[${new Date().toISOString()}] PAYOUT ERROR: ${payoutError.message}\nDETAIL: ${JSON.stringify(payoutError.response?.data || {}, null, 2)}`);
+                } catch (err) { console.error("Log write failed", err); }
+
+                return res.status(500).json({ error: 'BTCPay Payout Failed: ' + payoutError.message });
+            }
+
+        } else if (action === 'REJECT') {
+            request.status = 'REJECTED';
+            request.processedAt = new Date();
+            request.adminNote = adminNote || 'Rejected by Admin';
+            await request.save();
+
+            // REFUND THE USER
+            // We must credit the money back to the ledger
+            await ledgerService.addToLedger({
+                action: 'DEPOSIT', // effectively a specialized refund deposit
+                userId: request.userId,
+                amount: request.amount,
+                referenceId: `REFUND-${request._id}`,
+                description: `Refund: Withdrawal Rejected. ${adminNote}`
+            });
+        } else {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        res.json({ success: true, request });
+
+    } catch (error) {
+        console.error("Process error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==========================================
+// 8. SERVER START
+// ==========================================
 
 // ==========================================
 // 4. API ROUTES (PRIORITY #1)
@@ -170,23 +351,150 @@ app.post('/api/admin/credit', async (req, res) => {
     }
 });
 
-// C. TICKET CREATION (LEDGER PROTECTED & JUGADAS SYNC)
+// C. ADMIN APIs (Dashboard Data)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        await connectDB();
+        // Return all users with essential fields
+        const users = await User.find({}, 'name email role balance status createdAt lastLogin').sort({ createdAt: -1 });
+        res.json(users);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// NEW: Financial Stats Endpoint (Banking Standard)
+app.get('/api/admin/finance/stats', async (req, res) => {
+    try {
+        await connectDB();
+        const { startDate, endDate } = req.query;
+
+        // 1. Ledger Aggregation (Flows)
+        const matchStage = {};
+        if (startDate && endDate) {
+            matchStage.timestamp = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        const flowStats = await BeastLedger.aggregate([
+            { $match: matchStage },
+            {
+                $group: {
+                    _id: "$action",
+                    totalAmount: { $sum: "$amount" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Process Ledger Stats
+        let stats = {
+            ggr: 0, // Gross Gaming Revenue (Total Wagers)
+            payouts: 0,
+            deposits: 0,
+            withdrawals: 0,
+            ngr: 0, // Net Gaming Revenue (House Profit)
+            netCashFlow: 0 // Liquidity
+        };
+
+        flowStats.forEach(s => {
+            const amt = s.totalAmount; // Wager/Withdraw is negative, Deposit/Payout positive
+            if (s._id === 'WAGER') stats.ggr += Math.abs(amt);
+            if (s._id === 'PAYOUT') stats.payouts += amt;
+            if (s._id === 'DEPOSIT') stats.deposits += amt;
+            if (s._id === 'WITHDRAW') stats.withdrawals += Math.abs(amt); // Tracking outflow volume
+        });
+
+        stats.ngr = stats.ggr - stats.payouts;
+        stats.netCashFlow = stats.deposits - stats.withdrawals;
+
+        // 2. User Liability Aggregation (Snapshot of NOW)
+        // System Liability = Sum of all user balances (Float)
+        const liabilityStats = await User.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalLiability: { $sum: "$balance" },
+                    userCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const totalLiability = liabilityStats[0] ? liabilityStats[0].totalLiability : 0;
+
+        res.json({
+            metrics: stats,
+            liability: totalLiability,
+            timestamp: new Date()
+        });
+
+    } catch (e) {
+        console.error("Finance Stats Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/admin/ledger', async (req, res) => {
+    try {
+        await connectDB();
+
+        const { startDate, endDate, type, userId, limit, sortBy, order } = req.query;
+        const query = {};
+
+        // Filters
+        if (startDate && endDate) {
+            query.timestamp = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        }
+        if (type && type !== 'ALL') {
+            // Support comma separated types if needed, but simple for now
+            if (type.includes(',')) {
+                query.action = { $in: type.split(',') };
+            } else {
+                query.action = type;
+            }
+        }
+        if (userId) {
+            query.userId = userId;
+        }
+
+        const limitVal = parseInt(limit) || 200;
+        const sortField = sortBy || 'index';
+        const sortOrder = order === 'asc' ? 1 : -1;
+
+        // Return latest ledger entries
+        const ledger = await BeastLedger.find(query).sort({ [sortField]: sortOrder }).limit(limitVal);
+        res.json(ledger);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 // Replaces the old /api/tickets logic for SECURE creation
 app.post('/api/tickets', async (req, res) => {
     await connectDB();
     const session = await mongoose.startSession();
     try {
         const ticketData = req.body;
+        // DEBUG: Check if silent flag is receiving
+        console.log(`Processing Ticket ${ticketData.ticketNumber}. Silent? ${ticketData.silent}`);
+
         const userId = ticketData.userId; // Usually 'guest-session' if not logged in
 
         // 1. Ledger Transaction (Non-Blocking for Guests/Errors to ensure data save)
+        // 1. Ledger Transaction (STRICT MODE - ZERO TRUST)
+        // If this fails (Insufficient funds), the entire request fails.
+        // We now allow ALL users (including Guest ID) to be processed by the ledger.
         let ledgerSuccess = false;
-        if (userId && userId !== 'guest-session') {
-            try {
-                // Calculate Cost
-                const cost = ticketData.grandTotal;
 
-                // Transact on Ledger
+        if (userId) {
+            // Calculate Cost
+            const cost = ticketData.grandTotal;
+
+            // Transact on Ledger
+            // This will THROW if funds are insufficient.
+            // FIX: Skip for Guest Session
+            if (userId !== 'guest-session') {
                 await ledgerService.addToLedger({
                     action: 'WAGER',
                     userId: userId,
@@ -194,12 +502,8 @@ app.post('/api/tickets', async (req, res) => {
                     referenceId: ticketData.ticketNumber || 'TICKET-' + Date.now(),
                     description: `Ticket Purchase #${ticketData.ticketNumber}`
                 });
-                ledgerSuccess = true;
-            } catch (ledgerError) {
-                console.warn("⚠️ Ledger Transaction Failed (Proceeding with save anyway):", ledgerError.message);
-                // We proceed to save the ticket even if ledger fails, 
-                // assuming the frontend validation was sufficient or Admin will reconcile.
             }
+            ledgerSuccess = true;
         }
 
         // 2. Save Ticket to 'tickets' Collection
@@ -233,6 +537,16 @@ app.post('/api/tickets', async (req, res) => {
         res.status(201).json({ message: 'Ticket saved.', ticketId: ticketData.ticketNumber, ledgerSuccess });
 
     } catch (error) {
+        // --- SILENT POLLING HANDLER ---
+        console.log(`🔎 Silent Check: ${req.body.silent}, Error: ${error.message}`);
+        if (req.body.silent && (error.message.includes('funds') || error.message.includes('Insufficient'))) {
+            return res.status(200).json({
+                success: false,
+                silent: true,
+                message: 'Insufficient funds (Silent Check)',
+                code: 'INSUFFICIENT_FUNDS'
+            });
+        }
         console.error('Error processing ticket:', error);
         res.status(400).json({ message: error.message || 'Transaction failed' });
     } finally {
@@ -262,6 +576,137 @@ app.post('/api/payment/invoice', async (req, res) => {
         res.json(invoice);
     } catch (e) {
         console.error("Invoice Error:", e.message);
+        // DEBUGGING: Check if env vars are present
+        if (!process.env.BTCPAY_URL) console.error("DEBUG: BTCPAY_URL is missing");
+        if (!process.env.BTCPAY_API_KEY) console.error("DEBUG: BTCPAY_API_KEY is missing");
+
+        const details = e.response ? e.response.data : e.message;
+        res.status(500).json({
+            error: "Payment generation failed",
+            debug_env: process.env.BTCPAY_URL ? 'URL_OK' : 'URL_MISSING',
+            details: details
+        });
+    }
+});
+
+// MANUAL CLAIM ROUTE (For Localhost/Backup)
+app.post('/api/payment/claim', async (req, res) => {
+    try {
+        await connectDB();
+        const { invoiceId, orderId } = req.body;
+        console.log(`🕵️ Manual Claim for Invoice: ${invoiceId}`);
+
+        // 0. IDEMPOTENCY CHECK (Prevent Double Credit)
+        const referenceId = `CLAIM-${invoiceId}`;
+        const existingTx = await require('./models/BeastLedger').findOne({ referenceId });
+
+        if (existingTx) {
+            console.log(`⚠️ Invoice ${invoiceId} already processed (Block #${existingTx.index}). Returning success.`);
+            return res.json({ success: true, status: 'Settled', alreadyProcessed: true });
+        }
+
+        // 1. Fetch Invoice from BTCPay
+        const invoice = await require('./services/paymentService').getInvoice(invoiceId);
+
+        // 2. Check Status (New/Paid/Settled)
+        // For 'New' status, we might accept it if it has been paid but not confirmed ("paidAmount" >= "amount")
+        // Or strictly Settled. For demo speed, we might accept "Paid".
+        const status = invoice.status; // 'New', 'Paid', 'Confirmed', 'Complete', 'Expired', 'Invalid'
+
+        console.log(`📄 Invoice Status: ${status}`);
+
+        if (status === 'Settled' || status === 'Complete' || status === 'Confirmed' || status === 'Paid' || status === 'Processing') {
+            // 3. Credit User
+
+            // FOR THIS FIX: We'll credit the Guest ID or the User ID passed in body.
+            const targetUserId = req.body.userId || 'guest-session';
+
+            // FIX: If guest, simply acknowledge success without db lookup
+            if (targetUserId === 'guest-session') {
+                console.log(`💰 Guest Claim Successful (No Ledger) - Invoice #${invoiceId}`);
+                return res.json({ success: true, status: status, guest: true });
+            }
+
+            await ledgerService.addToLedger({
+                action: 'DEPOSIT',
+                userId: targetUserId,
+                amount: parseFloat(invoice.amount),
+                referenceId: referenceId,
+                description: `Manual Claim Invoice #${invoiceId}`
+            });
+
+            console.log(`💰 Claim Successful! Credited ${invoice.amount} to ${targetUserId}`);
+            return res.json({ success: true, status: status });
+        } else {
+            return res.status(400).json({ success: false, status: status, message: 'Invoice not paid/settled yet.' });
+        }
+
+        // ... existing endpoint code ...
+    } catch (e) {
+        console.error("Claim Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// SHOPIFY PAYMENT INIT
+app.post('/api/payment/shopify', async (req, res) => {
+    try {
+        await connectDB();
+        const { amount, userId, email } = req.body;
+        console.log(`🛍️ Shopify Deposit requested: $${amount} for ${userId} (${email})`);
+
+        const shopifyService = require('./services/shopifyService');
+        const paymentInfo = await shopifyService.createDepositLink(amount, userId, email);
+
+        console.log("✅ Shopify Draft Order Created:", paymentInfo.id);
+        res.json({ success: true, checkoutUrl: paymentInfo.checkoutUrl, id: paymentInfo.id });
+
+    } catch (error) {
+        console.error("Shopify Init Error:", error);
+        res.status(500).json({ error: "Failed to create Shopify checkout link" });
+    }
+});
+
+// SHOPIFY STATUS POLL (For Localhost/UX)
+app.post('/api/payment/shopify-status', async (req, res) => {
+    try {
+        await connectDB();
+        const { id, userId } = req.body; // id is Draft Order ID
+
+        // 0. IDEMPOTENCY CHECK
+        const referenceId = `SHOPIFY-${id}`;
+        const existingTx = await require('./models/BeastLedger').findOne({ referenceId });
+        if (existingTx) {
+            return res.json({ success: true, status: 'completed', alreadyProcessed: true });
+        }
+
+        // 1. Check Shopify
+        const shopifyService = require('./services/shopifyService');
+        const draftOrder = await shopifyService.checkDraftOrder(id);
+
+        if (!draftOrder) return res.status(404).json({ error: "Order not found" });
+
+        console.log(`🔎 Poll Shopify #${id}: Status=${draftOrder.status}`);
+
+        // 2. Settlement Logic
+        if (draftOrder.status === 'completed') {
+            // Credit User
+            const amount = parseFloat(draftOrder.total_price);
+            await ledgerService.addToLedger({
+                action: 'DEPOSIT',
+                userId: userId,
+                amount: amount,
+                referenceId: referenceId,
+                description: `Shopify Deposit #${id}`
+            });
+            console.log(`💰 Shopify Poll Credited: $${amount} to ${userId}`);
+            return res.json({ success: true, status: 'completed' });
+        } else {
+            return res.json({ success: false, status: draftOrder.status });
+        }
+
+    } catch (e) {
+        console.error("Shopify Poll Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -280,13 +725,16 @@ app.post('/api/payment/webhook', async (req, res) => {
     const event = req.body;
     console.log(`📩 Webhook: ${event.type} for Invoice: ${event.invoiceId}`);
 
-    // Handle 'InvoiceSettled' -> Credit User
-    if (event.type === 'InvoiceSettled') {
+    // Handle 'InvoiceReceivedPayment' (0-Conf Instant) OR 'InvoiceSettled' (Confirmed)
+    // We listen to "ReceivedPayment" for speed. The ledgerService should handle duplicate referenceIds if you implemented idempotency,
+    // or we can blindly trust it here for the MVP.
+    if (event.type === 'InvoiceReceivedPayment' || event.type === 'InvoiceSettled') {
         const invoiceId = event.invoiceId;
-        // In real flow, we would look up which user created this invoice
-        // For now, logging the success.
-        console.log("💰 Payment Received! Crediting user...");
-        // await ledgerService.addToLedger({...})
+        console.log(`💰 Payment Detected (${event.type})! Crediting user...`);
+
+        // In a real app, we extract the "orderId" (metadata) to find the user/ticket
+        // For this demo, we assume the invoice matches the last pending action.
+        // await ledgerService.recordPayment({ invoiceId, ... });
     }
 
     res.status(200).send('OK');

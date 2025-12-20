@@ -8,7 +8,10 @@ import UserSettingsModal from './UserSettingsModal';
 import ReferralTree from './ReferralTree';
 import ReferralLinkModal from './ReferralLinkModal';
 import RegistrationModal from './RegistrationModal';
-import SniperFrame from './SniperFrame';
+import SniperFrame from './SniperFrame'; // RESTORED
+import { DepositModal } from './DepositModal'; // NEW
+import { WithdrawModal } from './WithdrawModal'; // NEW
+import { TransactionHistory } from './TransactionHistory'; // NEW
 
 interface UserDashboardProps {
     onOpenPlayground: () => void;
@@ -25,9 +28,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
 
     // New Modal States
     const [isReferralLinkOpen, setIsReferralLinkOpen] = useState(false);
+
     const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'referrals' | 'strategy'>('dashboard');
+    // Transaction Modals
+    const [isDepositOpen, setIsDepositOpen] = useState(false);
+    const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'referrals' | 'strategy' | 'history'>('dashboard');
     const [allResults, setAllResults] = useState<WinningResult[]>([]);
     const [refreshTreeKey, setRefreshTreeKey] = useState(0); // Trigger tree refresh
 
@@ -74,7 +82,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                         </div>
                     </div>
 
-                    {/* Desktop Navigation Tabs */}
                     <div className="hidden md:flex gap-1 bg-white/5 p-1 rounded-lg">
                         <button
                             onClick={() => setActiveTab('dashboard')}
@@ -87,6 +94,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                             className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'referrals' ? 'bg-neon-cyan text-black shadow' : 'text-gray-400 hover:text-white'}`}
                         >
                             My Network
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-neon-cyan text-black shadow' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            History
                         </button>
                     </div>
 
@@ -150,11 +163,11 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                                     </div>
 
                                     <div className="flex gap-4 mt-8">
-                                        <button className="px-6 py-3 bg-neon-cyan text-black font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 transition-all flex items-center gap-2">
+                                        <button onClick={() => { console.log('Deposit Clicked'); setIsDepositOpen(true); }} className="px-6 py-3 bg-neon-cyan text-black font-bold rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 transition-all flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14" /><path d="m5 12 7-7 7 7" /></svg>
                                             Deposit
                                         </button>
-                                        <button className="px-6 py-3 bg-white/5 text-white font-bold rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2">
+                                        <button onClick={() => setIsWithdrawOpen(true)} className="px-6 py-3 bg-white/5 text-white font-bold rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></svg>
                                             Withdraw
                                         </button>
@@ -347,7 +360,29 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
             <RegistrationModal
                 isOpen={isRegistrationOpen}
                 onClose={() => setIsRegistrationOpen(false)}
+
                 sponsorId={user.id} // User self-simulates, so they are the sponsor
+            />
+
+            <DepositModal
+                isOpen={isDepositOpen}
+                onClose={() => setIsDepositOpen(false)}
+                userEmail={user.email}
+                userId={user.id}
+                onSuccess={(amount) => {
+                    console.log(`Deposit of $${amount} successful. Reloading...`);
+                    window.location.reload();
+                }}
+            />
+
+            <WithdrawModal
+                isOpen={isWithdrawOpen}
+                onClose={() => setIsWithdrawOpen(false)}
+                userId={user.id}
+                availableBalance={user.balance || 0}
+                onSuccess={(amount) => {
+                    // Update UI locally or reload
+                }}
             />
         </div>
     );

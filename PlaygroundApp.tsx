@@ -344,6 +344,13 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             if (!confirm(`Found ${plays.length - validPlays.length} invalid plays. Proceed with only valid plays?`)) return;
         }
 
+        // --- FIX: RESET STATE BEFORE OPENING ---
+        setIsTicketConfirmed(false);
+        setTicketNumber('');
+        setIsPaymentRequired(false);
+        setLastSaveStatus(null);
+        // ---------------------------------------
+
         setIsTicketModalOpen(true);
     };
 
@@ -355,10 +362,11 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         // We create a lightweight payload without the Base64 image string to save space/bandwidth
         const { ticketImage, ...ticketDataForDb } = ticketData;
 
-        // INJECT USER ID (Or 'guest-session' if null)
+        // INJECT USER ID (Or Guest ID if null)
+        const GUEST_ID = 'guest-session';
         const finalTicketData = {
             ...ticketDataForDb,
-            userId: user ? user.id : 'guest-session'
+            userId: user ? user.id : GUEST_ID
         };
 
         // Save locally (redundancy) - also lightweight
@@ -370,19 +378,51 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(finalTicketData)
             });
+            const data = await res.json();
+
+            // SUCCESS or SILENT FAILURE (200 OK)
             if (res.ok) {
+                // Check if it's a "Silent Error" (handled insufficiency)
+                if (data.silent) {
+                    if (data.code === 'INSUFFICIENT_FUNDS') {
+                        setIsPaymentRequired(true);
+                        // We don't log error, effectively silencing the console spam
+                    }
+                    return;
+                }
+
+                // --- SUCCESS: Payment Confirmed / Balance OK ---
                 setLastSaveStatus('success');
+                setIsPaymentRequired(false); // <--- UNLOCK UI: Explicitly clear payment lock
+
+                // --- BEAST LEDGER TRANSACTION ---
+                // We record the WAGER in the immutable ledger immediately after server confirmation
+                await localDbService.addToLedger({
+                    action: 'WAGER',
+                    userId: user ? user.id : GUEST_ID,
+                    amount: -finalTicketData.grandTotal, // Negative amount for wager
+                    details: `Ticket Purchase #${finalTicketData.ticketNumber}`
+                });
+                console.log("🔗 Wager recorded in Beast Ledger");
+
             } else {
-                const errorData = await res.json();
-                if (res.status === 400 && (errorData.message === 'Insufficient funds' || errorData.message.includes('funds'))) {
+                // REAL ERRORS (400, 500, etc.)
+                if (res.status === 400 && (data.message === 'Insufficient funds' || data.message.includes('funds'))) {
                     setIsPaymentRequired(true);
-                    setLastSaveStatus('error'); // Triggers retry UI, but we'll override in Modal with Payment UI
+                    setLastSaveStatus('error');
                 } else {
                     setLastSaveStatus('error');
+                    console.error("Server Error:", data);
                 }
             }
-        } catch (error) {
-            console.error("Save failed", error);
+        } catch (error: any) {
+            // Silence "Insufficient Funds" errors if they slipped through as 400s
+            // (Typically handled by the silent check above, but for catch-all safety)
+            if (error?.message?.includes('funds') || error?.message?.includes('Insufficient')) {
+                // Do nothing (silent)
+            } else {
+                console.error("Save failed", error);
+            }
             setLastSaveStatus('error');
         } finally {
             setIsSaving(false);
@@ -542,6 +582,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 serverHealth={serverHealth}
                 lastSaveStatus={lastSaveStatus}
                 isPaymentRequired={isPaymentRequired}
+                userId={user ? user.id : 'guest-session'}
             />
 
             <ValidationErrorModal

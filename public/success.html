@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            background-color: #2d2d2d;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+            width: 400px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        h1 {
+            color: #4ade80;
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 1s infinite alternate;
+        }
+
+        p {
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            color: #d1d5db;
+            font-size: 1.1rem;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="icon">🎉</div>
+        <h1>Payment Received!</h1>
+        <p>Your ticket has been unlocked.<br>Returning you to the game...</p>
+        <button id="closeBtn" onclick="window.close()">Close Tab Now</button>
+    </div>
+
+    <script>
+        // 1. Broadcast Success to the Main Tab
+        const channel = new BroadcastChannel('payment_channel');
+        channel.postMessage({ status: 'success' });
+        console.log("Sent payment success signal.");
+
+        // 2. Auto-Close Logic (The "Magic")
+        setTimeout(() => {
+            try {
+                // Attempt to close the window automatically
+                window.close();
+
+                // If window.close() is blocked (which can happen), update the UI
+                // to guide the user.
+                const btn = document.getElementById('closeBtn');
+                if (btn) btn.innerText = "Click to Return to Game";
+            } catch (e) {
+                console.log("Auto-close blocked by browser, waiting for user interaction.");
+            }
+        }, 2000); // Wait 2 seconds so they see the celebration first
+    </script>
+</body>
+
+</html>

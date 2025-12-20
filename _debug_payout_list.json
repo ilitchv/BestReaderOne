@@ -1,0 +1,23 @@
+{
+  "lookingFor": "bc1qhnlnemg2dytwg8xzkrwsqfvjd3ln7du5k5wuk7",
+  "allFound": [
+    {
+      "error": "Failed to fetch state AwaitingPayment: config is not defined"
+    },
+    {
+      "error": "Failed to fetch state AwaitingApproval: config is not defined"
+    },
+    {
+      "error": "Failed to fetch state New: config is not defined"
+    },
+    {
+      "error": "Failed to fetch state Processing: config is not defined"
+    },
+    {
+      "error": "Failed to fetch state Completed: config is not defined"
+    },
+    {
+      "error": "Failed to fetch state Cancelled: config is not defined"
+    }
+  ]
+}

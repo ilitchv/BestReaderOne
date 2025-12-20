@@ -16,6 +16,11 @@
 -   [x] **User Dashboard:** Diseño Grid, Historial, Playback.
 -   [x] **Reglas de Negocio:** Validación Horses/Venezuela.
 
+### Correcciones Urgentes (Local Development)
+-   [x] **Manual Claim System:** Bypass de Webhooks para BTCPay Local.
+-   [x] **Crash Fix:** `TicketModal` ReferenceError.
+-   [ ] **Server Logic:** Aceptar estatus `Processing` en `/api/payment/claim`.
+
 ### En Cola de Desarrollo (Prioridad)
 
 1.  **Beast Ledger (Economía Segura) [PRÓXIMO]**

@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     btcpayCustomerId: { type: String }, // For BTCPay integration
     walletHash: { type: String }, // Integrity check (Hash of last transaction)
+    savedWalletAddress: { type: String }, // Saved BTC/USDT address for withdrawals
     status: { type: String, enum: ['active', 'suspended'], default: 'active' }
 }, {
     timestamps: true

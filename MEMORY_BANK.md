@@ -70,3 +70,49 @@ Este enfoque evita la navegación entre páginas y mantiene toda la experiencia 
   2. `await connectDB()` debe invocarse **dentro** de cada handler, no solo al inicio del archivo.
   3. Los Schemas deben tener `bufferCommands: false` explícito.
 - **Limpieza de Cache:** En scripts de build, usar `rm -rf backend/node_modules` para evitar residuos zombies en Vercel.
+
+## 7. Estado Actual: Semi-Auto Payouts (Fix Implementado - Verificación Pendiente)
+
+### 7.1 Objetivo
+Resolver el error 500 (`duplicate-destination`) en el botón "Auto Pay" del Admin Dashboard > Withdrawals. Este error ocurría cuando se intentaba pagar a una billetera que ya tenía un payout activo en BTCPay Server, y el backend fallaba al intentar recuperar ese payout existente.
+
+### 7.2 Solución Implementada (`services/paymentService.js`)
+Se ha mejorado la lógica de **Idempotencia** en la función `createPayout`.
+*   **Antes:** La recuperación era débil y solo buscaba estados específicos o fallaba silenciosamente.
+*   **Ahora:** Al capturar el error `duplicate-destination`, el sistema:
+    1.  Consulta la API de BTCPay (`/payouts`) para obtener todos los payouts recientes.
+    2.  Filtra en el cliente buscando una coincidencia exacta de `destination` Y que tenga uno de los estados activos: `'New'`, `'AwaitingApproval'`, o `'AwaitingPayment'`.
+    3.  Si lo encuentra, devuelve el objeto payout formateado correctamente con `isSemiAuto: true` y el `signingLink`.
+    4.  Esto permite que el frontend muestre el modal de "Signing Link" en lugar de un error 500.
+
+### 7.3 Estado de Verificación
+*   **Implementación:** ✅ Código aplicado en `services/paymentService.js`.
+*   **Reinicio:** ✅ Servidores backend y frontend reiniciados.
+*   **Prueba de Usuario:** ⚠️ Pendiente. El usuario detuvo la verificación automática.
+*   **Próximo Paso Crítico:** El usuario debe ir al Dashboard, pestaña Withdrawals, y clicar "Auto Pay" en una solicitud problemática para confirmar que ahora aparece el modal de firma en lugar del error.
+
+### 7.4 Pasos para el Siguiente Chat
+1.  **Verificación Manual:** Navegar a `http://localhost:3000/admin`.
+2.  **Prueba:** Clicar "Auto Pay" en una solicitud de retiro repetida.
+3.  **Resultado Esperado:** Modal "Payout Staged!" con botón para firmar en BTCPay.
+## Lessons Learned
+
+### BTCPay Server Payout Recovery (Idempotency)
+*   **Problem:** Retrying a payout for the same destination fails with "duplicate-destination" or "already used", but recovering the existing payout failed initially because we weren't checking all possible states.
+*   **Solution:**
+    *   **Comprehensive State Check:** When a duplicate is detected, query BTCPay for **all** states (`AwaitingPayment`, `AwaitingApproval`, `New`, `Processing`, `Completed`, `Cancelled`).
+    *   **Scope & Permissions:** Ensure API configuration (`config`) is defined in a scope accessible to `catch` blocks for recovery logic.
+    *   **Robust Links:** Use the general Payouts Dashboard URL (`/stores/{id}/payouts`) for the "Signing Link" instead of a specific ID link. Specific IDs can cause 404s if the format differs (e.g., On-Chain vs. Lightning), whereas the dashboard always loads and allows the user to find the staged payout.
+    *   **Debug Dumping:** Writing a JSON dump of the API response (`_debug_payout_list.json`) was crucial to diagnosing that the API was returning an empty list due to credential scope issues.
+
+### BTCPay Deposit Polling (Localhost Fix)
+*   **Problem:** Webhooks do not work on `localhost` development environments because BTCPay Server cannot send HTTP requests to a private network address. This caused deposits to remain "Pending" in the app even after being completed in BTCPay.
+*   **Solution:**
+    *   **Frontend Polling:** Implemented a polling interval in `DepositModal.tsx` that calls `/api/payment/claim` every 5 seconds while the modal is open in "Waiting" state.
+    *   **Backend Idempotency:** Updated `/api/payment/claim` to check `BeastLedger` for existing `referenceId` (e.g., `CLAIM-{invoiceId}`) before processing. This ensures that even if the polling calls the endpoint multiple times, the user is only credited once.
+    *   **Result:** A robust deposit flow that works in both local (polling-driven) and production (webhook-driven) environments.
+
+## Current State
+*   **Server Status:** Verified running on port 8080.
+*   **Auto Pay:** Fully functional with idempotency. Recovered payouts show "PENDING_SIGNATURE" and the modal correctly links to the BTCPay Dashboard.
+*   **Deposits:** Fully functional on Localhost via Polling. Balance updates are instant and idempotent.

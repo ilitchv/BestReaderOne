@@ -19,6 +19,16 @@ const seedUsers = async () => {
             walletHash: 'GENESIS'
         },
         {
+            email: 'pedro@demo.com',
+            username: 'pedro_martinez',
+            referralCode: 'REF_PEDRO',
+            password: '123',
+            name: 'Pedro Martinez',
+            role: 'user',
+            balance: 0.00,
+            walletHash: 'GENESIS'
+        },
+        {
             email: 'user@demo.com',
             username: 'demo_player',
             referralCode: 'REF_DEMO',

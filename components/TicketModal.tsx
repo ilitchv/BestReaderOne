@@ -31,6 +31,7 @@ interface TicketModalProps {
     variant?: 'default' | 'admin' | 'results-only';
     resultsContext?: WinningResult[]; // Optional context for Admin/User view to calculate winnings
     isPaymentRequired?: boolean; // Payment Flow
+    userId?: string; // --- ADDED USER ID ---
 }
 
 const TicketModal: React.FC<TicketModalProps> = ({
@@ -40,12 +41,15 @@ const TicketModal: React.FC<TicketModalProps> = ({
     onSaveTicket, isSaving, serverHealth, lastSaveStatus,
     variant = 'default',
     resultsContext = [],
-    isPaymentRequired = false
+    isPaymentRequired = false,
+    userId // --- DESTRUCTURED ---
 }) => {
     const ticketContentRef = useRef<HTMLDivElement>(null);
     const qrCodeRef = useRef<HTMLDivElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
     const { playSound } = useSound();
+    const [isPaymentLoading, setIsPaymentLoading] = React.useState(false);
+    const [currentInvoiceId, setCurrentInvoiceId] = React.useState<string | null>(null);
 
     // Determine layout flags
     const showResultsOnly = variant === 'results-only';
@@ -96,86 +100,163 @@ const TicketModal: React.FC<TicketModalProps> = ({
     }, [isOpen]);
 
 
+
+
+    // --- AUTO-POLL FOR PAYMENT SUCCESS ---
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isPaymentRequired && isOpen) {
+            interval = setInterval(async () => {
+                console.log("Polling for payment success...");
+                // We reuse handleRetrySave which checks the backend
+                // If the backend suddenly says "OK" (credit received), the parent will update
+                // Optimized polling: Silent 400s (insufficient funds) are normal here.
+                // We pass 'true' to handleRetrySave to indicate we want a silent check.
+                await handleRetrySave(true);
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [isPaymentRequired, isOpen]);
+
+    // --- LISTEN FOR BROADCAST SUCCESS (Seamless Return) ---
+    useEffect(() => {
+        const channel = new BroadcastChannel('payment_channel');
+        channel.onmessage = async (event) => {
+            // Support both object { status: 'success' } and older string formats if any
+            if ((event.data && event.data.status === 'success') || event.data === 'payment_success') {
+                console.log("💳 Payment broadcast received! Unlocking ticket...");
+
+                // --- MANUAL CLAIM TRIGGER (Localhost/Zero-Conf Fix) ---
+                if (currentInvoiceId) {
+                    try {
+                        console.log(`🔎 Claiming Invoice: ${currentInvoiceId}`);
+                        const claimRes = await fetch('/api/payment/claim', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            // USE PROP USER ID OR FALLBACK TO GUEST
+                            body: JSON.stringify({ invoiceId: currentInvoiceId, userId: userId || 'guest-session' })
+                        });
+
+                        const claimData = await claimRes.json();
+
+                        if (claimRes.ok) {
+                            console.log("✅ Invoice Claimed (Simulated Webhook)", claimData);
+                        } else {
+                            console.warn("⚠️ Claim Failed:", claimData);
+                            // If claim fails (e.g. not settled yet), we should probably not unlock immediately
+                            // But we will let the polling continue.
+                        }
+                    } catch (err) {
+                        console.error("Claim Fetch Error:", err);
+                    }
+                }
+
+                // setIsPaymentRequired(false); // Removed: Not available in this scope. Relies on handleRetrySave success.
+
+                // setLastSaveStatus('idle');   // Removed: Not available in this scope. Managed by parent.
+
+                // Wait a moment for DB update to propagate if needed, or retry immediately
+                setTimeout(() => {
+                    handleRetrySave(true); // Retry silently first
+                }, 500);
+            }
+        };
+        return () => channel.close();
+    }, [currentInvoiceId]); // Added dependency
+
+    // --- DEFERRED CONFIRMATION LOGIC ---
+    // We strictly wait for the backend to confirm "Success" before showing the ticket/QR.
+
+    // 1. Trigger Save (Optimistic ID generation for the request, but visual blocking)
     const handleConfirmAndPrint = async () => {
-        playSound('warp'); // Celebration Sound triggers here!
         const newTicketNumber = generateSecureTicketId();
-        setIsConfirmed(true);
+        // Update state to track this specific attempt's ID
         setTicketNumber(newTicketNumber);
 
-        setTimeout(async () => {
-            const ticketElement = ticketContentRef.current;
-            if (ticketElement && qrCodeRef.current) {
-                qrCodeRef.current.innerHTML = '';
-                new QRCode(qrCodeRef.current, {
-                    text: `Ticket #${newTicketNumber}`,
-                    width: 128,
-                    height: 128,
-                });
+        // Prepare Payload (No Image needed for backend)
+        const ticketData = {
+            ticketNumber: newTicketNumber,
+            transactionDateTime: new Date(),
+            betDates: selectedDates,
+            tracks: selectedTracks,
+            grandTotal: grandTotal,
+            plays: plays.map((p, i) => ({
+                ...p,
+                straightAmount: p.straightAmount || 0,
+                boxAmount: p.boxAmount || 0,
+                comboAmount: p.comboAmount || 0,
+                totalAmount: calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount),
+                jugadaNumber: i + 1
+            })),
+            ticketImage: '' // Backend doesn't need it
+        };
 
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                try {
-                    // --- Step 1: Capture High-Res for User ---
-                    const canvas = await html2canvas(ticketElement, {
-                        scale: 3,
-                        backgroundColor: '#ffffff',
-                        useCORS: true,
-                    });
-
-                    const { jsPDF } = jspdf;
-                    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                    const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = pdf.internal.pageSize.getHeight();
-                    const imgProps = pdf.getImageProperties(imgData);
-                    const aspectRatio = imgProps.height / imgProps.width;
-                    let finalImgWidth = pdfWidth - 20;
-                    let finalImgHeight = finalImgWidth * aspectRatio;
-                    if (finalImgHeight > pdfHeight - 20) {
-                        finalImgHeight = pdfHeight - 20;
-                        finalImgWidth = finalImgHeight / aspectRatio;
-                    }
-                    const x = (pdfWidth - finalImgWidth) / 2;
-                    const y = 10;
-                    pdf.addImage(imgData, 'JPEG', x, y, finalImgWidth, finalImgHeight);
-                    const pdfBlob = pdf.output('blob');
-                    setTicketImageBlob(pdfBlob);
-
-                    // --- Step 1.5: Auto Download (Restore Legacy Behavior) ---
-                    // Only auto-download if we are in default mode (transactional)
-                    if (variant === 'default') {
-                        pdf.save(`ticket-${newTicketNumber}.pdf`);
-                    }
-
-                    // --- Step 2: Capture Optimized Low-Res for Database ---
-                    const optimizedImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
-
-                    // --- Step 3: Send Data to Backend ---
-                    // NOTE: PlaygroundApp strips the image before sending to DB
-                    const ticketData = {
-                        ticketNumber: newTicketNumber,
-                        transactionDateTime: new Date(),
-                        betDates: selectedDates,
-                        tracks: selectedTracks,
-                        grandTotal: grandTotal,
-                        plays: plays.map((p, i) => ({
-                            ...p,
-                            totalAmount: calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount),
-                            jugadaNumber: i + 1
-                        })),
-                        ticketImage: optimizedImageBase64
-                    };
-
-                    onSaveTicket(ticketData);
-
-                } catch (error) {
-                    console.error("Error generating ticket image/pdf:", error);
-                }
-            }
-        }, 200);
+        // Trigger Parent Save
+        onSaveTicket(ticketData);
     };
 
-    const handleRetrySave = async () => {
+    // 2. Listen for Success to Reveal Ticket (The "Zero Trust" Reveal)
+    useEffect(() => {
+        // Only trigger if we are open, not yet confirmed visually, but backend says success
+        if (isOpen && !isConfirmed && lastSaveStatus === 'success' && ticketNumber && !isPaymentRequired) {
+            playSound('warp'); // Celebration Sound only when ACTUALLY saved
+            setIsConfirmed(true);
+
+            // Generate the Visual Assets (QR + PDF) AFTER confirmation
+            setTimeout(async () => {
+                const ticketElement = ticketContentRef.current;
+
+                if (qrCodeRef.current) {
+                    qrCodeRef.current.innerHTML = '';
+                    new QRCode(qrCodeRef.current, {
+                        text: `Ticket #${ticketNumber}`,
+                        width: 128,
+                        height: 128,
+                    });
+                }
+
+                if (ticketElement) {
+                    try {
+                        // Capture High-Res for User PDF
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Allow DOM render
+                        const canvas = await html2canvas(ticketElement, {
+                            scale: 3,
+                            backgroundColor: '#ffffff',
+                            useCORS: true,
+                        });
+
+                        const { jsPDF } = jspdf;
+                        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                        const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+                        const imgProps = pdf.getImageProperties(imgData);
+                        const aspectRatio = imgProps.height / imgProps.width;
+                        let finalImgWidth = pdfWidth - 20;
+                        let finalImgHeight = finalImgWidth * aspectRatio;
+                        if (finalImgHeight > pdfHeight - 20) {
+                            finalImgHeight = pdfHeight - 20;
+                            finalImgWidth = finalImgHeight / aspectRatio;
+                        }
+                        const x = (pdfWidth - finalImgWidth) / 2;
+                        const y = 10;
+                        pdf.addImage(imgData, 'JPEG', x, y, finalImgWidth, finalImgHeight);
+                        const pdfBlob = pdf.output('blob');
+                        setTicketImageBlob(pdfBlob);
+
+                        // Auto Download (Legacy Behavior)
+                        if (variant === 'default') {
+                            pdf.save(`ticket-${ticketNumber}.pdf`);
+                        }
+                    } catch (error) {
+                        console.error("Error generating ticket image/pdf:", error);
+                    }
+                }
+            }, 200);
+        }
+    }, [lastSaveStatus, isOpen, isConfirmed, ticketNumber, isPaymentRequired, variant, playSound]);
+
+    const handleRetrySave = async (silentMode = false) => {
         const ticketElement = ticketContentRef.current;
         if (ticketElement) {
             try {
@@ -193,14 +274,32 @@ const TicketModal: React.FC<TicketModalProps> = ({
                     grandTotal: grandTotal,
                     plays: plays.map((p, i) => ({
                         ...p,
+                        straightAmount: p.straightAmount || 0,
+                        boxAmount: p.boxAmount || 0,
+                        comboAmount: p.comboAmount || 0,
                         totalAmount: calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount),
                         jugadaNumber: i + 1
                     })),
-                    ticketImage: optimizedImageBase64
+                    ticketImage: optimizedImageBase64,
+                    silent: silentMode // Pass silent flag to parent/service if supported, or handle 400 locally (requires modifying onSaveTicket wrapper, but here we assume onSaveTicket might need adjustment or we catch errors if onSaveTicket was async and threw, but it's likely a void-returning prop. The request is to silence console errors, which originate from the network request. If onSaveTicket triggers the fetch, we need to ensure the fetch doesn't log 400s. Since onSaveTicket is a prop, we can't easily change the fetch behavior inside IT without changing the parent. However, if onSaveTicket returns a Promise, we can catch it.)
                 };
-                onSaveTicket(ticketData);
-            } catch (e) {
-                console.error("Retry failed", e);
+
+                // Assuming onSaveTicket might be handling the fetch. The user's request specifically asked to "silence" 400 errors. 
+                // A common pattern is that the parent (UserDashboard) handles the logic. 
+                // To truly silence the 400 network error log from the BROWSER console is impossible (browser behavior), 
+                // but we can silence the "console.error" calls in our code.
+                // WE ARE MODIFYING THE CALLER HERE.
+
+                await onSaveTicket(ticketData);
+
+            } catch (e: any) {
+                // If silentMode is on, and it's a 400-range error (validation/funds), we suppress logging.
+                // Note: Network tab will still show 400, but Console will be cleaner.
+                if (silentMode && e?.response?.status === 400) {
+                    // Shhh... waiting for funds.
+                } else {
+                    console.error("Retry failed", e);
+                }
             }
         }
     };
@@ -292,7 +391,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                 {/* Header (Fixed) */}
                 <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0 bg-light-card dark:bg-dark-card z-10">
                     <div className="flex flex-col">
-                        <h2 className="text-lg font-bold text-neon-cyan truncate mr-2">{isConfirmed ? `Ticket #${ticketNumber}` : 'Confirm Ticket'}</h2>
+                        <h2 className="text-lg font-bold text-neon-cyan truncate mr-2">{isConfirmed ? `Ticket #${ticketNumber}` : 'Confirmar y Pagar Ticket'}</h2>
                         {isConfirmed && <span className="text-[10px] text-gray-500 uppercase font-bold">{formatTime()}</span>}
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
@@ -355,7 +454,37 @@ const TicketModal: React.FC<TicketModalProps> = ({
 
                                     <div className="text-center mt-4 space-y-2">
                                         <p className="font-bold text-base">GRAND TOTAL: ${(grandTotal || 0).toFixed(2)}</p>
-                                        <div ref={qrCodeRef} className="flex justify-center pt-2 min-h-[128px]"></div>
+
+                                        {/* STRICT GUARD: QR CODE ONLY RENDERS IF CONFIRMED */}
+                                        {isConfirmed ? (
+                                            <div ref={qrCodeRef} className="flex justify-center pt-2 min-h-[128px]"></div>
+                                        ) : !isPaymentRequired ? (
+                                            /* Show Placeholder only if NOT confirmed AND NOT waiting for payment explicitly (or show it always if not confirmed?) 
+                                               Actually, if isPaymentRequired is true, we want to show it? 
+                                               The visual bug was "Stuck Processing" overlaid or conflicting. 
+                                               If confirmed, we show QR. If not confirmed, we show placeholder. 
+                                               The logic was: isConfirmed ? QR : Placeholder. 
+                                               If "Processing" is overlapping, it's likely in the Footer, not here. 
+                                               But let's ensure the placeholder doesn't look like a real QR. 
+                                               The previous logic was valid for this section. 
+                                               The "Processing" overlay mentioned in the plan might be the footer area. 
+                                               Let's stick to cleaning this part simply. */
+                                            <div className="flex items-center justify-center pt-2 min-h-[128px] opacity-20">
+                                                <div className="border-2 border-dashed border-black p-2 rounded">
+                                                    <span className="text-[10px] font-bold uppercase">Payment Required</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            // If Payment is Required, we also show the placeholder usually. 
+                                            // The bug report said "UI displays confirmed ticket (QR) alongside Insufficient Funds message".
+                                            // That implies isConfirmed=true AND isPaymentRequired=true. 
+                                            // This shouldn't happen if logic is correct, but let's guard against it.
+                                            <div className="flex items-center justify-center pt-2 min-h-[128px] opacity-20">
+                                                <div className="border-2 border-dashed border-black p-2 rounded">
+                                                    <span className="text-[10px] font-bold uppercase">Payment Required</span>
+                                                </div>
+                                            </div>
+                                        )}
                                         <p className="text-[10px] pt-2">Please check your ticket, no claims for errors.</p>
                                     </div>
                                 </div>
@@ -476,8 +605,8 @@ const TicketModal: React.FC<TicketModalProps> = ({
                 {/* Footer with Action Buttons (Fixed) */}
                 <div className="p-3 sm:p-4 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 space-y-3 bg-light-card dark:bg-dark-card z-10 pb-safe">
 
-                    {/* CONFIRMED STATE (Step 2) */}
-                    {isConfirmed ? (
+                    {/* CONFIRMED STATE (Step 2) OR PAYMENT REQUIRED */}
+                    {isConfirmed || isPaymentRequired ? (
                         <div className="space-y-3">
                             {/* LARGE STATUS INDICATORS */}
                             {isSaving && !showResultsOnly && (
@@ -503,20 +632,56 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                     <p className="text-xs text-gray-400">Your balance is too low for this ticket.</p>
 
                                     <button
+                                        disabled={isPaymentLoading}
                                         onClick={async () => {
+                                            if (isPaymentLoading) return;
+                                            setIsPaymentLoading(true);
                                             try {
-                                                const res = await fetch('/api/payment/invoice', { method: 'POST' });
+                                                const res = await fetch('/api/payment/invoice', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        amount: Number((grandTotal || 0).toFixed(2)),
+                                                        currency: 'USD',
+                                                        orderId: `TICKET-${Date.now()}`,
+                                                        buyerEmail: 'guest@example.com' // Optional
+                                                    })
+                                                });
                                                 const data = await res.json();
                                                 if (data.checkoutLink) {
+                                                    // STORE INVOICE ID FOR CLAIMING LATER
+                                                    setCurrentInvoiceId(data.id);
+                                                    console.log("📝 Active Invoice ID:", data.id);
+
                                                     window.open(data.checkoutLink, '_blank');
                                                 } else {
-                                                    alert('Error setting up payment.');
+                                                    // Show detailed error if available
+                                                    const errMsg = data.error || JSON.stringify(data);
+                                                    alert(`Error setting up payment: ${errMsg} \nCheck console for details.`);
+                                                    console.error("Payment API Response:", data);
+                                                    setIsPaymentLoading(false);
                                                 }
-                                            } catch (e) { console.error(e); alert('Connection failed'); }
+                                            } catch (e: any) {
+                                                console.error("Payment Fetch Error:", e);
+                                                alert(`Connection failed: ${e.message}`);
+                                                setIsPaymentLoading(false);
+                                            }
                                         }}
-                                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded shadow-lg transition-colors flex items-center justify-center gap-2"
+                                        className={`w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded shadow-lg transition-colors flex items-center justify-center gap-2 ${isPaymentLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
-                                        <svg data-lucide="bitcoin" className="w-4 h-4" /> Pay with Bitcoin
+                                        {isPaymentLoading ? (
+                                            <span className="flex items-center gap-2">
+                                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Processing...
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <svg data-lucide="bitcoin" className="w-4 h-4" /> Pay with Bitcoin
+                                            </>
+                                        )}
                                     </button>
 
                                     <button onClick={handleRetrySave} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded shadow-lg transition-colors">
@@ -561,14 +726,14 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                 {/* Renamed "Confirm" to "Print" per request */}
                                 <button onClick={handleConfirmAndPrint} className="w-full px-2 py-3 rounded-lg bg-neon-green text-black font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-sm">
                                     <svg data-lucide="printer" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" /></svg>
-                                    Print
+                                    Confirmar y Pagar Ticket
                                 </button>
                             </div>
                         </div>
                     )}
 
                     {/* FOOTER BUTTONS (DONE / SHARE) - MOVED OUTSIDE OF CONDITIONS TO BE ALWAYS VISIBLE IF CONFIRMED */}
-                    {isConfirmed && (
+                    {(isConfirmed || isPaymentRequired) && (
                         <div className="grid grid-cols-2 gap-3 w-full">
                             <button onClick={onClose} className="w-full px-4 py-3 rounded-lg bg-gray-600 text-white font-bold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
                                 {variant === 'default' ? 'Done' : 'Close Viewer'}

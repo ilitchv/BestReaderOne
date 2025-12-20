@@ -14,9 +14,13 @@ const cors = require('cors');
 const { GoogleGenerativeAI, SchemaType: Type } = require("@google/generative-ai");
 
 // Import Models (Assuming models folder sits in root, so ../models)
+// Import Models (Assuming models folder sits in root, so ../models)
 const Ticket = require('../models/Ticket');
 const LotteryResult = require('../models/LotteryResult');
 // const Track = require('../models/Track'); // Keeping inline Track for now to respect previous logic
+
+// --- IMPORT PAYMENT SERVICE ---
+const paymentService = require('../services/paymentService');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -433,6 +437,20 @@ app.post('/api/ai/interpret-results-text', async (req, res) => {
     }
 });
 
+// 6. PAYMENT ROUTE (FIXED)
+app.post('/api/payment/invoice', async (req, res) => {
+    try {
+        const { amount, currency, orderId, buyerEmail } = req.body;
+        console.log(`💳 Generating Invoice for ${orderId}: ${amount} ${currency}`);
+
+        const invoice = await paymentService.createInvoice(amount, currency, orderId, buyerEmail);
+        res.json(invoice);
+    } catch (error) {
+        console.error("Payment Route Error:", error.message);
+        res.status(500).json({ error: "Failed to generate invoice" });
+    }
+});
+
 // ==========================================
 // LEGACY / DASHBOARD API ROUTES (Ported)
 // ==========================================
@@ -487,8 +505,22 @@ app.post('/api/tickets', async (req, res) => {
         const newTicket = new Ticket(ticketData);
         await newTicket.save();
         console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
+        await newTicket.save();
+        console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
         res.status(201).json({ message: 'Ticket saved successfully.', ticketId: ticketData.ticketNumber });
     } catch (error) {
+        // --- SILENT POLLING HANDLER ---
+        // If 'silent' flag is true and it's an insufficient funds error, return 200 OK (soft error)
+        // to prevent parsing errors or browser console spam.
+        if (req.body.silent && (error.message.includes('funds') || error.message.includes('Insufficient'))) {
+            return res.status(200).json({
+                success: false,
+                silent: true,
+                message: 'Insufficient funds (Silent Check)',
+                code: 'INSUFFICIENT_FUNDS'
+            });
+        }
+
         if (error.code === 11000) {
             return res.status(409).json({ message: 'Ticket number already exists.' });
         }

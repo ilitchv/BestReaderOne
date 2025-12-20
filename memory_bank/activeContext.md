@@ -20,6 +20,15 @@
 
 ### 📅 Plan de Ejecución
 
+#### FASE 3.6: Auto Pay Diagnosis & Pivot (COMPLETED/IN-PROGRESS)
+**Objetivo:** Diagnóstico profundo del error 500 en retiros automáticos.
+**Hallazgos Críticos (Knowledge Bank):**
+1.  **BTCPay Demo Server Limitation:** El servidor público `mainnet.demo` **PROHÍBE** las Hot Wallets. No se pueden importar semillas por seguridad. Esto hace imposible el "Full Auto Pay" (firma servidor) en esta infraestructura.
+2.  **Circular Economy:** El usuario descubrió que sus pruebas eran circulares (BitPay App -> BTCPay -> BitPay App). Se confirmó forensemente que la xPub de BTCPay pertenecía a su propia wallet de BitPay.
+3.  **Solución "Semi-Auto":** Dado el límite del servidor, pivotamos a un flujo híbrido:
+    *   **Backend:** Crea y Aprueba el pago (Staging).
+    *   **Humano:** Firma la transacción final desde su App (Security Air-Gap).
+
 #### FASE 4: Beast Ledger (Siguiente Prioridad - INMEDIATA)
 **Objetivo:** Seguridad Financiera y Trazabilidad Inmutable.
 1.  **Crypto Hashing:** Implementar generación de SHA-256 para cada transacción.
@@ -31,8 +40,9 @@
 2.  **Analysis:** Gráficas de calor.
 
 #### FASE 6: Sistema de Compensación (Planificación Pendiente)
-*   **Integración:** Conectar el Árbol de Jerarquía con un motor de comisiones (detalles del plan de compensación pendientes de entrega por el usuario).
+*   **Integración:** Conectar el Árbol de Jerarquía con un motor de comisiones.
 
 ### 🔒 Core Architectural Decisions
 1.  **Surgical Edits Only:** Prohibido reescribir archivos enteros de UI.
 2.  **Security First:** Ningún usuario puede crear a otro directamente (evita robo de identidad). Todo paso crítico requiere aprobación o hash.
+3.  **Infrastructure Awareness:** Distinguir claramente entre capacidades de "Demo Server" vs "Private Server". El código debe ser resiliente a ambas configuraciones.
