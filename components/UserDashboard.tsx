@@ -315,6 +315,16 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                         <SniperFrame mode="user" userId={user.id} />
                     </section>
                 )}
+
+                {activeTab === 'history' && (
+                    <section>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-white">Financial History</h2>
+                            <button onClick={() => setActiveTab('dashboard')} className="text-sm text-gray-400 hover:text-white underline">Back to Dashboard</button>
+                        </div>
+                        <TransactionHistory />
+                    </section>
+                )}
             </main>
 
             {/* MODALS */}

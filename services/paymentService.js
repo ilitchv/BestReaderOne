@@ -90,12 +90,12 @@ const paymentService = {
     },
 
     // 4. Create Payout (Automated Withdrawal)
-    createPayout: async (amount, currency, destination, userId) => {
+    createPayout: async (amount, currency, destination, userId, userLabel) => {
         // "BTC-CHAIN" is the ID visible in the user's screenshot (Mainnet Demo)
         const potentialMethods = ["BTC-CHAIN", "BTC-OnChain", "BTC", "TBTC-OnChain", "BTC_OnChain"];
         let lastError = null;
 
-        console.log(`💸 Creating Payout: ${amount} ${currency} to ${destination}`);
+        console.log(`💸 Creating Payout: ${amount} ${currency} to ${destination} for ${userLabel}`);
 
         const config = {
             headers: {
@@ -114,7 +114,7 @@ const paymentService = {
                     payoutMethodId: method, // V2 API requires this field name
                     metadata: {
                         userId: userId,
-                        source: "SniperStrategyApp"
+                        source: userLabel || "SniperStrategyApp"
                     }
                 };
 

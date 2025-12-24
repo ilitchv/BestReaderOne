@@ -3,10 +3,10 @@ import { WinningResult } from '../types';
 
 export const determineGameMode = (betNumber: string, selectedTracks: string[], pulitoPositions: number[]): string => {
     if (!betNumber) return "-";
-    
+
     const isUSA = selectedTracks.some(t => ["New York", "Georgia", "New Jersey", "Florida", "Connecticut", "Pensilvania", "Brooklyn", "Front", "Pulito", "Horses"].some(s => t.includes(s)));
     const isSD = selectedTracks.some(t => ["Real", "Gana mas", "Loteka", "Nacional", "Quiniela Pale", "Primera", "Suerte", "Lotería", "Lotedom", "Panama"].some(s => t.includes(s)));
-    const isVenezuela = selectedTracks.includes('Venezuela');
+    const isVenezuela = selectedTracks.includes('special/venezuela') || selectedTracks.includes('Venezuela');
 
     // Allow 'x' and 'X' as valid separators for Palé plays
     const cleanBetNumber = String(betNumber).replace(/[^0-9-xX]/g, '');
@@ -23,7 +23,7 @@ export const determineGameMode = (betNumber: string, selectedTracks: string[], p
 
     if (length === 1) {
         // Single Action with Position Selection (via Pulito Track)
-        if (selectedTracks.includes('Pulito') && pulitoPositions.length > 0) {
+        if ((selectedTracks.includes('special/pulito') || selectedTracks.includes('Pulito')) && pulitoPositions.length > 0) {
             return `Single Action-${pulitoPositions.sort((a, b) => a - b).join(',')}`;
         }
         // Generic Single Action (Legacy/Default)
@@ -33,7 +33,7 @@ export const determineGameMode = (betNumber: string, selectedTracks: string[], p
     }
 
     if (length === 2) {
-        if (selectedTracks.includes('Pulito') && pulitoPositions.length > 0) {
+        if ((selectedTracks.includes('special/pulito') || selectedTracks.includes('Pulito')) && pulitoPositions.length > 0) {
             return `Pulito-${pulitoPositions.sort((a, b) => a - b).join(',')}`;
         }
         if (isVenezuela) {
@@ -94,13 +94,13 @@ export const calculateRowTotal = (betNumber: string, gameMode: string, stVal: nu
     if (gameMode.startsWith("Pulito-") || gameMode.startsWith("Single Action-")) {
         const positionsPart = gameMode.split('-')[1] || '';
         const positionCount = positionsPart ? positionsPart.split(',').length : 1;
-        
+
         // Combo Logic for Pulito (Pairs)
         let comboCost = 0;
         if (co > 0 && !gameMode.startsWith("Single Action")) {
-             const isDouble = isRepetitiveNumber(betNumber);
-             const comboMultiplier = isDouble ? 1 : 2;
-             comboCost = co * comboMultiplier;
+            const isDouble = isRepetitiveNumber(betNumber);
+            const comboMultiplier = isDouble ? 1 : 2;
+            comboCost = co * comboMultiplier;
         }
 
         return (st + bx + comboCost) * Math.max(1, positionCount);
@@ -110,8 +110,8 @@ export const calculateRowTotal = (betNumber: string, gameMode: string, stVal: nu
     if (["Pale-RD", "Palé"].includes(gameMode)) {
         let comboCost = 0;
         if (co > 0) {
-             const multiplier = calculatePaleCombinations(betNumber);
-             comboCost = co * multiplier;
+            const multiplier = calculatePaleCombinations(betNumber);
+            comboCost = co * multiplier;
         }
         return st + bx + comboCost;
     }
@@ -120,25 +120,25 @@ export const calculateRowTotal = (betNumber: string, gameMode: string, stVal: nu
         // Combo Logic for Pairs (Pick 2, etc.)
         let comboCost = 0;
         if (co > 0) {
-             const isDouble = isRepetitiveNumber(betNumber);
-             const comboMultiplier = isDouble ? 1 : 2;
-             comboCost = co * comboMultiplier;
+            const isDouble = isRepetitiveNumber(betNumber);
+            const comboMultiplier = isDouble ? 1 : 2;
+            comboCost = co * comboMultiplier;
         }
-        
+
         return st + bx + comboCost;
     }
-    
+
     // Single Action Standard (1 digit)
     if (gameMode === "Single Action") {
         // Typically only Straight applies
         return st;
     }
-    
+
     if (gameMode === "Win 4" || gameMode === "Pick 3") {
         const combosCount = calcCombos(String(betNumber).replace(/[^0-9]/g, ''));
         return st + bx + (co * combosCount);
     }
-    
+
     return st + bx + co;
 };
 
@@ -264,7 +264,7 @@ export const expandBetSequence = (betNumber: string): string[] => {
     if (rangeMatch) {
         const startStr = rangeMatch[1];
         const endStr = rangeMatch[2];
-        
+
         if (startStr.length === 2 && endStr.length === 2) {
             return [cleanBet];
         }
@@ -274,7 +274,7 @@ export const expandBetSequence = (betNumber: string): string[] => {
 
         if (!isNaN(startNum) && !isNaN(endNum) && startNum <= endNum) {
             const padLength = startStr.length;
-            
+
             const isFullRangeTriples = startStr === '000' && endStr === '999';
             const isFullRangePairs = startStr === '00' && endStr === '99';
             const isFullRangeQuads = startStr === '0000' && endStr === '9999';
@@ -301,7 +301,7 @@ export const expandBetSequence = (betNumber: string): string[] => {
 export const getAbbreviation = (name: string): string => {
     if (!name) return '??';
     const n = name.toLowerCase();
-    
+
     if (n.includes('usa/ny')) return 'NY';
     if (n.includes('usa/nj')) return 'NJ';
     if (n.includes('usa/fl')) return 'FL';
@@ -309,7 +309,7 @@ export const getAbbreviation = (name: string): string => {
     if (n.includes('usa/ct')) return 'CT';
     if (n.includes('usa/pa')) return 'PA';
     if (n.includes('usa/tx')) return 'TX';
-    
+
     if (n.includes('real') || n.includes('/real')) return 'R';
     if (n.includes('gana') || n.includes('/gana')) return 'G';
     if (n.includes('nacional') || n.includes('/nacional')) return 'N';
@@ -324,7 +324,7 @@ export const getAbbreviation = (name: string): string => {
     if (n.includes('florida')) return 'FL';
     if (n.includes('georgia')) return 'GA';
     if (n.includes('connect')) return 'CT';
-    
+
     return name.substring(0, 2).toUpperCase();
 };
 
@@ -335,18 +335,18 @@ export const getTrackColorClasses = (trackIdOrName: string): string => {
         if (t.includes('horses')) return 'bg-gradient-to-b from-lime-500 to-lime-700';
         if (t.includes('bk') || t.includes('brooklyn')) return 'bg-gradient-to-b from-sky-500 to-sky-700';
         if (t.includes('front')) return 'bg-gradient-to-b from-purple-500 to-purple-700';
-        return 'bg-gradient-to-b from-blue-600 to-blue-800'; 
+        return 'bg-gradient-to-b from-blue-600 to-blue-800';
     }
-    
+
     if (t.includes('/nj/') || t.includes('new jersey')) return 'bg-gradient-to-b from-orange-500 to-orange-700';
-    
+
     if (t.includes('/fl/') || t.includes('florida') || t.includes('/flp2/')) return 'bg-gradient-to-b from-cyan-600 to-cyan-800';
-    
+
     if (t.includes('/ga/') || t.includes('georgia')) return 'bg-gradient-to-b from-green-600 to-green-800';
-    
+
     // CT FIXED: Removed text-black, used darker amber for white text readability
     if (t.includes('/ct/') || t.includes('connect')) return 'bg-gradient-to-b from-amber-600 to-amber-800';
-    
+
     if (t.includes('/pa/') || t.includes('penn')) return 'bg-gradient-to-b from-pink-700 to-pink-900';
 
     // SANTO DOMINGO - DISTINCT COLORS
@@ -363,7 +363,7 @@ export const getTrackColorClasses = (trackIdOrName: string): string => {
     if (t.includes('/sc/') || t.includes('south c')) return 'bg-gradient-to-b from-teal-600 to-teal-800';
     if (t.includes('/mi/') || t.includes('michigan')) return 'bg-gradient-to-b from-violet-600 to-violet-800';
     if (t.includes('/tn/') || t.includes('tennessee')) return 'bg-gradient-to-b from-amber-700 to-red-900';
-    
+
     if (t.includes('venezuela')) return 'bg-gradient-to-br from-yellow-600 via-blue-700 to-red-700';
     if (t.includes('anguilla')) return 'bg-gradient-to-br from-orange-500 via-blue-500 to-blue-700';
     if (t.includes('pulito')) return 'bg-gradient-to-b from-indigo-600 to-indigo-900';
@@ -372,9 +372,15 @@ export const getTrackColorClasses = (trackIdOrName: string): string => {
 };
 
 // --- NEW HELPER: Format WinningResult to String ---
-export const formatWinningResult = (result: WinningResult | undefined): string => {
+// Accepts either Legacy 'WinningResult' or New 'LotteryResult'
+export const formatWinningResult = (result: any | undefined): string => {
     if (!result) return '—';
-    
+
+    // 0. NEW SCHEMA: Pre-formatted string
+    if (result.numbers && typeof result.numbers === 'string') {
+        return result.numbers;
+    }
+
     // Priority 1: If pick3 AND pick4 exist (Combined style)
     if (result.pick3 && result.pick3.trim() && result.pick4 && result.pick4.trim()) {
         return `${result.pick3} - ${result.pick4}`;
@@ -383,7 +389,7 @@ export const formatWinningResult = (result: WinningResult | undefined): string =
     // Priority 2: Individual (fallback if one missing)
     if (result.pick4 && result.pick4.trim()) return result.pick4;
     if (result.pick3 && result.pick3.trim()) return result.pick3;
-    
+
     // Priority 3: Quiniela style (1st-2nd-3rd)
     if (result.first) {
         let str = result.first;
@@ -391,6 +397,6 @@ export const formatWinningResult = (result: WinningResult | undefined): string =
         if (result.third) str += `-${result.third}`;
         return str;
     }
-    
+
     return '—';
 };

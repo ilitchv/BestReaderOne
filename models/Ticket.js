@@ -12,6 +12,8 @@ const playSchema = new mongoose.Schema({
 
 const ticketSchema = new mongoose.Schema({
     ticketNumber: { type: String, required: true, unique: true, index: true },
+    userId: { type: String, required: true, index: true }, // Link to User Owner
+    cashierId: { type: String }, // Optional: Agent/Admin who processed it
     transactionDateTime: { type: Date, required: true },
     betDates: { type: [String], required: true },
     tracks: { type: [String], required: true },

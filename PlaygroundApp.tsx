@@ -58,16 +58,16 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 const currentHour = now.getHours();
                 const currentMinute = now.getMinutes();
 
-                // Logic: Cutoff is roughly 2:30 PM (14:30)
-                // If it's before 14:30, select AM. Otherwise PM.
-                if (currentHour < 14 || (currentHour === 14 && currentMinute < 30)) {
-                    return ['New York AM'];
+                // Logic: Cutoff is roughly 2:14 PM (14:14) for NY Midday
+                // If it's before 14:14, select Midday. Otherwise Evening.
+                if (currentHour < 14 || (currentHour === 14 && currentMinute < 14)) {
+                    return ['usa/ny/Midday'];
                 } else {
-                    return ['New York PM'];
+                    return ['usa/ny/Evening'];
                 }
             }
             return parsed;
-        } catch (e) { return ['New York PM']; }
+        } catch (e) { return ['usa/ny/Evening']; }
     });
 
     const [selectedDates, setSelectedDates] = useState<string[]>(() => {
@@ -297,7 +297,16 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     // --- TICKET GENERATION ---
     const handleGenerateTicket = () => {
         const errors: string[] = [];
-        if (selectedTracks.length === 0) errors.push("Select at least one track.");
+
+        // --- VALIDATION: Ensure at least one REAL track is selected ---
+        // 'Venezuela' and 'Pulito' are indicators, not tracks. 'New York Horses' is a valid track.
+        const validTracks = selectedTracks.filter(t => !['Venezuela', 'Pulito'].includes(t));
+
+        if (selectedTracks.length === 0) {
+            errors.push("Select at least one track.");
+        } else if (validTracks.length === 0) {
+            errors.push("Invalid Selection: You must select at least one actual Lottery (e.g., New York, Florida) alongside 'Venezuela' or 'Pulito'.");
+        }
         if (selectedDates.length === 0) errors.push("Select at least one date.");
         if (plays.length === 0) errors.push("Add at least one play.");
 
@@ -366,8 +375,14 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         const GUEST_ID = 'guest-session';
         const finalTicketData = {
             ...ticketDataForDb,
-            userId: user ? user.id : GUEST_ID
+            userId: user ? user.id : GUEST_ID,
+            userEmail: user ? user.email : undefined // For Backend Auto-Recovery
         };
+
+        // --- MODULE 3: FRONTEND VALIDATION ---
+        console.log("📤 Sending Ticket to DB...");
+        console.log(`   > UserID: ${finalTicketData.userId}`);
+        console.log(`   > Email: ${finalTicketData.userEmail || 'N/A'}`);
 
         // Save locally (redundancy) - also lightweight
         localDbService.saveTicket(finalTicketData);
@@ -407,7 +422,8 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
 
             } else {
                 // REAL ERRORS (400, 500, etc.)
-                if (res.status === 400 && (data.message === 'Insufficient funds' || data.message.includes('funds'))) {
+                // REAL ERRORS (400, 500, etc.)
+                if ((res.status === 400 || res.status === 402) && (data.message === 'Insufficient funds' || data.message.includes('funds') || data.code === 'INSUFFICIENT_FUNDS')) {
                     setIsPaymentRequired(true);
                     setLastSaveStatus('error');
                 } else {
@@ -433,11 +449,13 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const baseTotal = plays.reduce((sum, p) => sum + calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount), 0);
 
     // Grand Total Logic Refinement for Single Action
-    let effectiveTrackCount = selectedTracks.length;
+    // FIX: 'Venezuela' and 'Pulito' are indicators, NEVER multiplier tracks.
+    // NOTE: IDs are 'special/venezuela' and 'special/pulito' in constants
+    let effectiveTrackCount = selectedTracks.filter(t => !['Venezuela', 'special/venezuela', 'Pulito', 'special/pulito'].includes(t)).length;
 
     const isSingleActionPresent = plays.some(p => p.gameMode.startsWith('Single Action'));
-    const isPulitoSelected = selectedTracks.includes('Pulito');
-    const otherUsaTracksCount = selectedTracks.filter(t => t !== 'Pulito' && t !== 'Venezuela').length;
+    const isPulitoSelected = selectedTracks.includes('special/pulito') || selectedTracks.includes('Pulito');
+    const otherUsaTracksCount = selectedTracks.filter(t => !t.includes('Pulito') && !t.includes('Venezuela')).length;
 
     if (isSingleActionPresent && isPulitoSelected && otherUsaTracksCount > 0) {
         effectiveTrackCount -= 1; // Discount Pulito as it's acting as position modifier
@@ -445,6 +463,16 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
 
     const trackMultiplier = Math.max(1, effectiveTrackCount);
     const grandTotal = baseTotal * trackMultiplier * Math.max(1, selectedDates.length);
+
+    const handleCloseTicketModal = () => {
+        setIsTicketModalOpen(false);
+        // Robust State Reset (But Preserve Plays for Reuse)
+        setTicketNumber('');
+        setIsTicketConfirmed(false);
+        setIsPaymentRequired(false);
+        setLastSaveStatus(null);
+        setTicketImageBlob(null);
+    };
 
     return (
         <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-gray-900 dark:text-gray-100 flex flex-col transition-colors duration-300">
@@ -564,7 +592,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
 
             <TicketModal
                 isOpen={isTicketModalOpen}
-                onClose={() => setIsTicketModalOpen(false)}
+                onClose={handleCloseTicketModal} // UPDATED HERE
                 plays={plays.filter(p => calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount) > 0)}
                 selectedTracks={selectedTracks}
                 selectedDates={selectedDates}

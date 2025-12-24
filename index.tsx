@@ -14,15 +14,31 @@ type ViewState = 'HOME' | 'PRODUCT' | 'PLAYGROUND' | 'RESULTS' | 'ADMIN' | 'USER
 type Language = 'en' | 'es' | 'ht';
 
 const MainAppContent: React.FC = () => {
-    const [view, setView] = useState<ViewState>('HOME');
+    // 1. INITIALIZE VIEW FROM STORAGE TO PREVENT FLASH
+    const [view, setView] = useState<ViewState>(() => {
+        const saved = localStorage.getItem('beast_last_view');
+        // Only restore valid views
+        if (saved && ['HOME', 'PRODUCT', 'PLAYGROUND', 'RESULTS', 'ADMIN', 'USER_DASHBOARD'].includes(saved)) {
+            return saved as ViewState;
+        }
+        return 'HOME';
+    });
+
     const [language, setLanguage] = useState<Language>('en');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const { isAuthenticated, user, logout } = useAuth();
+    const { isAuthenticated, user, logout, loading } = useAuth(); // ADDED LOADING
 
-    // Playback State: Holds ticket data to be loaded into Playground
+    // Playback State
     const [playbackTicket, setPlaybackTicket] = useState<TicketData | null>(null);
 
-    // 1. SYNC THEME WITH DOM IMMEDIATELY
+    // PERSIST VIEW STATE
+    useEffect(() => {
+        if (view) {
+            localStorage.setItem('beast_last_view', view);
+        }
+    }, [view]);
+
+    // SYNC THEME
     useEffect(() => {
         const root = document.documentElement;
         if (theme === 'dark') {
@@ -32,16 +48,30 @@ const MainAppContent: React.FC = () => {
         }
     }, [theme]);
 
-    // 2. AUTO NAVIGATE LOGIC (CORRECTED)
-    // Only redirect to dashboard if user is authenticated AND currently on the Login page (Product).
-    // We REMOVED 'HOME' from here so users can actually visit the landing page while logged in.
+    // 2. SMART REDIRECT & PROTECTION LOGIC
     useEffect(() => {
-        if (isAuthenticated && view === 'PRODUCT') {
+        if (loading) return; // Wait for session check
+
+        // If NOT authenticated but trying to access protected areas -> Redirect to Product (Login)
+        if (!isAuthenticated) {
+            if (['PLAYGROUND', 'USER_DASHBOARD', 'ADMIN'].includes(view)) {
+                setView('PRODUCT');
+            }
+        }
+
+        // If AUTHENTICATED but on "Guest" pages -> Redirect to Dashboard (Restore Session)
+        // Only if the user didn't explicitly choose to go there (we can't easily know "explicit" vs "default" here without more state, 
+        // allows "Sticky Session". If I am logged in, and I reload on HOME, should I stay on Home? 
+        // User Request: "always maintained logged in unless explicitly logout".
+        // If they are on HOME and hit refresh, staying on HOME is fine. 
+        // BUT if they just logged in fresh, we want Dashboard. 
+        // This existing logic handles "If I am on Product Page, go to Dashboard".
+        else if (isAuthenticated && view === 'PRODUCT') {
             setView('USER_DASHBOARD');
         }
-    }, [isAuthenticated, view]);
+    }, [isAuthenticated, loading, view]);
 
-    // Lock body scroll when Playground or Admin is open
+    // Lock body scroll
     useEffect(() => {
         if (view === 'PLAYGROUND' || view === 'ADMIN') {
             document.body.style.overflow = 'hidden';
@@ -52,12 +82,11 @@ const MainAppContent: React.FC = () => {
     }, [view]);
 
     const handleOpenPlayground = () => {
-        // IRON GATE PROTOCOL: Block access if not authenticated
         if (!isAuthenticated) {
             setView('PRODUCT');
             return;
         }
-        setPlaybackTicket(null); // Clear any previous playback data
+        setPlaybackTicket(null);
         setView('PLAYGROUND');
     };
 
@@ -70,7 +99,7 @@ const MainAppContent: React.FC = () => {
         }
     };
 
-    // Smart Navigation: If logged in, skip login page and go straight to dashboard
+    // Smart Navigation
     const handleNavigateToProduct = () => {
         if (isAuthenticated) {
             setView('USER_DASHBOARD');
@@ -85,8 +114,9 @@ const MainAppContent: React.FC = () => {
 
     // Real Logout Action
     const handleUserLogout = () => {
-        logout(); // 1. Clear Auth State
-        setView('HOME'); // 2. Navigate Home
+        logout();
+        localStorage.removeItem('beast_last_view'); // Clear history
+        setView('HOME');
     };
 
     const handlePlayback = (ticket: TicketData) => {
@@ -97,6 +127,18 @@ const MainAppContent: React.FC = () => {
     const toggleTheme = () => {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
+
+    // 3. LOADING SCREEN (PREVENT FLASH)
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-black flex items-center justify-center z-[100]">
+                <div className="text-center space-y-4">
+                    <div className="w-16 h-16 border-4 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin mx-auto"></div>
+                    <p className="text-neon-cyan font-mono animate-pulse">VERIFYING SESSION...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>

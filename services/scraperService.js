@@ -4,6 +4,7 @@ const LotteryResult = require('../models/LotteryResult');
 const Track = require('../models/Track');
 const { scrapeState } = require('./scraperEngine');
 const scraperRD = require('./scraperRD'); // Import RD Scraper
+const { validateResult } = require('./validationService');
 
 // --- CONFIGURATION ---
 // Maps our internal IDs to Sniper Config Keys and external IDs
@@ -77,11 +78,11 @@ const SNIPER_CONFIG = {
     pa: {
         name: "Pennsylvania",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/pennsylvania/midday-pick-3/'], label: 'Day' },
+            mid: { urls: ['https://www.lotteryusa.com/pennsylvania/midday-pick-3/'], label: 'Midday' },
             eve: { urls: ['https://www.lotteryusa.com/pennsylvania/pick-3/'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/pennsylvania/midday-pick-4/'], label: 'Day' },
+            mid: { urls: ['https://www.lotteryusa.com/pennsylvania/midday-pick-4/'], label: 'Midday' },
             eve: { urls: ['https://www.lotteryusa.com/pennsylvania/pick-4/'], label: 'Evening' }
         }
     },
@@ -112,7 +113,6 @@ const SNIPER_CONFIG = {
             eve: { urls: ['https://www.lotteryusa.com/maryland/pick-4/'], label: 'Evening' }
         }
     },
-    // SC = Pick 3 / Pick 4
     sc: {
         name: "South Carolina",
         p3: {
@@ -159,69 +159,60 @@ const SNIPER_CONFIG = {
             mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-4/'], label: 'Morning' }
         }
     },
+    ma: {
+        name: "Massachusetts",
+        p3: {
+            mid: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-midday/'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-evening/'], label: 'Evening' }
+        },
+        p4: {
+            mid: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-midday/'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-evening/'], label: 'Evening' }
+        }
+    },
     va: {
         name: "Virginia",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/midday-pick-3/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/evening-pick-3/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-3-day/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-3-night/'], label: 'Night' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/midday-pick-4/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/evening-pick-4/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-4-day/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-4-night/'], label: 'Night' }
         }
     },
     nc: {
         name: "North Carolina",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/midday-pick-3/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/north-carolina/evening-pick-3/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3-daytime/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/midday-pick-4/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/north-carolina/evening-pick-4/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4-daytime/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/'], label: 'Evening' }
         }
     }
 };
 
 const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
 
-const fetchAndParse = async () => {
-    console.log('📡 Starting Data Cycle (Real Scraper)...');
-
-    // 1. Run RD Scraper
-    try {
-        await scraperRD.fetchAndProcess();
-    } catch (e) {
-        console.error("RD Scraper Failed:", e.message);
-    }
-
-    for (const [stateKey, config] of Object.entries(SNIPER_CONFIG)) {
-        try {
-            console.log(`   Running ${config.name}...`);
-            const data = await scrapeState(stateKey, config);
-
-            // Process Draws
-            await processDraw(stateKey, config.name, config.p3.mid?.label || 'Midday', data?.midday);
-            await processDraw(stateKey, config.name, config.p3.eve?.label || 'Evening', data?.evening);
-            if (data?.night) await processDraw(stateKey, config.name, config.p3.ngt?.label || 'Night', data.night);
-            if (data?.morning) await processDraw(stateKey, config.name, config.p3.mor?.label || 'Morning', data.morning);
-
-            // Stagger requests slightly to avoid rate limit slam
-            await new Promise(r => setTimeout(r, 2000));
-
-        } catch (e) {
-            console.error(`❌ Error scraping ${stateKey}: `, e.message);
-        }
-    }
-};
-
 async function processDraw(stateKey, stateName, timeLabel, result) {
     if (!result || !result.p3 || !result.w4 || !result.date) return;
+
+    const resultId = `usa/${stateKey}/${timeLabel}`;
+    const numbers = `${result.p3}-${result.w4}`;
+
+    // --- VALIDATION GATEKEEPER ---
+    const check = validateResult(resultId, result.date, numbers);
+    if (!check.valid) {
+        console.warn(`[VALIDATION BLOCKED] ${resultId}: ${check.reason} (Data: ${numbers} Date: ${result.date})`);
+        return;
+    }
+    // -----------------------------
 
     // 1. Save to Sniper Track Model
     try {
         const dateObj = new Date(result.date + 'T12:00:00Z');
-        // Composite check
         const exists = await Track.findOne({
             userId: GLOBAL_ADMIN_ID,
             lottery: stateName,
@@ -230,43 +221,40 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
         });
 
         if (!exists) {
-            await Track.create({
-                userId: GLOBAL_ADMIN_ID,
-                lottery: stateName,
-                date: dateObj, // Stored as Date object in Schema? Or String? 
-                // Wait, Schema has 'date: String' (YYYY-MM-DD) OR Date? 
-                // Checking Schema: date: String is what I wrote in Step 279.
-                // But original Track might have been Date. 
-                // Let's stick to String YYYY-MM-DD to be consistent with Schema I wrote.
-                // Actually my Schema in Step 279 says: `date: String, // YYYY-MM-DD`.
-                // So I should save as String.
-
-                // Correction:
-                date: result.date, // ISO String YYYY-MM-DD
-                time: timeLabel,
-                p3: result.p3,
-                pick3: result.p3, // alias
-                pick4: result.w4, // alias
-                first: result.p3, // simplified mapping
-                second: "---",
-                third: "---",
-
-                source: 'AutoScraper',
-                createdAt: new Date()
-            });
-            console.log(`   ✅ Saved Track: ${stateName} ${timeLabel} [${result.date}]`);
+            if (result.p3.includes('---') || result.w4.includes('---')) {
+                console.log(`      ⚠️ Skipping Track Save: ${stateName} ${timeLabel} (Contains Dashed/Empty Data)`);
+            } else {
+                await Track.create({
+                    userId: GLOBAL_ADMIN_ID,
+                    lottery: stateName,
+                    date: result.date,
+                    time: timeLabel,
+                    p3: result.p3,
+                    pick3: result.p3,
+                    pick4: result.w4,
+                    first: result.p3,
+                    second: "---",
+                    third: "---",
+                    source: 'AutoScraper',
+                    createdAt: new Date()
+                });
+                console.log(`   ✅ Saved Track: ${stateName} ${timeLabel} [${result.date}]`);
+            }
         }
     } catch (e) {
         if (e.code !== 11000) console.error(`      Error saving Track: ${e.message}`);
     }
 
     // 2. Save to LotteryResult (Main Dashboard)
-    // Map to LotteryResult schema: { resultId, country, lotteryName, drawName, numbers, drawDate... }
     try {
         const resultId = `usa/${stateKey}/${timeLabel}`;
-        const numbers = `${result.p3}-${result.w4}`; // Combined format? Or Mock format?
-        // Mock format was typically specific to game. 
-        // Let's optimize for display.
+        const numbers = `${result.p3}-${result.w4}`;
+
+        // INTEGRITY CHECK
+        if (result.p3.includes('---') && result.w4.includes('---')) {
+            console.log(`      ⚠️ Skipping Dashboard Save: ${stateName} ${timeLabel} (Both Empty)`);
+            return;
+        }
 
         await LotteryResult.updateOne(
             { resultId: resultId, drawDate: result.date },
@@ -279,25 +267,101 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
                     numbers: numbers,
                     drawDate: result.date,
                     scrapedAt: new Date(),
-                    // lastDrawTime, closeTime - optional or static
                 }
             },
             { upsert: true }
         );
-        // console.log(`   ✅ Saved LotteryResult: ${resultId}`);
+
+        // --- DERIVED RESULTS LOGIC (NEW YORK ONLY) ---
+        // Brooklyn = Last 3 digits of Win 4
+        // Front = First 3 digits of Win 4
+        if (stateKey === 'ny' && result.w4 && result.w4.length === 4 && result.w4 !== '----') {
+            const win4 = result.w4;
+            const brooklyn = win4.substring(1, 4); // Index 1,2,3 (Last 3)
+            const front = win4.substring(0, 3);    // Index 0,1,2 (First 3)
+
+            console.log(`      🗽 NY DETECTED (${timeLabel}): Deriving Brooklyn (${brooklyn}) & Front (${front})`);
+
+            // Common Metadata
+            const derivedBase = {
+                country: 'USA', // Or 'SPECIAL'
+                drawDate: result.date,
+                scrapedAt: new Date()
+            };
+
+            // BROOKLYN
+            // Map Midday -> Midday, Evening -> Evening
+            const bkId = `special/bk/${timeLabel}`;
+            await LotteryResult.updateOne(
+                { resultId: bkId, drawDate: result.date },
+                {
+                    $set: {
+                        ...derivedBase,
+                        resultId: bkId,
+                        lotteryName: 'Brooklyn',
+                        drawName: timeLabel,
+                        numbers: brooklyn // Just 3 digits
+                    }
+                }, { upsert: true }
+            );
+
+            // FRONT
+            const frontId = `special/front/${timeLabel}`;
+            await LotteryResult.updateOne(
+                { resultId: frontId, drawDate: result.date },
+                {
+                    $set: {
+                        ...derivedBase,
+                        resultId: frontId,
+                        lotteryName: 'Win-4 Front',
+                        drawName: timeLabel === 'Midday' ? 'AM' : 'PM', // User asked for AM/PM label
+                        numbers: front // Just 3 digits
+                    }
+                }, { upsert: true }
+            );
+        }
+
     } catch (e) {
         console.error(`      Error saving LotteryResult: ${e.message}`);
     }
 }
 
+const fetchAndParse = async () => {
+    console.log('📡 Starting Data Cycle (Real Scraper)...');
+
+    // 1. Run RD Scraper
+    try {
+        await scraperRD.fetchAndProcess();
+    } catch (e) {
+        console.error("RD Scraper Failed:", e.message);
+    }
+
+    // 2. Run USA Scrapers
+    for (const [stateKey, config] of Object.entries(SNIPER_CONFIG)) {
+        try {
+            console.log(`   Running ${config.name}...`);
+            const data = await scrapeState(stateKey, config);
+
+            // Process Draws
+            await processDraw(stateKey, config.name, config.p3.mid?.label || 'Midday', data?.midday);
+            await processDraw(stateKey, config.name, config.p3.eve?.label || 'Evening', data?.evening);
+            if (data?.night) await processDraw(stateKey, config.name, config.p3.ngt?.label || 'Night', data.night);
+            if (data?.morning) await processDraw(stateKey, config.name, config.p3.mor?.label || 'Morning', data.morning);
+
+            // Stagger requests
+            await new Promise(r => setTimeout(r, 2000));
+
+        } catch (e) {
+            console.error(`❌ Error scraping ${stateKey}: `, e.message);
+        }
+    }
+};
+
 // Initialize Cron Job
 const startResultScheduler = () => {
-    // Run every 10 minutes
     cron.schedule('*/10 * * * *', () => {
         fetchAndParse();
     });
-
-    // RUN IMMEDIATELY (with slight delay)
     console.log('⏳ Scheduler started. Initial scrape in 5s...');
     setTimeout(fetchAndParse, 5000);
 };

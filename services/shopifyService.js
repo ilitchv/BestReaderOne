@@ -60,8 +60,9 @@ const shopifyService = {
             };
 
         } catch (error) {
-            console.error("Shopify Create Draft Order Error:", error.response?.data || error.message);
-            throw new Error('Failed to create Shopify deposit link');
+            const details = error.response ? JSON.stringify(error.response.data) : error.message;
+            console.error("Shopify Create Draft Order Error:", details);
+            throw new Error(`Shopify Error: ${details}`);
         }
     },
 

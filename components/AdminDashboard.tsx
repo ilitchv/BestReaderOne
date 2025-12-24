@@ -116,14 +116,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const [salesViewMode, setSalesViewMode] = useState<'tickets' | 'plays'>('tickets');
     const { playSound } = useSound();
 
+    // Fix: Use local date to avoid UTC tomorrow issue
+    const getLocalISODate = () => {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    };
+
     // SALES STATE
     const [tickets, setTickets] = useState<TicketData[]>([]);
     const [filteredTickets, setFilteredTickets] = useState<TicketData[]>([]);
 
     // LEDGER & FINANCE STATE
     const [ledgerFilters, setLedgerFilters] = useState({
-        startDate: new Date().toISOString().split('T')[0], // Default today
-        endDate: new Date().toISOString().split('T')[0],
+        startDate: getLocalISODate(), // Default today (Local)
+        endDate: getLocalISODate(),
         type: 'ALL',
         userId: '',
         sortBy: 'index',
@@ -132,11 +138,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const [financeStats, setFinanceStats] = useState<FinanceStats | null>(null);
     const [totalLiability, setTotalLiability] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
-    // Fix: Use local date to avoid UTC tomorrow issue
-    const getLocalISODate = () => {
-        const d = new Date();
-        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    };
 
     const [dateRange, setDateRange] = useState<{ start: string, end: string }>({
         start: getLocalISODate(),
@@ -239,10 +240,77 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         originalName: c.lottery
     }));
 
-    const loadResultsFromDb = () => {
-        const resultData = localDbService.getResults();
-        resultData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setResults(resultData);
+    const loadResultsFromDb = async () => {
+        try {
+            console.log("AdminDashboard: Fetching authoritative results from Server...");
+            const res = await fetch('/api/results');
+            if (res.ok) {
+                const rawData: any[] = await res.json();
+
+                // ADAPTER: Convert API 'LotteryResult' -> Admin 'WinningResult'
+                // Admin expects: { id, lotteryId, first, second, third, pick3, pick4 ... }
+                // API gives: { resultId, numbers: "123-4567" or "10-20-30" ... }
+
+                const adaptedResults: WinningResult[] = rawData.map(item => {
+                    let first = '', second = '', third = '', p3 = '', p4 = '';
+                    const nums = item.numbers || '';
+
+                    // Parse 'numbers' string
+                    // Parse 'numbers' string
+                    if (nums.includes('-') && !nums.includes(' ')) {
+                        const parts = nums.split('-');
+
+                        // CASE A: Standard Pick3-Pick4 (e.g. "144-6733" or "321-4321")
+                        // Check if parts fit the profile: one is length 3, one is length 4
+                        // Sometimes scraper puts them in order 3-4, sometimes 4-3? Assume 3-4 usually.
+                        if (parts.length === 2 && parts[0].length === 3 && parts[1].length === 4) {
+                            p3 = parts[0];
+                            p4 = parts[1];
+
+                            // Venezuela Mapping
+                            first = p3.slice(-2);
+                            second = p4.slice(0, 2);
+                            third = p4.slice(-2);
+                        }
+                        // CASE B: Quiniela / RD (e.g. "94-14-09")
+                        else {
+                            if (parts.length >= 1) first = parts[0];
+                            if (parts.length >= 2) second = parts[1];
+                            if (parts.length >= 3) third = parts[2];
+                        }
+                    } else if (nums.length === 3) {
+                        p3 = nums;
+                        first = p3.slice(-2);
+                    } else if (nums.length === 4) {
+                        p4 = nums;
+                        second = p4.slice(0, 2);
+                        third = p4.slice(-2);
+                    }
+
+                    return {
+                        id: item._id || `${item.resultId}_${item.drawDate}`,
+                        date: item.drawDate,
+                        lotteryId: item.resultId, // MAP resultId -> lotteryId (Fixes .split error)
+                        lotteryName: item.lotteryName,
+                        first,
+                        second,
+                        third,
+                        pick3: p3,
+                        pick4: p4,
+                        createdAt: item.createdAt || new Date().toISOString()
+                    };
+                });
+
+                // Ensure sorting
+                adaptedResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                setResults(adaptedResults);
+                console.log(`AdminDashboard: Loaded and Adapted ${adaptedResults.length} results.`);
+            } else {
+                console.error("Failed to fetch results from server");
+            }
+        } catch (e) {
+            console.error("Error loading results from API:", e);
+        }
     };
 
     const loadUsersFromDb = async () => {
@@ -250,16 +318,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             const res = await fetch('/api/admin/users');
             if (res.ok) {
                 const userData = await res.json();
+                console.log("AdminDashboard: Loaded Users from API:", userData); // DEBUG: Inspect loaded users
                 setUsers(userData);
             }
         } catch (e) { console.error("Failed to load users", e); }
     };
 
-    const loadAuditLog = () => {
-        // Audit log is still local for now as per design in this prototype phase
-        // or we could add an endpoint later. Keeping local for simplicity unless specified.
-        const logs = localDbService.getAuditLog();
-        setAuditLog(logs);
+    const loadAuditLog = async () => {
+        try {
+            const res = await fetch('/api/admin/audit');
+            if (res.ok) {
+                const logs = await res.json();
+                setAuditLog(logs);
+            }
+        } catch (e) {
+            console.error("Failed to load audit logs:", e);
+        }
     };
 
     const reloadTickets = () => {
@@ -320,9 +394,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 setWithdrawalTxHash('');
                 loadWithdrawals(); // Refresh table
 
-                // If it was a Semi-Auto Payout, open the instruction modal
+                // If it was a Semi-Auto Payout OR if a Link is provided, open the instruction modal
                 console.log("PAYOUT RESPONSE:", data); // DEBUG
-                if (data.isSemiAuto && data.payout?.signingLink) {
+                // FIX: Trust the link presence regardless of isSemiAuto flag (which might be false if recovered)
+                if (data.payout?.signingLink) {
                     console.log("OPENING MODAL WITH:", data.payout.signingLink); // DEBUG
                     setPayoutModal({
                         open: true,
@@ -330,7 +405,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         id: data.payout.id
                     });
                 } else {
-                    console.warn("Modal not opened. isSemiAuto:", data.isSemiAuto, "Link:", data.payout?.signingLink);
+                    console.warn("Modal not opened. Link missing.", data);
                 }
 
 
@@ -437,6 +512,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     useEffect(() => {
         if (activeTab === 'ledger') {
             checkIntegrity();
+            loadUsersFromDb();
+        }
+        if (activeTab === 'audit') {
+            loadAuditLog(); // Refresh Audit Log when tab is selected
         }
     }, [activeTab]);
 
@@ -544,7 +623,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         }
     };
 
-    const filteredAuditLog = auditLog.filter(log => { if (auditFilter === 'ALL') return true; if (auditFilter === 'FINANCE') return ['FINANCE', 'PAYOUT'].includes(log.action); if (auditFilter === 'RESULTS') return ['CREATE', 'UPDATE', 'DELETE'].includes(log.action); if (auditFilter === 'USERS') return ['USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'USER_APPROVE', 'USER_REJECT'].includes(log.action); return true; });
+    const filteredAuditLog = auditLog.filter(log => {
+        if (auditFilter === 'ALL') return true;
+        // FIX: Match broad categories (e.g. FINANCE_ADMIN_ADJUST should show in FINANCE)
+        if (auditFilter === 'FINANCE') return log.action.includes('FINANCE') || log.action === 'PAYOUT';
+        if (auditFilter === 'RESULTS') return ['CREATE', 'UPDATE', 'DELETE'].some(k => log.action.includes(k)) && !log.action.includes('USER');
+        if (auditFilter === 'USERS') return log.action.includes('USER');
+        return true;
+    });
 
     // ... (QR / Results / OCR / Payout handlers unchanged) ...
     const parseRowValue = (val: string) => { const cleaned = val.replace(/-{2,}|x{2,}/gi, '').trim(); const parts = cleaned.split(/[\s\-\t,]+/).filter(p => /^\d+$/.test(p)); let f = '', s = '', t = '', p3 = '', p4 = ''; const p3Candidates = parts.filter(p => p.length === 3); const p4Candidates = parts.filter(p => p.length === 4); if (p3Candidates.length > 0) p3 = p3Candidates[p3Candidates.length - 1]; if (p4Candidates.length > 0) p4 = p4Candidates[p4Candidates.length - 1]; const pairCandidates = parts.filter(p => p.length <= 2); if (pairCandidates.length > 0) f = pairCandidates[0].padStart(2, '0'); if (pairCandidates.length > 1) s = pairCandidates[1].padStart(2, '0'); if (pairCandidates.length > 2) t = pairCandidates[2].padStart(2, '0'); return { f, s, t, p3, p4 }; };
@@ -679,6 +765,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     <button onClick={() => setActiveTab('payouts')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'payouts' ? 'bg-neon-cyan text-black shadow' : 'text-gray-400 hover:text-white'}`}>Payouts</button>
                 </div>
 
+                <button onClick={() => {
+                    if (confirm('Clear Local Database Cache? This will refresh the app.')) {
+                        localDbService.clearDb();
+                        window.location.reload();
+                    }
+                }} className="px-4 py-2 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500 hover:text-black rounded border border-yellow-500/30 transition-all text-sm font-bold mr-2">
+                    CLEAR CACHE
+                </button>
                 <button onClick={onClose} className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded border border-red-500/30 transition-all text-sm font-bold">
                     EXIT
                 </button>
@@ -855,7 +949,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                                                     {autoPayConfirmId === w._id ? (
                                                                         <div className="flex items-center gap-1 animate-fade-in">
                                                                             <button onClick={() => handleProcessWithdrawal(w._id, 'APPROVE_AUTO')} className="px-2 py-1.5 bg-neon-cyan text-black hover:bg-cyan-400 rounded text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all">
-                                                                                Confirm?
+                                                                                Pay & Approve (BTCPay)
                                                                             </button>
                                                                             <button onClick={() => setAutoPayConfirmId(null)} className="p-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600 rounded text-xs">
                                                                                 ✕
@@ -909,7 +1003,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 {/* OTHER TABS ... */}
                 {activeTab === 'results' && (<div className="space-y-6"><div className="flex flex-wrap gap-4 items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700"><div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-slate-900 border border-slate-600 rounded-lg px-2"><span className="text-xs font-bold text-slate-500">FROM</span><input type="date" className="bg-transparent py-2 text-sm focus:outline-none text-white w-32" value={resultsDateRange.start} onChange={e => setResultsDateRange({ ...resultsDateRange, start: e.target.value })} /><span className="text-slate-600">|</span><span className="text-xs font-bold text-slate-500">TO</span><input type="date" className="bg-transparent py-2 text-sm focus:outline-none text-white w-32" value={resultsDateRange.end} onChange={e => setResultsDateRange({ ...resultsDateRange, end: e.target.value })} /></div><input type="text" placeholder="Filter by Name..." value={resultsSearch} onChange={e => setResultsSearch(e.target.value)} className="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white outline-none focus:border-neon-cyan text-sm w-48" /></div><div className="flex gap-3"><button onClick={() => setIsOcrModalOpen(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold text-xs flex items-center gap-1 shadow-lg shadow-purple-500/20 transition-all"><span className="text-lg leading-none">📷</span> Import (OCR)</button><button onClick={handleSyncScrapedData} disabled={isSyncing} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-xs flex items-center gap-1 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"><span className={`${isSyncing ? 'animate-spin' : ''}`}>☁️</span> {isSyncing ? 'Syncing...' : 'Sync Data'}</button><button onClick={() => { setIsAddResultOpen(true); }} className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded font-bold text-xs flex items-center gap-1 shadow-lg shadow-green-500/20"><span className="text-lg leading-none">+</span> Add Result</button></div></div><div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg"><div className="overflow-x-auto"><table className="w-full text-sm text-left text-gray-300"><thead className="bg-slate-900/50 text-xs uppercase font-bold border-b border-slate-700 text-gray-500"><tr><th className="p-4 w-1/6">Draw Date</th><th className="p-4 w-1/5">Lotería</th><th className="p-4 text-center text-blue-400 w-16">1st</th><th className="p-4 text-center w-16">2nd</th><th className="p-4 text-center w-16">3rd</th><th className="p-4 text-center text-purple-400 w-20">Pick 3</th><th className="p-4 text-center text-orange-400 w-20">Pick 4</th><th className="p-4 text-center w-24">Posted At</th><th className="p-4 text-right w-12">Actions</th></tr></thead><tbody className="divide-y divide-slate-700">{displayedResults.map(res => (<tr key={res.id} className="hover:bg-slate-700/50 transition-colors"><td className="p-4 font-mono font-bold text-white text-xs">{res.date}</td><td className="p-4 font-bold text-white">{res.lotteryName} <span className="text-xs font-normal text-slate-500 ml-1">({res.lotteryId.split('/').pop()})</span></td><td className="p-4 text-center font-mono font-bold text-lg text-blue-400">{res.first || '---'}</td><td className="p-4 text-center font-mono text-base">{res.second || '---'}</td><td className="p-4 text-center font-mono text-base">{res.third || '---'}</td><td className="p-4 text-center font-mono text-purple-400">{res.pick3 || '---'}</td><td className="p-4 text-center font-mono text-orange-400">{res.pick4 || '---'}</td><td className="p-4 text-center font-mono text-xs text-gray-500">{new Date(res.createdAt).toLocaleTimeString()}</td><td className="p-4 text-right flex justify-end gap-2"><button onClick={() => handleEditInitiate(res)} className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/10 rounded"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg></button><button onClick={() => handleDeleteInitiate(res.id)} className="text-red-500 hover:text-red-400 p-2 hover:bg-red-500/10 rounded"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg></button></td></tr>))}{displayedResults.length === 0 && (<tr><td colSpan={9} className="p-12 text-center text-gray-500">No results found for range.</td></tr>)}</tbody></table></div></div></div>)}
                 {activeTab === 'winners' && (<div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Total Payout Liability</p><p className="text-3xl font-bold text-red-400">${(auditStats.totalPayout || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Net Profit</p><p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-500'}`}>${(netProfit || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Winning Tickets</p><p className="text-3xl font-bold text-white">{auditStats.winningTicketsCount}</p></div></div>{auditStats.integrityBreaches.length > 0 && (<div className="bg-red-900/20 border border-red-500 rounded-xl p-4 flex items-center gap-4 animate-pulse"><div className="p-3 bg-red-500 rounded-full text-white font-bold">!</div><div><h4 className="text-red-500 font-bold text-lg">Integrity Breach Detected</h4><p className="text-red-300 text-sm">Found {auditStats.integrityBreaches.length} tickets sold AFTER results were posted.</p></div></div>)}<div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg"><div className="p-4 border-b border-slate-700 bg-slate-900/50"><h3 className="font-bold text-white">Winners Feed</h3></div><div className="overflow-x-auto max-h-[600px]"><table className="w-full text-sm text-left text-slate-400"><thead className="bg-slate-900/50 text-xs uppercase font-bold border-b border-slate-700 sticky top-0 z-10 backdrop-blur-md"><tr><th className="p-4">Ticket</th><th className="p-4">Date</th><th className="p-4">Tracks</th><th className="p-4">Play</th><th className="p-4">Match Type</th><th className="p-4 text-right">Prize</th><th className="p-4 text-center">Status</th></tr></thead><tbody className="divide-y divide-slate-700">{auditStats.winnersList.map((win, idx) => (<tr key={idx} className="hover:bg-slate-700/50 transition-colors"><td className="p-4 font-mono text-neon-cyan">{win.ticketNumber}</td><td className="p-4">{win.date}</td><td className="p-4 text-white text-xs font-bold">{win.track}</td><td className="p-4 font-bold text-white">{win.betNumber} <span className="text-xs text-slate-500 font-normal">({win.gameMode})</span></td><td className="p-4 text-xs">{win.matchType} <span className="text-slate-500">vs {win.resultNumbers}</span></td><td className="p-4 text-right font-bold text-green-400">${(win.prize || 0).toFixed(2)}</td><td className="p-4 text-center">{win.integrityOk ? (<span className="px-2 py-1 rounded bg-green-500/20 text-green-400 text-[10px] font-bold">VALID</span>) : (<span className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] font-bold">LATE ({win.timeGapSeconds}s)</span>)}</td></tr>))}{auditStats.winnersList.length === 0 && (<tr><td colSpan={7} className="p-8 text-center text-slate-500">No winners found yet.</td></tr>)}</tbody></table></div></div></div>)}
-                {activeTab === 'audit' && (<div className="space-y-6"><div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg p-4"><div className="flex gap-4 border-b border-slate-700 pb-4 mb-4"><button onClick={() => setAuditFilter('ALL')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'ALL' ? 'border-neon-cyan text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>All Activity</button><button onClick={() => setAuditFilter('FINANCE')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'FINANCE' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Finance</button><button onClick={() => setAuditFilter('RESULTS')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'RESULTS' ? 'border-yellow-500 text-yellow-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Results</button><button onClick={() => setAuditFilter('USERS')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'USERS' ? 'border-green-500 text-green-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Users</button></div><div className="max-h-[70vh] overflow-y-auto"><table className="w-full text-sm text-left text-gray-400"><thead className="bg-slate-900/50 text-xs uppercase font-bold text-gray-500 sticky top-0"><tr><th className="p-3">Timestamp</th><th className="p-3">User</th><th className="p-3">Action</th><th className="p-3">Target ID</th><th className="p-3 w-1/2">Details</th></tr></thead><tbody className="divide-y divide-slate-700/50">{filteredAuditLog.map(log => (<tr key={log.id} className="hover:bg-slate-700/20"><td className="p-3 font-mono text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</td><td className="p-3 font-bold text-white">{log.user}</td><td className="p-3"><span className={`text-[10px] font-bold px-2 py-1 rounded border uppercase ${log.action === 'DELETE' || log.action === 'USER_DELETE' ? 'bg-red-500/10 text-red-400 border-red-500/20' : log.action === 'UPDATE' || log.action === 'USER_UPDATE' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : log.action === 'FINANCE' || log.action === 'PAYOUT' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>{log.action}</span></td><td className="p-3 font-mono text-xs">{log.targetId}</td><td className="p-3 text-gray-300">{log.details}</td></tr>))}{filteredAuditLog.length === 0 && (<tr><td colSpan={5} className="p-8 text-center text-slate-600">No logs found for this filter.</td></tr>)}</tbody></table></div></div></div>)}
+                {activeTab === 'audit' && (<div className="space-y-6"><div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg p-4"><div className="flex gap-4 border-b border-slate-700 pb-4 mb-4 items-center justify-between">
+                    <div className="flex gap-4">
+                        <button onClick={() => setAuditFilter('ALL')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'ALL' ? 'border-neon-cyan text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>All Activity</button>
+                        <button onClick={() => setAuditFilter('FINANCE')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'FINANCE' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Finance</button>
+                        <button onClick={() => setAuditFilter('RESULTS')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'RESULTS' ? 'border-yellow-500 text-yellow-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Results</button>
+                        <button onClick={() => setAuditFilter('USERS')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'USERS' ? 'border-green-500 text-green-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Users</button>
+                    </div>
+                    <button onClick={loadAuditLog} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold flex items-center gap-1">
+                        🔄 Refresh
+                    </button>
+                </div><div className="max-h-[70vh] overflow-y-auto"><table className="w-full text-sm text-left text-gray-400"><thead className="bg-slate-900/50 text-xs uppercase font-bold text-gray-500 sticky top-0"><tr><th className="p-3">Timestamp</th><th className="p-3">User</th><th className="p-3">Action</th><th className="p-3">Target ID</th><th className="p-3 w-1/2">Details</th></tr></thead><tbody className="divide-y divide-slate-700/50">{filteredAuditLog.map(log => (<tr key={log.id} className="hover:bg-slate-700/20"><td className="p-3 font-mono text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</td><td className="p-3 font-bold text-white">{log.user}</td><td className="p-3"><span className={`text-[10px] font-bold px-2 py-1 rounded border uppercase ${log.action === 'DELETE' || log.action === 'USER_DELETE' ? 'bg-red-500/10 text-red-400 border-red-500/20' : log.action === 'UPDATE' || log.action === 'USER_UPDATE' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : log.action === 'FINANCE' || log.action === 'PAYOUT' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>{log.action}</span></td><td className="p-3 font-mono text-xs">{log.targetId}</td><td className="p-3 text-gray-300">{log.details}</td></tr>))}{filteredAuditLog.length === 0 && (<tr><td colSpan={5} className="p-8 text-center text-slate-600">No logs found for this filter.</td></tr>)}</tbody></table></div></div></div>)}
 
                 {/* BEAST LEDGER TAB - ENHANCED FINANCIAL DASHBOARD */}
                 {activeTab === 'ledger' && (

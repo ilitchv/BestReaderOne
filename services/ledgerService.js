@@ -16,9 +16,11 @@ const ledgerService = {
 
         try {
             // A. Get User
+            // console.log(`🔍 Ledger Lookup User: ${userId}`);
             const user = await User.findById(userId).session(session);
             if (!user) {
-                throw new Error('User not found');
+                console.error(`❌ Ledger Error: User not found for ID '${userId}'`);
+                throw new Error(`User not found for ledger transaction (ID: ${userId})`);
             }
 
             // B. Get Last Block (or check for Genesis)

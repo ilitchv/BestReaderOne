@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 interface DepositModalProps {
     isOpen: boolean;
@@ -259,6 +260,69 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                 >
                                     <span>💳</span> {loading && paymentType === 'SHOPIFY' ? 'Creating Link...' : 'Pay with Card (Shopify)'}
                                 </button>
+
+                                {/* PAYPAL BUTTONS */}
+                                <div className="mt-4 pt-4 border-t border-[#333]">
+                                    <PayPalScriptProvider options={{
+                                        clientId: (import.meta as any).env.VITE_PAYPAL_CLIENT_ID || "sb",
+                                        currency: "USD",
+                                        intent: "capture" // ensure intent matches backend
+                                    }}>
+                                        <PayPalButtons
+                                            style={{ layout: "horizontal", tagLine: false, color: "blue", height: 45 }}
+                                            createOrder={async (data, actions) => {
+                                                setLoading(true);
+                                                // Call OUR backend to create order
+                                                const response = await fetch("/api/payment/paypal/create-order", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({
+                                                        amount: selectedAmount,
+                                                        userId: userId, // useful for tracking
+                                                        email: userEmail
+                                                    }),
+                                                });
+                                                const orderData = await response.json();
+                                                // Return the ORDER ID from my backend (which got it from PayPal)
+                                                return orderData.id;
+                                            }}
+                                            onApprove={async (data, actions) => {
+                                                console.log("PayPal Approved:", data);
+                                                setStatus('processing');
+
+                                                // Call OUR backend to capture
+                                                const response = await fetch("/api/payment/paypal/capture-order", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({
+                                                        orderId: data.orderID,
+                                                        userId: userId
+                                                    }),
+                                                });
+
+                                                const details = await response.json();
+
+                                                if (details.status === 'COMPLETED') {
+                                                    setStatus('paid');
+                                                    setTimeout(() => {
+                                                        onSuccess(selectedAmount);
+                                                        onClose();
+                                                    }, 2000);
+                                                } else {
+                                                    console.error("Capture Failed", details);
+                                                    setStatus('error');
+                                                }
+                                                setLoading(false);
+                                            }}
+                                            onError={(err) => {
+                                                console.error("PayPal Error:", err);
+                                                setStatus('error');
+                                                setLoading(false);
+                                            }}
+                                            disabled={loading}
+                                        />
+                                    </PayPalScriptProvider>
+                                </div>
                             </div>
                         </>
                     )}
@@ -282,7 +346,11 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                             <div className="space-y-2">
                                 <h3 className="text-xl font-bold text-white">Payment Window Open</h3>
                                 <p className="text-gray-400 text-sm max-w-[80%] mx-auto">
-                                    A new tab has opened for your payment. Please complete the transaction there.
+                                    Please complete the transaction in the new tab.
+                                    <br />
+                                    <span className="text-yellow-400 font-bold block mt-2">
+                                        Once paid, you can close that tab and return here.
+                                    </span>
                                 </p>
                             </div>
 

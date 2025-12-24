@@ -20,6 +20,7 @@ export interface WizardPlay {
 export interface Track {
   name: string;
   id: string;
+  hideInDashboard?: boolean;
 }
 
 export interface TrackCategory {

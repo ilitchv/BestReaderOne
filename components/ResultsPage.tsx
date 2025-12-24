@@ -112,96 +112,111 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                 // Let's just fetch and see. For now, we will treat them as compatible or assign basic fields.
                 const json = await res.json();
 
-                // Map API results to internal WinningResult format if needed
-                remoteData = json.map((r: any) => ({
-                    id: r.resultId || r._id,
-                    date: r.drawDate,
-                    lotteryId: r.resultId, // or map from name
-                    lotteryName: r.lotteryName,
-                    first: r.first || r.numbers?.split('-')[0] || '',
-                    second: r.second || r.numbers?.split('-')[1] || '',
-                    third: r.third || r.numbers?.split('-')[2] || '',
-                    pick3: r.pick3 || '',
-                    pick4: r.pick4 || '',
-                    createdAt: r.createdAt
-                }));
+                // Map API results to internal WinningResult format
+                remoteData = json.map((r: any) => {
+                    let first = '', second = '', third = '', p3 = '', p4 = '';
+                    const nums = r.numbers || '';
+
+                    if (nums.includes('-') && !nums.includes(' ')) {
+                        const parts = nums.split('-');
+                        // CASE A: Combined P3-P4
+                        if (parts.length === 2 && parts[0].length === 3 && parts[1].length === 4) {
+                            p3 = parts[0];
+                            p4 = parts[1];
+
+                            // Venezuela Mapping
+                            first = p3.slice(-2);
+                            second = p4.slice(0, 2);
+                            third = p4.slice(-2);
+                        }
+                        // CASE B: Quiniela / RD
+                        else {
+                            if (parts.length >= 1) first = parts[0];
+                            if (parts.length >= 2) second = parts[1];
+                            if (parts.length >= 3) third = parts[2];
+                        }
+                    } else if (nums.length === 3) {
+                        p3 = nums;
+                        first = p3.slice(-2);
+                    } else if (nums.length === 4) {
+                        p4 = nums;
+                        second = p4.slice(0, 2);
+                        third = p4.slice(-2);
+                    }
+
+                    return {
+                        id: r.resultId || r._id,
+                        date: r.drawDate,
+                        lotteryId: r.resultId,
+                        lotteryName: r.lotteryName,
+                        first, second, third, pick3: p3, pick4: p4,
+                        createdAt: r.createdAt
+                    };
+                });
             }
         } catch (e) {
             console.warn("API offline, using local data only.");
         }
 
         // 3. Merge Strategies
-        // We want to combine local manual entries with remote scraped entries.
-        // If ID collides, who wins? Remote (scraped) usually is more official, but local might be a manual override.
-        // Let's trust REMOTE for the same ID, but keep LOCAL if unique.
+        // Logic: Group by LotteryId -> Sort Date DESC -> Pick Latest Valid -> Merge
+        // This prevents old API data from overwriting newer local/API data and removes ghosts.
 
         const mergedMap = new Map<string, WinningResult>();
-        localData.forEach(r => mergedMap.set(r.id, r));
-        remoteData.forEach(r => mergedMap.set(r.id, r)); // Remote overwrites local if ID matches
+
+        // A. Start with Local Data
+        // We use 'lotteryId' as the primary key for the FINAL display map because we want ONE result per lottery visually.
+        // However, the original code used composite keys (id_date). 
+        // IF the view expects a list of *multiple* dates per lottery, we need to keep composite.
+        // BUT the Dashboard view (grid) shows ONE card per lottery (the latest).
+        // Let's verify usage: 'getResultForTrack' finds by (trackId && selectedDate).
+        // The view filters by 'selectedDate'. 
+        // So we actually need to keep ALL dates available, OR just ensure that for the *selected date*, we have the best data.
+        // The previous issue was that 'remoteData' might contain old dates that verify as "latest" if we aren't careful? 
+        // Wait, if the user selects a date, we filter by that date.
+        // The issue on homepage was it shows "Latest Available". 
+        // On Ultimate Dashboard, if I select "Today" and it's empty, I want to see "Yesterday".
+        // The current code: `const getResultForTrack = ... dbResults.find(r => r.lotteryId === trackId && r.date === selectedDate);`
+        // This is STRICT date matching.
+        // If we want "Latest Available fallback", we need to change `getResultForTrack`.
+
+        // STEP 1: Store EVERYTHING in the DB state so history works.
+        localData.forEach(r => mergedMap.set(r.lotteryId + '_' + r.date, r));
+
+        // STEP 2: Process API Data
+        // We need to deduplicate API data too.
+        const apiGroups = new Map<string, WinningResult[]>();
+        remoteData.forEach(r => {
+            const key = r.lotteryId + '_' + r.date;
+            if (!apiGroups.has(key)) apiGroups.set(key, []);
+            apiGroups.get(key)?.push(r);
+        });
+
+        apiGroups.forEach((group, key) => {
+            // If multiple results for SAME Day/ID (unlikely but possible), pick best
+            const best = group.find(r => r.first || r.pick3) || group[0];
+            mergedMap.set(key, best);
+        });
 
         setDbResults(Array.from(mergedMap.values()));
     };
 
-    const loadResultsFromDb = () => {
-        // Legacy fallback or reload
-        loadMergedResults();
-    };
-
-    // Date Change
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const nd = e.target.value;
-        setSelectedDate(nd);
-        writeJSON(LS.DATE, nd);
-    };
-
-    // Add Manual Result
-    const handleSaveResult = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newResultTrack || !newResultDate) return;
-
-        const trackObj = catalog.find(t => t.id === newResultTrack);
-        if (!trackObj) return;
-
-        const newResult: WinningResult = {
-            id: `${newResultDate}_${newResultTrack}`,
-            date: newResultDate,
-            lotteryId: newResultTrack,
-            lotteryName: trackObj.lottery,
-            first: newResult1st,
-            second: newResult2nd,
-            third: newResult3rd,
-            pick3: newResultP3,
-            pick4: newResultP4,
-            createdAt: new Date().toISOString()
-        };
-
-        localDbService.saveResult(newResult);
-        loadResultsFromDb(); // Refresh
-        setIsAddResultOpen(false);
-
-        // Reset Form (Keep date)
-        setNewResult1st(''); setNewResult2nd(''); setNewResult3rd(''); setNewResultP3(''); setNewResultP4('');
-    };
-
-    // Open History
-    const handleOpenHistory = (trackId: string) => {
-        const all = localDbService.getResults();
-        const trackHistory = all.filter(r => r.lotteryId === trackId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setHistoryData(trackHistory);
-        setHistoryTargetId(trackId);
-        setIsHistoryOpen(true);
-    };
-
-    // Visibility
-    const handleVisChange = (id: string, val: boolean) => {
-        const nv = { ...visibility, [id]: val };
-        setVisibility(nv);
-        writeJSON(LS.VIS, nv);
-    };
-
-    // Helper to find result for current view
+    // Helper: Smart Fallback for Display
+    // If exact date match is missing, find the most recent previous result?
     const getResultForTrack = (trackId: string): string => {
-        const res = dbResults.find(r => r.lotteryId === trackId && r.date === selectedDate);
+        // 1. Try Exact Match
+        let res = dbResults.find(r => r.lotteryId === trackId && r.date === selectedDate);
+
+        // 2. Fallback: If no result for selected date, AND selected date is Today, show latest available?
+        if (!res && selectedDate === todayStr()) {
+            // Find all results for this track
+            const allTrack = dbResults.filter(r => r.lotteryId === trackId);
+            // Sort Newest First
+            allTrack.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            // Pick first value that isn't empty
+            res = allTrack.find(r => (r.first || r.pick3));
+        }
+
         return formatWinningResult(res);
     };
 

@@ -66,13 +66,58 @@ export const WalletManagerModal: React.FC<WalletManagerModalProps> = ({ isOpen, 
             return setError("Insufficient funds for withdrawal.");
         }
 
-        const success = await localDbService.updateUserBalance(user.id, numAmount, type, note);
-        if (success) {
+        try {
+            // BACKEND INTEGRATION
+            // If Type is DEPOSIT (Manual Credit), use the new Admin Credit Endpoint
+            if (type === 'DEPOSIT') {
+                const res = await fetch('/api/admin/credit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        adminId: 'mock-admin-id', // In real app, from auth context
+                        targetUserId: user.id,
+                        amount: numAmount,
+                        note: note
+                    })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Failed to credit user');
+                }
+            } else {
+                // WITHDRAW (Keep using local or migrate to /api/financial/withdraw later if needed)
+                // For now, let's assuming Manual Debit via same endpoint?
+                // The current /api/admin/credit only supports DEPOSIT (ADD).
+                // Existing /api/financial/withdraw is for USERS requesting.
+                // We need ADMIN DEBIT.
+                // Let's stick to localDbService for withdraw OR add 'action' to /api/admin/credit?
+                // server.js /api/admin/credit sends "DEPOSIT".
+
+                // TEMP: Use local for withdraw to avoid breaking feature, but warn user.
+                // OR better, update server.js to handle debit?
+                // Step 631 injected "ADMIN_CREDIT"/"ADMIN_DEBIT" logic into server.js!
+                // Let's check server.js again to see if it handles negative amounts or action types?
+                // Checked Step 676: It hardcodes action: 'DEPOSIT'.
+
+                // DECISION: Only fix DEPOSIT for now as requested.
+                // For Withdraw, fallback to local or throw error "Not implemented on backend yet".
+                // Given the user flow, they are doing "Manual Credit".
+
+                if (type === 'WITHDRAW') {
+                    // Fallback to local for now to not break it entirely
+                    const success = await localDbService.updateUserBalance(user.id, numAmount, type, note);
+                    if (!success) throw new Error("Local Withdraw Failed");
+                }
+            }
+
             playSound(type === 'DEPOSIT' ? 'add' : 'delete');
             onSuccess();
             onClose();
-        } else {
-            setError("Transaction failed. Check logs.");
+
+        } catch (err: any) {
+            console.error("Transaction Error:", err);
+            setError(err.message || "Transaction failed");
         }
     };
 

@@ -62,8 +62,24 @@ function eastCoastDateISO(d = new Date()) {
 }
 
 function parseDateFromText(text) {
-    const y = dayjs().year();
     const t = (text || '').replace(/\s+/g, ' ');
+
+    // 1. React/Symfony Props Detection (PRIORITY)
+    // Matches: "drawDate":"22-12-2025" or HTML encoded variant
+    // We prioritize this because "Today" might appear in "Next Draw: Today" text, which is wrong for previous results.
+    const reactDate = t.match(/drawDate(?:&quot;|"|\\")?:(?:&quot;|"|\\")?(\d{2}-\d{2}-\d{4})/);
+    if (reactDate) {
+        // Format is DD-MM-YYYY
+        const [d, m, y] = reactDate[1].split('-');
+        return dayjs(`${y}-${m}-${d}`);
+    }
+
+    // 2. Explicit "Today" check
+    if (/\b(today)\b/i.test(t)) {
+        return dayjs(eastCoastDateISO());
+    }
+
+    const y = dayjs().year();
 
     // Month-name format
     const m1 = t.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:,\s*(\d{4}))?/i);
@@ -86,16 +102,57 @@ function parseDateFromText(text) {
     return null;
 }
 
+// Date Capping (Ref Repo Logic)
 function eastCoastISOFromDayjs(dj) {
     if (!dj) return null;
     const todayNY = dayjs(eastCoastDateISO());
+    // If date is in the future, cap it to Today (Ref Repo Strategy)
     return dj.isAfter(todayNY) ? todayNY.format('YYYY-MM-DD') : dj.format('YYYY-MM-DD');
+}
+
+function parseDateFromText(text) {
+    const t = (text || '').replace(/\s+/g, ' ');
+
+    // 1. React/Symfony Props Detection (PRIORITY)
+    // Matches: "drawDate":"22-12-2025"
+    const reactDate = t.match(/drawDate(?:&quot;|"|\\")?:(?:&quot;|"|\\")?(\d{2}-\d{2}-\d{4})/);
+    if (reactDate) {
+        const [d, m, y] = reactDate[1].split('-');
+        return dayjs(`${y}-${m}-${d}`);
+    }
+
+    // REF REPO CHANGE: Removed explicit "Today" check here.
+    // We only parse specific dates. Defaulting happens in scrapeState/maxISO.
+
+    const y = dayjs().year();
+
+    // Month-name format
+    const m1 = t.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:,\s*(\d{4}))?/i);
+    if (m1) {
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const M = monthNames.findIndex(x => m1[1].toLowerCase().startsWith(x)) + 1;
+        const D = parseInt(m1[2], 10);
+        const Y = m1[3] ? parseInt(m1[3], 10) : y;
+        return dayjs(`${Y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`);
+    }
+
+    // Numeric format
+    const m2 = t.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+    if (m2) {
+        const M = parseInt(m2[1], 10), D = parseInt(m2[2], 10);
+        let Y = m2[3] ? parseInt(m2[3], 10) : y;
+        if (Y < 100) Y = 2000 + Y;
+        return dayjs(`${Y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`);
+    }
+    return null;
 }
 
 function maxISO(...djs) {
     const arr = djs.filter(Boolean);
-    if (!arr.length) return null;
+    if (!arr.length) return null; // Let caller default if needed
+    // Sort by time value
     const latest = arr.sort((a, b) => a.valueOf() - b.valueOf()).pop();
+    // Cap at today (Ref Repo Logic)
     return eastCoastISOFromDayjs(latest);
 }
 
@@ -125,41 +182,51 @@ function extractFirstInLatest($, n) {
 }
 
 function extractByLabel($, label, n) {
-    // 1) Find "Latest numbers" section
     let $section = $('section').filter((_, el) => {
         const h = $(el).find('h1,h2,h3').first().text().trim().toLowerCase();
         return h.includes('latest') && h.includes('number');
     }).first();
     if (!$section.length) $section = $.root();
 
-    // 2) Find label
     const re = CT_LABEL_RE[label] || new RegExp(label, 'i');
     const $labelEl = $section.find('*').filter((_, el) =>
         re.test($(el).text().trim().toLowerCase())
     ).first();
     if (!$labelEl.length) return { digits: null, date: null };
 
-    // 3) Walk forward looking for digits
+    // REF REPO CHANGE: Stop walking if we hit the next label
+    const NEXT_LABEL_RE = /\b(day|night|midday|evening|morning)\b/i;
+
     const candidates = [];
     let walker = $labelEl;
     for (let steps = 0; steps < 40; steps++) {
         const $next = walker.next();
         if (!$next.length) break;
         walker = $next;
+
+        const text = walker.text();
+        // Check if we hit another draw label (avoid bleeding into next draw)
+        if (steps > 0 && NEXT_LABEL_RE.test(text) && !re.test(text)) break;
+
         candidates.push(walker);
         candidates.push(...walker.find('li,div,p,span').toArray().map(el => $(el)));
         if (candidates.length > 80) break;
     }
 
     for (const $cand of candidates) {
+        const dateText = $cand.text() + ' ' + ($cand.attr('data-symfony--ux-react--react-props-value') || '');
+        const candDate = parseDateFromText(dateText);
+        const labelDate = parseDateFromText($labelEl.text() + ' ' + ($labelEl.attr('data-symfony--ux-react--react-props-value') || ''));
+
         const d1 = pickConsecutiveSingleDigitNodes($, $cand, n);
-        if (d1) return { digits: d1, date: parseDateFromText($cand.text()) || parseDateFromText($labelEl.text()) };
+        if (d1) return { digits: d1, date: candDate || labelDate };
         const d2 = pickNDigitsFromTextSafe($, $cand, n);
-        if (d2) return { digits: d2, date: parseDateFromText($cand.text()) || parseDateFromText($labelEl.text()) };
+        if (d2) return { digits: d2, date: candDate || labelDate };
     }
 
+    const labelDateFull = parseDateFromText($labelEl.text() + ' ' + ($labelEl.attr('data-symfony--ux-react--react-props-value') || ''));
     const d3 = pickConsecutiveSingleDigitNodes($, $labelEl, n) || pickNDigitsFromTextSafe($, $labelEl, n);
-    return { digits: d3, date: parseDateFromText($labelEl.text()) };
+    return { digits: d3, date: labelDateFull };
 }
 
 function extractRowByLabel($, label, n) {
@@ -176,9 +243,21 @@ function extractRowByLabel($, label, n) {
         if (size < bestSize) { best = $el; bestSize = size; }
     });
     if (!best) return { digits: null, date: null };
+
+    // Check React props on Best Node
+    const reactProps = best.attr('data-symfony--ux-react--react-props-value') || '';
+    const dateText = best.text() + ' ' + reactProps;
+    let date = parseDateFromText(dateText);
+
+    // If no date found checking the row text, try checking children
+    if (!date) {
+        const childProps = best.find('*').map((_, el) => $(el).attr('data-symfony--ux-react--react-props-value') || '').get().join(' ');
+        date = parseDateFromText(childProps);
+    }
+
     const d1 = pickConsecutiveSingleDigitNodes($, best, n);
     const d2 = d1 || pickNDigitsFromTextSafe($, best, n);
-    const date = parseDateFromText(best.text());
+
     return d2 ? { digits: d2, date } : { digits: null, date: null };
 }
 

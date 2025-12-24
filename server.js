@@ -1,4 +1,3 @@
-
 console.log("------------------------------------------------");
 console.log("🚀 STARTING BEAST READER SERVER (CLOUD RUN MODE)");
 console.log("=== SERVER BOOT CHECK [ID: VERIFY-001] ===");
@@ -24,6 +23,17 @@ const Track = require('./models/Track');
 const User = require('./models/User'); // NEW
 const BeastLedger = require('./models/BeastLedger'); // NEW
 const WithdrawRequest = require('./models/WithdrawRequest'); // NEW
+const AuditLog = require('./models/AuditLog'); // NEW
+
+// HELPER: CENTRALIZED AUDIT LOGGER
+const logSystemAudit = async (data) => {
+    try {
+        await AuditLog.create(data);
+        console.log(`📝 Audit Logged: ${data.action} - ${data.user}`);
+    } catch (e) {
+        console.error("Audit Log Error:", e);
+    }
+};
 
 const app = express();
 // Google Cloud Run injects the PORT environment variable
@@ -109,6 +119,16 @@ app.post('/api/financial/withdraw', async (req, res) => {
 
         await newRequest.save();
 
+        // 3. AUDIT LOG (FINANCE_WITHDRAW_REQ)
+        await logSystemAudit({
+            action: 'FINANCE_WITHDRAW_REQ',
+            user: userId,
+            amount: -amount,
+            details: `Withdrawal Request: $${amount} to ${network} (${walletAddress})`,
+            referenceId: block.hash,
+            targetId: newRequest._id
+        });
+
         res.json({ success: true, request: newRequest, balance: block.balanceAfter });
 
     } catch (error) {
@@ -138,7 +158,8 @@ app.get('/api/user/ledger', async (req, res) => {
         const { userId, limit } = req.query;
         if (!userId) return res.status(400).json({ error: 'User ID required' });
 
-        const history = await BeastLedger.find({ userId }).sort({ timestamp: -1 }).limit(parseInt(limit) || 50);
+        const limitVal = parseInt(limit) || 100;
+        const history = await BeastLedger.find({ userId }).sort({ timestamp: -1 }).limit(limitVal);
         res.json(history);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -164,7 +185,7 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
         const { id } = req.params;
         const { action, adminNote } = req.body; // action: 'APPROVE' or 'REJECT'
 
-        const request = await WithdrawRequest.findById(id);
+        const request = await WithdrawRequest.findById(id).populate('userId'); // FIX: Populate to get Name
         if (!request) return res.status(404).json({ error: 'Request not found' });
         if (request.status !== 'PENDING') return res.status(400).json({ error: 'Request already processed' });
 
@@ -180,11 +201,15 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 
             try {
                 // 1. Trigger Payout
+                // Identify User Label (Name or Email)
+                const userLabel = request.userId ? (request.userId.name || request.userId.email) : 'Unknown User';
+
                 const payout = await paymentService.createPayout(
                     request.amount,
                     'USD', // Or derive from request.network if we store currency
                     request.walletAddress,
-                    request.userId
+                    request.userId._id || request.userId, // Ensure ID string
+                    userLabel // Pass the dynamic label
                 );
 
                 // 2. Update Request based on Payout Status
@@ -204,10 +229,7 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 
             } catch (payoutError) {
                 console.error("Auto-Payout Failed:", payoutError);
-                try {
-                    require('fs').writeFileSync('_debug_last_error.txt', `[${new Date().toISOString()}] PAYOUT ERROR: ${payoutError.message}\nDETAIL: ${JSON.stringify(payoutError.response?.data || {}, null, 2)}`);
-                } catch (err) { console.error("Log write failed", err); }
-
+                // ... logging ...
                 return res.status(500).json({ error: 'BTCPay Payout Failed: ' + payoutError.message });
             }
 
@@ -219,15 +241,38 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 
             // REFUND THE USER
             // We must credit the money back to the ledger
-            await ledgerService.addToLedger({
+            const refundBlock = await ledgerService.addToLedger({
                 action: 'DEPOSIT', // effectively a specialized refund deposit
                 userId: request.userId,
                 amount: request.amount,
                 referenceId: `REFUND-${request._id}`,
                 description: `Refund: Withdrawal Rejected. ${adminNote}`
             });
+
+            // AUDIT LOG (REJECT/REFUND)
+            await logSystemAudit({
+                action: 'FINANCE_WITHDRAW_REJECT',
+                user: request.userId,
+                amount: request.amount,
+                details: `Withdrawal Rejected (Refunded): ${adminNote}`,
+                referenceId: refundBlock.hash,
+                targetId: request._id
+            });
+
         } else {
             return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        // AUDIT LOG (APPROVE - General)
+        if (request.status === 'APPROVED' || request.status === 'COMPLETED' || request.status === 'PENDING_SIGNATURE') {
+            await logSystemAudit({
+                action: 'FINANCE_WITHDRAW_APPROVE',
+                user: request.userId,
+                amount: -request.amount,
+                details: `Withdrawal Approved (${action}). Status: ${request.status}`,
+                referenceId: request.txHash || 'MANUAL-APPROVE',
+                targetId: request._id
+            });
         }
 
         res.json({ success: true, request });
@@ -282,10 +327,23 @@ app.get('/api/results', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         await connectDB();
-        const { email } = req.body;
-        // In real app: verify password hash
-        const user = await User.findOne({ email });
+        const { email, password, username } = req.body; // accept email or username field
+        const indentifier = email || username;
+
+        // Verify password (Simple string comparison for prototype as per seed file)
+        const user = await User.findOne({
+            $or: [
+                { email: indentifier },
+                { username: indentifier }
+            ]
+        });
+
         if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Simple password check (Mock/Prototype mode - matching seed_users.js)
+        if (user.password !== password) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
         // Return user info sans password
         res.json({
@@ -344,6 +402,18 @@ app.post('/api/admin/credit', async (req, res) => {
             description: note || 'Admin Manual Credit'
         });
 
+        // AUDIT LOG
+        await logSystemAudit({
+            action: 'FINANCE_ADMIN_ADJUST',
+            user: targetUserId, // The user receiving the credit
+            performedBy: 'ADMIN', // Ideally capture which admin
+            amount: parseFloat(amount),
+            details: `Admin Added Credit: $${amount}. Note: ${note || 'Manual Credit'}`,
+            referenceId: block.hash, // Link to ledger block hash
+            targetId: targetUserId,
+            metadata: { note, adminId }
+        });
+
         res.json({ success: true, balance: block.balanceAfter });
     } catch (e) {
         console.error("Credit Error:", e);
@@ -352,12 +422,39 @@ app.post('/api/admin/credit', async (req, res) => {
 });
 
 // C. ADMIN APIs (Dashboard Data)
+
+// NEW: AUDIT LOGS
+app.get('/api/admin/audit', async (req, res) => {
+    try {
+        await connectDB();
+        const limit = parseInt(req.query.limit) || 100;
+        const logs = await AuditLog.find().sort({ timestamp: -1 }).limit(limit);
+        res.json(logs);
+    } catch (e) {
+        console.error("Audit Fetch Error:", e);
+        res.status(500).json({ error: "Failed to fetch audit log" });
+    }
+});
+
 app.get('/api/admin/users', async (req, res) => {
     try {
         await connectDB();
         // Return all users with essential fields
         const users = await User.find({}, 'name email role balance status createdAt lastLogin').sort({ createdAt: -1 });
-        res.json(users);
+
+        // FIX: Map _id to id for Frontend Compatibility
+        const safeUsers = users.map(user => ({
+            id: user._id.toString(), // CRITICAL FIX
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            balance: user.balance,
+            status: user.status,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin
+        }));
+
+        res.json(safeUsers);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -444,8 +541,14 @@ app.get('/api/admin/ledger', async (req, res) => {
         const query = {};
 
         // Filters
+        // Filters
         if (startDate && endDate) {
-            query.timestamp = { $gte: new Date(startDate), $lte: new Date(endDate) };
+            // FIX: Ensure End Date covers the full day (23:59:59.999)
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+
+            query.timestamp = { $gte: start, $lte: end };
         }
         if (type && type !== 'ALL') {
             // Support comma separated types if needed, but simple for now
@@ -476,34 +579,103 @@ app.post('/api/tickets', async (req, res) => {
     const session = await mongoose.startSession();
     try {
         const ticketData = req.body;
-        // DEBUG: Check if silent flag is receiving
-        console.log(`Processing Ticket ${ticketData.ticketNumber}. Silent? ${ticketData.silent}`);
 
-        const userId = ticketData.userId; // Usually 'guest-session' if not logged in
+        // --- 1. ROBUST IDENTITY CHECK (MODULE 2) ---
+        let userId = ticketData.userId;
+        const requestedId = userId; // Keep original for logs
 
-        // 1. Ledger Transaction (Non-Blocking for Guests/Errors to ensure data save)
-        // 1. Ledger Transaction (STRICT MODE - ZERO TRUST)
-        // If this fails (Insufficient funds), the entire request fails.
-        // We now allow ALL users (including Guest ID) to be processed by the ledger.
+        // A. Sanitize
+        if (userId && typeof userId === 'string') {
+            userId = userId.trim();
+        }
+
+        console.log(`🔒 PROCESSING TICKET ${ticketData.ticketNumber}`);
+        console.log(`   > Incoming UserID: '${requestedId}'`);
+        console.log(`   > Ticket Total: ${ticketData.grandTotal}`);
+
+        // B. Validate User Existence
+        let userUser = null;
+        let isGuest = false;
+
+        if (!userId || userId === 'guest-session') {
+            console.warn("⚠️ Ticket has no valid UserID. Marking as GUEST.");
+            userId = 'guest-session';
+            isGuest = true;
+        } else {
+            // Check DB
+            userUser = await User.findById(userId);
+
+            if (!userUser) {
+                console.error(`❌ CRITICAL: User ID '${userId}' NOT found in DB.`);
+
+                // C. Auto-Recovery Strategy
+                if (ticketData.userEmail) {
+                    console.log(`   > Attempting recovery via Email: ${ticketData.userEmail} ...`);
+                    userUser = await User.findOne({ email: ticketData.userEmail });
+                    if (userUser) {
+                        console.log(`   > ✅ RECOVERED! Found user ${userUser._id} for email.`);
+                        userId = userUser._id.toString();
+                    } else {
+                        console.log("   > ❌ Recovery failed. Email also not found.");
+                    }
+                }
+            }
+        }
+
+        // Final Security Gate
+        if (!isGuest && !userUser) {
+            // Decide: Reject or Fallback?
+            // Prompt says: "Intentar autocorrección... o asignar a cuenta Incidencias"
+            // For now, if we can't find the user, we MUST NOT credit/debit a ghost.
+            // We fallback to guest-session to save the ticket data at least, but we flag it.
+            console.warn("⚠️ Fallback: Forcing 'guest-session' to preserve ticket data.");
+            userId = 'guest-session';
+            isGuest = true;
+        }
+
+        // Inject sanitized ID back into data for saving
+        ticketData.userId = userId;
+
+        // 2. Ledger Transaction (STRICT MODE)
         let ledgerSuccess = false;
 
-        if (userId) {
-            // Calculate Cost
+        if (!isGuest && userId !== 'guest-session') {
             const cost = ticketData.grandTotal;
 
-            // Transact on Ledger
-            // This will THROW if funds are insufficient.
-            // FIX: Skip for Guest Session
-            if (userId !== 'guest-session') {
-                await ledgerService.addToLedger({
-                    action: 'WAGER',
-                    userId: userId,
-                    amount: -Math.abs(cost), // Ensure negative
-                    referenceId: ticketData.ticketNumber || 'TICKET-' + Date.now(),
-                    description: `Ticket Purchase #${ticketData.ticketNumber}`
-                });
+            if (cost > 0) {
+                try {
+                    await ledgerService.addToLedger({
+                        action: 'WAGER',
+                        userId: userId,
+                        amount: -Math.abs(cost),
+                        referenceId: ticketData.ticketNumber || 'TICKET-' + Date.now(),
+                        description: `Ticket Purchase #${ticketData.ticketNumber}`
+                    });
+                    ledgerSuccess = true;
+
+                    // AUDIT LOG (WAGER)
+                    await logSystemAudit({
+                        action: 'FINANCE_WAGER',
+                        user: userId,
+                        amount: -Math.abs(cost),
+                        details: `Ticket Purchase #${ticketData.ticketNumber}`,
+                        referenceId: ticketData.ticketNumber,
+                        targetId: ticketData.ticketNumber
+                    });
+
+                } catch (ledgerError) {
+                    // D. Precision Error Handling
+                    console.error("   > ❌ Ledger Error:", ledgerError.message);
+                    if (ledgerError.message.includes('Insufficient') || ledgerError.message.includes('funds')) {
+                        return res.status(402).json({
+                            message: 'Insufficient funds',
+                            code: 'INSUFFICIENT_FUNDS',
+                            silent: ticketData.silent
+                        });
+                    }
+                    throw ledgerError; // Re-throw other errors to catch block
+                }
             }
-            ledgerSuccess = true;
         }
 
         // 2. Save Ticket to 'tickets' Collection
@@ -589,6 +761,63 @@ app.post('/api/payment/invoice', async (req, res) => {
     }
 });
 
+app.post('/api/payment/shopify-status', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.body;
+        const shopifyService = require('./services/shopifyService');
+        const draftOrder = await shopifyService.checkDraftOrder(id);
+
+        if (!draftOrder) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+
+        let status = draftOrder.status; // 'open', 'invoice_sent', 'completed'
+        console.log(`🔎 Shopify Status Check: ${id} -> ${status}`); // DEBUG LOG
+
+        if (status === 'completed' || status === 'paid') {
+            // AUTO-CREDIT LOGIC (Idempotent)
+            // Ideally we check if we already credited this specific Shopify Order
+            const referenceId = `SHOPIFY-${draftOrder.id}`;
+            const existing = await BeastLedger.findOne({ referenceId });
+
+            if (!existing) {
+                console.log("💰 New Payment Detected! Processing credit..."); // DEBUG LOG
+                // Find User from attributes or body? The draft order has custom attributes.
+                const userIdAttr = draftOrder.note_attributes.find(a => a.name === 'userId');
+                const userId = userIdAttr ? userIdAttr.value : 'guest-session';
+                console.log(`👤 Identifying User: ${userId}`); // DEBUG LOG
+
+                if (userId !== 'guest-session') {
+                    await ledgerService.addToLedger({
+                        action: 'DEPOSIT',
+                        userId: userId,
+                        amount: parseFloat(draftOrder.total_price),
+                        referenceId: referenceId,
+                        description: `Shopify Auto-Deposit #${draftOrder.order_id || draftOrder.id}`
+                    });
+
+                    await logSystemAudit({
+                        action: 'FINANCE_DEPOSIT_SHOPIFY',
+                        user: userId,
+                        amount: parseFloat(draftOrder.total_price),
+                        details: `Shopify Auto-Deposit #${draftOrder.name}`,
+                        referenceId: referenceId,
+                        targetId: draftOrder.id
+                    });
+                    console.log(`✅ Shopify Auto-Credit Success: ${userId}`);
+                }
+            }
+        }
+
+        res.json({ status: status, order: draftOrder });
+
+    } catch (e) {
+        console.error("Shopify Status Error:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // MANUAL CLAIM ROUTE (For Localhost/Backup)
 app.post('/api/payment/claim', async (req, res) => {
     try {
@@ -632,7 +861,18 @@ app.post('/api/payment/claim', async (req, res) => {
                 userId: targetUserId,
                 amount: parseFloat(invoice.amount),
                 referenceId: referenceId,
-                description: `Manual Claim Invoice #${invoiceId}`
+                description: `BTCPay Deposit #${invoiceId}`
+            });
+
+            // AUDIT LOG
+            await logSystemAudit({
+                action: 'FINANCE_DEPOSIT_BTC',
+                user: targetUserId,
+                amount: parseFloat(invoice.amount),
+                details: `Deposited $${parseFloat(invoice.amount)} via BTCPay`,
+                referenceId: referenceId,
+                targetId: invoiceId,
+                metadata: { provider: 'BTCPay', invoiceId }
             });
 
             console.log(`💰 Claim Successful! Credited ${invoice.amount} to ${targetUserId}`);
@@ -663,7 +903,7 @@ app.post('/api/payment/shopify', async (req, res) => {
 
     } catch (error) {
         console.error("Shopify Init Error:", error);
-        res.status(500).json({ error: "Failed to create Shopify checkout link" });
+        res.status(500).json({ error: error.message || "Failed to create Shopify checkout link" });
     }
 });
 
@@ -699,6 +939,18 @@ app.post('/api/payment/shopify-status', async (req, res) => {
                 referenceId: referenceId,
                 description: `Shopify Deposit #${id}`
             });
+
+            // AUDIT LOG
+            await logSystemAudit({
+                action: 'FINANCE_DEPOSIT_SHOPIFY',
+                user: userId,
+                amount: amount,
+                details: `Deposited $${amount} via Shopify`,
+                referenceId: referenceId,
+                targetId: id.toString(),
+                metadata: { provider: 'Shopify', draftOrderId: id }
+            });
+
             console.log(`💰 Shopify Poll Credited: $${amount} to ${userId}`);
             return res.json({ success: true, status: 'completed' });
         } else {
@@ -710,6 +962,74 @@ app.post('/api/payment/shopify-status', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
+// PAYPAL ROUTES
+app.post('/api/payment/paypal/create-order', async (req, res) => {
+    try {
+        const { amount } = req.body;
+        console.log(`🅿️ PayPal Order Create: $${amount}`);
+        const order = await require('./services/paypalService').createOrder(amount);
+        res.json({ id: order.id });
+    } catch (e) {
+        console.error("PayPal Create Error:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/payment/paypal/capture-order', async (req, res) => {
+    try {
+        await connectDB();
+        const { orderId, userId } = req.body;
+        console.log(`🅿️ PayPal Capture: ${orderId} for User ${userId}`);
+
+        // 1. Capture at PayPal
+        const captureData = await require('./services/paypalService').captureOrder(orderId);
+
+        // 2. Verify Success
+        const captureStatus = captureData.status; // 'COMPLETED'
+        if (captureStatus === 'COMPLETED') {
+            const amount = parseFloat(captureData.purchase_units[0].payments.captures[0].amount.value);
+
+            // 3. Credit Ledger
+            const referenceId = `PAYPAL-${orderId}`;
+            // Idempotency check handled by ledgerService unique index on referenceId usually, 
+            // but manual check is safer if service doesn't enforce it strictly yet.
+            const existingTx = await require('./models/BeastLedger').findOne({ referenceId });
+            if (existingTx) {
+                return res.json({ success: true, status: 'COMPLETED', alreadyProcessed: true });
+            }
+
+            await ledgerService.addToLedger({
+                action: 'DEPOSIT',
+                userId: userId,
+                amount: amount,
+                referenceId: referenceId,
+                description: `PayPal Deposit #${orderId}`
+            });
+
+            // 4. Audit Log
+            await logSystemAudit({
+                action: 'FINANCE_DEPOSIT_PAYPAL',
+                user: userId,
+                amount: amount,
+                details: `Deposited $${amount} via PayPal`,
+                referenceId: referenceId,
+                targetId: orderId,
+                metadata: { provider: 'PayPal', orderId }
+            });
+
+            console.log(`💰 PayPal Credited: $${amount} to ${userId}`);
+            res.json({ success: true, status: 'COMPLETED' });
+        } else {
+            console.warn(`PayPal Capture Status: ${captureStatus}`);
+            res.status(400).json({ error: "Payment not completed", status: captureStatus });
+        }
+    } catch (e) {
+        console.error("PayPal Capture Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 
 app.post('/api/payment/webhook', async (req, res) => {
     await connectDB();
@@ -732,9 +1052,48 @@ app.post('/api/payment/webhook', async (req, res) => {
         const invoiceId = event.invoiceId;
         console.log(`💰 Payment Detected (${event.type})! Crediting user...`);
 
-        // In a real app, we extract the "orderId" (metadata) to find the user/ticket
-        // For this demo, we assume the invoice matches the last pending action.
-        // await ledgerService.recordPayment({ invoiceId, ... });
+        try {
+            // 1. Fetch Invoice to get Metadata (User ID)
+            const invoice = await require('./services/paymentService').getInvoice(invoiceId);
+            const userId = invoice.metadata.userId || 'guest-session'; // Fallback
+
+            if (userId !== 'guest-session') {
+                // 2. Add to Ledger (Idempotency handled by unique referenceId usually, but let's be safe)
+                // We use a unique ref based on the event or invoice to prevent double credit if we handle both events.
+                // Ideally only CREDIT on 'InvoiceSettled' or 'Confirmed'.
+                // For SPEED (User req), we credit on 'ReceivedPayment' (0-conf).
+                // We verify if already credited.
+
+                const referenceId = `BTCPAY-AUTO-${invoiceId}`;
+                const existing = await BeastLedger.findOne({ referenceId });
+
+                if (!existing) {
+                    const block = await ledgerService.addToLedger({
+                        action: 'DEPOSIT',
+                        userId: userId,
+                        amount: parseFloat(invoice.amount),
+                        referenceId: referenceId,
+                        description: `BTCPay Auto Deposit #${invoiceId}`
+                    });
+
+                    // 3. Audit Log
+                    await logSystemAudit({
+                        action: 'FINANCE_DEPOSIT_BTC_AUTO',
+                        user: userId,
+                        amount: parseFloat(invoice.amount),
+                        details: `Auto-Deposit via BTCPay (${event.type})`,
+                        referenceId: block.hash,
+                        targetId: invoiceId,
+                        metadata: { provider: 'BTCPay', invoiceId, event: event.type }
+                    });
+                    console.log(`✅ Auto-Credit Success for ${userId}`);
+                } else {
+                    console.log(`⚠️ Invoice ${invoiceId} already processed. Skipping.`);
+                }
+            }
+        } catch (err) {
+            console.error(`❌ Webhook Auto-Credit Error: ${err.message}`);
+        }
     }
 
     res.status(200).send('OK');

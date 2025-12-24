@@ -116,3 +116,133 @@ Se ha mejorado la lógica de **Idempotencia** en la función `createPayout`.
 *   **Server Status:** Verified running on port 8080.
 *   **Auto Pay:** Fully functional with idempotency. Recovered payouts show "PENDING_SIGNATURE" and the modal correctly links to the BTCPay Dashboard.
 *   **Deposits:** Fully functional on Localhost via Polling. Balance updates are instant and idempotent.
+
+## 8. State Update: Critical Ledger Display Mismatch (2025-12-21)
+
+### 8.1 Solved Issues
+- **Shopify Deposit 500 Error:** Fixed by correcting the `.env` file credentials via a Node script. Validated with `testShopify.js`.
+- **Ledger Date Bugs:** Fixed empty ledger tables by correcting date filtering logic.
+
+### 8.2 Active CRITICAL Bug: Leftover "Pedro Martinez"
+**Symptom:** 
+When `user@demo.com` ("Demo Player", ID `693f...`) makes a deposit, the **Admin Dashboard > Ledger** displays the user correctly as ID `693f...` in the backend/audit logs, but the **NAME** rendered in the table is **"Pedro Martinez"**.
+
+**Diagnosis:**
+1. **Backend Integrity:** Confirmed via `debugUsers.js` (curl) that the API `/api/admin/users` returns:
+   - ID `693f...` = "Demo Player"
+   - ID `6941...` = "Pedro Martinez"
+   This proves the backend data is CORRECT.
+2. **Frontend Mismatch:** The `AdminDashboard.tsx` component is mapping ID `693f...` to "Pedro Martinez". This suggests the Frontend State (`users` array) is either:
+   - Stale (not refreshing from API).
+   - Polluted (merging with legacy LocalStorage data that has hardcoded "Pedro").
+   - Bugged (Using `localDbService.getUsers()` which might return hardcoded mock data for IDs).
+
+**Attempts:**
+- Added `loadUsersFromDb()` to the `useEffect` on tab switch (`activeTab === 'ledger'`).
+- **Result:** User reports the issue PERSISTS.
+
+### 8.3 Action Plan for Next Session
+1. **Investigate `localDbService.ts`:** Check if it's overwriting or "seeding" Pedro Martinez with the wrong ID or if `AdminDashboard` is merging it incorrectly.
+   - Force API Priority: Modify `AdminDashboard.tsx` to strictly use API data for user lookup, potentially ignoring `localDbService` completely for the Ledger view.
+3. **Check Browser LocalStorage:** The user's browser might have a very old `beast_users_db` blob that needs to be nuked. Add a "Clear Cache" button or logic to the Dashboard.
+
+## 9. State Update: BTCPay Self-Hosted Migration (2025-12-21)
+
+### 9.1 Motivation
+To enable "Hot Wallet" functionality for **Automated Payouts**, which is restricted on the public BTCPay demo server.
+
+### 9.2 New Architecture
+*   **Infrastructure:** Hostinger VPS (Ubuntu 24.04).
+*   **BTCPay Instance:** Self-Hosted Docker deployment (`pay.beastreaderone.com`).
+*   **Node Configuration:** Pruned Node (saving storage, ~10GB).
+*   **Wallet:** Hot Wallet enabled with private seed on server.
+
+### 9.3 Configuration Status
+*   **Store:** "BeastReaderOne" created on self-hosted instance.
+*   **API Connection:**
+    *   Backend connected via new API Key.
+    *   `.env` updated with new `BTCPAY_URL`, `BTCPAY_STORE_ID`, `BTCPAY_API_KEY`, and `BTCPAY_WEBHOOK_SECRET`.
+*   **Payouts:**
+    *   **Auto Pay:** Verified working. The backend correctly stages payouts on the new server, and the frontend displays the signing modal.
+    *   **Instant Processing:** "Process approved payouts instantly" enabled in Store Settings.
+*   **Deposits (Webhooks):**
+    *   **Production:** Webhooks configured to hit `/api/webhooks/btcpay` (will work once deployed).
+    *   **Localhost:** Webhooks **cannot** reach localhost directly. Local development relies on **Frontend Polling** (TicketModal) or manual triggering for simulation.
+
+## 10. State Update: Critical Fixes & PayPal Integration (2025-12-21)
+
+### 10.1 PayPal Integration (Completed)
+*   **Backend:** Implemented `paypalService.js` for OAuth2, Order Creation (`/create-order`), and Capture (`/capture-order`) using the REST API.
+*   **Security:** Server-Side integration ensures credentials (`PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`) are never exposed to the client. Frontend only receives the Client ID for the SDK.
+*   **UI:** Added PayPal buttons to `DepositModal` and integrated a fallback payment option directly within the `TicketModal` when funds are insufficient.
+*   **Ledger:** Transactions are recorded automatically in `BeastLedger`.
+
+### 10.2 Critical Bug Fix: Silent Ticket Charge
+*   **Problem:** Generating a second ticket caused a UI freeze (invisible modal due to `animate-fade-in` bug) but allowed multiple "Silent Charges" via the "Confirm" button which remained active and clickable (despite being invisible).
+*   **Solution:**
+    *   **Disabled Button:** The "Confirmar y Pagar" button now has `disabled={isSaving}` to strictly prevent double-clicks/double-charges.
+    *   **Z-Index & Visibility:** Removed the buggy animation and enforced `z-index: 100` to guarantee the modal is always visible on top of other elements.
+    *   **Robust Reset:** Implemented `handleCloseTicketModal` in `PlaygroundApp` to explicitly clear payment flags and status while **preserving user plays**, allowing for rapid ticket regeneration without data loss.
+
+### 10.3 Critical Fix: Invalid Track Selection
+*   **Problem:** Users could generate tickets selecting only "Venezuela" or "Pulito" (indicators) without a valid lottery track, resulting in dead tickets that could never win.
+*   **Solution:** Implemented loose-but-strict validation in `handleGenerateTicket`. It now requires at least one "Real" lottery track (e.g., New York, Florida) to be present. If only indicators are selected, it blocks generation and shows a descriptive error.
+
+## 11. State Update: Data Persistence Failure (2025-12-21)
+
+### 11.1 Problem
+Tickets are not being saved to Sales, Ledger, or Audit, despite the process appearing to complete on the frontend. This is a critical data loss issue.
+
+### 11.2 Diagnosis (Root Cause)
+1.  **Transactional Block:** The Ledger acts as a strict gatekeeper. It rejects transactions with "User not found" because the `userId` sent from the frontend is missing or invalid. When the Ledger rejects the charge, the entire save process (Ticket + Audit) is aborted.
+2.  **Structural Integrity:** The `Ticket` schema in MongoDB is missing the `userId` field entirely. Even if tickets were saved, they would be "orphaned" (unclaimable).
+
+### 11.3 Remediation Plan (To be executed in next session)
+1.  **Database:** Update `Ticket` schema to include `userId` (indexed).
+## 12. State Update: Track Restoration & Logic Fixes (2025-12-23)
+
+### 12.1 Pulito & Venezuela Restoration
+*   **Problem:** The "Pulito" and "Venezuela" tracks were removed or broken. The "Pulito" track specifically lost its unique UI for selecting positions (1-4).
+*   **Solution:**
+    *   **UI Restoration:** Restored the logic in `TrackButton.tsx` to render the internal position buttons (1, 2, 3, 4) when `special/pulito` is selected.
+    *   **Logic Restoration:** Updated `TrackSelector.tsx` to correctly handle mutual exclusivity (selecting one deselects the other) and enabled the correct disabled states.
+
+### 12.2 Critical Bug Fix: Ticket Calculation
+*   **Problem:** "Pulito" and "Venezuela" were being treated as standard lottery tracks in the multiplier calculation. If a user selected "New York" + "Pulito", the system calculated `2 tracks * wager`, doubling the cost.
+*   **Correction:** Updated `PlaygroundApp.tsx` logic to explicitly exclude `special/pulito` and `special/venezuela` from the `effectiveTrackCount`. They are now correctly treated as **Game Mode Indicators**.
+    *   **Result:** 1 Play + NY + Pulito = $1.00 (Correct).
+
+### 12.3 Smart Default Selection
+*   **feature:** The app now intelligently selects the default track based on the time of day when opened.
+*   **Logic:**
+    *   **Before 2:14 PM:** Defaults to `usa/ny/Midday`.
+    *   **After 2:14 PM:** Defaults to `usa/ny/Evening`.
+*   **Implementation:** Updated initialization logic in `PlaygroundApp.tsx` and `TrackSelector.tsx` to use the standardized IDs.
+
+### 12.4 Real-Time Game Mode Switching
+*   **Feature:** 2-digit plays ("Pick 2") now reactively switch game modes.
+*   **Logic:**
+    *   Enter "55" -> Shows "Pick 2".
+    *   Select **Venezuela** -> Automatically updates play to "Venezuela".
+    *   Select **Pulito** -> Automatically updates play to "Pulito" (prompting for position).
+    *   Deselect -> Reverts to "Pick 2".
+*   **Fix:** Updated `utils/helpers.ts` -> `determineGameMode` to recognize `special/pulito` and `special/venezuela` IDs, enabling the existing reactive effect in `PlaygroundApp`.
+
+### Lessons Learned
+
+## 13. Future Plan: Payment System Upgrade (Scheduled Post-Dec 23)
+
+### 13.1 Objective
+To resolve the "Silent Insufficient Funds" error and implement a user-centric Payment Selection flow.
+
+### 13.2 Key Issues to Resolve
+1.  **Silent Failure:** App ignores Backend 402 Error (Payment Required) because it expects 400.
+2.  **Implicit UX:** Users are forced to try charging Ledger before seeing other options.
+
+### 13.3 Implementation Blueprint
+A rigorous plan has been created and saved as **`payment_upgrade_plan.md`**.
+*   **Artifact Path:** `C:\Users\Admin\.gemini\antigravity\brain\3c86c843-6f4b-4843-8a32-da797cf4ebb0\payment_upgrade_plan.md`
+
+### 13.4 Instructions for Next Session
+When starting the new chat to execute this upgrade, use the following prompt:
+> "Execute the Payment System Upgrade Plan documented in `payment_upgrade_plan.md` located in the artifacts folder. This involves fixing the 402 Error handling in `PlaygroundApp.tsx` and refactoring `TicketModal.tsx` to add the 'Checkout Mode' payment selector."
