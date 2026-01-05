@@ -47,7 +47,7 @@ const OcrModal: React.FC<OcrModalProps> = ({ isOpen, onClose, onSuccess, interpr
             reader.readAsDataURL(selectedFile);
         }
     };
-    
+
     const handleProcess = async () => {
         if (!file) return;
 
@@ -57,8 +57,8 @@ const OcrModal: React.FC<OcrModalProps> = ({ isOpen, onClose, onSuccess, interpr
         try {
             const base64String = await fileToBase64(file);
             const result = await interpretTicketImage(base64String);
-            if(result && result.plays.length > 0) {
-                 setOcrResult(result);
+            if (result && result.plays.length > 0) {
+                setOcrResult(result);
             } else {
                 setError("AI could not detect any valid plays in the image. Please try a clearer picture.");
             }
@@ -69,7 +69,7 @@ const OcrModal: React.FC<OcrModalProps> = ({ isOpen, onClose, onSuccess, interpr
             setIsLoading(false);
         }
     };
-    
+
     const handleAddResults = () => {
         if (ocrResult) {
             onSuccess(ocrResult);
@@ -102,20 +102,20 @@ const OcrModal: React.FC<OcrModalProps> = ({ isOpen, onClose, onSuccess, interpr
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                     <h2 className="text-lg font-bold text-neon-cyan">Scan Ticket with AI</h2>
                     <button onClick={handleClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                       <svg data-lucide="x" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg data-lucide="x" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                     </button>
                 </div>
                 <div className="p-6 space-y-4 overflow-y-auto">
                     {!file && (
-                         <div 
-                             onDragEnter={(e) => handleDragEvents(e, true)}
-                             onDragLeave={(e) => handleDragEvents(e, false)}
-                             onDragOver={(e) => e.preventDefault()}
-                             onDrop={handleDrop}
-                             className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragging ? 'border-neon-cyan bg-neon-cyan/10' : 'border-gray-300 dark:border-gray-600 hover:border-neon-cyan/50'}`}
-                             onClick={() => document.getElementById('ocr-file-input')?.click()}
-                         >
-                            <svg data-lucide="upload-cloud" className="mx-auto w-12 h-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                        <div
+                            onDragEnter={(e) => handleDragEvents(e, true)}
+                            onDragLeave={(e) => handleDragEvents(e, false)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleDrop}
+                            className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragging ? 'border-neon-cyan bg-neon-cyan/10' : 'border-gray-300 dark:border-gray-600 hover:border-neon-cyan/50'}`}
+                            onClick={() => document.getElementById('ocr-file-input')?.click()}
+                        >
+                            <svg data-lucide="upload-cloud" className="mx-auto w-12 h-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M12 12v9" /><path d="m16 16-4-4-4 4" /></svg>
                             <p className="mt-2">Drag & Drop an image or click to select</p>
                             <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 4MB</p>
                             <input id="ocr-file-input" type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(e.target.files?.[0] || null)} />
@@ -130,19 +130,19 @@ const OcrModal: React.FC<OcrModalProps> = ({ isOpen, onClose, onSuccess, interpr
                     )}
 
                     {isLoading && (
-                         <div className="flex items-center justify-center space-x-2 p-4 bg-light-surface dark:bg-dark-surface rounded-lg">
+                        <div className="flex items-center justify-center space-x-2 p-4 bg-light-surface dark:bg-dark-surface rounded-lg">
                             <div className="w-5 h-5 bg-neon-cyan rounded-full animate-spinner-bounce"></div>
-                            <div className="w-5 h-5 bg-neon-cyan rounded-full animate-spinner-bounce" style={{animationDelay: '-0.16s'}}></div>
-                            <div className="w-5 h-5 bg-neon-cyan rounded-full animate-spinner-bounce" style={{animationDelay: '-0.32s'}}></div>
+                            <div className="w-5 h-5 bg-neon-cyan rounded-full animate-spinner-bounce" style={{ animationDelay: '-0.16s' }}></div>
+                            <div className="w-5 h-5 bg-neon-cyan rounded-full animate-spinner-bounce" style={{ animationDelay: '-0.32s' }}></div>
                             <span className="font-semibold">AI is analyzing your ticket...</span>
-                         </div>
+                        </div>
                     )}
-                    
+
                     {error && <p className="text-center text-red-500 bg-red-500/10 p-3 rounded-lg">{error}</p>}
-                    
+
                     {ocrResult && ocrResult.plays.length > 0 && (
                         <div>
-                             <div className="text-sm space-y-1 mb-2 text-center bg-light-surface dark:bg-dark-surface p-2 rounded-lg">
+                            <div className="text-sm space-y-1 mb-2 text-center bg-light-surface dark:bg-dark-surface p-2 rounded-lg">
                                 {ocrResult.detectedDate && <p><strong>Date:</strong> {ocrResult.detectedDate}</p>}
                                 {ocrResult.detectedTracks.length > 0 && <p><strong>Tracks:</strong> {ocrResult.detectedTracks.join(', ')}</p>}
                             </div>

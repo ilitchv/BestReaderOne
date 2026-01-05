@@ -246,3 +246,32 @@ A rigorous plan has been created and saved as **`payment_upgrade_plan.md`**.
 ### 13.4 Instructions for Next Session
 When starting the new chat to execute this upgrade, use the following prompt:
 > "Execute the Payment System Upgrade Plan documented in `payment_upgrade_plan.md` located in the artifacts folder. This involves fixing the 402 Error handling in `PlaygroundApp.tsx` and refactoring `TicketModal.tsx` to add the 'Checkout Mode' payment selector."
+
+ # #   1 4 .   S e s s i o n   S u m m a r y :   U l t i m a t e   D a s h b o a r d   O v e r h a u l   ( 2 0 2 5 - 1 2 - 2 5 ) 
+ 
+ # # #   1 4 . 1   O b j e c t i v e s   A c h i e v e d 
+ 1 .     * * R e f a c t o r i n g   R e s u l t s P a g e . t s x   ( U l t i m a t e   D a s h b o a r d ) : * * 
+         -       * * V i s u a l   O v e r h a u l : * *   P o r t e d   t h e   B o w l i n g   P i n   3 D   b a l l   l a y o u t   a n d   S q u a r e   C a r d   U I   f r o m   t h e   h o m e p a g e   t o   R e s u l t s P a g e . t s x . 
+         -       * * C l e a n u p : * *   R e m o v e d   l e g a c y   A d m i n   D r a w e r   c o d e   a n d   e x c l u d e d   g a m e - m o d e   t r a c k s   ( P u l i t o ,   V e n e z u e l a )   f r o m   t h e   r e s u l t s   f e e d . 
+         -       * * M a n u a l   E n t r y : * *   I m p l e m e n t e d   a   s e c u r e   P e n c i l   b u t t o n   ( P I N :   1 9 8 3 1 2 )   o n   c a r d s   f o r   t r a c k s   t h a t   a l l o w   m a n u a l   e n t r y   ( e . g . ,   B K   P a p e r ,   3 - 5 - 7 ) . 
+         -       * * V i s u a l   R e f i n e m e n t : * *   A d j u s t e d   f o n t   s i z e s   ( t e x t - 2 x l   f o r   t i t l e s )   a n d   b a l l   s i z e s   ( 5 0 p x + )   f o r   h i g h   v i s i b i l i t y .   S p l i t   U S A   r e s u l t s   s t r i n g s   i n t o   i n d i v i d u a l   b a l l s   p e r   d i g i t . 
+         -       * * A u t o   S c r o l l : * *   F i x e d   l o g i c   t o   e n s u r e   s m o o t h   s c r o l l i n g   o f   t h e   r e s u l t s   g r i d . 
+ 
+ 2 .     * * R e l o c a t i n g   A d m i n   T o o l s   t o   A d m i n D a s h b o a r d . t s x : * * 
+         -       * * C a t a l o g   V i s i b i l i t y : * *   M o v e d   t h e   V i s i b i l i t y   M a n a g e r   f r o m   t h e   o l d   R e s u l t s P a g e   d r a w e r   t o   t h e   R e s u l t s   t a b   i n   A d m i n D a s h b o a r d .   A d m i n s   c a n   n o w   t o g g l e   t r a c k   v i s i b i l i t y   g l o b a l l y   ( s t o r e d   i n   l o c a l S t o r a g e ) . 
+         -       * * A d v a n c e d   M a n u a l   R e s u l t   E n t r y : * *   E n h a n c e d   t h e   A d d   R e s u l t   m o d a l   i n   A d m i n   D a s h b o a r d   w i t h   f i e l d s   f o r   * T i m e *   a n d   * D a i l y   C l o s i n g   T i m e   C o n f i g u r a t i o n * ,   m a t c h i n g   t h e   d e t a i l e d   c o n t r o l s   p r e v i o u s l y   o n l y   a v a i l a b l e   o n   t h e   h o m e p a g e . 
+ 
+ 3 .     * * D a t a   P e r s i s t e n c e : * * 
+         -       A d d e d   a   D a t a   A d a p t e r   i n   R e s u l t s P a g e . t s x   t o   c o r r e c t l y   m a p   A P I   r e s u l t I d   t o   f r o n t e n d   l o g i c ,   r e s o l v i n g   t h e    
+ N o  
+ R e s u l t s   d i s p l a y   i s s u e . 
+ 
+ # # #   1 4 . 2   K n o w n   I s s u e s   /   N e x t   S t e p s 
+ -       * * V i s i b i l i t y   S c o p e : * *   C u r r e n t l y ,   v i s i b i l i t y   p r e f e r e n c e s   a r e   s t o r e d   i n   l o c a l S t o r a g e   ( b r _ v i s i b i l i t y ) .   T h i s   m e a n s   c h a n g e s   m a d e   i n   t h e   A d m i n   D a s h b o a r d   o n l y   a f f e c t   t h e   * s a m e   b r o w s e r * .   M o v i n g   t h i s   t o   t h e   d a t a b a s e   ( T r a c k C o n f i g   o r   G l o b a l S e t t i n g s   c o l l e c t i o n )   w o u l d   b e   a   l o g i c a l   n e x t   s t e p   f o r   t r u e   g l o b a l   m a n a g e m e n t . 
+ -       * * T h e m e   P e r s i s t e n c e : * *   T h e m e   t o g g l e   w o r k s   b u t   r e l i e s   o n   l o c a l   s t a t e / p r o p s .   E n s u r e   i t   p e r s i s t s   a c r o s s   r e l o a d s   v i a   c o n t e x t   o r   l o c a l   s t o r a g e   i f   n o t   a l r e a d y   h a n d l e d   b y   a   p a r e n t   p r o v i d e r . 
+ 
+ # # #   1 4 . 3   I n s t r u c t i o n s   f o r   N e x t   S e s s i o n 
+ * * C o n t e x t : * *   T h e   v i s u a l   o v e r h a u l   i s   c o m p l e t e .   T h e   u s e r   m a y   w a n t   t o   f u r t h e r   r e f i n e   t h e   U I   o r   m o v e   o n   t o   b a c k e n d   d a t a   c o n s o l i d a t i o n   ( e . g . ,   g l o b a l   v i s i b i l i t y ) . 
+ * * P r o m p t : * *   U s e   t h e   p r o v i d e d   c o m p r e h e n s i v e   p r o m p t   t o   r e s u m e . 
+  
+ 

@@ -11,6 +11,7 @@ const playSchema = new mongoose.Schema({
 }, { _id: false });
 
 const ticketSchema = new mongoose.Schema({
+    ticketId: { type: String, unique: true, index: true }, // Legacy Index Support
     ticketNumber: { type: String, required: true, unique: true, index: true },
     userId: { type: String, required: true, index: true }, // Link to User Owner
     cashierId: { type: String }, // Optional: Agent/Admin who processed it

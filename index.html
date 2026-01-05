@@ -9,6 +9,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- Beast Office Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1"
+    rel="stylesheet">
+
   <script>
     // --- SERVICE WORKER KILL SWITCH (AGGRESSIVE) ---
     // Forces unregistration of any existing SW and reloads to ensure fresh assets
@@ -47,6 +52,16 @@
             'light-bg': '#F3F0E3',
             'light-card': '#F4F1E1',
             'light-surface': '#E6E2D0',
+
+            // BEAST OFFICE MODULE COLORS
+            "brand-cyan": "#00f0ff",
+            "brand-dark": "#0b0e14",
+            "brand-panel": "#151a23",
+            "brand-panel-lighter": "#1e2532",
+            "brand-text-muted": "#8b9bb4",
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
           },
           boxShadow: {
             'neon': '0 0 5px theme(colors.neon-cyan), 0 0 10px theme(colors.neon-cyan), 0 0 15px theme(colors.neon-cyan)',

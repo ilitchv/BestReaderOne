@@ -81,6 +81,7 @@ export interface WinningResult {
   third: string;
   pick3: string;
   pick4: string;
+  numbers?: string; // Unified string rep
   createdAt: string;
 }
 
@@ -130,6 +131,33 @@ export interface CalculationResult {
   matchType: string; // e.g. "Exact Match", "Box 6-Way"
 }
 
+
+// --- NEW: MLM TYPES ---
+export enum UserRank {
+  NORMAL = 'Normal',
+  AGENTE = 'Agente',
+  SOCIO = 'Socio',
+  MANAGER = 'Manager'
+}
+
+export enum UserStatus {
+  ACTIVE = 'Active',
+  PENDING = 'Pending',
+  INACTIVE = 'Inactive'
+}
+
+export type ViewType = 'tree' | 'directory' | 'requests' | 'commissions' | 'reports' | 'config';
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  date: string;
+  level: 1 | 2 | 3;
+  commissionEarned: number;
+}
+
 // --- CATALOG ITEM ---
 export interface CatalogItem {
   id: string;
@@ -149,15 +177,45 @@ export interface User {
   password?: string; // Only used for mock auth/reset
   name: string;
   role: 'admin' | 'user';
-  status: 'active' | 'suspended' | 'pending';
+  // MLM Fields
+  rank: UserRank; // NEW
+  status: 'active' | 'suspended' | 'pending' | UserStatus; // Combined
   balance: number;
   pendingBalance: number;
+
+  // Profile
   phone?: string;
   address?: string;
   notes?: string;
+  avatar?: string; // Standardized from avatarUrl
+  avatarUrl?: string; // Support legacy
+
   createdAt: string;
-  avatarUrl?: string;
-  sponsorId?: string; // NEW: Referral System
+
+  // MLM Network Data
+  sponsorId?: string;
+  sponsorName?: string;
+  referralCode?: string;
+
+  personalVolume: number;    // PV
+  groupVolume: number;       // GV
+  directActiveCount: number; // For rank qualification
+  levels: {
+    direct: number;
+    indirect: number;
+    deep: number;
+  };
+
+  kycVerified: boolean;
+  walletRegistered: boolean;
+  networkEnabled?: boolean; // NEW: Toggle for Network Module Access
+
+  commissionBalance: {
+    tokens: number;
+    btc: number;
+  };
+
+  children?: User[]; // For Tree View
 }
 
 // --- BEAST LEDGER ---

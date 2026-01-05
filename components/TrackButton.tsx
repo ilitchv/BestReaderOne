@@ -49,12 +49,17 @@ const TrackButton: React.FC<TrackButtonProps> = ({ trackId, trackName, isSelecte
     if (effectiveDisabled) {
         buttonClasses = `${galacticBase} ${colorClasses} ${disabledClasses} border-b-[2px] border-black/20 translate-y-[2px] shadow-none`;
     } else if (isSelected) {
-        buttonClasses = `${galacticBase} ${colorClasses} ${galacticPressed} brightness-110`;
+        // Fix: If invalid selection (expired), show as error state instead of active green
+        if (isExpired) {
+            buttonClasses = `${galacticBase} bg-red-900/40 border border-red-500/50 text-red-200 ${galacticPressed} brightness-75 grayscale-0`;
+        } else {
+            buttonClasses = `${galacticBase} ${colorClasses} ${galacticPressed} brightness-110`;
+        }
     } else {
         buttonClasses = `${galacticBase} ${colorClasses} ${galacticNormal} active:translate-y-[4px] active:border-b-0 active:shadow-none`;
     }
 
-    if (isExpired) buttonClasses += " brightness-50 saturate-50";
+    if (isExpired && !isSelected) buttonClasses += " brightness-50 saturate-50";
 
     const renderStandardButton = () => (
         <button
@@ -128,8 +133,8 @@ const TrackButton: React.FC<TrackButtonProps> = ({ trackId, trackName, isSelecte
                                     onPositionClick?.(pos);
                                 }}
                                 className={`flex-1 h-5 text-[8px] sm:text-[9px] rounded-sm flex items-center justify-center font-bold transition-all duration-200 shadow-sm border ${isPositionSelected
-                                        ? 'bg-neon-cyan text-black border-neon-cyan shadow-[0_0_5px_theme(colors.neon-cyan)] z-30 scale-110'
-                                        : 'bg-black/40 text-white border-white/30 hover:bg-white/20'
+                                    ? 'bg-neon-cyan text-black border-neon-cyan shadow-[0_0_5px_theme(colors.neon-cyan)] z-30 scale-110'
+                                    : 'bg-black/40 text-white border-white/30 hover:bg-white/20'
                                     }`}
                             >
                                 {pos}

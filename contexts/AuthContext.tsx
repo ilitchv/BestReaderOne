@@ -8,6 +8,7 @@ export interface User {
     balance: number;
     role: 'user' | 'admin';
     status?: 'active' | 'suspended';
+    networkEnabled?: boolean; // NEW
 }
 
 interface AuthContextType {
@@ -28,16 +29,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Helper to Fetch User Data
     const fetchUser = async (userId: string) => {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s Force Timeout
+
             const res = await fetch(`/api/auth/me?userId=${userId}`, {
-                headers: { 'x-user-id': userId }
+                headers: { 'x-user-id': userId },
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
             if (res.ok) {
                 const userData = await res.json();
                 // Map _id to id for frontend consistency logic
                 return { ...userData, id: userData.id || userData._id };
             }
         } catch (e) {
-            console.error("Auth Fetch Error", e);
+            console.error("Auth Fetch Error/Timeout", e);
         }
         return null;
     };
@@ -67,9 +74,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const syncInterval = setInterval(async () => {
             const freshUser = await fetchUser(user.id);
             if (freshUser) {
-                if (freshUser.balance !== user.balance) {
-                    console.log(`♻️ Syncing Balance: $${user.balance} -> $${freshUser.balance}`);
-                    setUser(prev => prev ? { ...prev, balance: freshUser.balance } : freshUser);
+                if (freshUser.balance !== user.balance || freshUser.networkEnabled !== user.networkEnabled) {
+                    console.log(`♻️ Syncing User Data`);
+                    setUser(prev => prev ? { ...prev, balance: freshUser.balance, networkEnabled: freshUser.networkEnabled } : freshUser);
                 }
             } else {
                 // Session invalid (e.g. user deleted)

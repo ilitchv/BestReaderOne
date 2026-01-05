@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { translations } from '../constants/translations';
 import ThemeToggle from './ThemeToggle';
 import ResultsDashboard from './ResultsDashboard';
+import { FloatingQR } from './FloatingQR';
 
 interface LandingPageProps {
     onNavigateToProduct: () => void;
@@ -20,6 +21,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
+
+    // Zoom State
+    const [zoomScale, setZoomScale] = useState(1);
+    const handleZoomIn = () => setZoomScale(prev => Math.min(prev + 0.1, 2.5));
+    const handleZoomOut = () => setZoomScale(prev => Math.max(prev - 0.1, 0.1));
 
     useEffect(() => {
         const yearSpan = document.getElementById('year');
@@ -46,21 +52,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
     };
 
     // Dynamic Colors based on Theme State - UPDATED TO NAVY
-    const bgGradient = isDark 
+    const bgGradient = isDark
         ? 'radial-gradient(circle at top left, #1e293b 0, #0f172a 45%, #020617 100%)' // Navy Gradient
         : 'radial-gradient(circle at top left, #fff7ed 0, #fff1f2 45%, #ffffff 100%)';
-    
+
     const textColor = isDark ? '#f1f5f9' : '#111827';
     const textMuted = isDark ? '#94a3b8' : '#6b7280';
-    
-    const cardBg = isDark 
+
+    const cardBg = isDark
         ? 'radial-gradient(circle at top left, #1e293b, #0f172a 70%)' // Navy Card
         : 'linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%)';
-        
+
     const headerBg = isDark
         ? 'linear-gradient(to bottom, rgba(11,17,33,0.96), rgba(11,17,33,0.78), transparent)' // Navy Header
         : 'linear-gradient(to bottom, rgba(255,255,255,0.96), rgba(255,255,255,0.85), transparent)';
-        
+
     const borderColor = isDark ? 'rgba(51,65,85,0.6)' : 'rgba(229,231,235,1)'; // Slate border
 
     const styles = `
@@ -86,7 +92,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
         a { text-decoration: none; color: inherit; }
         img { max-width: 100%; display: block; }
         .page { width: 100%; padding: 18px 16px 40px; }
-        .page-inner { max-width: var(--max-width); margin: 0 auto; }
+        .page-inner { max-width: var(--max-width); margin: 0 auto; position: relative; }
         .landing-header {
           position: sticky; top: 0; z-index: 40;
           backdrop-filter: blur(14px);
@@ -190,112 +196,128 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
         <div id="top">
             {/* Inject dynamic styles based on theme state */}
             <style dangerouslySetInnerHTML={{ __html: styles }} />
-            
+
             <header className="landing-header">
                 <div className="header-inner">
-                <a href="#" onClick={(e) => e.preventDefault()} className="brand">
-                    <div className="brand-mark"><span>BR</span></div>
-                    <div className="brand-text">
-                    <div className="brand-name">Beast Reader Lotto</div>
-                    <div className="brand-tagline">Resultados y Estrategia</div>
+                    <a href="#" onClick={(e) => e.preventDefault()} className="brand">
+                        <div className="brand-mark"><span>BR</span></div>
+                        <div className="brand-text">
+                            <div className="brand-name">Beast Reader Lotto</div>
+                            <div className="brand-tagline">Resultados y Estrategia</div>
+                        </div>
+                    </a>
+                    <nav className="nav">
+                        {/* UPDATED: Trigger ResultsPage instead of scrolling */}
+                        <a href="#results" onClick={(e) => { e.preventDefault(); onNavigateToResults(); }}>{t.navResults}</a>
+                        <a href="#tools" onClick={(e) => { e.preventDefault(); scrollTo('tools'); }}>{t.navTools}</a>
+                        <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo('faq'); }}>{t.navHelp}</a>
+                    </nav>
+                    <div className="nav-cta">
+                        {/* Zoom Controls */}
+                        <div className="lang-switch hidden sm:flex">
+                            <button onClick={handleZoomOut} className="lang-btn hover:text-white" title="Zoom Out">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
+                            </button>
+                            <span className="text-[10px] font-mono w-8 text-center text-gray-500">{Math.round(zoomScale * 100)}%</span>
+                            <button onClick={handleZoomIn} className="lang-btn hover:text-white" title="Zoom In">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
+                            </button>
+                        </div>
+
+                        {/* Language Switcher */}
+                        <div className="lang-switch">
+                            <button onClick={() => setLanguage('en')} className={`lang-btn ${language === 'en' ? 'active' : ''}`}>EN</button>
+                            <button onClick={() => setLanguage('es')} className={`lang-btn ${language === 'es' ? 'active' : ''}`}>ES</button>
+                            <button onClick={() => setLanguage('ht')} className={`lang-btn ${language === 'ht' ? 'active' : ''}`}>HT</button>
+                        </div>
+
+                        {/* Shared Theme Toggle */}
+                        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
                     </div>
-                </a>
-                <nav className="nav">
-                    {/* UPDATED: Trigger ResultsPage instead of scrolling */}
-                    <a href="#results" onClick={(e) => { e.preventDefault(); onNavigateToResults(); }}>{t.navResults}</a>
-                    <a href="#tools" onClick={(e) => { e.preventDefault(); scrollTo('tools'); }}>{t.navTools}</a>
-                    <a href="#faq" onClick={(e) => { e.preventDefault(); scrollTo('faq'); }}>{t.navHelp}</a>
-                </nav>
-                <div className="nav-cta">
-                    {/* Language Switcher */}
-                    <div className="lang-switch">
-                        <button onClick={() => setLanguage('en')} className={`lang-btn ${language === 'en' ? 'active' : ''}`}>EN</button>
-                        <button onClick={() => setLanguage('es')} className={`lang-btn ${language === 'es' ? 'active' : ''}`}>ES</button>
-                        <button onClick={() => setLanguage('ht')} className={`lang-btn ${language === 'ht' ? 'active' : ''}`}>HT</button>
-                    </div>
-                    
-                    {/* Shared Theme Toggle */}
-                    <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-                </div>
                 </div>
             </header>
 
             <main className="page">
                 <div className="page-inner">
-                <section className="hero">
-                    <div className="hero-main-title">
-                    {t.heroTitle} <span className="highlight">{t.heroTitleHighlight}</span>
-                    </div>
-                    <p className="hero-subtitle">
-                    {t.heroSubtitle}
-                    </p>
-                    <div className="hero-cta-row">
-                    <button onClick={onNavigateToProduct} className="btn btn-primary">
-                        {t.ctaAccess}
-                    </button>
-                    <button className="btn btn-ghost" onClick={() => scrollTo('tools')}>
-                        {t.ctaViewTools}
-                    </button>
-                    </div>
-                </section>
-
-                <section id="results">
-                    {/* Replaced inline dashboard with CTA to full dashboard */}
-                    <div className="text-center py-8">
-                        <h3 className="text-xl font-bold mb-4 text-[var(--text)]">Latest Live Results</h3>
-                        <ResultsDashboard />
-                        <div className="mt-6">
-                            <button onClick={onNavigateToResults} className="btn btn-ghost border-2 border-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)] hover:text-black">
-                                View Full Ultimate Dashboard →
+                    <section className="hero">
+                        <div className="hero-main-title">
+                            {t.heroTitle} <span className="highlight">{t.heroTitleHighlight}</span>
+                        </div>
+                        <p className="hero-subtitle">
+                            {t.heroSubtitle}
+                        </p>
+                        <div className="hero-cta-row">
+                            <button onClick={onNavigateToProduct} className="btn btn-primary">
+                                {t.ctaAccess}
+                            </button>
+                            <button className="btn btn-ghost" onClick={() => scrollTo('tools')}>
+                                {t.ctaViewTools}
                             </button>
                         </div>
-                    </div>
-                </section>
+                    </section>
 
-                <section id="tools">
-                    <div className="section-header">
-                    <div className="eyebrow">Premium</div>
-                    <h2 className="section-title">{t.premiumTitle}</h2>
-                    <p className="section-subtitle">
-                        {t.premiumSubtitle}
-                    </p>
+                    {/* QR CODE - Top Right Absolute Position */}
+                    <div className="hidden lg:block absolute top-[180px] right-0 z-30 opacity-90 hover:opacity-100 transition-opacity">
+                        <FloatingQR className="scale-75 origin-top-right transform translate-x-4" />
                     </div>
-                    <div className="card-grid">
-                    <div className="card">
-                        <div className="card-kicker">Sim + AI</div>
-                        <div className="card-title">{t.cardPlaygroundTitle}</div>
-                        <p className="card-body">
-                        {t.cardPlaygroundBody}
-                        </p>
-                        <div className="card-cta">
-                        <button onClick={onNavigateToProduct} className="btn btn-ghost">{t.btnOpenPlayground}</button>
-                        </div>
-                    </div>
-                    <div className="card">
-                        <div className="card-kicker">Pro</div>
-                        <div className="card-title">{t.cardGenTitle}</div>
-                        <p className="card-body">
-                        {t.cardGenBody}
-                        </p>
-                        <div className="card-cta">
-                        <button className="btn btn-ghost" disabled>{t.btnComingSoon}</button>
-                        </div>
-                    </div>
-                    </div>
-                </section>
 
-                <footer className="landing-footer">
-                    <div className="flex items-center gap-4">
-                        <span>© <span id="year"></span> {t.footerRights}</span>
-                        {/* New Admin Access Link */}
-                        <button onClick={() => setIsAdminModalOpen(true)} className="opacity-60 hover:opacity-100 hover:text-[var(--accent-pink)] transition-colors text-[10px] uppercase tracking-wider font-bold border border-transparent hover:border-[var(--accent-pink)] px-2 py-0.5 rounded-full">
-                            Admin Access
-                        </button>
-                    </div>
-                    <span>
-                    <a href="#top" onClick={(e) => { e.preventDefault(); scrollTo('top'); }}>Top</a>
-                    </span>
-                </footer>
+                    <section id="results">
+                        {/* Replaced inline dashboard with CTA to full dashboard */}
+                        <div className="text-center py-8">
+                            <h3 className="text-xl font-bold mb-4 text-[var(--text)]">Latest Live Results</h3>
+                            <ResultsDashboard zoomScale={zoomScale} theme={theme} />
+                            <div className="mt-6">
+                                <button onClick={onNavigateToResults} className="btn btn-ghost border-2 border-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)] hover:text-black">
+                                    View Full Ultimate Dashboard →
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="tools">
+                        <div className="section-header">
+                            <div className="eyebrow">Premium</div>
+                            <h2 className="section-title">{t.premiumTitle}</h2>
+                            <p className="section-subtitle">
+                                {t.premiumSubtitle}
+                            </p>
+                        </div>
+                        <div className="card-grid">
+                            <div className="card">
+                                <div className="card-kicker">Sim + AI</div>
+                                <div className="card-title">{t.cardPlaygroundTitle}</div>
+                                <p className="card-body">
+                                    {t.cardPlaygroundBody}
+                                </p>
+                                <div className="card-cta">
+                                    <button onClick={onNavigateToProduct} className="btn btn-ghost">{t.btnOpenPlayground}</button>
+                                </div>
+                            </div>
+                            <div className="card">
+                                <div className="card-kicker">Pro</div>
+                                <div className="card-title">{t.cardGenTitle}</div>
+                                <p className="card-body">
+                                    {t.cardGenBody}
+                                </p>
+                                <div className="card-cta">
+                                    <button className="btn btn-ghost" disabled>{t.btnComingSoon}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer className="landing-footer">
+                        <div className="flex items-center gap-4">
+                            <span>© <span id="year"></span> {t.footerRights}</span>
+                            {/* New Admin Access Link */}
+                            <button onClick={() => setIsAdminModalOpen(true)} className="opacity-60 hover:opacity-100 hover:text-[var(--accent-pink)] transition-colors text-[10px] uppercase tracking-wider font-bold border border-transparent hover:border-[var(--accent-pink)] px-2 py-0.5 rounded-full">
+                                Admin Access
+                            </button>
+                        </div>
+                        <span>
+                            <a href="#top" onClick={(e) => { e.preventDefault(); scrollTo('top'); }}>Top</a>
+                        </span>
+                    </footer>
                 </div>
             </main>
 
@@ -305,10 +327,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
                     <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-sm">
                         <h3 className="text-lg font-bold text-white mb-4 text-center">Admin Gatekeeper</h3>
                         <form onSubmit={handleAdminSubmit} className="space-y-4">
-                            <input 
-                                type="password" 
+                            <input
+                                type="password"
                                 autoFocus
-                                placeholder="Enter PIN" 
+                                placeholder="Enter PIN"
                                 value={pin}
                                 onChange={e => setPin(e.target.value)}
                                 className="w-full bg-black/50 border border-slate-600 rounded-lg p-3 text-center text-xl tracking-widest text-white focus:border-neon-cyan outline-none"

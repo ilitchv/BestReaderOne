@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { localDbService } from '../services/localDbService';
 import { TicketData, WinningResult } from '../types';
 import TicketModal from './TicketModal';
 import UserSettingsModal from './UserSettingsModal';
-import ReferralTree from './ReferralTree';
-import ReferralLinkModal from './ReferralLinkModal';
+import UserBeastModule from '../beast-modules/beast-office/UserBeastModule';
 import RegistrationModal from './RegistrationModal';
 import SniperFrame from './SniperFrame'; // RESTORED
 import { DepositModal } from './DepositModal'; // NEW
@@ -27,7 +25,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // New Modal States
-    const [isReferralLinkOpen, setIsReferralLinkOpen] = useState(false);
+    // const [isReferralLinkOpen, setIsReferralLinkOpen] = useState(false);
 
     const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
@@ -284,22 +282,13 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                 )}
 
                 {activeTab === 'referrals' && (
-                    <section className="space-y-6">
-                        <div className="flex justify-between items-end bg-[#151e32] p-6 rounded-2xl border border-white/5 shadow-lg">
-                            <div>
-                                <h3 className="text-xl font-bold text-white mb-1">Your Agent Network</h3>
-                                <p className="text-sm text-gray-400">Grow your business by sharing your link.</p>
-                            </div>
-                            <button
-                                onClick={() => setIsReferralLinkOpen(true)}
-                                className="px-5 py-2.5 bg-neon-cyan text-black font-bold rounded-xl shadow-[0_0_15px_rgba(0,255,255,0.2)] hover:scale-105 transition-all flex items-center gap-2"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-                                Recruit Agent
-                            </button>
+                    <section className="h-full">
+                        <div className="h-[700px]">
+                            <UserBeastModule
+                                user={user}
+                                networkEnabled={user.networkEnabled || false}
+                            />
                         </div>
-
-                        <ReferralTree key={refreshTreeKey} />
                     </section>
                 )}
 
@@ -358,14 +347,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                 onClose={() => setIsSettingsOpen(false)}
             />
 
-            <ReferralLinkModal
-                isOpen={isReferralLinkOpen}
-                onClose={() => setIsReferralLinkOpen(false)}
-                onSimulate={() => {
-                    setIsReferralLinkOpen(false);
-                    setIsRegistrationOpen(true);
-                }}
-            />
+            {/* <ReferralLinkModal /> REMOVED */}
 
             <RegistrationModal
                 isOpen={isRegistrationOpen}

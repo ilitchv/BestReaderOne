@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beast Office - Plan de Compensación</title>
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --accent: #f5576c;
+            --success: #4facfe;
+            --warning: #fa709a;
+            --bg-light: #f8f9fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        header h1 {
+            font-size: 3.5rem;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        /* Sections */
+        .section {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            animation: fadeIn 1s ease-out;
+        }
+
+        h2 {
+            color: var(--secondary);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        /* Calculator Grid */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        /* Inputs */
+        .input-group {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #e1e1e1;
+            transition: transform 0.2s;
+        }
+
+        .input-group:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 8px;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-hint {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* Results Dashboard */
+        .results-dashboard {
+            background: #1a1a2e;
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .result-card.highlight {
+            background: linear-gradient(135deg, var(--accent), var(--warning));
+            border: none;
+        }
+
+        .result-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin: 10px 0;
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        /* Validation Box */
+        .validation-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .valid {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .invalid {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Breakdown Table */
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .breakdown-table th {
+            text-align: left;
+            color: #888;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            padding: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .breakdown-table td {
+            padding: 15px 10px;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+        }
+
+        .breakdown-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Tree Visual Enhanced */
+        .tree-container {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: auto;
+            padding-bottom: 20px;
+            min-height: 300px;
+            background: #f8fbff;
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .node-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 5px;
+            position: relative;
+        }
+
+        .tree-row {
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        .node {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s;
+            position: relative;
+            z-index: 2;
+            margin-bottom: 5px;
+        }
+
+        .node.root {
+            width: 70px;
+            height: 70px;
+            background: var(--secondary);
+            font-size: 1rem;
+            z-index: 10;
+        }
+
+        .node.n1 {
+            background: var(--primary);
+        }
+
+        .node.n2 {
+            background: var(--success);
+            width: 40px;
+            height: 40px;
+            font-size: 0.7rem;
+        }
+
+        .node.n3 {
+            background: var(--warning);
+            width: 35px;
+            height: 35px;
+            font-size: 0.6rem;
+        }
+
+        /* Lines */
+        .v-line {
+            width: 2px;
+            background: #ccc;
+            height: 15px;
+            margin: 0 auto;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Beast Office</h1>
+        <p>Simulador de Comisiones & Plan de Carrera</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Description -->
+        <div class="section">
+            <h2>📊 Estructura del Plan (Unilevel 8%)</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                <div class="result-card" style="background:var(--primary); color:white; min-width: 200px;">
+                    <div class="result-value">5%</div>
+                    <div class="result-label">Nivel 1</div>
+                </div>
+                <div class="result-card" style="background:var(--secondary); color:white; min-width: 200px;">
+                    <div class="result-value">2%</div>
+                    <div class="result-label">Nivel 2</div>
+                </div>
+                <div class="result-card" style="background:var(--accent); color:white; min-width: 200px;">
+                    <div class="result-value">1%</div>
+                    <div class="result-label">Nivel 3</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator -->
+        <div class="section">
+            <h2>🧮 Calculadora de Proyección</h2>
+
+            <div class="calculator-grid">
+                <!-- Inputs -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="input-group">
+                        <label>👑 Tu Rango Objetivo</label>
+                        <select id="rankSelector" onchange="calculate()">
+                            <option value="AGENTE">Agente (Cobra N1)</option>
+                            <option value="SOCIO">Socio (Cobra N1 + N2)</option>
+                            <option value="MANAGER" selected>Manager (Cobra N1 + N2 + N3)</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>👤 Referidos Directos (N1)</label>
+                        <input type="number" id="inputN1" value="3" min="0" max="50" oninput="calculate()">
+                        <span class="input-hint">Personas invitadas directamente por ti.</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label>👥 Multiplicador Nivel 2</label>
+                        <input type="number" id="inputN2" value="3" min="0" max="20" oninput="calculate()">
+                        <span class="input-hint">Promedio de referidos que trae cada N1.</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label>👥 Multiplicador Nivel 3</label>
+                        <input type="number" id="inputN3" value="3" min="0" max="20" oninput="calculate()">
+                        <span class="input-hint">Promedio de referidos que trae cada N2.</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label>💵 Consumo Mensual (USD)</label>
+                        <input type="number" id="inputConsumption" value="50" min="0" step="10" oninput="calculate()">
+                        <span class="input-hint">Gasto promedio por usuario (PV).</span>
+                    </div>
+                </div>
+
+                <!-- Visualization & Validation -->
+                <div>
+                    <div id="validationMessage" class="validation-box valid">
+                        ✅ Calificas para el rango seleccionado.
+                    </div>
+
+                    <table class="breakdown-table">
+                        <thead>
+                            <tr>
+                                <th>Nivel</th>
+                                <th>Usuarios</th>
+                                <th>Volumen (GV)</th>
+                                <th>%</th>
+                                <th>Comisión</th>
+                            </tr>
+                        </thead>
+                        <tbody id="breakdownBody">
+                            <!-- Filled by JS -->
+                        </tbody>
+                    </table>
+
+                    <div class="results-dashboard">
+                        <div class="result-card highlight">
+                            <div class="result-value" id="totalCommission">$0.00</div>
+                            <div class="result-label">Comisión Total</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <div class="result-card" style="flex:1; background:#764ba2; color:white;">
+                            <div class="result-value" style="font-size: 1.5rem;" id="splitTokens">$0.00</div>
+                            <div class="result-label">70% Tokens</div>
+                        </div>
+                        <div class="result-card" style="flex:1; background:#f5576c; color:white;">
+                            <div class="result-value" style="font-size: 1.5rem;" id="splitBTC">$0.00</div>
+                            <div class="result-label">30% BTC</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tree Viz -->
+            <h3 style="margin-top: 40px; text-align: center;">Visualización de Estructura (Niveles 1, 2 y 3)</h3>
+            <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 20px;">
+                (Se muestra una rama representativa para facilitar la visualización)
+            </p>
+            <div class="tree-container" id="treeViz"></div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        }
+
+        function calculate() {
+            // 1. Get Inputs
+            const rank = document.getElementById('rankSelector').value;
+            const n1Count = parseInt(document.getElementById('inputN1').value) || 0;
+            const n2Mult = parseInt(document.getElementById('inputN2').value) || 0;
+            const n3Mult = parseInt(document.getElementById('inputN3').value) || 0;
+            const consumption = parseFloat(document.getElementById('inputConsumption').value) || 0;
+
+            // 2. Calculate Populations
+            const usersN1 = n1Count;
+            const usersN2 = usersN1 * n2Mult;
+            const usersN3 = usersN2 * n3Mult;
+
+            // 3. Calculate Volumes
+            const volN1 = usersN1 * consumption;
+            const volN2 = usersN2 * consumption;
+            const volN3 = usersN3 * consumption;
+
+            // 4. Calculate Commissions (Based on Rank Cap)
+            let commN1 = 0, commN2 = 0, commN3 = 0;
+
+            // Agente: Only N1
+            if (rank === 'AGENTE' || rank === 'SOCIO' || rank === 'MANAGER') {
+                commN1 = volN1 * 0.05;
+            }
+
+            // Socio: N1 + N2
+            if (rank === 'SOCIO' || rank === 'MANAGER') {
+                commN2 = volN2 * 0.02;
+            }
+
+            // Manager: N1 + N2 + N3
+            if (rank === 'MANAGER') {
+                commN3 = volN3 * 0.01;
+            }
+
+            const totalCommission = commN1 + commN2 + commN3;
+
+            // 5. Update UI Breakdown
+            const tbody = document.getElementById('breakdownBody');
+            tbody.innerHTML = `
+            <tr>
+                <td>Nivel 1</td>
+                <td>${usersN1}</td>
+                <td>${formatCurrency(volN1)}</td>
+                <td>5% ${rank === 'NORMAL' ? '(Bloq)' : ''}</td>
+                <td>${formatCurrency(commN1)}</td>
+            </tr>
+            <tr>
+                <td>Nivel 2</td>
+                <td>${usersN2}</td>
+                <td>${formatCurrency(volN2)}</td>
+                <td>2% ${rank === 'AGENTE' ? '(Bloq)' : ''}</td>
+                <td>${formatCurrency(commN2)}</td>
+            </tr>
+            <tr>
+                <td>Nivel 3</td>
+                <td>${usersN3}</td>
+                <td>${formatCurrency(volN3)}</td>
+                <td>1% ${(rank === 'AGENTE' || rank === 'SOCIO') ? '(Bloq)' : ''}</td>
+                <td>${formatCurrency(commN3)}</td>
+            </tr>
+            <tr style="background:#f8f9fa;">
+                <td>TOTAL</td>
+                <td>${usersN1 + usersN2 + usersN3}</td>
+                <td>${formatCurrency(volN1 + volN2 + volN3)}</td>
+                <td>-</td>
+                <td style="color:var(--primary);">${formatCurrency(totalCommission)}</td>
+            </tr>
+        `;
+
+            // 6. Update Totals
+            document.getElementById('totalCommission').textContent = formatCurrency(totalCommission);
+            document.getElementById('splitTokens').textContent = formatCurrency(totalCommission * 0.70);
+            document.getElementById('splitBTC').textContent = formatCurrency(totalCommission * 0.30);
+
+            // 7. Smart Validation (The "2 Legs" Rule)
+            validateRank(rank, n1Count, consumption, n2Mult, n3Mult, volN1 + volN2);
+
+            // 8. Render Tree (Enhanced)
+            renderTree(n1Count, n2Mult, n3Mult);
+        }
+
+        function validateRank(rank, n1, consumption, n2Mult, n3Mult, gvN1N2) {
+            const msgBox = document.getElementById('validationMessage');
+            let isValid = true;
+            let message = "✅ Calificas para el rango seleccionado.";
+
+            // Logic Source: compensation.ts "checkQualification"
+
+            // Check 1: Direct Count
+            if (rank === 'AGENTE' && n1 < 3) {
+                isValid = false; message = `❌ AGENTE requiere 3 directos. Tienes ${n1}.`;
+            }
+            else if ((rank === 'SOCIO' || rank === 'MANAGER') && n1 < 5) {
+                isValid = false; message = `❌ ${rank} requiere 5 directos. Tienes ${n1}.`;
+            }
+
+            // Check 2: Volume Requirements
+            else if (rank === 'SOCIO' && gvN1N2 < 150) {
+                isValid = false; message = `❌ SOCIO requiere 150 GV (N1+N2). Tienes ${formatCurrency(gvN1N2)}.`;
+            }
+
+            // Check 3: Manager Specifics (Leg Rule)
+            else if (rank === 'MANAGER') {
+                // Leg Volume Projection:
+                // One Leg = 1 Direct + Their Downline (N2s + N3s)
+                // Volume = Consumption * (1 + n2Mult + (n2Mult * n3Mult))
+                const usersPerLeg = 1 + n2Mult + (n2Mult * n3Mult);
+                const volumePerLeg = usersPerLeg * consumption;
+
+                if (volumePerLeg < 150) {
+                    isValid = false;
+                    message = `⚠️ MANAGER requiere 2 ramas de $150+. Tu promedio por rama es ${formatCurrency(volumePerLeg)}. Aumenta el consumo o lo referidos por pierna (N2/N3).`;
+                } else if (n1 < 2) {
+                    // Covered by n1 < 5 check generally, but specific logic:
+                    isValid = false; message = "❌ MANAGER requiere al menos 2 ramas activas.";
+                }
+            }
+
+            msgBox.className = isValid ? "validation-box valid" : "validation-box invalid";
+            msgBox.textContent = message;
+        }
+
+        function renderTree(n1, n2Mult, n3Mult) {
+            const container = document.getElementById('treeViz');
+            container.innerHTML = '';
+
+            // --- ROOT ---
+            const rootWrapper = document.createElement('div');
+            rootWrapper.className = 'node-wrapper';
+
+            const rootNode = document.createElement('div');
+            rootNode.className = 'node root';
+            rootNode.textContent = 'YOU';
+            rootWrapper.appendChild(rootNode);
+
+            // Connector Root -> L1
+            if (n1 > 0) {
+                const vLine = document.createElement('div');
+                vLine.className = 'v-line';
+                vLine.style.height = '20px';
+                rootWrapper.appendChild(vLine);
+
+                const l1Container = document.createElement('div');
+                l1Container.className = 'tree-row';
+
+                // Limit render to max 4 direct nodes to avoid scrolling hell
+                const maxL1 = Math.min(n1, 4);
+
+                for (let i = 0; i < maxL1; i++) {
+                    const l1Wrapper = document.createElement('div');
+                    l1Wrapper.className = 'node-wrapper';
+
+                    const l1Node = document.createElement('div');
+                    l1Node.className = 'node n1';
+                    l1Node.textContent = '1';
+                    l1Wrapper.appendChild(l1Node);
+
+                    // Expand L2 if this is the "Middle" node (or first few)
+                    // We expand L2 for the first 2 nodes only to show potential
+                    if (i < 2 && n2Mult > 0) {
+                        appendLevel2(l1Wrapper, n2Mult, n3Mult);
+                    }
+
+                    l1Container.appendChild(l1Wrapper);
+                }
+
+                // "More" indicator
+                if (n1 > 4) {
+                    const moreWrapper = document.createElement('div');
+                    moreWrapper.className = 'node-wrapper';
+                    const moreNode = document.createElement('div');
+                    moreNode.className = 'node';
+                    moreNode.style.background = '#ccc';
+                    moreNode.textContent = `+${n1 - 4}`;
+                    moreWrapper.appendChild(moreNode);
+                    l1Container.appendChild(moreWrapper);
+                }
+
+                rootWrapper.appendChild(l1Container);
+            }
+
+            container.appendChild(rootWrapper);
+        }
+
+        function appendLevel2(parentWrapper, n2Mult, n3Mult) {
+            const vLine = document.createElement('div');
+            vLine.className = 'v-line';
+            parentWrapper.appendChild(vLine);
+
+            const row = document.createElement('div');
+            row.className = 'tree-row';
+
+            const maxL2 = Math.min(n2Mult, 3);
+            for (let j = 0; j < maxL2; j++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'node-wrapper';
+
+                const node = document.createElement('div');
+                node.className = 'node n2';
+                node.textContent = '2';
+                wrapper.appendChild(node);
+
+                // Expand L3 only on first node of this group
+                if (j === 0 && n3Mult > 0) {
+                    appendLevel3(wrapper, n3Mult);
+                }
+
+                row.appendChild(wrapper);
+            }
+
+            if (n2Mult > 3) {
+                const moreWrapper = document.createElement('div');
+                const moreNode = document.createElement('div');
+                moreNode.className = 'node n2';
+                moreNode.style.background = '#ccc';
+                moreNode.style.fontSize = '0.6rem';
+                moreNode.textContent = `+${n2Mult - 3}`;
+                moreWrapper.appendChild(moreNode);
+                row.appendChild(moreWrapper);
+            }
+
+            parentWrapper.appendChild(row);
+        }
+
+        function appendLevel3(parentWrapper, n3Mult) {
+            const vLine = document.createElement('div');
+            vLine.className = 'v-line';
+            vLine.style.height = '10px';
+            parentWrapper.appendChild(vLine);
+
+            const row = document.createElement('div');
+            row.className = 'tree-row';
+
+            const maxL3 = Math.min(n3Mult, 3);
+            for (let k = 0; k < maxL3; k++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'node-wrapper';
+
+                const node = document.createElement('div');
+                node.className = 'node n3';
+                node.textContent = '3';
+                wrapper.appendChild(node);
+                row.appendChild(wrapper);
+            }
+            if (n3Mult > 3) {
+                const moreWrapper = document.createElement('div');
+                const moreNode = document.createElement('div');
+                moreNode.className = 'node n3';
+                moreNode.style.background = '#ccc';
+                moreNode.textContent = `+`;
+                moreWrapper.appendChild(moreNode);
+                row.appendChild(moreWrapper);
+            }
+
+            parentWrapper.appendChild(row);
+        }
+
+        // Init
+        calculate();
+    </script>
+
+</body>
+
+</html>

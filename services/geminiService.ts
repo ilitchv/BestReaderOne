@@ -116,3 +116,21 @@ export const interpretWinningResultsText = async (text: string, catalogIds: stri
         throw error;
     }
 };
+
+export const chatWithContext = async (query: string, context: string): Promise<string> => {
+    try {
+        const response = await fetch('/api/ai/chat-compensation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, context })
+        });
+
+        if (!response.ok) throw new Error("Failed to chat");
+
+        const data = await response.json();
+        return data.answer;
+    } catch (error) {
+        console.error("Chat Error:", error);
+        throw error;
+    }
+};

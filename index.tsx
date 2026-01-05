@@ -7,11 +7,14 @@ import ProductPage from './components/ProductPage';
 import ResultsPage from './components/ResultsPage';
 import AdminDashboard from './components/AdminDashboard';
 import UserDashboard from './components/UserDashboard';
+
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TicketData } from './types';
 
 type ViewState = 'HOME' | 'PRODUCT' | 'PLAYGROUND' | 'RESULTS' | 'ADMIN' | 'USER_DASHBOARD';
 type Language = 'en' | 'es' | 'ht';
+
+import { useAnalytics } from './hooks/useAnalytics'; // ADDED
 
 const MainAppContent: React.FC = () => {
     // 1. INITIALIZE VIEW FROM STORAGE TO PREVENT FLASH
@@ -27,6 +30,10 @@ const MainAppContent: React.FC = () => {
     const [language, setLanguage] = useState<Language>('en');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const { isAuthenticated, user, logout, loading } = useAuth(); // ADDED LOADING
+
+    // --- ANALYTICS TRACKER ---
+    useAnalytics(view); // Automatically tracks view changes
+
 
     // Playback State
     const [playbackTicket, setPlaybackTicket] = useState<TicketData | null>(null);
@@ -54,7 +61,7 @@ const MainAppContent: React.FC = () => {
 
         // If NOT authenticated but trying to access protected areas -> Redirect to Product (Login)
         if (!isAuthenticated) {
-            if (['PLAYGROUND', 'USER_DASHBOARD', 'ADMIN'].includes(view)) {
+            if (['PLAYGROUND', 'USER_DASHBOARD'].includes(view)) {
                 setView('PRODUCT');
             }
         }
@@ -135,6 +142,15 @@ const MainAppContent: React.FC = () => {
                 <div className="text-center space-y-4">
                     <div className="w-16 h-16 border-4 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin mx-auto"></div>
                     <p className="text-neon-cyan font-mono animate-pulse">VERIFYING SESSION...</p>
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('beast_user_id');
+                            window.location.reload();
+                        }}
+                        className="text-xs text-slate-500 hover:text-white underline mt-4 block mx-auto"
+                    >
+                        Stuck? Click Here to Reset
+                    </button>
                 </div>
             </div>
         );
@@ -198,6 +214,8 @@ const MainAppContent: React.FC = () => {
                     <AdminDashboard onClose={handleBackToHome} />
                 </div>
             )}
+
+
         </>
     );
 };

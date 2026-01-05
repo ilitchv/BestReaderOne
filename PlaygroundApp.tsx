@@ -15,7 +15,7 @@ import ValidationErrorModal from './components/ValidationErrorModal';
 import { getTodayDateString, calculateRowTotal, fileToBase64, determineGameMode } from './utils/helpers';
 import { interpretTicketImage, interpretNaturalLanguagePlays } from './services/geminiService';
 import type { Play, WizardPlay, ImageInterpretationResult, CopiedWagers, ServerHealth, TicketData } from './types';
-import { MAX_PLAYS } from './constants';
+import { MAX_PLAYS, RESULTS_CATALOG } from './constants';
 import { localDbService } from './services/localDbService';
 import { useSound } from './hooks/useSound';
 import { useAuth } from './contexts/AuthContext';
@@ -50,9 +50,17 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [selectedTracks, setSelectedTracks] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem(STORAGE_KEYS.TRACKS);
-            const parsed = saved ? JSON.parse(saved) : [];
+            let parsed = saved ? JSON.parse(saved) : [];
 
-            // Smart Default Logic if storage is empty
+            // --- SANITATION: Filter out ghosts (Legacy IDs) ---
+            const VALID_IDS = new Set(RESULTS_CATALOG.map(c => c.id));
+            // Whitelist Special Keys / Indicators
+            ['Venezuela', 'Pulito', 'special/venezuela', 'special/pulito', 'New York Horses'].forEach(k => VALID_IDS.add(k));
+
+            // Filter parsed to only include valid IDs
+            parsed = parsed.filter((t: string) => VALID_IDS.has(t));
+
+            // Smart Default Logic if storage is empty (or emptied by sanitation)
             if (parsed.length === 0) {
                 const now = new Date();
                 const currentHour = now.getHours();
@@ -128,6 +136,16 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
 
     // Sound Hook
     const { isMuted, toggleMute } = useSound();
+
+    // View Mode (Persisted)
+    const [trackViewMode, setTrackViewMode] = useState<'grid' | 'reel'>(() => {
+        return (localStorage.getItem('trackViewMode') as 'grid' | 'reel') || 'grid';
+    });
+
+    // Save View Mode Preference
+    useEffect(() => {
+        localStorage.setItem('trackViewMode', trackViewMode);
+    }, [trackViewMode]);
 
     // Sync theme with document
     useEffect(() => {
@@ -295,8 +313,9 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     };
 
     // --- TICKET GENERATION ---
-    const handleGenerateTicket = () => {
+    const handleGenerateTicket = async () => {
         const errors: string[] = [];
+        const warnings: string[] = [];
 
         // --- VALIDATION: Ensure at least one REAL track is selected ---
         // 'Venezuela' and 'Pulito' are indicators, not tracks. 'New York Horses' is a valid track.
@@ -323,7 +342,8 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             }
 
             // 2. Pulito 2-digit position check
-            if (p.betNumber.length === 2 && selectedTracks.includes('Pulito') && pulitoPositions.length > 0) {
+            const isPulitoSelected = selectedTracks.includes('Pulito') || selectedTracks.includes('special/pulito');
+            if (p.betNumber.length === 2 && isPulitoSelected && pulitoPositions.length > 0) {
                 const invalidPositions = pulitoPositions.filter(pos => pos > 4);
                 if (invalidPositions.length > 0) {
                     errors.push(`Play #${idx + 1}: 2-digit plays (Pulito) are restricted to positions 1-4.`);
@@ -342,6 +362,35 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         }
 
         if (validPlays.length === 0 && plays.length > 0) errors.push("No valid plays found (check amounts or bet numbers).");
+
+        // --- 5. SERVER-SIDE RISK VALIDATION (ACTIVE ENFORCEMENT) ---
+        if (errors.length === 0 && validPlays.length > 0) {
+            try {
+                const riskRes = await fetch('/api/risk/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tracks: selectedTracks,
+                        betDates: selectedDates,
+                        plays: validPlays
+                    })
+                });
+
+                if (riskRes.ok) {
+                    const riskData = await riskRes.json();
+                    if (!riskData.allowed) {
+                        // Process Failures
+                        riskData.failures.forEach((f: any) => {
+                            // Professional "Sold Out" Message
+                            errors.push(`SOLD OUT: Number ${f.number} (${f.type}) on ${f.track} has reached the global limit of $${f.limit}.`);
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Risk validation failed (network)", e);
+                // Optional: warnings.push("Network warning: Could not verify global risk limits.");
+            }
+        }
 
         if (errors.length > 0) {
             setValidationErrors(errors);
@@ -490,6 +539,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                     selectedDates={selectedDates}
                     pulitoPositions={pulitoPositions}
                     onPulitoPositionsChange={setPulitoPositions}
+                    viewMode={trackViewMode}
                 />
 
                 {/* Actions */}
@@ -528,6 +578,19 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                             title="Prize Calculator"
                         >
                             <svg data-lucide="calculator" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="14" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>
+                        </button>
+
+                        {/* VIEW MODE TOGGLE */}
+                        <button
+                            onClick={() => setTrackViewMode(prev => prev === 'grid' ? 'reel' : 'grid')}
+                            className={`p-2 rounded-full transition-colors ${trackViewMode === 'reel' ? 'bg-neon-cyan text-black shadow-lg shadow-cyan-500/50' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-neon-cyan'}`}
+                            title="Toggle View Mode"
+                        >
+                            {trackViewMode === 'grid' ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><circle cx="15.5" cy="8.5" r="1.5" /><circle cx="15.5" cy="15.5" r="1.5" /><circle cx="8.5" cy="15.5" r="1.5" /></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></svg>
+                            )}
                         </button>
                     </div>
 

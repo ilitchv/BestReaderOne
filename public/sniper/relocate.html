@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sniper Risk Relocation Cart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0b1120;
+            --bg-card: #151e32;
+            --accent: #06b6d4;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .font-tech {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+
+        .input-dark {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .btn-action {
+            background: linear-gradient(90deg, #22d3ee, #06b6d4);
+            color: black;
+            font-weight: bold;
+            border-radius: 99px;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .track-badge {
+            background: #1e293b;
+            border: 1px solid #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+
+<body class="p-6 flex flex-col h-screen overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="flex justify-between items-end mb-6 border-b border-slate-800 pb-4">
+        <div>
+            <h1 class="text-2xl font-bold font-tech tracking-wider text-white flex items-center gap-2">
+                <span class="text-cyan-500">SNIPER</span> RELOCATION
+            </h1>
+            <p class="text-xs text-slate-500 mt-1">RISK REDISTRIBUTION MODULE v1.0</p>
+        </div>
+        <div class="text-right">
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider">TOTAL RELOCATION VALUE</div>
+            <div id="totalValue" class="text-3xl font-bold text-cyan-400">$0.00</div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex-1 flex flex-col gap-4 overflow-hidden">
+
+        <!-- TOOLBAR -->
+        <div class="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+            <div class="flex gap-2">
+                <button onclick="clearCart()"
+                    class="text-xs text-red-400 hover:text-red-300 font-bold uppercase px-3 py-1 border border-red-900/50 bg-red-900/10 rounded hover:bg-red-900/20 transition">
+                    🗑️ Clear Cart
+                </button>
+                <div class="h-6 w-px bg-slate-700 mx-2"></div>
+                <span class="text-xs text-slate-400 flex items-center">
+                    <span id="itemCount" class="font-bold text-white mr-1">0</span> Items Staged
+                </span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="printCart()"
+                    class="text-xs text-slate-300 hover:text-white font-bold uppercase px-3 py-1 border border-slate-700 bg-slate-800 rounded hover:bg-slate-700 transition">
+                    🖨️ Print List
+                </button>
+                <button onclick="distributeRisk()"
+                    class="btn-action px-6 py-1.5 text-sm uppercase tracking-wider shadow-lg">
+                    ⚡ Execute Relocation
+                </button>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="glass-card flex-1 overflow-hidden relative">
+            <div class="overflow-y-auto h-full custom-scrollbar">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead
+                        class="bg-slate-900/80 text-xs text-slate-500 uppercase font-bold sticky top-0 backdrop-blur-md z-10 border-b border-slate-700">
+                        <tr>
+                            <th class="p-4">Play Details</th>
+                            <th class="p-4">Original Mode</th>
+                            <th class="p-4">Amounts (Str/Box/Com)</th>
+                            <th class="p-4">Target Track (Relocate)</th>
+                            <th class="p-4 text-right">Total</th>
+                            <th class="p-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartBody" class="divide-y divide-slate-800">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div id="emptyState"
+                class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none hidden">
+                <div class="text-4xl mb-4 opacity-20">🌪️</div>
+                <h3 class="text-slate-600 font-bold uppercase tracking-widest text-sm">Relocation Queue Empty</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION -->
+    <div id="toast"
+        class="fixed bottom-6 right-6 bg-slate-900 border border-cyan-500/50 text-cyan-400 px-6 py-3 rounded-lg shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 font-bold flex items-center gap-3">
+        <span>✅ Action Completed</span>
+    </div>
+
+    <script>
+        // --- STATE ---
+        let items = [];
+
+        // --- INIT ---
+        window.onload = () => {
+            loadItems();
+        };
+
+        function loadItems() {
+            try {
+                const raw = localStorage.getItem('RISK_RELOCATION_QUEUE');
+                if (raw) {
+                    items = JSON.parse(raw);
+                    // Add temp ID if missing
+                    items.forEach((item, idx) => { if (!item._id) item._id = idx; item.targetTrack = item.targetTrack || "ANY AVAILABLE"; });
+                }
+            } catch (e) { console.error("Load Error", e); items = []; }
+            render();
+        }
+
+        function render() {
+            const tbody = document.getElementById('cartBody');
+            const empty = document.getElementById('emptyState');
+            const countEl = document.getElementById('itemCount');
+            const totalEl = document.getElementById('totalValue');
+
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                let grandTotal = 0;
+
+                items.forEach((item, index) => {
+                    const str = item.straightAmount || 0;
+                    const box = item.boxAmount || 0;
+                    const com = item.comboAmount || 0;
+                    const total = str + box + com;
+                    grandTotal += total;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/50 transition-colors group";
+                    tr.innerHTML = `
+                        <td class="p-4">
+                            <span class="text-2xl font-black text-white tracking-widest">${item.betNumber}</span>
+                        </td>
+                        <td class="p-4">
+                            <span class="bg-slate-800 text-slate-400 text-[10px] font-bold px-2 py-1 rounded border border-slate-700 uppercase">${item.gameMode}</span>
+                        </td>
+                        <td class="p-4 font-mono text-slate-300">
+                            <div class="flex gap-3 text-xs">
+                                ${str > 0 ? `<div class="flex flex-col"><span class="text-[9px] text-slate-600 uppercase">Str</span><span class="text-cyan-400">$${str}</span></div>` : ''}
+                                ${box > 0 ? `<div class="flex flex-col"><span class="text-[9px] text-slate-600 uppercase">Box</span><span class="text-amber-400">$${box}</span></div>` : ''}
+                                ${com > 0 ? `<div class="flex flex-col"><span class="text-[9px] text-slate-600 uppercase">Com</span><span class="text-purple-400">$${com}</span></div>` : ''}
+                            </div>
+                        </td>
+                        <td class="p-4">
+                             <select class="input-dark text-xs w-48" onchange="updateTrack(${index}, this.value)">
+                                <option value="ANY AVAILABLE" ${item.targetTrack === 'ANY AVAILABLE' ? 'selected' : ''}>Any Available</option>
+                                <option value="New York" ${item.targetTrack === 'New York' ? 'selected' : ''}>New York (Relocate)</option>
+                                <option value="Florida" ${item.targetTrack === 'Florida' ? 'selected' : ''}>Florida (Relocate)</option>
+                                <option value="Georgia" ${item.targetTrack === 'Georgia' ? 'selected' : ''}>Georgia (Relocate)</option>
+                                <option value="Texas" ${item.targetTrack === 'Texas' ? 'selected' : ''}>Texas (Relocate)</option>
+                            </select>
+                        </td>
+                        <td class="p-4 text-right font-bold text-emerald-400">$${total.toFixed(2)}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="removeItem(${index})" class="text-slate-600 hover:text-red-500 transition">✕</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                totalEl.innerText = '$' + grandTotal.toFixed(2);
+                countEl.innerText = items.length;
+            }
+        }
+
+        // --- ACTIONS ---
+        window.updateTrack = (index, val) => {
+            if (items[index]) items[index].targetTrack = val;
+            save();
+        };
+
+        window.removeItem = (index) => {
+            items.splice(index, 1);
+            save();
+            render();
+        };
+
+        window.clearCart = () => {
+            if (confirm('Clear all items?')) {
+                items = [];
+                save();
+                render();
+            }
+        };
+
+        function save() {
+            localStorage.setItem('RISK_RELOCATION_QUEUE', JSON.stringify(items));
+        }
+
+        window.distributeRisk = () => {
+            if (items.length === 0) return;
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+            showToast("🚀 Risk Relocated Successfully (Simulated)");
+            // Here you would API call to process relocation
+        };
+
+        window.printCart = () => {
+            window.print();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerHTML = `<span>${msg}</span>`;
+            t.style.transform = "translateY(0)";
+            t.style.opacity = "1";
+            setTimeout(() => {
+                t.style.transform = "translateY(20px)";
+                t.style.opacity = "0";
+            }, 3000);
+        }
+
+    </script>
+</body>
+
+</html>

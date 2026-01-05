@@ -1,5 +1,5 @@
 
-import { TicketData, WinningResult, PrizeTable, AuditLogEntry, User, LedgerEntry } from '../types';
+import { TicketData, WinningResult, PrizeTable, AuditLogEntry, User, LedgerEntry, UserRank } from '../types';
 import { DEFAULT_PRIZE_TABLE } from '../constants';
 import { sha256 } from '../utils/crypto';
 
@@ -194,7 +194,7 @@ export const localDbService = {
             const hasMaria = users.some(u => u.id === 'u-maria');
 
             if (!hasDemo || !hasMaria) {
-                const newUsers = [];
+                const newUsers: User[] = [];
 
                 // Guest Session User (Crucial for Client-Side Ledger Support)
                 if (!users.some(u => u.id === GUEST_ID)) {
@@ -208,7 +208,15 @@ export const localDbService = {
                         balance: 0,
                         pendingBalance: 0,
                         createdAt: new Date().toISOString(),
-                        avatarUrl: ''
+                        avatarUrl: '',
+                        // MLM DEFAULTS
+                        rank: UserRank.NORMAL,
+                        personalVolume: 0,
+                        groupVolume: 0,
+                        directActiveCount: 0,
+                        kycVerified: false,
+                        walletRegistered: false,
+                        commissionBalance: { tokens: 0, btc: 0 }
                     });
                 }
 
@@ -226,7 +234,16 @@ export const localDbService = {
                         address: 'Santo Domingo, DO',
                         createdAt: new Date().toISOString(),
                         avatarUrl: 'https://ui-avatars.com/api/?name=Demo+Player&background=0D8ABC&color=fff',
-                        sponsorId: 'u-admin-01' // Linked to Admin
+                        sponsorId: 'u-admin-01', // Linked to Admin
+                        referralCode: 'DEMO123',
+                        // MLM DATA
+                        rank: UserRank.AGENTE,
+                        personalVolume: 125.00,
+                        groupVolume: 450.00,
+                        directActiveCount: 3,
+                        kycVerified: true,
+                        walletRegistered: true,
+                        commissionBalance: { tokens: 150, btc: 45 }
                     });
                     newUsers.push({
                         id: 'u-admin-01',
@@ -238,7 +255,15 @@ export const localDbService = {
                         balance: 0,
                         pendingBalance: 0,
                         createdAt: new Date().toISOString(),
-                        avatarUrl: 'https://ui-avatars.com/api/?name=System+Admin&background=10b981&color=fff'
+                        avatarUrl: 'https://ui-avatars.com/api/?name=System+Admin&background=10b981&color=fff',
+                        rank: UserRank.MANAGER,
+                        personalVolume: 1000,
+                        groupVolume: 10000,
+                        directActiveCount: 10,
+                        kycVerified: true,
+                        walletRegistered: true,
+                        referralCode: 'ADMIN01',
+                        commissionBalance: { tokens: 1000, btc: 500 }
                     });
                 }
 
@@ -256,7 +281,15 @@ export const localDbService = {
                         address: 'Santiago, DO',
                         createdAt: new Date().toISOString(),
                         avatarUrl: 'https://ui-avatars.com/api/?name=Maria+Perez&background=FF69B4&color=fff',
-                        sponsorId: 'u-12345' // Linked to Demo Player
+                        sponsorId: 'u-12345', // Linked to Demo Player
+                        rank: UserRank.NORMAL,
+                        personalVolume: 0,
+                        groupVolume: 0,
+                        directActiveCount: 0,
+                        kycVerified: false,
+                        walletRegistered: false,
+                        referralCode: 'MARIA01',
+                        commissionBalance: { tokens: 0, btc: 0 }
                     });
                     newUsers.push({
                         id: 'u-pedro',
@@ -271,14 +304,34 @@ export const localDbService = {
                         address: 'La Romana, DO',
                         createdAt: new Date().toISOString(),
                         avatarUrl: 'https://ui-avatars.com/api/?name=Pedro+Martinez&background=32CD32&color=fff',
-                        sponsorId: 'u-12345' // Linked to Demo Player
+                        sponsorId: 'u-12345', // Linked to Demo Player
+                        rank: UserRank.NORMAL,
+                        personalVolume: 60,
+                        groupVolume: 0,
+                        directActiveCount: 0,
+                        kycVerified: true,
+                        walletRegistered: true,
+                        referralCode: 'PEDRO01',
+                        commissionBalance: { tokens: 0, btc: 0 }
                     });
                 }
 
                 users = [...users, ...newUsers];
                 localStorage.setItem(USERS_KEY, JSON.stringify(users));
             }
-            return users;
+
+            // AUTO-MIGRATE EXISTING USERS TO HAVE NEW FIELDS
+            return users.map(u => ({
+                ...u,
+                rank: u.rank || UserRank.NORMAL,
+                personalVolume: u.personalVolume || 0,
+                groupVolume: u.groupVolume || 0,
+                directActiveCount: u.directActiveCount || 0,
+                kycVerified: u.kycVerified ?? false,
+                walletRegistered: u.walletRegistered ?? false,
+                commissionBalance: u.commissionBalance || { tokens: 0, btc: 0 },
+                referralCode: u.referralCode || `REF-${u.id.substring(0, 5).toUpperCase()}`
+            }));
         } catch (e) {
             return [];
         }

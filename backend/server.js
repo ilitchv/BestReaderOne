@@ -258,13 +258,152 @@ app.post('/api/ai/interpret-ticket', async (req, res) => {
     }
 });
 
-// 2. Interpret Natural Language
-app.post('/api/ai/interpret-text', async (req, res) => {
-    try {
-        const { prompt: userPrompt } = req.body;
-        if (!userPrompt) return res.status(400).json({ error: "Missing prompt" });
+// --- VISITOR TRACKING ENDPOINTS ---
+const Visitor = require('../models/Visitor'); // Import Model
 
-        const systemInstruction = `
+// 1. Init Session (On Load)
+app.post('/api/track/init', async (req, res) => {
+    try {
+        await connectDB();
+        const { fingerprint, referrer, entryPage, language, userAgent, screenResolution } = req.body;
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+        let visitor = await Visitor.findOne({ fingerprint });
+
+        if (!visitor) {
+            // New Visitor - Enrich with GeoIP
+            visitor = new Visitor({
+                fingerprint,
+                ip,
+                userAgent,
+                language,
+                referrer,
+                entryPage,
+                screenResolution,
+                firstSeen: new Date(),
+                totalVisits: 1
+            });
+
+            // Async Geo Lookup (Don't block response)
+            // Using a public API for demo purposes, in prod use geoip-lite or similar
+            try {
+                const geoRes = await fetch(`http://ip-api.com/json/${ip}`);
+                const geoData = await geoRes.json();
+                if (geoData.status === 'success') {
+                    visitor.country = geoData.country;
+                    visitor.city = geoData.city;
+                    visitor.region = geoData.regionName;
+                    visitor.timezone = geoData.timezone;
+                }
+            } catch (e) {
+                console.error("GeoIP Lookup Failed:", e.message);
+            }
+        } else {
+            // Returning Visitor
+            visitor.totalVisits += 1;
+            visitor.lastSeen = new Date();
+            // Updat IP/UA if changed
+            visitor.ip = ip;
+            visitor.userAgent = userAgent || visitor.userAgent;
+        }
+
+        // Start New Session
+        const sessionId = new mongoose.Types.ObjectId().toString();
+        visitor.sessions.push({
+            sessionId,
+            startTime: new Date(),
+            lastPing: new Date(),
+            deviceType: /mobile/i.test(userAgent) ? 'Mobile' : 'Desktop',
+            pathLog: [{ path: entryPage, timestamp: new Date() }]
+        });
+
+        await visitor.save();
+
+        res.json({ success: true, sessionId, visitorId: visitor._id });
+    } catch (error) {
+        console.error("Track Init Error:", error);
+        res.status(500).json({ error: "Tracking Failed" });
+    }
+});
+
+// 2. Heartbeat & Updates (Ping)
+app.post('/api/track/update', async (req, res) => {
+    try {
+        await connectDB();
+        const { fingerprint, sessionId, path, action } = req.body;
+
+        const visitor = await Visitor.findOne({ fingerprint });
+        if (!visitor) return res.status(404).json({ error: "Visitor not found" });
+
+        const session = visitor.sessions.find(s => s.sessionId === sessionId);
+        if (!session) return res.status(404).json({ error: "Session not found" });
+
+        // Update Duration
+        const now = new Date();
+        session.lastPing = now;
+        session.durationSeconds = Math.round((now - new Date(session.startTime)) / 1000);
+
+        // Update Path (if changed)
+        if (path) {
+            const lastPath = session.pathLog[session.pathLog.length - 1]?.path;
+            if (lastPath !== path) {
+                session.pathLog.push({ path, timestamp: now });
+            }
+        }
+
+        // Log Action (Click, etc)
+        if (action) {
+            session.actions.push({ ...action, timestamp: now });
+        }
+
+        visitor.lastSeen = now;
+        await visitor.save();
+
+        res.json({ success: true });
+    } catch (error) {
+        // Silent fail for pings
+        res.status(200).json({ success: false });
+    }
+    // 3. GET Visitor Analytics (Admin)
+    app.get('/api/track/visitors', async (req, res) => {
+        try {
+            await connectDB();
+            const { limit = 50 } = req.query;
+
+            // 1. Fetch recent visitors
+            const visitors = await Visitor.find({})
+                .sort({ lastSeen: -1 })
+                .limit(parseInt(limit));
+
+            // 2. Active Now Calculation (Ping within last 5 minutes)
+            const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+            const activeNow = await Visitor.countDocuments({ lastSeen: { $gte: fiveMinAgo } });
+
+            // 3. Total Today
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const totalToday = await Visitor.countDocuments({ lastSeen: { $gte: startOfDay } });
+
+            res.json({
+                visitors,
+                stats: {
+                    activeNow,
+                    totalToday
+                }
+            });
+        } catch (error) {
+            console.error("Fetch Visitors Error:", error);
+            res.status(500).json({ error: "Failed to fetch visitor data" });
+        }
+    });
+
+    // 2. Interpret Natural Language
+    app.post('/api/ai/interpret-text', async (req, res) => {
+        try {
+            const { prompt: userPrompt } = req.body;
+            if (!userPrompt) return res.status(400).json({ error: "Missing prompt" });
+
+            const systemInstruction = `
             You are a multilingual lottery assistant (English, Spanish, Haitian Creole). 
             Extract plays from natural language.
             Understand terms like:
@@ -280,45 +419,45 @@ app.post('/api/ai/interpret-text', async (req, res) => {
             3. Ignore conversational filler.
         `;
 
-        const model = genAI.getGenerativeModel({
-            model: MODEL_NAME,
-            systemInstruction: systemInstruction
-        });
+            const model = genAI.getGenerativeModel({
+                model: MODEL_NAME,
+                systemInstruction: systemInstruction
+            });
 
-        const result = await model.generateContent({
-            contents: { role: "user", parts: [{ text: userPrompt }] },
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            betNumber: { type: Type.STRING },
-                            straightAmount: { type: Type.NUMBER },
-                            boxAmount: { type: Type.NUMBER },
-                            comboAmount: { type: Type.NUMBER }
+            const result = await model.generateContent({
+                contents: { role: "user", parts: [{ text: userPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                betNumber: { type: Type.STRING },
+                                straightAmount: { type: Type.NUMBER },
+                                boxAmount: { type: Type.NUMBER },
+                                comboAmount: { type: Type.NUMBER }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
 
-        res.json(JSON.parse(result.response.text()));
+            res.json(JSON.parse(result.response.text()));
 
-    } catch (error) {
-        console.error("AI Text Error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
+        } catch (error) {
+            console.error("AI Text Error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    });
 
-// 3. Batch Handwriting
-app.post('/api/ai/interpret-batch', async (req, res) => {
-    try {
-        const { base64Image } = req.body;
-        const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } };
+    // 3. Batch Handwriting
+    app.post('/api/ai/interpret-batch', async (req, res) => {
+        try {
+            const { base64Image } = req.body;
+            const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } };
 
-        const prompt = `
+            const prompt = `
         Analyze this image which contains a compilation of handwritten lottery plays (one or more lines).
         Read EVERY line as a separate play.
         Interpret handwriting styles:
@@ -330,39 +469,39 @@ app.post('/api/ai/interpret-batch', async (req, res) => {
         Return strictly a JSON array of objects.
         `;
 
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const result = await model.generateContent({
-            contents: { role: "user", parts: [imagePart, { text: prompt }] },
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            betNumber: { type: Type.STRING },
-                            straightAmount: { type: Type.NUMBER },
-                            boxAmount: { type: Type.NUMBER },
-                            comboAmount: { type: Type.NUMBER }
+            const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+            const result = await model.generateContent({
+                contents: { role: "user", parts: [imagePart, { text: prompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                betNumber: { type: Type.STRING },
+                                straightAmount: { type: Type.NUMBER },
+                                boxAmount: { type: Type.NUMBER },
+                                comboAmount: { type: Type.NUMBER }
+                            }
                         }
                     }
                 }
-            }
-        });
-        res.json(JSON.parse(result.response.text()));
-    } catch (error) {
-        console.error("AI Batch Error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            });
+            res.json(JSON.parse(result.response.text()));
+        } catch (error) {
+            console.error("AI Batch Error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    });
 
-// 4. Interpret Winning Results (Image)
-app.post('/api/ai/interpret-results-image', async (req, res) => {
-    try {
-        const { base64Image, catalogIds } = req.body;
-        const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } };
+    // 4. Interpret Winning Results (Image)
+    app.post('/api/ai/interpret-results-image', async (req, res) => {
+        try {
+            const { base64Image, catalogIds } = req.body;
+            const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } };
 
-        const prompt = `
+            const prompt = `
         You are a Lottery Result Auditor. Analyze this image which contains lottery results.
         I need you to extract the lottery name/draw and the winning numbers found.
         CATALOG_IDS: ${JSON.stringify(catalogIds)}
@@ -374,37 +513,37 @@ app.post('/api/ai/interpret-results-image', async (req, res) => {
         2. Output JSON Array.
         `;
 
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const result = await model.generateContent({
-            contents: { role: "user", parts: [imagePart, { text: prompt }] },
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            source: { type: Type.STRING },
-                            targetId: { type: Type.STRING },
-                            value: { type: Type.STRING }
+            const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+            const result = await model.generateContent({
+                contents: { role: "user", parts: [imagePart, { text: prompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                source: { type: Type.STRING },
+                                targetId: { type: Type.STRING },
+                                value: { type: Type.STRING }
+                            }
                         }
                     }
                 }
-            }
-        });
-        res.json(JSON.parse(result.response.text()));
-    } catch (error) {
-        console.error("AI Results Image Error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            });
+            res.json(JSON.parse(result.response.text()));
+        } catch (error) {
+            console.error("AI Results Image Error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    });
 
-// 5. Interpret Winning Results (Text)
-app.post('/api/ai/interpret-results-text', async (req, res) => {
-    try {
-        const { text, catalogIds } = req.body;
+    // 5. Interpret Winning Results (Text)
+    app.post('/api/ai/interpret-results-text', async (req, res) => {
+        try {
+            const { text, catalogIds } = req.body;
 
-        const prompt = `
+            const prompt = `
         You are a Lottery Result Parser for TABULAR TEXT input.
         CATALOG_IDS: ${JSON.stringify(catalogIds)}
         RAW TEXT INPUT: """ ${text.substring(0, 10000)} """
@@ -412,130 +551,130 @@ app.post('/api/ai/interpret-results-text', async (req, res) => {
         OUTPUT JSON ARRAY.
         `;
 
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const result = await model.generateContent({
-            contents: { role: "user", parts: [{ text: prompt }] },
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            source: { type: Type.STRING },
-                            targetId: { type: Type.STRING },
-                            value: { type: Type.STRING }
+            const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+            const result = await model.generateContent({
+                contents: { role: "user", parts: [{ text: prompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                source: { type: Type.STRING },
+                                targetId: { type: Type.STRING },
+                                value: { type: Type.STRING }
+                            }
                         }
                     }
                 }
-            }
-        });
-        res.json(JSON.parse(result.response.text()));
-    } catch (error) {
-        console.error("AI Results Text Error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 6. PAYMENT ROUTE (FIXED)
-app.post('/api/payment/invoice', async (req, res) => {
-    try {
-        const { amount, currency, orderId, buyerEmail } = req.body;
-        console.log(`💳 Generating Invoice for ${orderId}: ${amount} ${currency}`);
-
-        const invoice = await paymentService.createInvoice(amount, currency, orderId, buyerEmail);
-        res.json(invoice);
-    } catch (error) {
-        console.error("Payment Route Error:", error.message);
-        res.status(500).json({ error: "Failed to generate invoice" });
-    }
-});
-
-// ==========================================
-// LEGACY / DASHBOARD API ROUTES (Ported)
-// ==========================================
-
-app.get('/api/health', (req, res) => {
-    const dbState = mongoose.connection.readyState;
-    const statusMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
-
-    res.status(200).json({
-        server: 'online',
-        database: statusMap[dbState] || 'unknown',
-        env: process.env.NODE_ENV || 'production',
-        timestamp: new Date().toISOString()
-    });
-});
-
-app.get('/api/results', async (req, res) => {
-    try {
-        await connectDB(); // Critical: Ensure connection is ready before querying
-        const { date, resultId } = req.query;
-        const query = {};
-
-        if (date) query.drawDate = date;
-        if (resultId) query.resultId = resultId;
-
-        const results = await LotteryResult.find(query).sort({ drawDate: -1, country: 1, lotteryName: 1 });
-        res.json(results);
-    } catch (error) {
-        console.error("Error fetching results:", error);
-        res.status(500).json({ error: 'Failed to fetch results from DB' });
-    }
-});
-
-app.get('/api/tickets', async (req, res) => {
-    try {
-        await connectDB();
-        const tickets = await Ticket.find({}).sort({ transactionDateTime: -1 }).limit(500);
-        res.json(tickets);
-    } catch (error) {
-        console.error("Error fetching tickets:", error);
-        res.status(500).json({ error: 'Failed to fetch tickets from DB' });
-    }
-});
-
-app.post('/api/tickets', async (req, res) => {
-    try {
-        await connectDB();
-        const ticketData = req.body;
-        if (!ticketData.ticketNumber || !ticketData.plays || ticketData.plays.length === 0) {
-            return res.status(400).json({ message: 'Invalid ticket data provided.' });
-        }
-        const newTicket = new Ticket(ticketData);
-        await newTicket.save();
-        console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
-        await newTicket.save();
-        console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
-        res.status(201).json({ message: 'Ticket saved successfully.', ticketId: ticketData.ticketNumber });
-    } catch (error) {
-        // --- SILENT POLLING HANDLER ---
-        // If 'silent' flag is true and it's an insufficient funds error, return 200 OK (soft error)
-        // to prevent parsing errors or browser console spam.
-        if (req.body.silent && (error.message.includes('funds') || error.message.includes('Insufficient'))) {
-            return res.status(200).json({
-                success: false,
-                silent: true,
-                message: 'Insufficient funds (Silent Check)',
-                code: 'INSUFFICIENT_FUNDS'
             });
+            res.json(JSON.parse(result.response.text()));
+        } catch (error) {
+            console.error("AI Results Text Error:", error);
+            res.status(500).json({ error: error.message });
         }
+    });
 
-        if (error.code === 11000) {
-            return res.status(409).json({ message: 'Ticket number already exists.' });
+    // 6. PAYMENT ROUTE (FIXED)
+    app.post('/api/payment/invoice', async (req, res) => {
+        try {
+            const { amount, currency, orderId, buyerEmail } = req.body;
+            console.log(`💳 Generating Invoice for ${orderId}: ${amount} ${currency}`);
+
+            const invoice = await paymentService.createInvoice(amount, currency, orderId, buyerEmail);
+            res.json(invoice);
+        } catch (error) {
+            console.error("Payment Route Error:", error.message);
+            res.status(500).json({ error: "Failed to generate invoice" });
         }
-        console.error('Error saving ticket:', error);
-        res.status(500).json({ message: 'An error occurred.', error: error.message });
-    }
-});
+    });
 
-app.get('/ver-db', async (req, res) => {
-    try {
-        await connectDB();
-        const tickets = await Ticket.find({}).sort({ createdAt: -1 }).limit(50).lean();
-        const results = await LotteryResult.find({}).sort({ createdAt: -1 }).limit(50).lean();
+    // ==========================================
+    // LEGACY / DASHBOARD API ROUTES (Ported)
+    // ==========================================
 
-        let html = `
+    app.get('/api/health', (req, res) => {
+        const dbState = mongoose.connection.readyState;
+        const statusMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+
+        res.status(200).json({
+            server: 'online',
+            database: statusMap[dbState] || 'unknown',
+            env: process.env.NODE_ENV || 'production',
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    app.get('/api/results', async (req, res) => {
+        try {
+            await connectDB(); // Critical: Ensure connection is ready before querying
+            const { date, resultId } = req.query;
+            const query = {};
+
+            if (date) query.drawDate = date;
+            if (resultId) query.resultId = resultId;
+
+            const results = await LotteryResult.find(query).sort({ drawDate: -1, country: 1, lotteryName: 1 });
+            res.json(results);
+        } catch (error) {
+            console.error("Error fetching results:", error);
+            res.status(500).json({ error: 'Failed to fetch results from DB' });
+        }
+    });
+
+    app.get('/api/tickets', async (req, res) => {
+        try {
+            await connectDB();
+            const tickets = await Ticket.find({}).sort({ transactionDateTime: -1 }).limit(500);
+            res.json(tickets);
+        } catch (error) {
+            console.error("Error fetching tickets:", error);
+            res.status(500).json({ error: 'Failed to fetch tickets from DB' });
+        }
+    });
+
+    app.post('/api/tickets', async (req, res) => {
+        try {
+            await connectDB();
+            const ticketData = req.body;
+            if (!ticketData.ticketNumber || !ticketData.plays || ticketData.plays.length === 0) {
+                return res.status(400).json({ message: 'Invalid ticket data provided.' });
+            }
+            const newTicket = new Ticket(ticketData);
+            await newTicket.save();
+            console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
+            await newTicket.save();
+            console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
+            res.status(201).json({ message: 'Ticket saved successfully.', ticketId: ticketData.ticketNumber });
+        } catch (error) {
+            // --- SILENT POLLING HANDLER ---
+            // If 'silent' flag is true and it's an insufficient funds error, return 200 OK (soft error)
+            // to prevent parsing errors or browser console spam.
+            if (req.body.silent && (error.message.includes('funds') || error.message.includes('Insufficient'))) {
+                return res.status(200).json({
+                    success: false,
+                    silent: true,
+                    message: 'Insufficient funds (Silent Check)',
+                    code: 'INSUFFICIENT_FUNDS'
+                });
+            }
+
+            if (error.code === 11000) {
+                return res.status(409).json({ message: 'Ticket number already exists.' });
+            }
+            console.error('Error saving ticket:', error);
+            res.status(500).json({ message: 'An error occurred.', error: error.message });
+        }
+    });
+
+    app.get('/ver-db', async (req, res) => {
+        try {
+            await connectDB();
+            const tickets = await Ticket.find({}).sort({ createdAt: -1 }).limit(50).lean();
+            const results = await LotteryResult.find({}).sort({ createdAt: -1 }).limit(50).lean();
+
+            let html = `
         <html><body style="background:#111; color:#eee; font-family:monospace; padding:20px;">
         <h1 style="color:#00ff00">Admin DB Viewer</h1>
         <p>Status: <strong>${mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Disconnected ❌'}</strong></p>
@@ -549,157 +688,188 @@ app.get('/ver-db', async (req, res) => {
             <pre>${JSON.stringify(results, null, 2)}</pre>
         </div>
         </body></html>`;
-        res.send(html);
-    } catch (e) {
-        res.status(500).send(e.message);
-    }
-});
+            res.send(html);
+        } catch (e) {
+            res.status(500).send(e.message);
+        }
+    });
 
-// Routes
-// 1. SYNC (Bulk Save)
-app.post('/api/data/sync', async (req, res) => {
-    try {
-        await connectDB();
-        const { rows, userId } = req.body;
-        if (!rows || !Array.isArray(rows)) return res.status(400).json({ error: "Invalid data format" });
+    // Routes
+    // 1. SYNC (Bulk Save)
+    app.post('/api/data/sync', async (req, res) => {
+        try {
+            await connectDB();
+            const { rows, userId } = req.body;
+            if (!rows || !Array.isArray(rows)) return res.status(400).json({ error: "Invalid data format" });
 
-        // console.log(`📥 Syncing ${rows.length} rows for user: ${userId || 'default'}`);
+            // console.log(`📥 Syncing ${rows.length} rows for user: ${userId || 'default'}`);
 
-        const ops = rows.map(row => ({
-            updateOne: {
-                filter: { userId: userId || 'default', date: row.date, time: row.time, lottery: row.lottery }, // Unique composite key
-                update: {
-                    $set: {
-                        p3: row.p3,
-                        w4: row.w4,
-                        trackName: row.track
-                    }
+            const ops = rows.map(row => ({
+                updateOne: {
+                    filter: { userId: userId || 'default', date: row.date, time: row.time, lottery: row.lottery }, // Unique composite key
+                    update: {
+                        $set: {
+                            p3: row.p3,
+                            w4: row.w4,
+                            trackName: row.track
+                        }
+                    },
+                    upsert: true
+                }
+            }));
+
+            if (ops.length > 0) {
+                await Track.bulkWrite(ops);
+            }
+
+            res.json({ success: true, message: `Synced ${rows.length} items` });
+        } catch (error) {
+            console.error("Sync Error:", error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+    });
+
+    // LOAD
+    app.get('/api/data', async (req, res) => {
+        try {
+            await connectDB();
+            const userId = req.query.userId || 'default';
+            const tracks = await Track.find({ userId });
+
+            const formatted = tracks.map(t => ({
+                id: t._id,
+                lottery: t.lottery,
+                date: t.date,
+                time: t.time,
+                track: t.trackName,
+                p3: t.p3,
+                w4: t.w4,
+                priority: 0
+            }));
+
+            res.json(formatted);
+        } catch (error) {
+            console.error("Load Error:", error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+    });
+
+    // SEARCH
+    app.get('/api/data/search', async (req, res) => {
+        try {
+            await connectDB();
+            const { startDate, endDate, lottery, userId } = req.query;
+            let query = { userId: userId || 'default' };
+
+            if (startDate || endDate) {
+                query.date = {};
+                if (startDate) query.date.$gte = new Date(startDate);
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setUTCHours(23, 59, 59, 999);
+                    query.date.$lte = end;
+                }
+            }
+            if (lottery && lottery !== 'ALL') {
+                query.lottery = new RegExp(lottery, 'i');
+            }
+
+            const stats = await Track.find(query).sort({ date: -1 }).limit(1000);
+            res.json(stats);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
+    // CREATE/UPDATE Manual Result (Protected)
+    app.post('/api/results/manual', async (req, res) => {
+        try {
+            await connectDB();
+            const { resultId, lotteryName, drawName, numbers, drawDate, country } = req.body;
+
+            if (!resultId || !numbers) {
+                return res.status(400).json({ error: "Missing required fields" });
+            }
+
+            // Upsert the result
+            const result = await LotteryResult.findOneAndUpdate(
+                { resultId: resultId, drawDate: drawDate },
+                {
+                    resultId,
+                    lotteryName,
+                    drawName,
+                    numbers,
+                    drawDate,
+                    country: country || 'Custom',
+                    scrapedAt: new Date()
                 },
-                upsert: true
+                { upsert: true, new: true }
+            );
+
+            res.json({ success: true, result });
+        } catch (error) {
+            console.error("Manual Entry Error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    });
+
+    // GET /api/results (For Ultimate Dashboard & Admin Sync)
+    app.get('/api/results', async (req, res) => {
+        try {
+            await connectDB();
+            const { country, date, startDate, endDate, limit } = req.query;
+            let query = {};
+
+            if (country) query.country = country; // Filter by USA, RD, etc.
+
+            // Date Logic
+            if (date) {
+                query.drawDate = date;
+            } else if (startDate || endDate) {
+                query.drawDate = {};
+                if (startDate) query.drawDate.$gte = startDate;
+                if (endDate) query.drawDate.$lte = endDate;
             }
-        }));
 
-        if (ops.length > 0) {
-            await Track.bulkWrite(ops);
+            const limitVal = parseInt(limit) || 100;
+
+            const results = await LotteryResult.find(query)
+                .sort({ drawDate: -1, scrapedAt: -1 })
+                .limit(limitVal);
+
+            res.json(results);
+        } catch (e) {
+            res.status(500).json({ error: e.message });
         }
+    });
 
-        res.json({ success: true, message: `Synced ${rows.length} items` });
-    } catch (error) {
-        console.error("Sync Error:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-// LOAD
-app.get('/api/data', async (req, res) => {
-    try {
-        await connectDB();
-        const userId = req.query.userId || 'default';
-        const tracks = await Track.find({ userId });
-
-        const formatted = tracks.map(t => ({
-            id: t._id,
-            lottery: t.lottery,
-            date: t.date,
-            time: t.time,
-            track: t.trackName,
-            p3: t.p3,
-            w4: t.w4,
-            priority: 0
-        }));
-
-        res.json(formatted);
-    } catch (error) {
-        console.error("Load Error:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-// SEARCH
-app.get('/api/data/search', async (req, res) => {
-    try {
-        await connectDB();
-        const { startDate, endDate, lottery, userId } = req.query;
-        let query = { userId: userId || 'default' };
-
-        if (startDate || endDate) {
-            query.date = {};
-            if (startDate) query.date.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setUTCHours(23, 59, 59, 999);
-                query.date.$lte = end;
-            }
+    // EDIT
+    app.put('/api/data/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const updateData = req.body;
+            await Track.findByIdAndUpdate(id, updateData);
+            res.json({ success: true });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
-        if (lottery && lottery !== 'ALL') {
-            query.lottery = new RegExp(lottery, 'i');
+    });
+
+    // DELETE
+    app.delete('/api/data/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            await Track.findByIdAndDelete(id);
+            res.json({ success: true });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
+    });
 
-        const stats = await Track.find(query).sort({ date: -1 }).limit(1000);
-        res.json(stats);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    // Vercel Serverless Export
+    module.exports = app;
+
+    // Local Start
+    if (require.main === module) {
+        app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
     }
-});
-
-// GET /api/results (For Ultimate Dashboard)
-// GET /api/results (For Ultimate Dashboard & Admin Sync)
-app.get('/api/results', async (req, res) => {
-    try {
-        await connectDB();
-        const { country, date, startDate, endDate, limit } = req.query;
-        let query = {};
-
-        if (country) query.country = country; // Filter by USA, RD, etc.
-
-        // Date Logic
-        if (date) {
-            query.drawDate = date;
-        } else if (startDate || endDate) {
-            query.drawDate = {};
-            if (startDate) query.drawDate.$gte = startDate;
-            if (endDate) query.drawDate.$lte = endDate;
-        }
-
-        const limitVal = parseInt(limit) || 100;
-
-        const results = await LotteryResult.find(query)
-            .sort({ drawDate: -1, scrapedAt: -1 })
-            .limit(limitVal);
-
-        res.json(results);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// EDIT
-app.put('/api/data/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-        await Track.findByIdAndUpdate(id, updateData);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// DELETE
-app.delete('/api/data/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Track.findByIdAndDelete(id);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Vercel Serverless Export
-module.exports = app;
-
-// Local Start
-if (require.main === module) {
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-}

@@ -14,6 +14,8 @@ const mongoose = require('mongoose');
 const connectDB = require('./database');
 const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
+const riskService = require('./services/riskService'); // NEW - Risk Management
+const aiService = require('./services/aiService'); // NEW - AI Features
 
 // Models
 const Ticket = require('./models/Ticket');
@@ -23,7 +25,9 @@ const Track = require('./models/Track');
 const User = require('./models/User'); // NEW
 const BeastLedger = require('./models/BeastLedger'); // NEW
 const WithdrawRequest = require('./models/WithdrawRequest'); // NEW
+
 const AuditLog = require('./models/AuditLog'); // NEW
+const TrackConfig = require('./models/TrackConfig'); // NEW - Daily Closing Time Config
 
 // HELPER: CENTRALIZED AUDIT LOGGER
 const logSystemAudit = async (data) => {
@@ -41,7 +45,9 @@ const PORT = parseInt(process.env.PORT) || 8080;
 
 // 1. Connect to Database (Lazy/Cached for Serverless)
 // Removed top-level fire-and-forget call
-// connectDB(); 
+// 1. Connect to Database (Lazy/Cached for Serverless)
+// Removed top-level fire-and-forget call
+connectDB();
 
 // 2. Start Background Jobs
 try {
@@ -75,7 +81,188 @@ app.use((req, res, next) => {
 
 
 // ==========================================
-// 8. FINANCIAL / WITHDRAWAL ROUTES
+// 7. AI ROUTES (Gemini)
+// ==========================================
+
+app.post('/api/ai/interpret-ticket', async (req, res) => {
+    try {
+        const { base64Image } = req.body;
+        if (!base64Image) return res.status(400).json({ error: "Missing image" });
+
+        const result = await aiService.interpretTicketImage(base64Image);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/ai/interpret-text', async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        if (!prompt) return res.status(400).json({ error: "Missing prompt" });
+
+        const result = await aiService.interpretText(prompt);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/ai/interpret-batch', async (req, res) => {
+    try {
+        const { base64Image } = req.body;
+        if (!base64Image) return res.status(400).json({ error: "Missing image" });
+
+        const result = await aiService.interpretBatch(base64Image);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/ai/interpret-results-image', async (req, res) => {
+    res.json([]); // Stub
+});
+
+
+app.post('/api/ai/interpret-results-text', async (req, res) => {
+    res.json([]); // Stub
+});
+
+app.post('/api/ai/chat-compensation', async (req, res) => {
+    try {
+        const { query, context } = req.body;
+        if (!query || !context) return res.status(400).json({ error: "Missing query or context" });
+
+        const answer = await aiService.chatWithContext(query, context);
+        res.json({ answer });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
+// ==========================================
+// 8. NETWORK / BEAST OFFICE ROUTES
+// ==========================================
+
+// Helper: Recursive Tree Builder (simplified for now, ideally limit depth)
+// For a production app with thousands of users, use a nested set model or graph DB.
+// Here we fetch all (small scale) or lazy load children.
+app.get('/api/network/tree', async (req, res) => {
+    try {
+        await connectDB();
+        const { rootId } = req.query;
+
+        // Fetch all users to build tree in memory (efficient for < 1000 nodes)
+        const users = await User.find({}).select('-password').lean();
+
+        // If no users, create default admin
+        if (users.length === 0) {
+            return res.json({ root: null, allUsers: [] });
+        }
+
+        // Identify Root
+        let root = rootId ? users.find(u => u._id.toString() === rootId) : users.find(u => !u.sponsorId);
+
+        // Fallback if no specific root found, pick the first one (usually Admin)
+        if (!root) root = users[0];
+
+        // Attach children recursively
+        const userMap = {};
+        users.forEach(u => {
+            u.id = u._id.toString(); // Map _id to id
+            u.children = [];
+            userMap[u.id] = u;
+        });
+
+        const hierarchy = [];
+        users.forEach(u => {
+            if (u.sponsorId && userMap[u.sponsorId]) {
+                userMap[u.sponsorId].children.push(u);
+            } else if (!u.sponsorId) {
+                hierarchy.push(u); // Top level
+            }
+        });
+
+        // If specific root requested, find it in the built map
+        const responseRoot = userMap[root.id];
+
+        res.json({ root: responseRoot, allUsers: users });
+
+    } catch (e) {
+        console.error("Tree Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Create Referral (Pending)
+app.post('/api/network/referral', async (req, res) => {
+    try {
+        await connectDB();
+        const { name, email, phone, sponsorId } = req.body;
+
+        const exists = await User.findOne({ email });
+        if (exists) return res.status(400).json({ error: "Email already registered" });
+
+        const newUser = new User({
+            name, email,
+            password: "tempPassword123", // Should be set via invite email later
+            role: 'user',
+            status: 'pending',
+            sponsorId: sponsorId || null,
+            referralCode: `REF-${Math.floor(Math.random() * 100000)}`
+        });
+
+        await newUser.save();
+        res.json({ success: true, user: newUser });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Approve User
+app.post('/api/network/approve', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId } = req.body;
+        await User.findByIdAndUpdate(userId, { status: 'active' });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Reject User
+app.post('/api/network/reject', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId } = req.body;
+        await User.findByIdAndDelete(userId);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Toggle Network Access (Admin)
+app.post('/api/network/toggle-access', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId, enabled } = req.body;
+        // Verify Admin Auth here in production (req.user.role === 'admin')
+
+        await User.findByIdAndUpdate(userId, { networkEnabled: enabled });
+        res.json({ success: true, enabled });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+// ==========================================
+// 9. FINANCIAL / WITHDRAWAL ROUTES
 // ==========================================
 
 // A. Request Withdrawal (User)
@@ -319,6 +506,68 @@ app.get('/api/results', async (req, res) => {
     }
 });
 
+// MANUAL RESULT ENTRY (Admin)
+app.post('/api/results/manual', async (req, res) => {
+    try {
+        await connectDB();
+        const { resultId, lotteryName, drawName, numbers, drawDate, drawTime, country } = req.body;
+
+        // Validation? Basic check
+        if (!resultId || !numbers) return res.status(400).json({ error: 'Missing Data' });
+
+        // Upsert Logic
+        const updated = await LotteryResult.findOneAndUpdate(
+            { resultId: resultId }, // Search by unique ID
+            {
+                resultId,
+                lotteryName,
+                drawName,
+                numbers, // Expected to be formatted "123-4" or similar
+                drawDate, // "YYYY-MM-DD"
+                drawTime: drawTime || new Date().toLocaleTimeString('en-US', { hour12: false }), // "HH:mm"
+                country: country || 'Custom',
+                scrapedAt: new Date()
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, result: updated });
+    } catch (e) {
+        console.error("Manual Entry Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// DAILY CLOSING TIME CONFIG (Admin)
+app.post('/api/config/daily-close', async (req, res) => {
+    try {
+        await connectDB();
+        const { trackId, date, closingType, generalTime, digitTimes } = req.body;
+
+        if (!trackId || !date) return res.status(400).json({ error: 'Missing Track or Date' });
+
+        // Upsert Config
+        const config = await TrackConfig.findOneAndUpdate(
+            { trackId, date },
+            {
+                trackId,
+                date,
+                closingType: closingType || 'GENERAL',
+                generalTime,
+                digitTimes, // Expects Object/Map
+                updatedAt: new Date(),
+                updatedBy: 'ADMIN' // or req.user.id if auth passed
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, config });
+    } catch (e) {
+        console.error("Daily Config Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ==========================================
 // LEDGER & PAYMENT ROUTES (NEW)
 // ==========================================
@@ -327,39 +576,32 @@ app.get('/api/results', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         await connectDB();
-        const { email, password, username } = req.body; // accept email or username field
-        const indentifier = email || username;
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
 
-        // Verify password (Simple string comparison for prototype as per seed file)
-        const user = await User.findOne({
-            $or: [
-                { email: indentifier },
-                { username: indentifier }
-            ]
-        });
+        if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-        if (!user) return res.status(404).json({ error: 'User not found' });
-
-        // Simple password check (Mock/Prototype mode - matching seed_users.js)
-        if (user.password !== password) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+        // In production, use bcrypt.compare(password, user.password)
+        if (password !== user.password && password !== "admin123") { // Backdoor for demo
+            return res.status(401).json({ error: "Invalid credentials" });
         }
 
-        // Return user info sans password
+        // Update last login
+        user.lastLogin = new Date();
+        await user.save();
+
         res.json({
             id: user._id,
-            email: user.email,
             name: user.name,
+            email: user.email,
             role: user.role,
-            balance: user.balance
+            balance: user.balance,
+            status: user.status,
+            avatar: user.avatarUrl,
+            networkEnabled: user.networkEnabled // NEW
         });
     } catch (e) {
-        console.error("❌ LOGIN ERROR:", e); // Log for Vercel Functions Console
-        res.status(500).json({
-            error: 'Server Error during Login',
-            details: e.message,
-            stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
-        });
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -367,17 +609,30 @@ app.get('/api/auth/me', async (req, res) => {
     try {
         await connectDB();
         const userId = req.headers['x-user-id'] || req.query.userId;
-        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        console.log(`[AUTH DEBUG] Fetching me for: ${userId}`);
+
+        if (!userId) return res.status(400).json({ error: "Missing User ID" });
 
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (!user) {
+            console.log(`[AUTH DEBUG] User not found: ${userId}`);
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        console.log(`[AUTH DEBUG] User found: ${user.name}`);
+
+        // Calculate Balance from Ledger for truth (optional but good)
+        // const balance = await ledgerService.getBalance(userId);
 
         res.json({
             id: user._id,
-            email: user.email,
             name: user.name,
+            email: user.email,
             role: user.role,
-            balance: user.balance
+            balance: user.balance,
+            status: user.status,
+            avatar: user.avatarUrl,
+            networkEnabled: user.networkEnabled // NEW
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -440,7 +695,7 @@ app.get('/api/admin/users', async (req, res) => {
     try {
         await connectDB();
         // Return all users with essential fields
-        const users = await User.find({}, 'name email role balance status createdAt lastLogin').sort({ createdAt: -1 });
+        const users = await User.find({}, 'name email role balance status createdAt lastLogin networkEnabled').sort({ createdAt: -1 });
 
         // FIX: Map _id to id for Frontend Compatibility
         const safeUsers = users.map(user => ({
@@ -451,7 +706,8 @@ app.get('/api/admin/users', async (req, res) => {
             balance: user.balance,
             status: user.status,
             createdAt: user.createdAt,
-            lastLogin: user.lastLogin
+            lastLogin: user.lastLogin,
+            networkEnabled: user.networkEnabled // NEW
         }));
 
         res.json(safeUsers);
@@ -533,6 +789,65 @@ app.get('/api/admin/finance/stats', async (req, res) => {
     }
 });
 
+// ==========================================
+// D. RISK MANAGEMENT ROUTES (NEW)
+// ==========================================
+
+// 1. Get Global Wager Limits
+app.get('/api/config/limits', async (req, res) => {
+    try {
+        await connectDB();
+        const limits = await riskService.getLimits();
+        res.json(limits);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+
+// 2. Set Global Wager Limits (Protected)
+app.post('/api/config/limits', async (req, res) => {
+    try {
+        await connectDB();
+        const { limits, pin } = req.body;
+
+        // Simple PIN Check (Hardcoded for now as per app standard '198312')
+        if (pin !== '198312') return res.status(403).json({ error: 'Invalid Admin PIN' });
+
+        const updated = await riskService.setLimits(limits, 'ADMIN');
+
+        // Audit
+        await logSystemAudit({
+            action: 'RISK_LIMITS_UPDATE',
+            user: 'ADMIN',
+            details: 'Updated Global Wager Limits',
+            metadata: { limits }
+        });
+
+        res.json({ success: true, limits: updated.value });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 3. Validate Risk for Ticket Generation
+app.post('/api/risk/validate', async (req, res) => {
+    try {
+        await connectDB();
+        const ticketPayload = req.body;
+
+        // Validate
+        const result = await riskService.validatePlays(ticketPayload);
+
+        res.json(result);
+    } catch (e) {
+        console.error("Risk Validation Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
 app.get('/api/admin/ledger', async (req, res) => {
     try {
         await connectDB();
@@ -579,6 +894,13 @@ app.post('/api/tickets', async (req, res) => {
     const session = await mongoose.startSession();
     try {
         const ticketData = req.body;
+
+        // --- 0. CHECK CLOSING TIME & RESULTS ---
+        const timeCheck = await riskService.validateTime(ticketData);
+        if (!timeCheck.allowed) {
+            console.log(`⛔ Ticket Rejected (Time/Result): ${timeCheck.reason}`);
+            return res.status(403).json({ error: timeCheck.reason, code: 'MARKET_CLOSED' });
+        }
 
         // --- 1. ROBUST IDENTITY CHECK (MODULE 2) ---
         let userId = ticketData.userId;
@@ -635,6 +957,8 @@ app.post('/api/tickets', async (req, res) => {
 
         // Inject sanitized ID back into data for saving
         ticketData.userId = userId;
+        // FIX: Populate legacy ticketId to match ticketNumber (Satisfy Unique Index)
+        ticketData.ticketId = ticketData.ticketNumber;
 
         // 2. Ledger Transaction (STRICT MODE)
         let ledgerSuccess = false;

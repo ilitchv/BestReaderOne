@@ -4,12 +4,15 @@ import { getTodayDateString } from '../utils/helpers';
 import TrackButton from './TrackButton';
 import { useSound } from '../hooks/useSound';
 
+import TrackCategoryReel from './TrackCategoryReel';
+
 interface TrackSelectorProps {
     selectedTracks: string[];
     onSelectionChange: (selected: string[]) => void;
     selectedDates: string[];
     pulitoPositions: number[];
     onPulitoPositionsChange: (positions: number[]) => void;
+    viewMode: 'grid' | 'reel';
 }
 
 const formatTime = (totalSeconds: number): string => {
@@ -35,7 +38,7 @@ const sdTrackIds = new Set(
         ?.tracks.map(t => t.id) || []
 );
 
-const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelectionChange, selectedDates, pulitoPositions, onPulitoPositionsChange }) => {
+const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelectionChange, selectedDates, pulitoPositions, onPulitoPositionsChange, viewMode }) => {
     const [openCategory, setOpenCategory] = useState<string | null>(TRACK_CATEGORIES[0]?.name || null);
     const [now, setNow] = useState(new Date());
     const { playSound } = useSound();
@@ -64,7 +67,23 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
                 if (isMiddayOpen) {
                     onSelectionChange(['usa/ny/Midday']);
                 } else {
-                    onSelectionChange(['usa/ny/Evening']);
+                    // Check if Evening is also closed
+                    const eveningTimeStr = RESULTS_CATALOG.find(t => t.id === 'usa/ny/Evening')?.closeTime;
+                    let isEveningOpen = true;
+                    if (eveningTimeStr) {
+                        const [eh, em, es] = eveningTimeStr.split(':').map(Number);
+                        const eDate = new Date();
+                        eDate.setHours(eh, em, es || 0, 0);
+                        if (new Date() > eDate) isEveningOpen = false;
+                    }
+
+                    if (isEveningOpen) {
+                        onSelectionChange(['usa/ny/Evening']);
+                    } else {
+                        // Both closed? Maybe select nothing or tomorrow?
+                        // For now, select nothing to avoid the "Selected but Closed" visual bug
+                        onSelectionChange([]);
+                    }
                 }
             }
         }
@@ -101,11 +120,18 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
     };
 
     const handleTrackToggle = (trackId: string) => {
+        // Prevent selecting expired tracks
+        const { isExpired } = getTrackStatus(trackId);
+
+        // Allow DESELECTING an expired track (if it was already selected), but NOT selecting a new expired one
+        const isCurrentlySelected = selectedTracks.includes(trackId);
+        if (isExpired && !isCurrentlySelected) {
+            return; // Block selection
+        }
+
         playSound('click');
         let newSelection = [...selectedTracks];
         let newPulitoPositions = [...pulitoPositions];
-        const isCurrentlySelected = newSelection.includes(trackId);
-
         // Identify the region of the clicked track
         const isClickingUsa = usaTrackIds.has(trackId);
         const isClickingSd = sdTrackIds.has(trackId);
@@ -186,43 +212,57 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
                                 <svg className={`w-5 h-5 transition-transform duration-300 ${isCategoryOpen ? 'rotate-180' : ''}`} data-lucide="chevron-down" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                             </button>
                             <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isCategoryOpen ? 'max-h-[1000px] mt-2' : 'max-h-0'}`}>
-                                <div className="p-2 grid grid-cols-3 sm:grid-cols-4 gap-2 bg-light-surface/50 dark:bg-dark-surface/50 rounded-lg">
-                                    {category.tracks.map(track => {
-                                        const { isExpired, remainingTime } = getTrackStatus(track.id);
+                                {viewMode === 'grid' ? (
+                                    <div className="p-2 grid grid-cols-3 sm:grid-cols-4 gap-2 bg-light-surface/50 dark:bg-dark-surface/50 rounded-lg">
+                                        {category.tracks.map(track => {
+                                            const { isExpired, remainingTime } = getTrackStatus(track.id);
 
-                                        const isUsaTrack = usaTrackIds.has(track.id);
-                                        const isSdTrack = sdTrackIds.has(track.id);
+                                            const isUsaTrack = usaTrackIds.has(track.id);
+                                            const isSdTrack = sdTrackIds.has(track.id);
 
-                                        // Lock logic based on calculated state
-                                        let isDisabledByCategory = false;
+                                            // Lock logic based on calculated state
+                                            let isDisabledByCategory = false;
 
-                                        // If any USA selected, disable SD tracks
-                                        if (isAnyUsaSelected && isSdTrack) isDisabledByCategory = true;
+                                            // If any USA selected, disable SD tracks
+                                            if (isAnyUsaSelected && isSdTrack) isDisabledByCategory = true;
 
-                                        // If any SD selected, disable USA tracks
-                                        if (isAnySdSelected && isUsaTrack) isDisabledByCategory = true;
+                                            // If any SD selected, disable USA tracks
+                                            if (isAnySdSelected && isUsaTrack) isDisabledByCategory = true;
 
-                                        const isDisabled = isExpired ||
-                                            (track.id === 'special/pulito' && isPulitoDisabled) ||
-                                            (track.id === 'special/venezuela' && isVenezuelaDisabled) ||
-                                            isDisabledByCategory;
+                                            // Hide expired tracks completely to save space
+                                            if (isExpired) return null;
 
-                                        return (
-                                            <TrackButton
-                                                key={track.id}
-                                                trackId={track.id}
-                                                trackName={track.name}
-                                                isSelected={selectedTracks.includes(track.id)}
-                                                onClick={() => handleTrackToggle(track.id)}
-                                                isExpired={isExpired}
-                                                isDisabled={isDisabled}
-                                                remainingTime={remainingTime}
-                                                pulitoPositions={track.id === 'special/pulito' ? pulitoPositions : undefined}
-                                                onPulitoPositionClick={track.id === 'special/pulito' ? handlePulitoPositionToggle : undefined}
-                                            />
-                                        )
-                                    })}
-                                </div>
+                                            const isDisabled = (track.id === 'special/pulito' && isPulitoDisabled) ||
+                                                (track.id === 'special/venezuela' && isVenezuelaDisabled) ||
+                                                isDisabledByCategory;
+
+                                            return (
+                                                <TrackButton
+                                                    key={track.id}
+                                                    trackId={track.id}
+                                                    trackName={track.name}
+                                                    isSelected={selectedTracks.includes(track.id)}
+                                                    onClick={() => handleTrackToggle(track.id)}
+                                                    isExpired={isExpired}
+                                                    isDisabled={isDisabled}
+                                                    remainingTime={remainingTime}
+                                                    pulitoPositions={track.id === 'special/pulito' ? pulitoPositions : undefined}
+                                                    onPulitoPositionClick={track.id === 'special/pulito' ? handlePulitoPositionToggle : undefined}
+                                                />
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <TrackCategoryReel
+                                        categoryTracks={category.tracks}
+                                        selectedTracks={selectedTracks}
+                                        onSelectionChange={onSelectionChange} // We pass simple handler, internal component handles exclusivity logic if needed or we trust Parent state updates
+                                        pulitoPositions={pulitoPositions}
+                                        onPulitoPositionsChange={onPulitoPositionsChange}
+                                        onTrackToggle={handleTrackToggle}
+                                        showModeReel={category.name.includes('USA')}
+                                    />
+                                )}
                             </div>
                         </div>
                     );

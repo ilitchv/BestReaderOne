@@ -48,9 +48,6 @@ export const RESULTS_CATALOG: CatalogItem[] = [
 
     { id: 'usa/fl/Midday', section: 'usa', lottery: 'Florida', draw: 'Midday', drawTime: '13:30', closeTime: '13:14:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/fl/Evening', section: 'usa', lottery: 'Florida', draw: 'Evening', drawTime: '21:45', closeTime: '21:29:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    // Pick 2 shares FL times
-    { id: 'usa/flp2/AM', section: 'usa', lottery: 'Florida Pick 2', draw: 'AM', drawTime: '13:30', closeTime: '13:14:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'usa/flp2/PM', section: 'usa', lottery: 'Florida Pick 2', draw: 'PM', drawTime: '21:45', closeTime: '21:29:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
 
     { id: 'usa/ct/Midday', section: 'usa', lottery: 'Connecticut', draw: 'Midday', drawTime: '13:57', closeTime: '13:26:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/ct/Night', section: 'usa', lottery: 'Connecticut', draw: 'Night', drawTime: '22:29', closeTime: '21:58:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
@@ -151,6 +148,7 @@ export const TRACK_CATEGORIES: TrackCategory[] = [
             { name: 'Texas Day', id: 'usa/tx/Day' },
             { name: 'Texas Evening', id: 'usa/tx/Evening' },
             { name: 'Texas Night', id: 'usa/tx/Night' },
+
             // MD
             { name: 'Maryland Midday', id: 'usa/md/Midday' },
             { name: 'Maryland Evening', id: 'usa/md/Evening' },
@@ -176,6 +174,10 @@ export const TRACK_CATEGORIES: TrackCategory[] = [
             // NC
             { name: 'North C Day', id: 'usa/nc/Day' },
             { name: 'North C Evening', id: 'usa/nc/Evening' },
+
+            // SPECIAL MODES (Moved to end)
+            { name: 'Pulito', id: 'special/pulito', hideInDashboard: true },
+            { name: 'Venezuela', id: 'special/venezuela', hideInDashboard: true },
         ],
     },
     {
@@ -257,22 +259,22 @@ export const CUTOFF_TIMES: { [key: string]: string } = {
     "La Suerte PM": "16:48",
     "Loteka": "19:13",
     "Quiniela Pale": "19:43",
-    "Nacional": "19:43",
+    "Nacional": "19:43"
 };
 
-export const WAGER_LIMITS: { [key: string]: { straight: number | null, box: number | null, combo: number | null } } = {
-    'Win 4': { straight: 10, box: 30, combo: 10 },
-    'Pick 3': { straight: 35, box: 105, combo: 35 },
-    'Pick 2': { straight: 100, box: 100, combo: null },
-    'RD-Quiniela': { straight: 100, box: 100, combo: null },
-    'Venezuela': { straight: 100, box: 100, combo: null },
-    'Single Action': { straight: 600, box: null, combo: null },
-    'Palé': { straight: 35, box: 105, combo: null },
-    'Pale-RD': { straight: 20, box: 105, combo: null },
-    'Pulito': { straight: 100, box: 100, combo: null }, // Base limits for Pulito plays
+export const WAGER_LIMITS: Record<string, { STRAIGHT: number; BOX: number; COMBO: number }> = {
+    "Pick 3": { "STRAIGHT": 35, "BOX": 105, "COMBO": 35 },
+    "Win 4": { "STRAIGHT": 10, "BOX": 30, "COMBO": 10 },
+    "Pick 2": { "STRAIGHT": 100, "BOX": 100, "COMBO": 100 },
+    "Palé": { "STRAIGHT": 35, "BOX": 105, "COMBO": 35 },
+    "Palé-RD": { "STRAIGHT": 20, "BOX": 105, "COMBO": 20 },
+    "Venezuela": { "STRAIGHT": 100, "BOX": 100, "COMBO": 100 },
+    "RD-Quiniela": { "STRAIGHT": 100, "BOX": 100, "COMBO": 100 },
+    "Pulito": { "STRAIGHT": 100, "BOX": 100, "COMBO": 100 },
+    "Single Action": { "STRAIGHT": 600, "BOX": 0, "COMBO": 0 },
 };
 
-export const TERMINAL_GAME_MODES = ['Win 4', 'Palé', 'Pale-RD'];
+export const TERMINAL_GAME_MODES = ['Win 4', 'Palé', 'Palé-RD'];
 
 export const GAME_MODE_LENGTHS: { [key: string]: number } = {
     'Single Action': 1,
@@ -283,7 +285,7 @@ export const GAME_MODE_LENGTHS: { [key: string]: number } = {
     'Pick 3': 3,
     'Win 4': 4,
     'Palé': 5, // e.g., 12-34
-    'Pale-RD': 5, // e.g., 12-34
+    'Palé-RD': 5, // e.g., 12-34
 };
 
 // --- PRIZE PAYOUT DEFAULTS (Per $1 Wager) ---

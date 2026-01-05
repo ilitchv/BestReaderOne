@@ -5,7 +5,7 @@ export const determineGameMode = (betNumber: string, selectedTracks: string[], p
     if (!betNumber) return "-";
 
     const isUSA = selectedTracks.some(t => ["New York", "Georgia", "New Jersey", "Florida", "Connecticut", "Pensilvania", "Brooklyn", "Front", "Pulito", "Horses"].some(s => t.includes(s)));
-    const isSD = selectedTracks.some(t => ["Real", "Gana mas", "Loteka", "Nacional", "Quiniela Pale", "Primera", "Suerte", "Lotería", "Lotedom", "Panama"].some(s => t.includes(s)));
+    const isSD = selectedTracks.some(t => t.toLowerCase().startsWith('rd/') || t.toLowerCase().includes('/rd/'));
     const isVenezuela = selectedTracks.includes('special/venezuela') || selectedTracks.includes('Venezuela');
 
     // Allow 'x' and 'X' as valid separators for Palé plays
@@ -15,7 +15,7 @@ export const determineGameMode = (betNumber: string, selectedTracks: string[], p
     if (paleRegex.test(cleanBetNumber)) {
         // If we are in USA context (even mixed), prioritize USA Palé
         if (isUSA) return "Palé";
-        return isSD ? "Pale-RD" : "Palé";
+        return isSD ? "Palé-RD" : "Palé";
     }
 
     // Remove any separator before counting length for other game modes
