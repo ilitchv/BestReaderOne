@@ -128,67 +128,67 @@ const SNIPER_CONFIG = {
         name: "Michigan",
         p3: {
             mid: { urls: ['https://www.lotteryusa.com/michigan/midday-3/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/michigan/daily-3/'], label: 'Night' }
+            eve: { urls: ['https://www.lotteryusa.com/michigan/daily-3/'], label: 'Evening' }
         },
         p4: {
             mid: { urls: ['https://www.lotteryusa.com/michigan/midday-4/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/michigan/daily-4/'], label: 'Night' }
+            eve: { urls: ['https://www.lotteryusa.com/michigan/daily-4/'], label: 'Evening' }
         }
     },
     de: {
         name: "Delaware",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/delaware/midday-play-3/'], label: 'Day' },
+            mid: { urls: ['https://www.lotteryusa.com/delaware/play-3/'], label: 'Day' },
             eve: { urls: ['https://www.lotteryusa.com/delaware/play-3/'], label: 'Night' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/delaware/midday-play-4/'], label: 'Day' },
+            mid: { urls: ['https://www.lotteryusa.com/delaware/play-4/'], label: 'Day' },
             eve: { urls: ['https://www.lotteryusa.com/delaware/play-4/'], label: 'Night' }
         }
     },
     tn: {
         name: "Tennessee",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/tennessee/midday-cash-3/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/tennessee/evening-cash-3/'], label: 'Evening' },
+            mid: { urls: ['https://www.lotteryusa.com/tennessee/cash-3/'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/tennessee/cash-3/'], label: 'Evening' },
             mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-3/'], label: 'Morning' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/tennessee/midday-cash-4/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/tennessee/evening-cash-4/'], label: 'Evening' },
+            mid: { urls: ['https://www.lotteryusa.com/tennessee/cash-4/'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/tennessee/cash-4/'], label: 'Evening' },
             mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-4/'], label: 'Morning' }
         }
     },
     ma: {
         name: "Massachusetts",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-midday/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-evening/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/massachusetts/midday-numbers/'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-midday/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers-evening/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/massachusetts/midday-numbers/'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/'], label: 'Evening' }
         }
     },
     va: {
         name: "Virginia",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-3-day/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-3-night/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-3/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-3/'], label: 'Night' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-4-day/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-4-night/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-4/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-4/'], label: 'Night' }
         }
     },
     nc: {
         name: "North Carolina",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3-daytime/'], label: 'Day' },
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/'], label: 'Day' },
             eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4-daytime/'], label: 'Day' },
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/'], label: 'Day' },
             eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/'], label: 'Evening' }
         }
     }

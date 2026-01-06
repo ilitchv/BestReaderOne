@@ -34,7 +34,7 @@ function cleanTextBlocks(txt) {
 }
 
 function pickConsecutiveSingleDigitNodes($, $container, n) {
-    const nodes = $container.find('span,div,li,p').toArray()
+    const nodes = $container.find('span,div,li,p,td').toArray()
         .map(el => $(el).text().trim())
         .map(t => t && /^[0-9]$/.test(t) ? t : null);
     for (let i = 0; i <= nodes.length - n; i++) {
