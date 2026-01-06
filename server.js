@@ -478,6 +478,27 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 // 4. API ROUTES (PRIORITY #1)
 // ==========================================
 
+// NEW VERCEL CRON TRIGGER
+app.get('/api/cron/trigger-scrape', async (req, res) => {
+    try {
+        console.log("⏰ Cron Triggered via API");
+        // Optional: Check for Vercel Signature
+        // if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) ... 
+
+        // Fire and forget (or await if Vercel times out quickly)
+        // Vercel limits functions to 10s (Hobby) or 60s (Pro). 
+        // Scraping takes time. Ideally we await a bit or just return.
+        // But for reliable results, we should try to await main logic or spawn.
+        // Since we can't spawn, we try await.
+        await scraperService.fetchAndParse();
+
+        res.json({ success: true, message: 'Scrape triggered' });
+    } catch (e) {
+        console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/health', async (req, res) => {
     await connectDB();
     const dbState = mongoose.connection.readyState;
