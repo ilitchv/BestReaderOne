@@ -4,7 +4,10 @@ const LotteryResult = require('../models/LotteryResult');
 const Track = require('../models/Track');
 const { scrapeState } = require('./scraperEngine');
 const scraperRD = require('./scraperRD'); // Import RD Scraper
+const scraperTopPick = require('./scraperTopPick');
+const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
 const { validateResult } = require('./validationService');
+const SystemAlert = require('../models/SystemAlert');
 
 // --- CONFIGURATION ---
 // Maps our internal IDs to Sniper Config Keys and external IDs
@@ -21,12 +24,12 @@ const SNIPER_CONFIG = {
     ny: {
         name: "New York",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-numbers/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/new-york/numbers/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-numbers/', 'https://www.lottery.net/new-york/numbers-midday/numbers'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/new-york/numbers/', 'https://www.lottery.net/new-york/numbers-evening/numbers'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-win-4/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/new-york/win-4/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-win-4/', 'https://www.lottery.net/new-york/win-4-midday/numbers'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/new-york/win-4/', 'https://www.lottery.net/new-york/win-4-evening/numbers'], label: 'Evening' }
         }
     },
     nj: {
@@ -138,58 +141,58 @@ const SNIPER_CONFIG = {
     de: {
         name: "Delaware",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/delaware/play-3/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/delaware/play-3/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/delaware/play-3-midday/year'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/delaware/play-3-night/year', 'https://www.lotteryusa.com/delaware/play-3/year'], label: 'Night' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/delaware/play-4/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/delaware/play-4/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/delaware/play-4-midday/year'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/delaware/play-4-night/year', 'https://www.lotteryusa.com/delaware/play-4/year'], label: 'Night' }
         }
     },
     tn: {
         name: "Tennessee",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/tennessee/cash-3/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/tennessee/cash-3/'], label: 'Evening' },
-            mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-3/'], label: 'Morning' }
+            mid: { urls: ['https://www.lotteryusa.com/tennessee/cash-3/year'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/tennessee/cash-3/year'], label: 'Evening' },
+            mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-3/year', 'https://www.lotteryusa.com/tennessee/cash-3/year'], label: 'Morning' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/tennessee/cash-4/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/tennessee/cash-4/'], label: 'Evening' },
-            mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-4/'], label: 'Morning' }
+            mid: { urls: ['https://www.lotteryusa.com/tennessee/cash-4/year'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/tennessee/cash-4/year'], label: 'Evening' },
+            mor: { urls: ['https://www.lotteryusa.com/tennessee/morning-cash-4/year', 'https://www.lotteryusa.com/tennessee/cash-4/year'], label: 'Morning' }
         }
     },
     ma: {
         name: "Massachusetts",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/massachusetts/midday-numbers/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/year'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/year'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/massachusetts/midday-numbers/'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/year'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/massachusetts/numbers/year'], label: 'Evening' }
         }
     },
     va: {
         name: "Virginia",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-3/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-3/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-3/year'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-3/year'], label: 'Night' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-4/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-4/'], label: 'Night' }
+            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-4/year'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-4/year'], label: 'Night' }
         }
     },
     nc: {
         name: "North Carolina",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/year'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/year'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/year'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/year'], label: 'Evening' }
         }
     }
 };
@@ -326,47 +329,134 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
     }
 }
 
-const fetchAndParse = async () => {
-    console.log('📡 Starting Data Cycle (Real Scraper)...');
-
-    // 1. Run RD Scraper
+// Helper to Create Alert (Deduped)
+const triggerAlert = async (type, message, metadata = {}, severity = 'MEDIUM') => {
     try {
-        await scraperRD.fetchAndProcess();
-    } catch (e) {
-        console.error("RD Scraper Failed:", e.message);
-    }
-
-    // 2. Run USA Scrapers
-    for (const [stateKey, config] of Object.entries(SNIPER_CONFIG)) {
-        try {
-            console.log(`   Running ${config.name}...`);
-            const data = await scrapeState(stateKey, config);
-
-            // Process Draws
-            await processDraw(stateKey, config.name, config.p3.mid?.label || 'Midday', data?.midday);
-            await processDraw(stateKey, config.name, config.p3.eve?.label || 'Evening', data?.evening);
-            if (data?.night) await processDraw(stateKey, config.name, config.p3.ngt?.label || 'Night', data.night);
-            if (data?.morning) await processDraw(stateKey, config.name, config.p3.mor?.label || 'Morning', data.morning);
-
-            // Stagger requests
-            await new Promise(r => setTimeout(r, 2000));
-
-        } catch (e) {
-            console.error(`❌ Error scraping ${stateKey}: `, e.message);
+        // Prevent spamming the same alert if one is already active
+        const existing = await SystemAlert.findOne({ type, message, active: true });
+        if (!existing) {
+            await SystemAlert.create({ type, message, metadata, severity });
+            console.log(`🚨 ALERT GENERATED: ${message}`);
         }
+    } catch (e) {
+        console.error("Failed to generate alert:", e);
     }
 };
 
-// Initialize Cron Job
+// --- SCHEDULER LOGIC ---
+
+// Flags to prevent overlapping runs (Robustness)
+let isFastRunning = false;
+let isHeavyRunning = false;
+
+// Queue A: Fast Scrapers (RD + USA) - Runs every 2 minutes
+const runFastQueue = async () => {
+    if (isFastRunning) {
+        console.warn('⚠️ [Fast Queue] Previous run still active. Skipping this cycle.');
+        return;
+    }
+    isFastRunning = true;
+    console.log('🚀 [Fast Queue] Starting Cycle: RD + USA Scrapers');
+    const start = Date.now();
+
+    try {
+        // 1. RD Scraper
+        try {
+            await scraperRD.fetchAndProcess();
+        } catch (e) {
+            console.error("   ❌ RD Scraper Failed:", e.message);
+            await triggerAlert('SCRAPER_FAILURE', 'RD Scraper Logic Failed', { error: e.message }, 'HIGH');
+        }
+
+        // 2. USA Scrapers
+        const fastPromises = [];
+        for (const [stateKey, config] of Object.entries(SNIPER_CONFIG)) {
+            try {
+                // console.log(`   Running ${config.name}...`);
+                const data = await scrapeState(stateKey, config);
+
+                if (!data || (!data.midday && !data.evening)) {
+                    // console.warn(`   ⚠️ Warning: No data found for ${config.name}`);
+                }
+
+                await processDraw(stateKey, config.name, config.p3.mid?.label || 'Midday', data?.midday);
+                await processDraw(stateKey, config.name, config.p3.eve?.label || 'Evening', data?.evening);
+                if (data?.night) await processDraw(stateKey, config.name, config.p3.ngt?.label || 'Night', data.night);
+                if (data?.morning) await processDraw(stateKey, config.name, config.p3.mor?.label || 'Morning', data.morning);
+
+            } catch (e) {
+                console.error(`   ❌ Error scraping ${stateKey}: `, e.message);
+                await triggerAlert('SCRAPER_FAILURE', `Failed to scrape ${config.name}`, { error: e.message, state: stateKey }, 'HIGH');
+            }
+        }
+    } catch (err) {
+        console.error('🔥 [Fast Queue] Critical Error:', err);
+    } finally {
+        isFastRunning = false;
+        const duration = ((Date.now() - start) / 1000).toFixed(1);
+        console.log(`✅ [Fast Queue] Finished in ${duration}s`);
+    }
+};
+
+// Queue B: Heavy Scrapers (TopPick + Instant Cash) - Runs every 10-15 minutes
+const runHeavyQueue = async () => {
+    if (isHeavyRunning) {
+        console.warn('⚠️ [Heavy Queue] Previous run still active. Skipping this cycle.');
+        return;
+    }
+    isHeavyRunning = true;
+    console.log('🐢 [Heavy Queue] Starting Cycle: TopPick + Instant Cash');
+    const start = Date.now();
+
+    try {
+        // 1. Top Pick
+        try {
+            console.log('   Running TopPick...');
+            await scraperTopPick();
+        } catch (e) {
+            console.error("   ❌ TopPick Scraper Failed:", e.message);
+        }
+
+        // 2. Instant Cash (Headless - Slow)
+        try {
+            console.log('   Running Instant Cash (Headless)...');
+            await scraperInstantCashHeadless();
+        } catch (e) {
+            console.error("   ❌ InstantCash Scraper Failed:", e.message);
+        }
+
+    } catch (err) {
+        console.error('🔥 [Heavy Queue] Critical Error:', err);
+    } finally {
+        isHeavyRunning = false;
+        const duration = ((Date.now() - start) / 1000).toFixed(1);
+        console.log(`✅ [Heavy Queue] Finished in ${duration}s`);
+    }
+};
+
+// Initialize Cron Jobs
 const startResultScheduler = () => {
-    cron.schedule('*/10 * * * *', () => {
-        fetchAndParse();
+    console.log('⏳ Scheduler Initializing...');
+
+    // Schedule Queue A: Every 2 minutes (*/2 * * * *)
+    cron.schedule('*/2 * * * *', () => {
+        runFastQueue();
     });
-    console.log('⏳ Scheduler started. Initial scrape in 5s...');
-    setTimeout(fetchAndParse, 5000);
+
+    // Schedule Queue B: Every 5 minutes (*/5 * * * *) (Optimized)
+    cron.schedule('*/5 * * * *', () => {
+        runHeavyQueue();
+    });
+
+    console.log('✅ Cron Jobs Scheduled: Fast (2m), Heavy (10m)');
+
+    // Run immediately on start (optional, staggered)
+    setTimeout(() => runFastQueue(), 5000);
+    setTimeout(() => runHeavyQueue(), 15000);
 };
 
 module.exports = {
     startResultScheduler,
-    fetchAndParse
+    fetchAndParse: runFastQueue, // Legacy export if referenced elsewhere
+    SNIPER_CONFIG
 };

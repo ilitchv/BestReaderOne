@@ -375,7 +375,12 @@ const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zo
 
                         // Parse Numbers
                         const rawNumbers = res.numbers || '---';
-                        const parts = rawNumbers.split('-'); // ["1", "2", "3"]
+                        let parts = rawNumbers.split('-'); // ["1", "2", "3"]
+
+                        // FIX: Santo Domingo Pending State should be 3 balls (1st, 2nd, 3rd), not 4 ("---" split is 4 empty strings)
+                        if (rawNumbers === '---' && (activeTab === 'Santo Domingo' || displayLotteryName.includes("Santo"))) {
+                            parts = ['', '', ''];
+                        }
 
                         // Determine Grouping for Colors/Separators
                         // Scenario: Pick 3 (3 nums) vs Win 4 (4 nums).
@@ -436,7 +441,7 @@ const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zo
                                     </div>
 
                                     {/* Text Info - CENTERED & LARGE - NO TRUNCATE */}
-                                    <div className="relative z-10 flex flex-col items-center justify-center w-full px-2 pt-2">
+                                    <div className="relative z-10 flex flex-col items-center justify-center w-full pl-12 pr-2 pt-2">
                                         <h3 className="font-extrabold text-white leading-none tracking-tight drop-shadow-md text-center w-full break-words"
                                             style={{ fontSize: isCompact ? '0.9rem' : '1.4rem', lineHeight: 1.1 }}>
                                             {displayLotteryName.replace('Lottery', '').replace('Lotería', '').trim()}
@@ -455,31 +460,28 @@ const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zo
                                     <div className="relative z-10 flex flex-wrap items-center justify-center gap-2 content-center h-full w-full">
 
                                         {/* Santo Domingo / 3-Pair Logic */}
-                                        {(displayLotteryName.includes("Santo") || (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 2)) ? (
-                                            <div className="flex flex-nowrap items-center justify-center gap-1 w-full h-full pb-1">
+                                        {(activeTab === 'Santo Domingo' || displayLotteryName.includes("Santo") || (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 2)) ? (
+                                            <div className="flex flex-nowrap items-center justify-center gap-1 w-full h-full">
                                                 {parts.map((part, pIdx) => (
                                                     <div key={pIdx} className="flex flex-col items-center justify-center" style={{ width: '30%' }}>
                                                         {/* Ball Container */}
                                                         <div className="flex gap-0.5 items-center justify-center mb-0.5" style={{ transform: `scale(${zoomScale < 0.6 ? 0.8 : 1})` }}>
-                                                            {part.split('').map((char, cIdx) => (
-                                                                <div
-                                                                    key={`${pIdx}-${cIdx}`}
-                                                                    className="rounded-full flex items-center justify-center font-black text-slate-900 relative shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
-                                                                    style={{
-                                                                        width: isCompact ? '20px' : '34px',
-                                                                        height: isCompact ? '20px' : '34px',
-                                                                        fontSize: isCompact ? '12px' : '18px',
-                                                                        background: 'radial-gradient(circle at 30% 30%, #ffffff, #94a3b8)',
-                                                                        boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.25), 2px 4px 6px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)',
-                                                                    }}
-                                                                >
-                                                                    {char}
-                                                                    <div className="absolute top-[15%] left-[20%] w-[20%] h-[20%] bg-gradient-to-br from-white to-transparent rounded-full opacity-80 blur-[0.5px]"></div>
-                                                                </div>
-                                                            ))}
+                                                            <div
+                                                                className={`rounded-full flex items-center justify-center font-black text-slate-900 relative shadow-[0_2px_4px_rgba(0,0,0,0.4)]`}
+                                                                style={{
+                                                                    width: isCompact ? '34px' : '48px', // Square/Round
+                                                                    height: isCompact ? '34px' : '48px',
+                                                                    fontSize: isCompact ? '12px' : '18px',
+                                                                    background: pIdx === 0 ? 'radial-gradient(circle at 30% 30%, #bfdbfe, #3b82f6)' : 'radial-gradient(circle at 30% 30%, #ffffff, #94a3b8)',
+                                                                    boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.25), 2px 4px 6px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)',
+                                                                }}
+                                                            >
+                                                                {part}
+                                                                <div className="absolute top-[15%] left-[20%] w-[20%] h-[20%] bg-gradient-to-br from-white to-transparent rounded-full opacity-80 blur-[0.5px]"></div>
+                                                            </div>
                                                         </div>
                                                         {/* Position Label */}
-                                                        <span className={`font-bold uppercase tracking-wider text-center leading-none ${pIdx === 0 ? 'text-yellow-400' : pIdx === 1 ? 'text-slate-300' : 'text-orange-400'}`}
+                                                        <span className={`font-bold uppercase tracking-wider text-center leading-none min-h-[10px] ${pIdx === 0 ? 'text-yellow-400' : pIdx === 1 ? 'text-slate-300' : 'text-orange-400'}`}
                                                             style={{ fontSize: isCompact ? '0.45rem' : '0.6rem' }}>
                                                             {pIdx === 0 ? '1st' : pIdx === 1 ? '2nd' : '3rd'}
                                                         </span>
@@ -490,8 +492,8 @@ const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zo
                                             /* Standard Logic for Others */
                                             parts.map((part, pIdx) => (
                                                 <div key={pIdx} className="flex gap-1 items-center" style={{ transform: `scale(${zoomScale < 0.5 ? 0.8 : 1})` }}>
-                                                    {/* Separator if not first group? */}
-                                                    {pIdx > 0 && <div className="w-1 h-1 rounded-full bg-slate-600 mx-1"></div>}
+                                                    {/* Separator - Vertical Line */}
+                                                    {pIdx > 0 && <div className="w-px h-8 bg-slate-400 mx-1"></div>}
 
                                                     {part.split('').map((char, cIdx) => (
                                                         <div

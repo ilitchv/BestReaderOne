@@ -257,8 +257,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
                     </section>
 
                     {/* QR CODE - Top Right Absolute Position */}
-                    <div className="hidden lg:block absolute top-[180px] right-0 z-30 opacity-90 hover:opacity-100 transition-opacity">
-                        <FloatingQR className="scale-75 origin-top-right transform translate-x-4" />
+                    <div className="hidden lg:block absolute top-[160px] right-4 z-30 animate-in fade-in slide-in-from-right-10 duration-700">
+                        <FloatingQR className="shadow-2xl" />
                     </div>
 
                     <section id="results">

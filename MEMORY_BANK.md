@@ -274,4 +274,23 @@ When starting the new chat to execute this upgrade, use the following prompt:
  * * C o n t e x t : * *   T h e   v i s u a l   o v e r h a u l   i s   c o m p l e t e .   T h e   u s e r   m a y   w a n t   t o   f u r t h e r   r e f i n e   t h e   U I   o r   m o v e   o n   t o   b a c k e n d   d a t a   c o n s o l i d a t i o n   ( e . g . ,   g l o b a l   v i s i b i l i t y ) . 
  * * P r o m p t : * *   U s e   t h e   p r o v i d e d   c o m p r e h e n s i v e   p r o m p t   t o   r e s u m e . 
   
+  
+ # #   1 5 .   I n d e p e n d e n t   L o t t e r y   A P I s   ( C o n f i d e n t i a l   &   C r i t i c a l )  
+  
+ # # #   1 5 . 1   T o p   P i c k   L o t t o   ( ` t p l o t t o . c o m ` )  
+ *       * * T y p e : * *   H T T P   P O S T   ( H i d d e n   A P I )  
+ *       * * E n d p o i n t : * *   ` h t t p s : / / t p l o t t o . c o m / p r o c e d u r e _ l o a d _ n u m b e r s _ p u b l i c `  
+ *       * * P a y l o a d : * *   ` d a t e = Y Y Y Y - M M - D D `   ( e . g . ,   ` d a t e = 2 0 2 6 - 0 1 - 0 7 ` )  
+ *       * * R e s p o n s e : * *   J S O N   o b j e c t   w h e r e   ` . a n s w e r `   c o n t a i n s   a n   H T M L   s t r i n g   o f   t h e   r e s u l t s   t a b l e .  
+ *       * * P a r s i n g   S t r a t e g y : * *   R e q u i r e s   ` c h e e r i o `   t o   p a r s e   t h e   H T M L   w i t h i n   t h e   J S O N   r e s p o n s e .  
+ *       * * N o t e s : * *   S t a n d a r d   ` c u r l `   w o r k s .   N o   c o m p l e x   h e a d e r s   r e q u i r e d ,   b u t   a   s t a n d a r d   U s e r - A g e n t   i s   r e c o m m e n d e d .  
+  
+ # # #   1 5 . 2   I n s t a n t   C a s h   ( ` i n s t a n t c a s h . b e t ` )  
+ *       * * T y p e : * *   W e b S o c k e t   ( S e c u r e   W S S )  
+ *       * * E n d p o i n t : * *   ` w s s : / / i n s t a n t c a s h . b e t / w s / g a m i n g L T S D r a w H a n d l e r `  
+ *       * * C o n n e c t i o n   L o g i c : * *    
+         *       R e q u i r e s   a   t i m e s t a m p   p a r a m e t e r :   ` ? v = { D a t e . n o w ( ) } ` .  
+         *       D a t a   i s   p u s h e d   i m m e d i a t e l y   u p o n   c o n n e c t i o n   ( S n a p s h o t )   a n d   t h e n   u p d a t e s   a r e   p u s h e d   i n   r e a l - t i m e .  
+         *       * * K e e p - A l i v e : * *   T h e   c o n n e c t i o n   m u s t   b e   m a i n t a i n e d   o r   r e - e s t a b l i s h e d   t o   r e c e i v e   u p d a t e s .  
+ *       * * D a t a   F o r m a t : * *   J S O N   s t r e a m   c o n t a i n i n g   d r a w   r e s u l t s   a n d   g a m e   s t a t e s .  
  

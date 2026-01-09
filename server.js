@@ -28,6 +28,7 @@ const WithdrawRequest = require('./models/WithdrawRequest'); // NEW
 
 const AuditLog = require('./models/AuditLog'); // NEW
 const TrackConfig = require('./models/TrackConfig'); // NEW - Daily Closing Time Config
+const SystemAlert = require('./models/SystemAlert'); // NEW - Admin Alerts
 
 // HELPER: CENTRALIZED AUDIT LOGGER
 const logSystemAudit = async (data) => {
@@ -1546,6 +1547,25 @@ app.delete('/api/data/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ==========================================
+// ADMIN ALERTS API
+// ==========================================
+app.get('/api/admin/alerts', async (req, res) => {
+    try {
+        await connectDB();
+        const alerts = await SystemAlert.find({ active: true }).sort({ severity: -1, createdAt: -1 });
+        res.json(alerts);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/alerts/dismiss/:id', async (req, res) => {
+    try {
+        await connectDB();
+        await SystemAlert.findByIdAndUpdate(req.params.id, { active: false });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Admin DB Viewer
 app.get('/ver-db', async (req, res) => {
     try {
@@ -1583,6 +1603,11 @@ app.get('/ver-db', async (req, res) => {
         </body></html>`;
         res.send(html);
     } catch (e) { res.status(500).send(e.message); }
+});
+
+// FIX: Analytics Endpoint
+app.post('/api/track/init', (req, res) => {
+    res.json({ success: true });
 });
 
 // ==========================================

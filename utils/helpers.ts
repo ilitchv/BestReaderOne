@@ -353,7 +353,7 @@ export const getTrackColorClasses = (trackIdOrName: string): string => {
     if (t.includes('real')) return 'bg-gradient-to-b from-red-600 to-red-900'; // Real (Red)
     if (t.includes('gana') || t.includes('nacional')) return 'bg-gradient-to-b from-blue-700 to-blue-950'; // Nacional (Blue)
     if (t.includes('loteka')) return 'bg-gradient-to-b from-fuchsia-700 to-purple-900'; // Loteka (Purple)
-    if (t.includes('quiniela') || t.includes('pale')) return 'bg-gradient-to-b from-rose-600 to-rose-900'; // Leidsa (Red/Black)
+    if (t.includes('leidsa') || t.includes('quiniela') || t.includes('pale')) return 'bg-gradient-to-b from-rose-600 to-rose-900'; // Leidsa (Red/Black)
     if (t.includes('primera')) return 'bg-gradient-to-b from-yellow-600 to-yellow-800'; // Primera (Dark Yellow/Gold)
     if (t.includes('suerte')) return 'bg-gradient-to-b from-emerald-600 to-emerald-900'; // La Suerte (Green)
     if (t.includes('lotedom')) return 'bg-gradient-to-b from-sky-700 to-blue-900'; // Lotedom (Blue/Sky)

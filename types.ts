@@ -229,5 +229,15 @@ export interface LedgerEntry {
   previousHash: string;
   hash: string;
   details: string; // Description or Ticket ID
-  signature?: string; // For future RSA verification
+}
+
+// --- ADMIN ALERTS ---
+export interface Alert {
+  _id: string;
+  type: 'SCRAPER_FAILURE' | 'SYSTEM_ERROR' | 'VALIDATION_ERROR';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  message: string;
+  metadata?: any;
+  active: boolean;
+  createdAt: string;
 }

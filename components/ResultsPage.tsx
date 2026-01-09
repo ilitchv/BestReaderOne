@@ -6,6 +6,7 @@ import { localDbService } from '../services/localDbService';
 import { WinningResult, CatalogItem } from '../types';
 import { getLotteryLogo } from './LotteryLogos';
 import { RESULTS_CATALOG } from '../constants';
+import HighFrequencyAccordion from './HighFrequencyAccordion';
 
 
 
@@ -129,14 +130,18 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                 // If Today, we want LATEST results (dashboard mode), so don't filter by date strictly in fetch
                 // But efficient API usage might require some limit. For now, fetch all or specific query if supported.
                 // We'll fetch simply `/api/results` without date if Today, which returns sorted latest.
-                const url = isToday ? `/api/results` : `/api/results?date=${selectedDate}`;
+                // Prevent Browser Caching of API Response
+                const ts = Date.now();
+                const url = isToday
+                    ? `/api/results?_t=${ts}`
+                    : `/api/results?date=${selectedDate}&_t=${ts}`;
 
                 const res = await fetch(url);
                 if (res.ok) {
                     const rawData: any[] = await res.json();
                     remoteAdapted = rawData.map(item => {
                         const tempObj = {
-                            country: 'USA',
+                            country: item.country || 'USA',
                             resultId: item.resultId,
                             lotteryName: item.lotteryName,
                             drawDate: item.drawDate,
@@ -151,7 +156,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                             lotteryName: item.lotteryName,
                             first: item.first, second: item.second, third: item.third, pick3: item.pick3, pick4: item.pick4,
                             numbers: formatWinningResult(tempObj as any),
-                            createdAt: item.createdAt || new Date().toISOString()
+                            createdAt: item.updatedAt || item.createdAt || new Date().toISOString()
                         };
                     });
                 }
@@ -172,8 +177,13 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
 
                 const bestResults: WinningResult[] = [];
                 mapIdToResults.forEach((group) => {
-                    // Sort Descending (Newest First)
-                    group.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    // Sort Descending (Newest First) - prioritizing createdAt for same-day updates
+                    group.sort((a, b) => {
+                        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+                        if (dateDiff !== 0) return dateDiff;
+                        // If dates are equal, use update time (createdAt)
+                        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+                    });
 
                     // Find first VALID result (non-placeholder)
                     const valid = group.find(r => {
@@ -253,8 +263,17 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                         <div>
                             <h1 className={`text-2xl font-black italic tracking-tighter uppercase flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                                 <span className={theme === 'dark' ? 'text-neon-cyan' : 'text-blue-600'}>Ultimate</span> Dashboard
+                                <span className="text-red-500 text-sm align-top">v2.1</span>
                             </h1>
-                            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Global Lottery Feed</p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Global Lottery Feed</p>
+                                <button
+                                    onClick={() => { localStorage.clear(); window.location.reload(); }}
+                                    className="text-[10px] bg-red-500/10 text-red-500 px-2 rounded hover:bg-red-500 hover:text-white transition-colors uppercase font-bold"
+                                >
+                                    Clear Cache
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -501,7 +520,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                                         <div className="flex flex-col absolute left-0 justify-center transition-all duration-300 opacity-100 translate-y-0 group-hover:-translate-y-full group-hover:opacity-0 pointer-events-none w-full">
                                             <span className={`uppercase tracking-wider font-bold leading-none mb-1 text-[10px] ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Draw Date</span>
                                             <span className={`font-mono font-bold leading-none text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                                                {res ? new Date(res.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : selectedDate}
+                                                {res ? new Date(res.date.includes('T') ? res.date : `${res.date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : selectedDate}
                                             </span>
                                         </div>
                                         {/* Hover Layer: Updated At */}
@@ -523,6 +542,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                             </div>
                         );
                     })}
+                </div>
+
+                {/* Independent High Frequency Games */}
+                <div className="max-w-[1920px] mx-auto pb-10">
+                    <HighFrequencyAccordion results={dbResults} theme={theme} />
                 </div>
             </div>
 

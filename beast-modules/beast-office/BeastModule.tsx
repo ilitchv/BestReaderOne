@@ -9,6 +9,7 @@ import ConfigurationView from './components/ConfigurationView';
 import RequestsView from './components/RequestsView';
 import AddReferralModal from './components/AddReferralModal';
 import CompensationChatbot from './components/CompensationChatbot';
+import { AlertBanner } from './components/AlertBanner';
 // import { getAllUsers } from './mockData';
 
 interface BeastModuleProps {
@@ -207,6 +208,7 @@ const BeastModule: React.FC<BeastModuleProps> = ({ users: initialUsers, rootUser
                 </header>
 
                 <div className="flex-1 relative flex flex-col overflow-hidden">
+                    <div className="px-6 pt-4"><AlertBanner /></div>
                     {renderView()}
                 </div>
 

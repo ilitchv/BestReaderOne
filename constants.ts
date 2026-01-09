@@ -74,24 +74,28 @@ export const RESULTS_CATALOG: CatalogItem[] = [
     { id: 'rd/real/Mediodía', section: 'rd', lottery: 'Lotería Real', draw: 'Mediodía', drawTime: '12:55', closeTime: '12:35', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'rd/ganamas/Tarde', section: 'rd', lottery: 'Gana Más', draw: 'Tarde', drawTime: '14:30', closeTime: '14:10', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'rd/loteka/Noche', section: 'rd', lottery: 'Loteka', draw: 'Noche', drawTime: '19:55', closeTime: '19:35', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'rd/nacional/Tarde', section: 'rd', lottery: 'Lotería Nacional', draw: 'Tarde', drawTime: '14:30', closeTime: '14:10', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'rd/leidsa/Noche', section: 'rd', lottery: 'Leidsa Quiniela Palé', draw: 'Noche', drawTime: '20:55', closeTime: '20:35', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'rd/nacional/Noche', section: 'rd', lottery: 'Lotería Nacional', draw: 'Noche', drawTime: '21:00', closeTime: '20:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'rd/nacional/Domingo', section: 'rd', lottery: 'Lotería Nacional', draw: 'Domingo', drawTime: '18:00', closeTime: '17:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'rd/quiniela/Diario', section: 'rd', lottery: 'Quiniela Palé', draw: 'Diario', drawTime: '20:55', closeTime: '20:35', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'rd/quiniela/Domingo', section: 'rd', lottery: 'Quiniela Palé', draw: 'Domingo', drawTime: '15:55', closeTime: '15:35', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    // Consolidate: Quiniela Palé Removed
     { id: 'rd/primer/AM', section: 'rd', lottery: 'La Primera', draw: 'AM', drawTime: '12:00', closeTime: '11:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'rd/primer/PM', section: 'rd', lottery: 'La Primera', draw: 'PM', drawTime: '20:00', closeTime: '19:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'rd/primer/Noche', section: 'rd', lottery: 'La Primera', draw: 'PM', drawTime: '20:00', closeTime: '19:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'rd/suerte/AM', section: 'rd', lottery: 'La Suerte', draw: 'AM', drawTime: '12:30', closeTime: '12:10', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'rd/suerte/PM', section: 'rd', lottery: 'La Suerte', draw: 'PM', drawTime: '18:00', closeTime: '17:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'rd/lotedom/Tarde', section: 'rd', lottery: 'LoteDom', draw: 'Tarde', drawTime: '13:55', closeTime: '13:35', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
 
+    // King Lottery
+    { id: 'rd/king/Dia', section: 'rd', lottery: 'King Lottery', draw: 'Dia', drawTime: '12:30', closeTime: '12:10', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'rd/king/Noche', section: 'rd', lottery: 'King Lottery', draw: 'Noche', drawTime: '19:30', closeTime: '19:10', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+
+    // Anguilla (Moved to RD Section)
+    { id: 'rd/anguila/10', section: 'rd', lottery: 'Anguilla', draw: '10 AM', drawTime: '10:00', closeTime: '09:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'rd/anguila/13', section: 'rd', lottery: 'Anguilla', draw: '1 PM', drawTime: '13:00', closeTime: '12:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'rd/anguila/18', section: 'rd', lottery: 'Anguilla', draw: '6 PM', drawTime: '18:00', closeTime: '17:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'rd/anguila/21', section: 'rd', lottery: 'Anguilla', draw: '9 PM', drawTime: '21:00', closeTime: '20:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+
     // Special
     { id: 'special/extra/Midday', section: 'special', lottery: 'Extra', draw: 'Midday', drawTime: '13:00', closeTime: '12:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'special/extra/Night', section: 'special', lottery: 'Extra', draw: 'Night', drawTime: '22:00', closeTime: '21:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'special/anguilla/10AM', section: 'special', lottery: 'Anguilla', draw: '10AM', drawTime: '10:00', closeTime: '09:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'special/anguilla/1PM', section: 'special', lottery: 'Anguilla', draw: '1PM', drawTime: '13:00', closeTime: '12:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'special/anguilla/6PM', section: 'special', lottery: 'Anguilla', draw: '6PM', drawTime: '18:00', closeTime: '17:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
-    { id: 'special/anguilla/9PM', section: 'special', lottery: 'Anguilla', draw: '9PM', drawTime: '21:00', closeTime: '20:40', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
 
     // NY Horses / Races Legacy & Special
     // Replaced generic 'NY Horses' with the Unified 'special/ny-horses' above. Keeping special/bk-paper for legacy.
@@ -184,22 +188,21 @@ export const TRACK_CATEGORIES: TrackCategory[] = [
         name: 'Santo Domingo',
         tracks: [
             { name: 'La Primera AM', id: 'rd/primer/AM' },
-            { name: 'La Primera PM', id: 'rd/primer/PM' },
+            { name: 'La Primera PM', id: 'rd/primer/Noche' },
             { name: 'La Suerte AM', id: 'rd/suerte/AM' },
             { name: 'La Suerte PM', id: 'rd/suerte/PM' },
             { name: 'Lotería Real', id: 'rd/real/Mediodía' },
             { name: 'Gana Más', id: 'rd/ganamas/Tarde' },
             { name: 'LoteDom', id: 'rd/lotedom/Tarde' },
             { name: 'Loteka', id: 'rd/loteka/Noche' },
-            { name: 'Nacional Tarde', id: 'rd/nacional/Tarde' },
+            { name: 'Leidsa Quiniela Palé', id: 'rd/leidsa/Noche' },
             { name: 'Nacional Noche', id: 'rd/nacional/Noche' },
-            { name: 'Nacional Dom', id: 'rd/nacional/Domingo' },
-            { name: 'Quiniela Palé', id: 'rd/quiniela/Diario' },
-            { name: 'Quiniela Dom', id: 'rd/quiniela/Domingo' },
-            { name: 'Anguilla 10AM', id: 'special/anguilla/10AM' },
-            { name: 'Anguilla 1PM', id: 'special/anguilla/1PM' },
-            { name: 'Anguilla 6PM', id: 'special/anguilla/6PM' },
-            { name: 'Anguilla 9PM', id: 'special/anguilla/9PM' }
+            { name: 'KING LOTTERY AM', id: 'rd/king/Dia' },
+            { name: 'KING LOTTERY PM', id: 'rd/king/Noche' },
+            { name: 'Anguilla 10AM', id: 'rd/anguila/10' },
+            { name: 'Anguilla 1PM', id: 'rd/anguila/13' },
+            { name: 'Anguilla 6PM', id: 'rd/anguila/18' },
+            { name: 'Anguilla 9PM', id: 'rd/anguila/21' }
         ],
     },
 ];
