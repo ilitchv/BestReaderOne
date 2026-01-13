@@ -4,7 +4,7 @@ const SystemAlertSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['SCRAPER_FAILURE', 'SYSTEM_ERROR', 'VALIDATION_ERROR']
+        enum: ['SCRAPER_FAILURE', 'SYSTEM_ERROR', 'VALIDATION_ERROR', 'MISSING_DATA']
     },
     severity: {
         type: String,

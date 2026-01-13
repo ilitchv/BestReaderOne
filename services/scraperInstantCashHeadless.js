@@ -2,10 +2,11 @@ const puppeteer = require('puppeteer');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const LotteryResult = require('../models/LotteryResult');
+const { triggerAlert } = require('./utils/alertHelper');
 
 // Configuration
 const TARGET_URL = 'https://instantcash.bet';
-const MAX_RETRIES = 1;
+const MAX_RETRIES = 3;
 
 /**
  * Scrapes Instant Cash results using a headless browser.
@@ -18,90 +19,53 @@ async function scrapeInstantCashHeadless(targetDateArg) {
         attempts++;
         let browser = null;
         try {
-            if (attempts > 1) {
-                console.log(`[InstantCash] Retry attempt ${attempts}/${MAX_RETRIES}...`);
-            }
+            if (attempts > 1) console.log(`[InstantCash] Retry attempt ${attempts}/${MAX_RETRIES}...`);
 
             browser = await puppeteer.launch({
                 headless: "new",
                 args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
             });
             const page = await browser.newPage();
-
-            // Set User Agent to avoid bot detection
+            // User Agent to avoid bot detection
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
             // 1. Navigate
             console.log(`[InstantCash] Navigating to ${TARGET_URL}...`);
             await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: 60000 });
 
-            // 2. Wait for Flutter app to hydrate (heuristic wait)
+            // 2. Wait for Flutter app to hydrate
             console.log('[InstantCash] Waiting for app hydration (10s)...');
             await new Promise(r => setTimeout(r, 10000));
 
-            // 3. Enable Accessibility ONCE (or try to keep it enabled)
-            // It seems Flutter accessibility might need re-enabling or stays on.
-            // Let's force it at the start.
-            await page.evaluate(() => {
-                const fltBtn = document.querySelector('flt-semantics-placeholder');
-                if (fltBtn) fltBtn.click();
-            });
-            await new Promise(r => setTimeout(r, 2000));
-
-            // 4. Incremental Scroll & Scrape
-            console.log('[InstantCash] starting incremental scrape (Mouse Wheel Mode)...');
-            const allExtractedTexts = [];
-
-            // 4a. Capture INITIAL Viewport (Top of list = Latest results)
+            // 3. Enable Accessibility
             try {
-                const initialText = await page.evaluate(() => document.body.innerText);
-                allExtractedTexts.push(initialText);
-                console.log(`[InstantCash] Captured initial viewport (${initialText.length} chars).`);
+                const btnSelector = 'flt-semantics-placeholder';
+                await page.waitForSelector(btnSelector, { timeout: 5000 });
+                await page.evaluate((sel) => {
+                    const el = document.querySelector(sel);
+                    if (el) el.click();
+                }, btnSelector);
+                console.log('[InstantCash] Clicked semantics placeholder.');
             } catch (e) {
-                console.warn("[InstantCash] Initial capture warn:", e);
+                console.warn('[InstantCash] Semantics click warning:', e);
             }
 
-            await page.evaluate(async () => {
-                // Define helper inside evaluate context
-                function getVisibleText(node) {
-                    if (node.nodeType === Node.TEXT_NODE) return node.textContent.trim();
-                    if (node.nodeType !== Node.ELEMENT_NODE) return "";
-                    try {
-                        const style = window.getComputedStyle(node);
-                        if (style.display === 'none' || style.visibility === 'hidden') return "";
-                    } catch (e) { }
+            await new Promise(r => setTimeout(r, 2000));
 
-                    let text = "";
-                    if (node.shadowRoot) text += getVisibleText(node.shadowRoot);
-                    for (let child of node.childNodes) text += " " + getVisibleText(child);
-                    if (node.getAttribute && node.getAttribute('aria-label')) {
-                        text += " [ARIA: " + node.getAttribute('aria-label') + "] ";
-                    }
-                    return text;
-                }
+            // 4. Incremental Scroll (ELEMENT BASED)
+            console.log('[InstantCash] starting incremental scrape (Element Scroll Mode)...');
+            const allExtractedTexts = [];
+            const collectedHashes = new Set(); // To avoid adding duplicates if view doesn't change
 
-                window.collectedText = ""; // Global buffer
+            // Increased scroll limit to capture previous day if needed
+            const scrollLimit = targetDateArg ? 150 : 80;
+            console.log(`[InstantCash] Scrolling ${scrollLimit} times...`);
 
-                // Improved Scroll for Flutter (Virtual Lists often ignore window.scroll)
-                const viewportHeight = window.innerHeight;
-                const centerX = window.innerWidth / 2;
-                const centerY = viewportHeight / 2;
+            for (let i = 0; i < scrollLimit; i++) {
+                // Focus body
+                await page.focus('body');
 
-                // We use Puppeteer's native mouse wheel in the main node context, 
-                // but here (inside evaluate) we can only sleep or gather text.
-                // We must move the scroll logic OUT to the main Puppeteer loop.
-            });
-
-            // 4b. MAIN LOOP with MOUSE WHEEL
-            // Optimize: Reduced from 120 to 30 for faster updates (approx 1 hr coverage is enough for frequent runs)
-            for (let i = 0; i < 30; i++) {
-                // Mouse Wheel Scroll (Generic)
-                await page.mouse.move(200, 300); // Move over potential list
-                await page.mouse.wheel({ deltaY: 800 });
-
-                await new Promise(r => setTimeout(r, 1500)); // Wait for render
-
-                // Extract Text incrementally using robust Shadow DOM walker
+                // EXTRACT
                 const currentText = await page.evaluate(() => {
                     function getVisibleText(node) {
                         if (node.nodeType === Node.TEXT_NODE) return node.textContent.trim();
@@ -121,84 +85,92 @@ async function scrapeInstantCashHeadless(targetDateArg) {
                     }
                     return getVisibleText(document.body);
                 });
-                allExtractedTexts.push(currentText);
+
+                // Helper hash
+                const hash = currentText.length + "-" + currentText.substring(0, 50);
+                if (!collectedHashes.has(hash)) {
+                    allExtractedTexts.push(currentText);
+                    collectedHashes.add(hash);
+                }
+
+                // SCROLL ACTION
+                // Try to find the last semantic node and scroll it into view
+                await page.evaluate(() => {
+                    const nodes = document.querySelectorAll('flt-semantics');
+                    if (nodes.length > 0) {
+                        const last = nodes[nodes.length - 1];
+                        last.scrollIntoView();
+                    } else {
+                        window.scrollBy(0, window.innerHeight);
+                    }
+                });
+
+                await new Promise(r => setTimeout(r, 1000)); // Wait for render
             }
 
             // Re-combine
             const extractedData = allExtractedTexts.join(" ||CHUNK|| ");
 
-            // (Legacy code cleanup)
+            console.log(`[InstantCash] Parsing results...`);
+            const resultsByDate = parseResults(extractedData);
+            console.log(`[InstantCash] Found Dates: ${Object.keys(resultsByDate).join(', ')}`);
+            const savedDrawsCount = {};
 
-            console.log(`[InstantCash] Raw Extracted (First 200 chars): ${extractedData.slice(0, 200)}`);
+            if (Object.keys(resultsByDate).length > 0) {
+                for (const [dateStr, draws] of Object.entries(resultsByDate)) {
+                    savedDrawsCount[dateStr] = draws.length;
+                    await saveResults(draws, dateStr);
+                }
 
-            // Generate Target Date Str
-            // If explicit date passed, use it. Else default to NY Time Today.
-            let targetStr;
-            if (targetDateArg) {
-                targetStr = targetDateArg;
-            } else {
-                const nyDate = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-                const year = nyDate.getFullYear();
-                const month = String(nyDate.getMonth() + 1).padStart(2, '0');
-                const day = String(nyDate.getDate()).padStart(2, '0');
-                targetStr = `${year}-${month}-${day}`;
-            }
+                // --- VALIDATION & ALERTING ---
+                // Validate Target Date if provided, otherwise Today
+                const dateToValidate = targetDateArg || new Date().toLocaleDateString('en-CA');
 
-            console.log(`[InstantCash] Parsing for Target Date: ${targetStr}`);
-            const results = parseResults(extractedData, targetStr);
-            console.log(`[InstantCash] Parsed ${results.length} draws.`);
+                if (resultsByDate[dateToValidate]) {
+                    await validateCompleteness(dateToValidate, resultsByDate[dateToValidate]);
+                } else {
+                    console.warn(`[InstantCash] No data found for Validation Target: ${dateToValidate}`);
+                    // If we explicitly asked for a date and got nothing, that's a MISSING_DATA event
+                    if (targetDateArg) {
+                        await validateCompleteness(dateToValidate, []);
+                    }
+                }
+                // -----------------------------
 
-            if (results.length > 0) {
-                await saveResults(results, targetStr);
-                console.log('[InstantCash] Data successfully saved.');
-                // Success - break loop
+                console.log('[InstantCash] Data successfully processed.');
                 if (browser) await browser.close();
                 return;
             } else {
-                console.warn('[InstantCash] No results found. Might be legitimate or scraping failure.');
-                // If it's a failure, we might want to retry? 
-                // Let's retry if result count is 0, just in case DOM wasn't ready.
+                console.warn('[InstantCash] No results found in text.');
                 throw new Error("No results found in extracted text.");
             }
 
         } catch (error) {
             console.error(`[InstantCash] Error on attempt ${attempts}:`, error.message);
             if (browser) await browser.close();
-
             if (attempts >= MAX_RETRIES) {
-                console.error('[InstantCash] Max retries reached. Giving up.');
+                await triggerAlert('SCRAPER_FAILURE', 'Instant Cash Scraper Failed (Max Retries)', { error: error.message }, 'HIGH');
             } else {
-                console.log('[InstantCash] Waiting 10s before retry...');
                 await new Promise(r => setTimeout(r, 10000));
             }
         }
     }
 }
 
-function parseResults(text, targetDateStr) {
-    const draws = [];
-
-    // Regex for Date headers and Time rows
-    const dateRegex = /([a-zA-Z]{3}\s+\d{1,2},?\s+\d{4})/gi; // "Jan 8, 2026"
-    const timeRegex = /(\d{1,2}:\d{2}\s*(?:AM|PM))/gi; // "12:00 PM"
+function parseResults(text) {
+    const drawsByDate = {};
+    const dateRegex = /([a-zA-Z]{3}\s+\d{1,2},?\s+\d{4})/gi;
+    const timeRegex = /(\d{1,2}:\d{2}\s*(?:AM|PM))/gi;
 
     const events = [];
     let match;
 
-    // 1. Find all Date occurrences
-    while ((match = dateRegex.exec(text)) !== null) {
-        events.push({ type: 'DATE', val: match[1], index: match.index });
-    }
+    while ((match = dateRegex.exec(text)) !== null) events.push({ type: 'DATE', val: match[1], index: match.index });
+    while ((match = timeRegex.exec(text)) !== null) events.push({ type: 'TIME', val: match[0], index: match.index });
 
-    // 2. Find all Time occurrences
-    while ((match = timeRegex.exec(text)) !== null) {
-        events.push({ type: 'TIME', val: match[0], index: match.index });
-    }
-
-    // 3. Sort by index to reconstruct the flow
     events.sort((a, b) => a.index - b.index);
 
-    let currentRowDateStr = null; // State
+    let currentRowDateStr = null;
 
     for (let i = 0; i < events.length; i++) {
         const e = events[i];
@@ -210,83 +182,58 @@ function parseResults(text, targetDateStr) {
                 const month = String(d.getMonth() + 1).padStart(2, '0');
                 const day = String(d.getDate()).padStart(2, '0');
                 currentRowDateStr = `${year}-${month}-${day}`;
+                if (!drawsByDate[currentRowDateStr]) drawsByDate[currentRowDateStr] = [];
             }
         }
         else if (e.type === 'TIME') {
             if (!currentRowDateStr) continue;
-
-            // FILTER:
-            if (currentRowDateStr !== targetDateStr) {
-                continue;
-            }
-
-            // Extract numbers from lookahead chunk
             const nextEventIndex = (i + 1 < events.length) ? events[i + 1].index : text.length;
             const chunk = text.substring(e.index, nextEventIndex);
 
-            // Remove time string from chunk
+            // Clean content to just numbers
             const content = chunk.replace(e.val, '');
-
-            // Regex for numbers
             const numsMatch = content.match(/((?:\d\s*,?\s*){10,})/);
+
             if (numsMatch) {
                 const rawNums = numsMatch[0].replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
                 const numArr = rawNums.split(' ');
 
-                draws.push({
-                    time: e.val,
-                    numbers: numArr.join('-')
-                });
+                // Deduplicate within the parser run to handle overlap chunks
+                const exists = drawsByDate[currentRowDateStr].some(d => d.time === e.val);
+                if (!exists) {
+                    drawsByDate[currentRowDateStr].push({
+                        time: e.val,
+                        numbers: numArr.join('-')
+                    });
+                }
             }
         }
     }
-
-    return draws;
+    return drawsByDate;
 }
 
 async function saveResults(draws, targetDateStr) {
-    if (mongoose.connection.readyState === 0) {
-        await mongoose.connect(process.env.MONGODB_URI);
-    }
-
+    if (mongoose.connection.readyState === 0) await mongoose.connect(process.env.MONGODB_URI);
     const resultId = 'special/instant-cash';
 
     // 1. Fetch Existing
     let existingDoc = await LotteryResult.findOne({ resultId: resultId, drawDate: targetDateStr });
     let existingDraws = [];
-
     if (existingDoc && existingDoc.numbers) {
-        try {
-            existingDraws = JSON.parse(existingDoc.numbers);
-        } catch (e) {
-            console.warn('[InstantCash] Failed to parse existing numbers JSON', e);
-        }
+        try { existingDraws = JSON.parse(existingDoc.numbers); } catch (e) { }
     }
 
-    // 2. Format New Draws
-    const newDrawsFormatted = draws.map(d => ({
-        time: d.time,
-        draws: { "All": d.numbers }
-    }));
-
-    // 3. Merge Logic (Deduplicate by Time)
-    // Create a map of time -> draw
+    // 2. Merge
     const mergedMap = new Map();
+    existingDraws.forEach(d => mergedMap.set(d.time, d));
 
-    // Load existing first
-    existingDraws.forEach(d => {
-        mergedMap.set(d.time, d);
+    // Format new
+    draws.forEach(d => {
+        mergedMap.set(d.time, { time: d.time, draws: { "All": d.numbers } });
     });
 
-    // Overwrite/Add new
-    newDrawsFormatted.forEach(d => {
-        mergedMap.set(d.time, d);
-    });
-
-    // Convert back to array
     const mergedDraws = Array.from(mergedMap.values());
-
-    console.log(`[InstantCash] Merged ${existingDraws.length} existing + ${newDrawsFormatted.length} new = ${mergedDraws.length} total draws.`);
+    console.log(`[InstantCash] Saving ${mergedDraws.length} total draws for ${targetDateStr}.`);
 
     const payload = {
         resultId,
@@ -298,19 +245,92 @@ async function saveResults(draws, targetDateStr) {
         scrapedAt: new Date()
     };
 
-    const doc = await LotteryResult.findOneAndUpdate(
+    await LotteryResult.findOneAndUpdate(
         { resultId: payload.resultId, drawDate: payload.drawDate },
         payload,
         { upsert: true, new: true }
     );
-    console.log(`[InstantCash] Saved to DB. ID: ${doc._id}`);
 }
 
-// Execute if running directly
+// --- VALIDATION LOGIC ---
+async function validateCompleteness(dateStr, draws) {
+    // 1. Define Standard Schedule: 10:00 AM to 10:00 PM , every 30 mins
+    const startHour = 10;
+    const endHour = 22; // 10 PM
+    const intervalMins = 30;
+
+    // Parse target date
+    const targetDate = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+
+    // Check if target date is today
+    const isToday = now.toDateString() === targetDate.toDateString();
+
+    if (!isToday) return; // Only validate active days for alerts (historical alerts usually noise)
+
+    const expectedTimes = [];
+    let current = new Date(targetDate);
+    current.setHours(startHour, 0, 0, 0);
+
+    const end = new Date(targetDate);
+    end.setHours(endHour, 0, 0, 0);
+
+    // Buffer: Don't expect a draw if it's currently 10:05 and draw is 10:00. Give 15 mins.
+    const threshold = new Date(now.getTime() - 15 * 60000);
+
+    while (current <= end) {
+        if (current > threshold) break; // Don't expect future draws
+
+        // Format: "10:00 AM" or "01:30 PM"
+        let hours = current.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        const mins = String(current.getMinutes()).padStart(2, '0');
+        // Note: Scraper output might perform loose matching (e.g. 01:00 vs 1:00). 
+        // Parser creates "01:00 PM" usually if input is "01:00". Text says "12:30 PM", "1:00 PM".
+        // Let's create a normalized comparator.
+        const timeLabel = `${hours}:${mins} ${ampm}`; // "10:00 AM"
+
+        expectedTimes.push(timeLabel);
+
+        current.setMinutes(current.getMinutes() + intervalMins);
+    }
+
+    // Check Actuals
+    const actualTimes = new Set(draws.map(d => normalizeTime(d.time)));
+    const missing = [];
+
+    expectedTimes.forEach(exp => {
+        if (!actualTimes.has(normalizeTime(exp))) {
+            missing.push(exp);
+        }
+    });
+
+    if (missing.length > 0) {
+        console.warn(`[InstantCash] ⚠️ MISSING DRAWS DETECTED: ${missing.join(', ')}`);
+        // Trigger Alert
+        await triggerAlert(
+            'MISSING_DATA',
+            `Instant Cash Missing ${missing.length} Draws for ${dateStr}`,
+            { missingDraws: missing, date: dateStr },
+            'HIGH'
+        );
+    } else {
+        console.log(`[InstantCash] ✅ Validation Passed: All ${expectedTimes.length} expected draws found.`);
+    }
+}
+
+function normalizeTime(t) {
+    // "10:00 AM" -> "10:00 AM", "01:00 PM" -> "1:00 PM"
+    return t.replace(/^0/, '').trim();
+}
+
 if (require.main === module) {
     const args = process.argv.slice(2);
-    const dateArg = args[0]; // e.g. "2026-01-07"
+    const dateArg = args[0];
     scrapeInstantCashHeadless(dateArg);
 }
 
 module.exports = scrapeInstantCashHeadless;
+

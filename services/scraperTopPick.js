@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const LotteryResult = require('../models/LotteryResult');
+const { triggerAlert } = require('./utils/alertHelper');
 
 // Configuration
 const TARGET_URL = 'https://tplotto.com/procedure_load_numbers_public';
@@ -127,8 +128,84 @@ async function scrapeTopPick(targetDate = new Date()) {
 
         await saveResultsToDB(results, formattedDate);
 
+        // --- VALIDATION & ALERTING ---
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        if (formattedDate === todayStr) {
+            await validateCompleteness(formattedDate, results);
+        }
+
     } catch (error) {
         console.error('[TopPick] Error:', error.message);
+        await triggerAlert(
+            'SCRAPER_FAILURE',
+            `Top Pick Scraper Error: ${error.message}`,
+            { error: error.message },
+            'HIGH'
+        );
+    }
+}
+
+async function validateCompleteness(dateStr, results) {
+    // Schedule: Daily 12:00 AM to 11:00 PM (Hourly) -> 00:00 to 23:00
+    const startHour = 0;
+    const endHour = 23;
+    const intervalMins = 60;
+
+    const targetDate = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+
+    // Check if target date is today
+    const isToday = now.toDateString() === targetDate.toDateString();
+
+
+
+    if (!isToday) return;
+
+    const expectedTimes = [];
+    let current = new Date(targetDate);
+    current.setHours(startHour, 0, 0, 0);
+
+    const end = new Date(targetDate);
+    end.setHours(endHour, 0, 0, 0);
+
+    // Buffer: 15 mins grace
+    const threshold = new Date(now.getTime() - 15 * 60000);
+
+    while (current <= end) {
+        if (current > threshold) break;
+
+        // Format: "12:00 AM", "1:00 AM" ... "11:00 PM"
+        let hours = current.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const mins = String(current.getMinutes()).padStart(2, '0');
+
+        const timeLabel = `${hours}:${mins} ${ampm}`;
+        expectedTimes.push(timeLabel);
+
+        current.setMinutes(current.getMinutes() + intervalMins);
+    }
+
+    const actualTimes = new Set(results.map(r => r.time.replace(/^0/, '').trim()));
+    const missing = [];
+
+    expectedTimes.forEach(exp => {
+        if (!actualTimes.has(exp.replace(/^0/, '').trim())) {
+            missing.push(exp);
+        }
+    });
+
+    if (missing.length > 0) {
+        console.warn(`[TopPick] ⚠️ MISSING DRAWS DETECTED: ${missing.join(', ')}`);
+        await triggerAlert(
+            'MISSING_DATA',
+            `Top Pick Missing ${missing.length} Draws for ${dateStr}`,
+            { missingDraws: missing, date: dateStr },
+            'HIGH'
+        );
+    } else {
+        console.log(`[TopPick] ✅ Validation Passed: All ${expectedTimes.length} expected draws found.`);
     }
 }
 

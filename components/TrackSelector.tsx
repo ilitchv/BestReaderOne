@@ -5,6 +5,7 @@ import TrackButton from './TrackButton';
 import { useSound } from '../hooks/useSound';
 
 import TrackCategoryReel from './TrackCategoryReel';
+import HighFrequencySelector from './HighFrequencySelector';
 
 interface TrackSelectorProps {
     selectedTracks: string[];
@@ -203,6 +204,7 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
                         }`;
 
                     return (
+
                         <div key={category.name}>
                             <button
                                 className={buttonClasses}
@@ -212,57 +214,68 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
                                 <svg className={`w-5 h-5 transition-transform duration-300 ${isCategoryOpen ? 'rotate-180' : ''}`} data-lucide="chevron-down" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                             </button>
                             <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isCategoryOpen ? 'max-h-[1000px] mt-2' : 'max-h-0'}`}>
-                                {viewMode === 'grid' ? (
-                                    <div className="p-2 grid grid-cols-3 sm:grid-cols-4 gap-2 bg-light-surface/50 dark:bg-dark-surface/50 rounded-lg">
-                                        {category.tracks.map(track => {
-                                            const { isExpired, remainingTime } = getTrackStatus(track.id);
 
-                                            const isUsaTrack = usaTrackIds.has(track.id);
-                                            const isSdTrack = sdTrackIds.has(track.id);
-
-                                            // Lock logic based on calculated state
-                                            let isDisabledByCategory = false;
-
-                                            // If any USA selected, disable SD tracks
-                                            if (isAnyUsaSelected && isSdTrack) isDisabledByCategory = true;
-
-                                            // If any SD selected, disable USA tracks
-                                            if (isAnySdSelected && isUsaTrack) isDisabledByCategory = true;
-
-                                            // Hide expired tracks completely to save space
-                                            if (isExpired) return null;
-
-                                            const isDisabled = (track.id === 'special/pulito' && isPulitoDisabled) ||
-                                                (track.id === 'special/venezuela' && isVenezuelaDisabled) ||
-                                                isDisabledByCategory;
-
-                                            return (
-                                                <TrackButton
-                                                    key={track.id}
-                                                    trackId={track.id}
-                                                    trackName={track.name}
-                                                    isSelected={selectedTracks.includes(track.id)}
-                                                    onClick={() => handleTrackToggle(track.id)}
-                                                    isExpired={isExpired}
-                                                    isDisabled={isDisabled}
-                                                    remainingTime={remainingTime}
-                                                    pulitoPositions={track.id === 'special/pulito' ? pulitoPositions : undefined}
-                                                    onPulitoPositionClick={track.id === 'special/pulito' ? handlePulitoPositionToggle : undefined}
-                                                />
-                                            )
-                                        })}
-                                    </div>
-                                ) : (
-                                    <TrackCategoryReel
-                                        categoryTracks={category.tracks}
+                                {/* SPECIAL HIGH FREQUENCY UI */}
+                                {category.name === 'High Frequency Games' ? (
+                                    <HighFrequencySelector
                                         selectedTracks={selectedTracks}
-                                        onSelectionChange={onSelectionChange} // We pass simple handler, internal component handles exclusivity logic if needed or we trust Parent state updates
-                                        pulitoPositions={pulitoPositions}
-                                        onPulitoPositionsChange={onPulitoPositionsChange}
-                                        onTrackToggle={handleTrackToggle}
-                                        showModeReel={category.name.includes('USA')}
+                                        onSelectionChange={onSelectionChange}
                                     />
+                                ) : (
+                                    /* STANDARD GRID / REEL UI */
+                                    viewMode === 'grid' ? (
+                                        <div className="p-2 grid grid-cols-3 sm:grid-cols-4 gap-2 bg-light-surface/50 dark:bg-dark-surface/50 rounded-lg">
+                                            {category.tracks.map(track => {
+                                                const { isExpired, remainingTime } = getTrackStatus(track.id);
+
+                                                const isUsaTrack = usaTrackIds.has(track.id);
+                                                const isSdTrack = sdTrackIds.has(track.id);
+
+                                                // Lock logic based on calculated state
+                                                let isDisabledByCategory = false;
+
+                                                // If any USA selected, disable SD tracks
+                                                if (isAnyUsaSelected && isSdTrack) isDisabledByCategory = true;
+
+                                                // If any SD selected, disable USA tracks
+                                                if (isAnySdSelected && isUsaTrack) isDisabledByCategory = true;
+
+                                                // Hide expired tracks completely to save space
+                                                if (isExpired) return null;
+
+                                                const isDisabled = (track.id === 'special/pulito' && isPulitoDisabled) ||
+                                                    (track.id === 'special/venezuela' && isVenezuelaDisabled) ||
+                                                    isDisabledByCategory;
+
+                                                return (
+                                                    <TrackButton
+                                                        key={track.id}
+                                                        trackId={track.id}
+                                                        trackName={track.name}
+                                                        isSelected={selectedTracks.includes(track.id)}
+                                                        onClick={() => handleTrackToggle(track.id)}
+                                                        isExpired={isExpired}
+                                                        isDisabled={isDisabled}
+                                                        remainingTime={remainingTime}
+                                                        pulitoPositions={track.id === 'special/pulito' ? pulitoPositions : undefined}
+                                                        onPulitoPositionClick={track.id === 'special/pulito' ? handlePulitoPositionToggle : undefined}
+                                                    />
+                                                )
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <TrackCategoryReel
+                                            categoryTracks={category.tracks}
+                                            selectedTracks={selectedTracks}
+                                            onSelectionChange={onSelectionChange}
+                                            pulitoPositions={pulitoPositions}
+                                            onPulitoPositionsChange={onPulitoPositionsChange}
+                                            onTrackToggle={handleTrackToggle}
+                                            showModeReel={category.name.includes('USA')}
+                                        />
+                                    )
                                 )}
+
                             </div>
                         </div>
                     );

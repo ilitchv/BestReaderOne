@@ -205,6 +205,16 @@ export const TRACK_CATEGORIES: TrackCategory[] = [
             { name: 'Anguilla 9PM', id: 'rd/anguila/21' }
         ],
     },
+    {
+        name: 'High Frequency Games',
+        tracks: [
+            // Logic handled by HighFrequencySelector, but we list a base set for validation or Fallback
+            // Note: The UI will dynamically generate these, but having them in ID map helps.
+            // Actuall listing them here ensures they show up if we reverted to Grid view.
+            { name: 'Top Pick', id: 'special/top-pick' },
+            { name: 'Instant Cash', id: 'special/instant-cash' }
+        ]
+    }
 ];
 
 export const CUTOFF_TIMES: { [key: string]: string } = {
@@ -302,6 +312,7 @@ export const DEFAULT_PRIZE_TABLE: PrizeTable = {
     },
     'Win 4': {
         'STRAIGHT': 5000,
+        'STRAIGHT_QUAD': 3000, // Rule: 3000 for quadruples
         'BOX_4WAY': 1200,
         'BOX_6WAY': 800,
         'BOX_12WAY': 400,
@@ -343,6 +354,54 @@ export const DEFAULT_PRIZE_TABLE: PrizeTable = {
     },
     'Single Action': {
         'STRAIGHT': 9
+    },
+    'Top Pick': {
+        'P2_STR': 95,
+        'P2_BOX': 47.5,
+        'P3_STR': 900,
+        'P3_BOX': 300,
+        'P3_BOX6': 150,
+        'P4_STR': 7000,
+        'P4_STR_QUAD': 3000,
+        'P4_BOX4': 1800,
+        'P4_BOX6': 1175,
+        'P4_BOX12': 600,
+        'P4_BOX24': 300,
+        'P5_STR': 50000,
+        'P5_BOX5': 10000,
+        'P5_BOX10': 5000,
+        'P5_BOX20': 2500,
+        'P5_BOX30': 1175,
+        'P5_BOX60': 830,
+        'P5_BOX120': 416,
+        'VEN_1ST': 75,
+        'VEN_2ND': 15,
+        'VEN_3RD': 10,
+        'PALE': 2000
+    },
+    'Instant Cash': {
+        'P2_STR': 95,
+        'P2_BOX': 47.5,
+        'P3_STR': 900,
+        'P3_BOX': 300,
+        'P3_BOX6': 150,
+        'P4_STR': 7000,
+        'P4_STR_QUAD': 3000,
+        'P4_BOX4': 1800,
+        'P4_BOX6': 1175,
+        'P4_BOX12': 600,
+        'P4_BOX24': 300,
+        'P5_STR': 50000,
+        'P5_BOX5': 10000,
+        'P5_BOX10': 5000,
+        'P5_BOX20': 2500,
+        'P5_BOX30': 1175,
+        'P5_BOX60': 830,
+        'P5_BOX120': 416,
+        'VEN_1ST': 75,
+        'VEN_2ND': 15,
+        'VEN_3RD': 10,
+        'PALE': 2000
     }
 };
 

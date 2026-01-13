@@ -14,12 +14,12 @@ const isPermutation = (numA: string, numB: string): boolean => {
 
 // Helper to count unique digits to determine box type
 const getPermutationType = (numStr: string, length: number): number => {
-    const freq: {[k:string]:number} = {};
-    for(const char of numStr) freq[char] = (freq[char] || 0) + 1;
-    
+    const freq: { [k: string]: number } = {};
+    for (const char of numStr) freq[char] = (freq[char] || 0) + 1;
+
     // Factorial calc
     const fact = (n: number): number => (n <= 1 ? 1 : n * fact(n - 1));
-    
+
     // N! / (n1! * n2! ...)
     const denom = Object.values(freq).reduce((acc, val) => acc * fact(val), 1);
     return fact(length) / denom;
@@ -36,15 +36,31 @@ export const calculateWinnings = (
     prizeTable: PrizeTable
 ): CalculationResult[] => {
     const winners: CalculationResult[] = [];
-    
+
     // NORMALIZE MODE KEY: Strip suffix (e.g. "Pulito-2" -> "Pulito")
     let modeKey = play.gameMode;
     if (modeKey.startsWith('Pulito')) modeKey = 'Pulito';
     if (modeKey.startsWith('Single Action')) modeKey = 'Single Action';
 
-    const table = prizeTable[modeKey];
+    const isTopPick = result.lotteryName.includes('Top Pick');
+    const isInstantCash = result.lotteryName.includes('Instant Cash');
+
+    let table = prizeTable[modeKey]; // Default behavior
+
+    // SPECIAL HANDLING: Top Pick & Instant Cash (Use Flat Tables)
+    if (isTopPick || isInstantCash) {
+        const specialKey = isTopPick ? 'Top Pick' : 'Instant Cash';
+        const specialTable = prizeTable[specialKey];
+
+        if (specialTable) {
+            // Map Standard Game Modes to Special Flat Keys
+            // We return early here because the logic is distinct (flat keys vs nested)
+            return calculateSpecialWinnings(play, result, specialTable);
+        }
+    }
+
     const isNY = isNewYorkTrack(result.lotteryName);
-    
+
     if (!table) return [];
 
     // --- BUSINESS RULE: HORSES DOES NOT SUPPORT VENEZUELA ---
@@ -57,7 +73,7 @@ export const calculateWinnings = (
     // --- DERIVATION LOGIC (Banker Rules) ---
     // If explicit positions (1st, 2nd, 3rd) are missing (e.g. USA Track results),
     // derive them from Pick 3 and Pick 4 numbers.
-    
+
     const p3 = result.pick3 ? clean(result.pick3) : '';
     const p4 = result.pick4 ? clean(result.pick4) : '';
 
@@ -67,10 +83,10 @@ export const calculateWinnings = (
 
     // Rule: 1st = Pick 3 Last 2
     if (!win1 && p3.length >= 2) win1 = p3.slice(-2);
-    
+
     // Rule: 2nd = Win 4 First 2
     if (!win2 && p4.length >= 2) win2 = p4.slice(0, 2);
-    
+
     // Rule: 3rd = Win 4 Last 2
     if (!win3 && p4.length >= 2) win3 = p4.slice(-2);
 
@@ -89,8 +105,8 @@ export const calculateWinnings = (
                     const amount = isTriple ? (table.STRAIGHT_TRIPLE || 500) : (table.STRAIGHT || 700);
                     winners.push({
                         ticketNumber: '', playNumber: 0, trackName: result.lotteryName, betNumber: play.betNumber, gameMode: play.gameMode,
-                        wagerType: 'STRAIGHT', wagerAmount: play.straightAmount, 
-                        prizeAmount: play.straightAmount * amount, 
+                        wagerType: 'STRAIGHT', wagerAmount: play.straightAmount,
+                        prizeAmount: play.straightAmount * amount,
                         matchType: 'Exact Order'
                     });
                 }
@@ -121,14 +137,14 @@ export const calculateWinnings = (
                     const amount = isTriple ? (table.STRAIGHT_TRIPLE || 500) : (table.STRAIGHT || 700);
                     winners.push({
                         ticketNumber: '', playNumber: 0, trackName: result.lotteryName, betNumber: play.betNumber, gameMode: play.gameMode,
-                        wagerType: 'COMBO', wagerAmount: play.comboAmount, 
-                        prizeAmount: play.comboAmount * amount, 
+                        wagerType: 'COMBO', wagerAmount: play.comboAmount,
+                        prizeAmount: play.comboAmount * amount,
                         matchType: 'Combo Win (Straight Payout)'
                     });
                 }
             }
         }
-    } 
+    }
     // -------------------------
     // WIN 4
     // -------------------------
@@ -140,8 +156,11 @@ export const calculateWinnings = (
             // 1. STRAIGHT
             if (play.straightAmount && play.straightAmount > 0) {
                 if (betNum === winningNum) {
-                    let multiplier = table.STRAIGHT || 5000;
-                    if (!isNY) multiplier = multiplier / 2; 
+                    // Check for Quadruple (e.g. 1111)
+                    const isQuad = betNum[0] === betNum[1] && betNum[1] === betNum[2] && betNum[2] === betNum[3];
+                    let multiplier = isQuad ? (table.STRAIGHT_QUAD || 3000) : (table.STRAIGHT || 5000);
+
+                    if (!isNY) multiplier = multiplier / 2;
                     winners.push({
                         ticketNumber: '', playNumber: 0, trackName: result.lotteryName, betNumber: play.betNumber, gameMode: play.gameMode,
                         wagerType: 'STRAIGHT', wagerAmount: play.straightAmount, prizeAmount: play.straightAmount * multiplier, matchType: 'Exact Order'
@@ -176,24 +195,24 @@ export const calculateWinnings = (
             if (play.comboAmount && play.comboAmount > 0) {
                 if (isPermutation(betNum, winningNum)) {
                     let multiplier = table.STRAIGHT || 5000;
-                    if (!isNY) multiplier = multiplier / 2; 
-                    
+                    if (!isNY) multiplier = multiplier / 2;
+
                     winners.push({
                         ticketNumber: '', playNumber: 0, trackName: result.lotteryName, betNumber: play.betNumber, gameMode: play.gameMode,
-                        wagerType: 'COMBO', wagerAmount: play.comboAmount, 
-                        prizeAmount: play.comboAmount * multiplier, 
+                        wagerType: 'COMBO', wagerAmount: play.comboAmount,
+                        prizeAmount: play.comboAmount * multiplier,
                         matchType: 'Combo Win (Straight Payout)'
                     });
                 }
             }
         }
-    } 
+    }
     // -------------------------
     // VENEZUELA (Derived positions)
     // -------------------------
     else if (play.gameMode === 'Venezuela') {
         const betNum = clean(play.betNumber).slice(-2);
-        
+
         // STRAIGHT
         if (play.straightAmount && play.straightAmount > 0) {
             if (betNum === win1) winners.push({ ...baseWin(play, result, play.straightAmount * (table.FIRST || 55), '1st Prize') });
@@ -215,7 +234,7 @@ export const calculateWinnings = (
         if (parts.length === 2) {
             const p1 = parts[0];
             const p2 = parts[1];
-            
+
             // Normalize wins for comparison (default to 'XX' if missing to prevent false match on empty string)
             const w1 = win1 || 'XX';
             const w2 = win2 || 'YY';
@@ -228,18 +247,18 @@ export const calculateWinnings = (
             // STRAIGHT ($700): Any combination of positions
             if (play.straightAmount && play.straightAmount > 0) {
                 const checkStraightPair = (wA: string, wB: string) => (matchS(p1, wA) && matchS(p2, wB)) || (matchS(p1, wB) && matchS(p2, wA));
-                
+
                 if (checkStraightPair(w1, w2) || checkStraightPair(w1, w3) || checkStraightPair(w2, w3)) {
-                     winners.push({ ...baseWin(play, result, play.straightAmount * (table.WIN_FULL || 700), 'Palé Straight') });
+                    winners.push({ ...baseWin(play, result, play.straightAmount * (table.WIN_FULL || 700), 'Palé Straight') });
                 }
             }
 
             // BOX ($175)
             if (play.boxAmount && play.boxAmount > 0) {
                 const checkBoxPair = (wA: string, wB: string) => (matchB(p1, wA) && matchB(p2, wB)) || (matchB(p1, wB) && matchB(p2, wA));
-                
+
                 if (checkBoxPair(w1, w2) || checkBoxPair(w1, w3) || checkBoxPair(w2, w3)) {
-                     winners.push({ ...baseWin(play, result, play.boxAmount * (table.WIN_BOX || 175), 'Palé Box') });
+                    winners.push({ ...baseWin(play, result, play.boxAmount * (table.WIN_BOX || 175), 'Palé Box') });
                 }
             }
         }
@@ -249,7 +268,7 @@ export const calculateWinnings = (
     // -------------------------
     else if (play.gameMode === 'RD-Quiniela') {
         const betNum = clean(play.betNumber).slice(-2);
-        
+
         // STRAIGHT
         if (play.straightAmount && play.straightAmount > 0) {
             if (betNum === win1) winners.push({ ...baseWin(play, result, play.straightAmount * (table.FIRST || 56), '1st Prize') });
@@ -271,14 +290,14 @@ export const calculateWinnings = (
         if (parts.length === 2) {
             const p1 = parts[0];
             const p2 = parts[1];
-            
+
             const w1 = win1 || 'XX';
             const w2 = win2 || 'YY';
             const w3 = win3 || 'ZZ';
 
-            const exact = (a:string, b:string) => a === b;
-            const perm = (a:string, b:string) => isPermutation(a, b);
-            
+            const exact = (a: string, b: string) => a === b;
+            const perm = (a: string, b: string) => isPermutation(a, b);
+
             // STRAIGHT LOGIC
             if (play.straightAmount && play.straightAmount > 0) {
                 // FULL: 1st + 2nd ONLY
@@ -316,13 +335,13 @@ export const calculateWinnings = (
     else if (play.gameMode.startsWith('Pulito')) {
         const specifiedPositions = play.gameMode.split('-')[1]?.split(',').map(Number) || [1];
         const betNum = clean(play.betNumber).slice(-2);
-        
+
         // Defined Positions from Derived/Actual values
-        const winVals: {[k:number]: string} = {
+        const winVals: { [k: number]: string } = {
             1: win1, // Pick3 Last 2 / First
             2: p3.length >= 3 ? p3.slice(-2) : win1, // P3 Last 2
         };
-        
+
         // Re-map specifically for Pulito to ensure accuracy
         if (p3.length >= 2) winVals[1] = p3.slice(0, 2);
         if (p3.length >= 3) winVals[2] = p3.slice(-2);
@@ -353,13 +372,150 @@ export const calculateWinnings = (
 
 // Helper for standard winner object construction
 const baseWin = (play: Play, result: WinningResult, amount: number, type: string): CalculationResult => ({
-    ticketNumber: '', 
-    playNumber: 0, 
-    trackName: result.lotteryName, 
-    betNumber: play.betNumber, 
+    ticketNumber: '',
+    playNumber: 0,
+    trackName: result.lotteryName,
+    betNumber: play.betNumber,
     gameMode: play.gameMode,
-    wagerType: type.includes('Box') ? 'BOX' : 'STRAIGHT', 
-    wagerAmount: type.includes('Box') ? (play.boxAmount||0) : (play.straightAmount||0),
-    prizeAmount: amount, 
+    wagerType: type.includes('Box') ? 'BOX' : 'STRAIGHT',
+    wagerAmount: type.includes('Box') ? (play.boxAmount || 0) : (play.straightAmount || 0),
+    prizeAmount: amount,
     matchType: type
 });
+
+// --- SPECIAL CALCULATOR FOR TOP PICK & INSTANT CASH (FLAT TABLE) ---
+function calculateSpecialWinnings(
+    play: Play,
+    result: WinningResult,
+    table: any // Using 'any' for the flat dictionary structure
+): CalculationResult[] {
+    const winners: CalculationResult[] = [];
+    // Ensure we handle potentially missing fields gracefully
+    const p3 = result.pick3 ? clean(result.pick3) : '';
+    const p4 = result.pick4 ? clean(result.pick4) : '';
+    const p5 = (result as any).pick5 ? clean((result as any).pick5) : '';
+
+    // Helpers
+    const betNum = clean(play.betNumber);
+    const win1 = result.first ? clean(result.first).slice(-2) : "";
+    // Fallback logic for win1/2/3 if not explicitly provided but implied by P3/P4 is handled in main, 
+    // but here we might need it too if raw result passed. 
+    // Re-implement basic derivation if missing?
+    // Result usually passes through a normalization layer before here, but let's be safe.
+    // Actually, `calculateWinnings` does derivation at the start. 
+    // We should probably pass derived values or re-derive.
+    // Let's re-derive briefly to be safe.
+    let w1 = win1;
+    let w2 = result.second ? clean(result.second).slice(-2) : "";
+    let w3 = result.third ? clean(result.third).slice(-2) : "";
+
+    if (!w1 && p3.length >= 2) w1 = p3.slice(-2);
+    if (!w2 && p4.length >= 2) w2 = p4.slice(0, 2);
+    if (!w3 && p4.length >= 2) w3 = p4.slice(-2);
+
+    // PICK 2
+    if (play.gameMode === 'Pick 2') {
+        // Use result.pick2 if available, else P3 last 2
+        const winningNum = (result as any).pick2 ? clean((result as any).pick2) : (p3.length >= 2 ? p3.slice(-2) : '');
+
+        if (winningNum.length === 2) {
+            // Straight
+            if (play.straightAmount && play.straightAmount > 0) {
+                if (betNum === winningNum) {
+                    winners.push(baseWin(play, result, play.straightAmount * (table.P2_STR || 95), 'Pick 2 Straight'));
+                }
+            }
+            // Box
+            if (play.boxAmount && play.boxAmount > 0) {
+                if (isPermutation(betNum, winningNum)) {
+                    winners.push(baseWin(play, result, play.boxAmount * (table.P2_BOX || 47.5), 'Pick 2 Box'));
+                }
+            }
+        }
+    }
+    // PICK 3
+    else if (play.gameMode === 'Pick 3') {
+        const winningNum = p3;
+        if (winningNum.length === 3) {
+            const isTriple = betNum[0] === betNum[1] && betNum[1] === betNum[2];
+            // Straight
+            if (play.straightAmount && play.straightAmount > 0 && betNum === winningNum) {
+                winners.push(baseWin(play, result, play.straightAmount * (table.P3_STR || 900), 'Pick 3 Straight'));
+            }
+            // Box
+            if (play.boxAmount && play.boxAmount > 0 && !isTriple && isPermutation(betNum, winningNum)) {
+                const perms = getPermutationType(winningNum, 3);
+                if (perms === 3) winners.push(baseWin(play, result, play.boxAmount * (table.P3_BOX || 300), 'Pick 3 Box 3-Way')); // Pair
+                if (perms === 6) winners.push(baseWin(play, result, play.boxAmount * (table.P3_BOX6 || 150), 'Pick 3 Box 6-Way')); // Unique
+            }
+        }
+    }
+    // PICK 4
+    else if (play.gameMode === 'Win 4' || play.gameMode === 'Pick 4') {
+        const winningNum = p4;
+        if (winningNum.length === 4) {
+            // Straight
+            if (play.straightAmount && play.straightAmount > 0 && betNum === winningNum) {
+                // Check for Quadruple (e.g. 1111)
+                const isQuad = betNum[0] === betNum[1] && betNum[1] === betNum[2] && betNum[2] === betNum[3];
+                const multiplier = isQuad ? (table.P4_STR_QUAD || 3000) : (table.P4_STR || 7000);
+                winners.push(baseWin(play, result, play.straightAmount * multiplier, 'Pick 4 Straight'));
+            }
+            // Box
+            if (play.boxAmount && play.boxAmount > 0 && isPermutation(betNum, winningNum)) {
+                const perms = getPermutationType(winningNum, 4);
+                if (perms === 4) winners.push(baseWin(play, result, play.boxAmount * (table.P4_BOX4 || 1800), 'Pick 4 Box 4-Way'));
+                if (perms === 6) winners.push(baseWin(play, result, play.boxAmount * (table.P4_BOX6 || 1175), 'Pick 4 Box 6-Way'));
+                if (perms === 12) winners.push(baseWin(play, result, play.boxAmount * (table.P4_BOX12 || 600), 'Pick 4 Box 12-Way'));
+                if (perms === 24) winners.push(baseWin(play, result, play.boxAmount * (table.P4_BOX24 || 300), 'Pick 4 Box 24-Way'));
+            }
+        }
+    }
+    // PICK 5 
+    else if (play.gameMode === 'Pick 5') {
+        const winningNum = p5;
+        if (winningNum.length === 5) {
+            // Straight
+            if (play.straightAmount && play.straightAmount > 0 && betNum === winningNum) {
+                winners.push(baseWin(play, result, play.straightAmount * (table.P5_STR || 50000), 'Pick 5 Straight'));
+            }
+            // Box
+            if (play.boxAmount && play.boxAmount > 0 && isPermutation(betNum, winningNum)) {
+                const perms = getPermutationType(winningNum, 5);
+                if (perms === 5) winners.push(baseWin(play, result, play.boxAmount * (table.P5_BOX5 || 10000), 'Pick 5 Box 5-Way'));
+                if (perms === 10) winners.push(baseWin(play, result, play.boxAmount * (table.P5_BOX10 || 5000), 'Pick 5 Box 10-Way'));
+                if (perms === 20) winners.push(baseWin(play, result, play.boxAmount * (table.P5_BOX20 || 2500), 'Pick 5 Box 20-Way'));
+                if (perms === 30) winners.push(baseWin(play, result, play.boxAmount * (table.P5_BOX30 || 1175), 'Pick 5 Box 30-Way'));
+                if (perms === 60) winners.push(baseWin(play, result, play.boxAmount * (table.P5_BOX60 || 830), 'Pick 5 Box 60-Way'));
+                if (perms === 120) winners.push(baseWin(play, result, play.boxAmount * (table.P5_BOX120 || 416), 'Pick 5 Box 120-Way'));
+            }
+        }
+    }
+    // VENEZUELA
+    else if (play.gameMode === 'Venezuela' || play.gameMode === 'Quiniela') {
+        const myBet = betNum.slice(-2);
+        if (play.straightAmount && play.straightAmount > 0) {
+            if (myBet === w1) winners.push(baseWin(play, result, play.straightAmount * (table.VEN_1ST || 75), 'Venezuela 1st Prize'));
+            if (myBet === w2) winners.push(baseWin(play, result, play.straightAmount * (table.VEN_2ND || 15), 'Venezuela 2nd Prize'));
+            if (myBet === w3) winners.push(baseWin(play, result, play.straightAmount * (table.VEN_3RD || 10), 'Venezuela 3rd Prize'));
+        }
+    }
+    // PALÉ
+    else if (play.gameMode === 'Palé') {
+        const parts = play.betNumber.split(/[-]/).map(clean);
+        if (parts.length === 2) {
+            const p1 = parts[0];
+            const p2 = parts[1];
+            if (play.straightAmount && play.straightAmount > 0) {
+                const matchS = (myNum: string, winNum: string) => myNum === winNum;
+                const checkStraightPair = (wA: string, wB: string) => (matchS(p1, wA) && matchS(p2, wB)) || (matchS(p1, wB) && matchS(p2, wA));
+
+                // Check combos: 1-2, 1-3, 2-3
+                if (checkStraightPair(w1, w2) || checkStraightPair(w1, w3) || checkStraightPair(w2, w3)) {
+                    winners.push(baseWin(play, result, play.straightAmount * (table.PALE || 2000), 'Palé General'));
+                }
+            }
+        }
+    }
+    return winners;
+}
