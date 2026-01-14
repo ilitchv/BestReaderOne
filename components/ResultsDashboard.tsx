@@ -782,11 +782,6 @@ const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zo
                     </div>
                 </div>
             )}
-            {/* INDEPENDENT HIGH FREQUENCY GAMES (Instant Cash / Top Pick) */}
-            <div className="mt-12 mb-8">
-                {/* Dynamically import or just render if imported */}
-                <HighFrequencyAccordion results={results} theme={theme} />
-            </div>
         </div>
     );
 };
