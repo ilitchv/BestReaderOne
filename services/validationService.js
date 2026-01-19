@@ -10,7 +10,7 @@ dayjs.extend(timezone);
 // Hardcoded Times (Fallback if constants import issues)
 const CUTOFF_TIMES = {
     "New York AM": "14:18", "New York PM": "22:18",
-    "Georgia Midday": "12:02", "Georgia Evening": "18:32", "Georgia Night": "23:00",
+    "Georgia Midday": "12:15", "Georgia Evening": "18:32", "Georgia Night": "23:00",
     "New Jersey AM": "12:47", "New Jersey PM": "22:45",
     "Florida AM": "13:23", "Florida PM": "21:33",
     "Connect AM": "13:33", "Connect PM": "22:02",

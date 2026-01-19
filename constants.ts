@@ -15,7 +15,7 @@ export const RESULTS_CATALOG: CatalogItem[] = [
     { id: 'usa/tx/Evening', section: 'usa', lottery: 'Texas', draw: 'Evening', drawTime: '18:44', closeTime: '18:44:33', days: [1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/tx/Night', section: 'usa', lottery: 'Texas', draw: 'Night', drawTime: '22:56', closeTime: '22:56:33', days: [1, 2, 3, 4, 5, 6], visible: true },
 
-    { id: 'usa/ga/Midday', section: 'usa', lottery: 'Georgia', draw: 'Midday', drawTime: '12:29', closeTime: '11:58:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'usa/ga/Midday', section: 'usa', lottery: 'Georgia', draw: 'Midday', drawTime: '12:29', closeTime: '12:15:00', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/ga/Evening', section: 'usa', lottery: 'Georgia', draw: 'Evening', drawTime: '18:59', closeTime: '18:28:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/ga/Night', section: 'usa', lottery: 'Georgia', draw: 'Night', drawTime: '23:59', closeTime: '23:03:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
 
@@ -221,7 +221,7 @@ export const CUTOFF_TIMES: { [key: string]: string } = {
     // USA Regular
     "New York AM": "14:18",
     "New York PM": "22:18",
-    "Georgia Midday": "12:02",
+    "Georgia Midday": "12:15",
     "Georgia Evening": "18:32",
     "Georgia Night": "23:00",
     "New Jersey AM": "12:47",

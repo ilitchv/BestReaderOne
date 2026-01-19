@@ -8,7 +8,7 @@ const RESULTS_CATALOG = [
     { id: 'usa/tx/Evening', section: 'usa', lottery: 'Texas', draw: 'Evening', drawTime: '18:44', closeTime: '18:44:33', days: [1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/tx/Night', section: 'usa', lottery: 'Texas', draw: 'Night', drawTime: '22:56', closeTime: '22:56:33', days: [1, 2, 3, 4, 5, 6], visible: true },
 
-    { id: 'usa/ga/Midday', section: 'usa', lottery: 'Georgia', draw: 'Midday', drawTime: '12:29', closeTime: '11:58:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
+    { id: 'usa/ga/Midday', section: 'usa', lottery: 'Georgia', draw: 'Midday', drawTime: '12:29', closeTime: '12:15:00', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/ga/Evening', section: 'usa', lottery: 'Georgia', draw: 'Evening', drawTime: '18:59', closeTime: '18:28:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
     { id: 'usa/ga/Night', section: 'usa', lottery: 'Georgia', draw: 'Night', drawTime: '23:59', closeTime: '23:03:33', days: [0, 1, 2, 3, 4, 5, 6], visible: true },
 
@@ -89,7 +89,7 @@ const RESULTS_CATALOG = [
 ];
 
 const CUTOFF_TIMES = {
-    "New York AM": "14:18", "New York PM": "22:18", "Georgia Midday": "12:02", "Georgia Evening": "18:32", "Georgia Night": "23:00",
+    "New York AM": "14:18", "New York PM": "22:18", "Georgia Midday": "12:15", "Georgia Evening": "18:32", "Georgia Night": "23:00",
     "New Jersey AM": "12:47", "New Jersey PM": "22:45", "Florida AM": "13:23", "Florida PM": "21:33", "Connect AM": "13:33", "Connect PM": "22:02",
     "Pennsylvania AM": "12:58", "Pennsylvania PM": "18:48", "Brooklyn Midday": "14:20", "Brooklyn Evening": "22:00", "Front Midday": "14:20",
     "Front Evening": "22:00", "New York Horses": "16:00", "Pulito": "23:59", "Venezuela": "23:59", "Texas Morning": "10:38", "Texas Day": "13:05",
