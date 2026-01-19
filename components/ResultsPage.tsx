@@ -547,6 +547,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                 {/* Independent High Frequency Games */}
                 <div className="max-w-[1920px] mx-auto pb-10">
                     <HighFrequencyAccordion results={dbResults} theme={theme} />
+
+                    {/* Version Tag */}
+                    <div className={`text-center mt-8 text-xs font-mono opacity-40 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                        v2.2 (GA-12:15)
+                    </div>
                 </div>
             </div>
 
