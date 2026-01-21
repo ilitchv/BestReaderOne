@@ -486,21 +486,31 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 // 4. API ROUTES (PRIORITY #1)
 // ==========================================
 
-// NEW VERCEL CRON TRIGGER
+// NEW VERCEL CRON TRIGGER (Secured)
 app.get('/api/cron/trigger-scrape', async (req, res) => {
     try {
         console.log("⏰ Cron Triggered via API");
-        // Optional: Check for Vercel Signature
-        // if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) ... 
 
-        // Fire and forget (or await if Vercel times out quickly)
-        // Vercel limits functions to 10s (Hobby) or 60s (Pro). 
-        // Scraping takes time. Ideally we await a bit or just return.
-        // But for reliable results, we should try to await main logic or spawn.
-        // Since we can't spawn, we try await.
+        // 1. Security Check
+        const authHeader = req.headers['authorization'];
+        const cronSecret = process.env.CRON_SECRET;
+
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+            console.warn("⛔ Unauthorized Cron Attempt");
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        // 2. Trigger Scraper (Fast Queue by default)
+        // Note: Vercel limits execution time. We return success immediately 
+        // after forcing the promise to start, OR we await it if it's fast enough.
+        // For reliability, we await the Fast Queue (RD + USA) which takes ~2-5s.
+
         await scraperService.fetchAndParse();
 
-        res.json({ success: true, message: 'Scrape triggered' });
+        // Optionally trigger heavy queue in background without await if environment allows
+        // but Vercel freezes background tasks. So we only run fast queue here.
+
+        res.json({ success: true, message: 'Scrape executed successfully' });
     } catch (e) {
         console.error("Cron Error:", e);
         res.status(500).json({ error: e.message });

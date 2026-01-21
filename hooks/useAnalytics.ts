@@ -43,7 +43,7 @@ export const useAnalytics = (currentPath: string = 'unknown') => {
 
                 // Use relative path assuming proxied in Vite or same domain
                 // Ideally this should be an env var
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                const API_URL = import.meta.env.VITE_API_URL || '';
 
                 const res = await fetch(`${API_URL}/api/track/init`, {
                     method: 'POST',
@@ -69,7 +69,7 @@ export const useAnalytics = (currentPath: string = 'unknown') => {
 
         // Log Page View
         const update = async () => {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             await fetch(`${API_URL}/api/track/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -89,7 +89,7 @@ export const useAnalytics = (currentPath: string = 'unknown') => {
         if (!sessionId) return;
 
         const interval = setInterval(async () => {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const API_URL = import.meta.env.VITE_API_URL || '';
             try {
                 await fetch(`${API_URL}/api/track/update`, {
                     method: 'POST',
@@ -119,7 +119,7 @@ export const useAnalytics = (currentPath: string = 'unknown') => {
                 const label = trackable.getAttribute('data-track') || trackable.innerText || trackable.id || 'unknown-element';
                 const actionType = 'CLICK';
 
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                const API_URL = import.meta.env.VITE_API_URL || '';
                 // Fire and forget
                 fetch(`${API_URL}/api/track/update`, {
                     method: 'POST',
