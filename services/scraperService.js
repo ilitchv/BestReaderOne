@@ -370,25 +370,28 @@ const runFastQueue = async () => {
 
         // 2. USA Scrapers
         const fastPromises = [];
-        for (const [stateKey, config] of Object.entries(SNIPER_CONFIG)) {
+        // 2. USA Scrapers
+        const fastPromises = Object.entries(SNIPER_CONFIG).map(async ([stateKey, config]) => {
             try {
-                // console.log(`   Running ${config.name}...`);
                 const data = await scrapeState(stateKey, config);
 
-                if (!data || (!data.midday && !data.evening)) {
-                    // console.warn(`   ⚠️ Warning: No data found for ${config.name}`);
-                }
-
-                await processDraw(stateKey, config.name, config.p3.mid?.label || 'Midday', data?.midday);
-                await processDraw(stateKey, config.name, config.p3.eve?.label || 'Evening', data?.evening);
+                // Process Midday
+                if (data?.midday) await processDraw(stateKey, config.name, config.p3.mid?.label || 'Midday', data.midday);
+                // Process Evening
+                if (data?.evening) await processDraw(stateKey, config.name, config.p3.eve?.label || 'Evening', data.evening);
+                // Process Night/Morning if exist
                 if (data?.night) await processDraw(stateKey, config.name, config.p3.ngt?.label || 'Night', data.night);
                 if (data?.morning) await processDraw(stateKey, config.name, config.p3.mor?.label || 'Morning', data.morning);
 
             } catch (e) {
                 console.error(`   ❌ Error scraping ${stateKey}: `, e.message);
-                await triggerAlert('SCRAPER_FAILURE', `Failed to scrape ${config.name}`, { error: e.message, state: stateKey }, 'HIGH');
+                // Don't fail the whole batch
+                triggerAlert('SCRAPER_FAILURE', `Failed to scrape ${config.name}`, { error: e.message, state: stateKey }, 'HIGH').catch(console.error);
             }
-        }
+        });
+
+        // Wait for all states to finish (Parallel Execution)
+        await Promise.allSettled(fastPromises);
     } catch (err) {
         console.error('🔥 [Fast Queue] Critical Error:', err);
     } finally {
