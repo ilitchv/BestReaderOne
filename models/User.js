@@ -14,6 +14,11 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['active', 'suspended', 'pending'], default: 'active' },
     networkEnabled: { type: Boolean, default: false }, // Feature toggle for User Network Module
 
+    // Auth Extension
+    firebaseUid: { type: String, unique: true, sparse: true },
+    avatarUrl: { type: String },
+
+
     // Network Module Extension
     rank: { type: String, default: 'Normal' }, // UserRank enum
     sponsorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Upline

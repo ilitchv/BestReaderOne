@@ -16,9 +16,10 @@ interface UserDashboardProps {
     onLogout: () => void;
     onHome: () => void;
     onPlayback: (ticket: TicketData) => void;
+    onAdminAccess: () => void; // NEW: Triggers switch to Admin View
 }
 
-const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogout, onHome, onPlayback }) => {
+const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogout, onHome, onPlayback, onAdminAccess }) => {
     const { user } = useAuth();
     const [recentTickets, setRecentTickets] = useState<TicketData[]>([]);
     const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
@@ -114,6 +115,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                                     <p className="text-white font-bold text-sm truncate">{user.name}</p>
                                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                                 </div>
+                                {user.role === 'admin' && (
+                                    <button onClick={onAdminAccess} className="w-full text-left px-4 py-3 text-sm text-neon-pink font-bold hover:bg-white/5 hover:text-white border-b border-white/5 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" /><path d="M8.5 8.5v.01" /><path d="M16 16v.01" /><path d="M12 12v.01" /><path d="M8.5 16v.01" /><path d="M16 8.5v.01" /></svg>
+                                        Admin Panel
+                                    </button>
+                                )}
                                 <button onClick={() => setIsSettingsOpen(true)} className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white">Settings</button>
                                 <button onClick={onLogout} className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 last:rounded-b-xl">Log Out</button>
                             </div>

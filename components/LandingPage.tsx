@@ -12,15 +12,11 @@ interface LandingPageProps {
     setLanguage: (lang: 'en' | 'es' | 'ht') => void;
     theme: 'light' | 'dark';
     toggleTheme: () => void;
-    onAdminAccess?: () => void; // New Prop
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNavigateToResults, language, setLanguage, theme, toggleTheme, onAdminAccess }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNavigateToResults, language, setLanguage, theme, toggleTheme }) => {
     const t = translations[language];
     const isDark = theme === 'dark';
-    const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState('');
 
     // Zoom State
     const [zoomScale, setZoomScale] = useState(1);
@@ -37,19 +33,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
     const scrollTo = (id: string) => {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }
-
-    const handleAdminSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (pin === '198312') {
-            setIsAdminModalOpen(false);
-            setPin('');
-            setError('');
-            if (onAdminAccess) onAdminAccess();
-        } else {
-            setError('Access Denied');
-            setPin('');
-        }
-    };
 
     // Dynamic Colors based on Theme State - UPDATED TO NAVY
     const bgGradient = isDark
@@ -309,10 +292,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
                     <footer className="landing-footer">
                         <div className="flex items-center gap-4">
                             <span>© <span id="year"></span> {t.footerRights}</span>
-                            {/* New Admin Access Link */}
-                            <button onClick={() => setIsAdminModalOpen(true)} className="opacity-60 hover:opacity-100 hover:text-[var(--accent-pink)] transition-colors text-[10px] uppercase tracking-wider font-bold border border-transparent hover:border-[var(--accent-pink)] px-2 py-0.5 rounded-full">
-                                Admin Access
-                            </button>
                         </div>
                         <span>
                             <a href="#top" onClick={(e) => { e.preventDefault(); scrollTo('top'); }}>Top</a>
@@ -320,30 +299,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
                     </footer>
                 </div>
             </main>
-
-            {/* PIN MODAL */}
-            {isAdminModalOpen && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-full max-w-sm">
-                        <h3 className="text-lg font-bold text-white mb-4 text-center">Admin Gatekeeper</h3>
-                        <form onSubmit={handleAdminSubmit} className="space-y-4">
-                            <input
-                                type="password"
-                                autoFocus
-                                placeholder="Enter PIN"
-                                value={pin}
-                                onChange={e => setPin(e.target.value)}
-                                className="w-full bg-black/50 border border-slate-600 rounded-lg p-3 text-center text-xl tracking-widest text-white focus:border-neon-cyan outline-none"
-                            />
-                            {error && <p className="text-red-500 text-center text-sm animate-pulse">{error}</p>}
-                            <div className="grid grid-cols-2 gap-3">
-                                <button type="button" onClick={() => setIsAdminModalOpen(false)} className="bg-slate-700 text-white py-2 rounded-lg font-bold hover:bg-slate-600">Cancel</button>
-                                <button type="submit" className="bg-gradient-to-r from-neon-cyan to-blue-600 text-white py-2 rounded-lg font-bold hover:brightness-110">Unlock</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

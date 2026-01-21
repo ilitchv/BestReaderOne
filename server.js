@@ -16,6 +16,7 @@ const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
+const firebaseService = require('./services/firebaseService'); // NEW - Dual-Store Auth
 
 // Models
 const Ticket = require('./models/Ticket');
@@ -63,7 +64,13 @@ try {
 }
 
 // 3. Middleware
-app.use(cors());
+const corsOptions = {
+    origin: ['http://localhost:3000', 'http://localhost:8080', 'https://sniperstrategy-auth.firebaseapp.com'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 
 // DATABASE CONNECTION MIDDLEWARE REMOVED
@@ -594,7 +601,86 @@ app.post('/api/config/daily-close', async (req, res) => {
 // LEDGER & PAYMENT ROUTES (NEW)
 // ==========================================
 
+// ==========================================
+// LEDGER & PAYMENT ROUTES (NEW)
+// ==========================================
+
 // A. AUTHENTICATION (Simple Mock for Prototype)
+
+app.post('/api/auth/firebase-login', async (req, res) => {
+    try {
+        await connectDB();
+        const { token, referralCode } = req.body;
+        if (!token) return res.status(400).json({ error: "Missing Token" });
+
+        // 1. Verify Token via Admin SDK
+        const decodedToken = await firebaseService.verifyToken(token);
+        const { uid, email, name, picture } = decodedToken;
+
+        // 2. Find or Create User
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            // Check for Sponsor if referral code provided
+            let sponsorId = null;
+            if (referralCode) {
+                const sponsor = await User.findOne({ referralCode });
+                if (sponsor) sponsorId = sponsor._id;
+            }
+
+            user = new User({
+                name: name || email.split('@')[0],
+                email: email,
+                password: "FIREBASE_AUTH_" + Math.random().toString(36), // Dummy password
+                role: 'user',
+                status: 'active',
+                firebaseUid: uid,
+                avatarUrl: picture,
+                // Generate a unique username to avoid duplicate key errors on null
+                username: (name || email.split('@')[0]).replace(/\s+/g, '') + Math.floor(Math.random() * 100000),
+                sponsorId: sponsorId,
+                referralCode: `REF-${Math.floor(Math.random() * 1000000)}` // Simple numeric ref
+            });
+            await user.save();
+
+            // Sync new user to Firestore (Dual-Write)
+            await firebaseService.syncToFirestore('users', user._id, user.toObject());
+        } else {
+            // Update metadata if needed
+            let needsSave = false;
+            if (!user.firebaseUid) {
+                user.firebaseUid = uid;
+                needsSave = true;
+            }
+            if (!user.avatarUrl && picture) {
+                user.avatarUrl = picture;
+                needsSave = true;
+            }
+
+            if (needsSave) await user.save();
+        }
+
+        // 3. Update Last Login
+        user.lastLogin = new Date();
+        await user.save();
+
+        // 4. Return Session Data
+        res.json({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            balance: user.balance,
+            status: user.status,
+            avatar: user.avatarUrl,
+            networkEnabled: user.networkEnabled
+        });
+
+    } catch (e) {
+        console.error("Firebase Login Error:", e);
+        res.status(401).json({ error: "Authentication Failed: " + e.message });
+    }
+});
 app.post('/api/auth/login', async (req, res) => {
     try {
         await connectDB();

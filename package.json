@@ -24,6 +24,8 @@
     "dayjs": "^1.11.19",
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
+    "firebase": "^12.8.0",
+    "firebase-admin": "^13.6.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
     "lucide-react": "^0.331.0",

@@ -117,7 +117,16 @@ const MainAppContent: React.FC = () => {
 
     const handleNavigateToResults = () => setView('RESULTS');
     const handleBackToHome = () => setView('HOME');
-    const handleAdminAccess = () => setView('ADMIN');
+
+    // Protected Admin Access
+    const handleAdminAccess = () => {
+        if (isAuthenticated && user?.role === 'admin') {
+            setView('ADMIN');
+        } else {
+            console.warn("Unauthorized Admin Access Attempt");
+            setView('USER_DASHBOARD');
+        }
+    };
 
     // Real Logout Action
     const handleUserLogout = () => {
@@ -166,7 +175,6 @@ const MainAppContent: React.FC = () => {
                     setLanguage={setLanguage}
                     theme={theme}
                     toggleTheme={toggleTheme}
-                    onAdminAccess={handleAdminAccess}
                 />
             )}
 
@@ -195,6 +203,7 @@ const MainAppContent: React.FC = () => {
                     onLogout={handleUserLogout}
                     onHome={handleBackToHome}
                     onPlayback={handlePlayback}
+                    onAdminAccess={handleAdminAccess}
                 />
             )}
 

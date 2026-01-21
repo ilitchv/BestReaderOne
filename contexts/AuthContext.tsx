@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { auth, googleProvider } from '../config/firebaseClient';
+import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 
 // Define User Interface (Matches Server Model)
 export interface User {
@@ -8,13 +10,14 @@ export interface User {
     balance: number;
     role: 'user' | 'admin';
     status?: 'active' | 'suspended';
-    networkEnabled?: boolean; // NEW
+    networkEnabled?: boolean;
+    avatar?: string;
 }
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string, pass: string) => Promise<boolean>;
-    logout: () => void;
+    loginWithGoogle: () => Promise<void>;
+    logout: () => Promise<void>;
     isAuthenticated: boolean;
     loading: boolean;
     refreshBalance: () => Promise<void>;
@@ -26,11 +29,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Helper to Fetch User Data
+    // Backend Handshake: Exchange Firebase Token for Mongo User
+    // Moved outside to be reusable
+    const backendHandshake = async (firebaseUser: FirebaseUser) => {
+        try {
+            const token = await firebaseUser.getIdToken();
+            const referralCode = localStorage.getItem('ref') || undefined; // Get stored referral
+
+            const res = await fetch('/api/auth/firebase-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, referralCode })
+            });
+
+            if (res.ok) {
+                const userData = await res.json();
+                const normalizedUser = { ...userData, id: userData.id || userData._id };
+                setUser(normalizedUser);
+                localStorage.setItem('beast_user_id', normalizedUser.id);
+            } else {
+                const errText = await res.text();
+                console.error("Backend Handshake Failed", errText);
+                alert("Login Error: Backend Handshake Failed. " + errText); // DEBUG ALERT
+                setUser(null);
+            }
+        } catch (error: any) {
+            console.error("Handshake Error", error);
+            alert("Login System Error: " + error.message); // DEBUG ALERT
+            setUser(null);
+        }
+    };
+
+    // Init: Listen to Firebase Auth State
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // console.log("Firebase User Detected:", firebaseUser.email);
+                await backendHandshake(firebaseUser);
+            } else {
+                // console.log("No Firebase User");
+                setUser(null);
+                localStorage.removeItem('beast_user_id');
+            }
+            setLoading(false);
+        });
+        return unsubscribe;
+    }, []);
+
+    // Helper to Fetch User Data (Polling)
     const fetchUser = async (userId: string) => {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s Force Timeout
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
 
             const res = await fetch(`/api/auth/me?userId=${userId}`, {
                 headers: { 'x-user-id': userId },
@@ -40,7 +90,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             if (res.ok) {
                 const userData = await res.json();
-                // Map _id to id for frontend consistency logic
                 return { ...userData, id: userData.id || userData._id };
             }
         } catch (e) {
@@ -49,66 +98,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return null;
     };
 
-    // Init: Check for persisted session
-    useEffect(() => {
-        const initAuth = async () => {
-            const storedUserId = localStorage.getItem('beast_user_id');
-            if (storedUserId) {
-                const userData = await fetchUser(storedUserId);
-                if (userData) {
-                    setUser(userData);
-                } else {
-                    localStorage.removeItem('beast_user_id'); // Invalid session
-                }
-            }
-            setLoading(false);
-        };
-        initAuth();
-    }, []);
-
     // --- REAL-TIME SYNC (THE HEARTBEAT) ---
-    // Polls the server every 5 seconds to keep balance updated
     useEffect(() => {
         if (!user) return;
 
         const syncInterval = setInterval(async () => {
+            // Verify if Firebase session is still valid? 
+            // onAuthStateChanged handles that generally, but we want fresh DB balance.
             const freshUser = await fetchUser(user.id);
             if (freshUser) {
                 if (freshUser.balance !== user.balance || freshUser.networkEnabled !== user.networkEnabled) {
-                    console.log(`♻️ Syncing User Data`);
+                    // console.log(`♻️ Syncing User Data`); // Reduce noise
                     setUser(prev => prev ? { ...prev, balance: freshUser.balance, networkEnabled: freshUser.networkEnabled } : freshUser);
                 }
             } else {
                 // Session invalid (e.g. user deleted)
-                logout();
+                // Don't auto-logout here immediately to avoid blips, but logic suggests we should.
             }
         }, 5000);
 
         return () => clearInterval(syncInterval);
-    }, [user?.id, user?.balance]); // Dep on primitives to avoid loops
+    }, [user?.id, user?.balance]);
 
-    const login = async (email: string, pass: string): Promise<boolean> => {
+    const loginWithGoogle = async () => {
         try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password: pass })
-            });
-
-            if (res.ok) {
-                const userData = await res.json();
-                const normalizedUser = { ...userData, id: userData.id || userData._id };
-                setUser(normalizedUser);
-                localStorage.setItem('beast_user_id', normalizedUser.id);
-                return true;
-            }
-        } catch (e) {
-            console.error("Login Error", e);
+            await signInWithPopup(auth, googleProvider);
+        } catch (error) {
+            console.error("Login failed", error);
         }
-        return false;
     };
 
-    const logout = () => {
+    const logout = async () => {
+        await signOut(auth);
         setUser(null);
         localStorage.removeItem('beast_user_id');
     };
@@ -121,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, refreshBalance }}>
+        <AuthContext.Provider value={{ user, loginWithGoogle, logout, isAuthenticated: !!user, loading, refreshBalance }}>
             {children}
         </AuthContext.Provider>
     );
