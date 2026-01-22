@@ -1,7 +1,8 @@
 console.log("------------------------------------------------");
 console.log("🚀 STARTING BEAST READER SERVER (CLOUD RUN MODE)");
-console.log("=== SERVER BOOT CHECK [ID: VERIFY-001] ===");
+console.log("=== SERVER BOOT CHECK [ID: VERIFY-002: RESTART CONFIRMED] ===");
 console.log("------------------------------------------------");
+console.log("✅ APPLIED FIX: Automatic jugadaNumber injection enabled");
 
 require('dotenv').config();
 const express = require('express');
@@ -65,7 +66,12 @@ try {
 
 // 3. Middleware
 const corsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost:8080', 'https://sniperstrategy-auth.firebaseapp.com'],
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:8080',
+        'https://sniperstrategy-auth.firebaseapp.com',
+        'https://sniper-strategy-project.vercel.app'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -1024,6 +1030,7 @@ app.post('/api/tickets', async (req, res) => {
         let userId = ticketData.userId;
         const requestedId = userId; // Keep original for logs
 
+
         // A. Sanitize
         if (userId && typeof userId === 'string') {
             userId = userId.trim();
@@ -1042,21 +1049,28 @@ app.post('/api/tickets', async (req, res) => {
             userId = 'guest-session';
             isGuest = true;
         } else {
-            // Check DB
-            userUser = await User.findById(userId);
+            // FIX: Prevent CastError if ID is not a valid MongoDB ObjectId (e.g. "u-12345")
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                console.warn(`⚠️ User ID '${userId}' is not a valid ObjectId. Fallback to GUEST.`);
+                userId = 'guest-session';
+                isGuest = true;
+            } else {
+                // Check DB
+                userUser = await User.findById(userId);
 
-            if (!userUser) {
-                console.error(`❌ CRITICAL: User ID '${userId}' NOT found in DB.`);
+                if (!userUser) {
+                    console.error(`❌ CRITICAL: User ID '${userId}' NOT found in DB.`);
 
-                // C. Auto-Recovery Strategy
-                if (ticketData.userEmail) {
-                    console.log(`   > Attempting recovery via Email: ${ticketData.userEmail} ...`);
-                    userUser = await User.findOne({ email: ticketData.userEmail });
-                    if (userUser) {
-                        console.log(`   > ✅ RECOVERED! Found user ${userUser._id} for email.`);
-                        userId = userUser._id.toString();
-                    } else {
-                        console.log("   > ❌ Recovery failed. Email also not found.");
+                    // C. Auto-Recovery Strategy
+                    if (ticketData.userEmail) {
+                        console.log(`   > Attempting recovery via Email: ${ticketData.userEmail} ...`);
+                        userUser = await User.findOne({ email: ticketData.userEmail });
+                        if (userUser) {
+                            console.log(`   > ✅ RECOVERED! Found user ${userUser._id} for email.`);
+                            userId = userUser._id.toString();
+                        } else {
+                            console.log("   > ❌ Recovery failed. Email also not found.");
+                        }
                     }
                 }
             }
@@ -1064,10 +1078,7 @@ app.post('/api/tickets', async (req, res) => {
 
         // Final Security Gate
         if (!isGuest && !userUser) {
-            // Decide: Reject or Fallback?
-            // Prompt says: "Intentar autocorrección... o asignar a cuenta Incidencias"
-            // For now, if we can't find the user, we MUST NOT credit/debit a ghost.
-            // We fallback to guest-session to save the ticket data at least, but we flag it.
+            // Fallback to guest-session to preserve ticket logic
             console.warn("⚠️ Fallback: Forcing 'guest-session' to preserve ticket data.");
             userId = 'guest-session';
             isGuest = true;
@@ -1077,6 +1088,14 @@ app.post('/api/tickets', async (req, res) => {
         ticketData.userId = userId;
         // FIX: Populate legacy ticketId to match ticketNumber (Satisfy Unique Index)
         ticketData.ticketId = ticketData.ticketNumber;
+
+        // FIX: Ensure plays have jugadaNumber (Required by Ticket Schema)
+        if (ticketData.plays && Array.isArray(ticketData.plays)) {
+            ticketData.plays = ticketData.plays.map((p, i) => ({
+                ...p,
+                jugadaNumber: p.jugadaNumber ? Number(p.jugadaNumber) : (i + 1)
+            }));
+        }
 
         // 2. Ledger Transaction (STRICT MODE)
         let ledgerSuccess = false;
@@ -1162,7 +1181,12 @@ app.post('/api/tickets', async (req, res) => {
             });
         }
         console.error('Error processing ticket:', error);
-        res.status(400).json({ message: error.message || 'Transaction failed' });
+        let details = null;
+        if (error.name === 'ValidationError') {
+            details = error.errors;
+            console.error('Validation Errors:', JSON.stringify(error.errors, null, 2));
+        }
+        res.status(400).json({ message: error.message || 'Transaction failed', details: details });
     } finally {
         session.endSession();
     }

@@ -1,5 +1,3 @@
-
-const cron = require('node-cron');
 const LotteryResult = require('../models/LotteryResult');
 const Track = require('../models/Track');
 const { scrapeState } = require('./scraperEngine');
@@ -345,18 +343,10 @@ const triggerAlert = async (type, message, metadata = {}, severity = 'MEDIUM') =
 
 // --- SCHEDULER LOGIC ---
 
-// Flags to prevent overlapping runs (Robustness)
-let isFastRunning = false;
-let isHeavyRunning = false;
-
 // Queue A: Fast Scrapers (RD + USA) - Runs every 2 minutes
-const runFastQueue = async () => {
-    if (isFastRunning) {
-        console.warn('⚠️ [Fast Queue] Previous run still active. Skipping this cycle.');
-        return;
-    }
-    isFastRunning = true;
-    console.log('🚀 [Fast Queue] Starting Cycle: RD + USA Scrapers');
+const runScraperJob = async () => {
+
+    console.log('🚀 [Cloud Function] Starting Scraper Cycle');
     const start = Date.now();
 
     try {
@@ -368,11 +358,30 @@ const runFastQueue = async () => {
             await triggerAlert('SCRAPER_FAILURE', 'RD Scraper Logic Failed', { error: e.message }, 'HIGH');
         }
 
-        // 2. USA Scrapers
-        const fastPromises = [];
-        // 2. USA Scrapers (Batched to prevent Vercel Resource Exhaustion)
+        // 2. Heavy Scrapers (TopPick + Instant Cash)
+        // We run these in parallel but with catch blocks to not fail the whole job
+        const heavyPromises = [
+            (async () => {
+                try {
+                    // Top Pick (Lightweight)
+                    await scraperTopPick();
+                } catch (e) { console.error("   ❌ TopPick Failed:", e.message); }
+            })(),
+            (async () => {
+                try {
+                    // Instant Cash (Puppeteer - Heavy)
+                    await scraperInstantCashHeadless();
+                } catch (e) { console.error("   ❌ InstantCash Failed:", e.message); }
+            })()
+        ];
+
+        await Promise.all(heavyPromises);
+
+        // 3. USA Scrapers (Batched)
         const entries = Object.entries(SNIPER_CONFIG);
-        const BATCH_SIZE = 3; // Process 3 states at a time
+        // On Cloud Functions we have more time, but batching is still good to avoid spamming target sites
+        // We can increase batch size to 5 since we are not as limited by strict 10s timeout, but 3 is safe.
+        const BATCH_SIZE = 3;
 
         for (let i = 0; i < entries.length; i += BATCH_SIZE) {
             const batch = entries.slice(i, i + BATCH_SIZE);
@@ -398,73 +407,14 @@ const runFastQueue = async () => {
             await Promise.allSettled(batchPromises);
         }
     } catch (err) {
-        console.error('🔥 [Fast Queue] Critical Error:', err);
+        console.error('🔥 [Cloud Function] Critical Error:', err);
     } finally {
-        isFastRunning = false;
         const duration = ((Date.now() - start) / 1000).toFixed(1);
-        console.log(`✅ [Fast Queue] Finished in ${duration}s`);
+        console.log(`✅ [Cloud Function] Finished in ${duration}s`);
     }
-};
-
-// Queue B: Heavy Scrapers (TopPick + Instant Cash) - Runs every 10-15 minutes
-const runHeavyQueue = async () => {
-    if (isHeavyRunning) {
-        console.warn('⚠️ [Heavy Queue] Previous run still active. Skipping this cycle.');
-        return;
-    }
-    isHeavyRunning = true;
-    console.log('🐢 [Heavy Queue] Starting Cycle: TopPick + Instant Cash');
-    const start = Date.now();
-
-    try {
-        // 1. Top Pick
-        try {
-            console.log('   Running TopPick...');
-            await scraperTopPick();
-        } catch (e) {
-            console.error("   ❌ TopPick Scraper Failed:", e.message);
-        }
-
-        // 2. Instant Cash (Headless - Slow)
-        try {
-            console.log('   Running Instant Cash (Headless)...');
-            await scraperInstantCashHeadless();
-        } catch (e) {
-            console.error("   ❌ InstantCash Scraper Failed:", e.message);
-        }
-
-    } catch (err) {
-        console.error('🔥 [Heavy Queue] Critical Error:', err);
-    } finally {
-        isHeavyRunning = false;
-        const duration = ((Date.now() - start) / 1000).toFixed(1);
-        console.log(`✅ [Heavy Queue] Finished in ${duration}s`);
-    }
-};
-
-// Initialize Cron Jobs
-const startResultScheduler = () => {
-    console.log('⏳ Scheduler Initializing...');
-
-    // Schedule Queue A: Every 2 minutes (*/2 * * * *)
-    cron.schedule('*/2 * * * *', () => {
-        runFastQueue();
-    });
-
-    // Schedule Queue B: Every 5 minutes (*/5 * * * *) (Optimized)
-    cron.schedule('*/5 * * * *', () => {
-        runHeavyQueue();
-    });
-
-    console.log('✅ Cron Jobs Scheduled: Fast (2m), Heavy (10m)');
-
-    // Run immediately on start (optional, staggered)
-    setTimeout(() => runFastQueue(), 5000);
-    setTimeout(() => runHeavyQueue(), 15000);
 };
 
 module.exports = {
-    startResultScheduler,
-    fetchAndParse: runFastQueue, // Legacy export if referenced elsewhere
+    runScraperJob, // The main entry point for the Cloud Function
     SNIPER_CONFIG
 };

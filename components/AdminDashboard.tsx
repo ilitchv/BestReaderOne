@@ -202,6 +202,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
     const [auditFilter, setAuditFilter] = useState<'ALL' | 'FINANCE' | 'RESULTS' | 'USERS'>('ALL');
 
+    // WINNERS TAB STATE
+    const [winnersDateRange, setWinnersDateRange] = useState<{ start: string, end: string }>({
+        start: getLocalISODate(),
+        end: getLocalISODate()
+    });
+
     // OCR STATE
     const [ocrImage, setOcrImage] = useState<string | null>(null);
     const [ocrText, setOcrText] = useState('');
@@ -606,17 +612,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     useEffect(() => { const p3 = newResultP3.replace(/\D/g, ''); if (p3.length >= 2) { setNewResult1st(p3.slice(-2)); } }, [newResultP3]);
     useEffect(() => { const p4 = newResultP4.replace(/\D/g, ''); if (p4.length >= 2) { setNewResult2nd(p4.slice(0, 2)); } if (p4.length >= 4) { setNewResult3rd(p4.slice(-2)); } }, [newResultP4]);
 
+    // ... (UseEffects for auto-fill logic unchanged) ...
+    useEffect(() => { const p3 = newResultP3.replace(/\D/g, ''); if (p3.length >= 2) { setNewResult1st(p3.slice(-2)); } }, [newResultP3]);
+    useEffect(() => { const p4 = newResultP4.replace(/\D/g, ''); if (p4.length >= 2) { setNewResult2nd(p4.slice(0, 2)); } if (p4.length >= 4) { setNewResult3rd(p4.slice(-2)); } }, [newResultP4]);
+
+    // HELPER: Robust Result Resolver (Handles ID or Name)
+    const resolveResult = (trackIdentifier: string, date: string) => {
+        // 1. Try exact ID match (Most reliable for new tickets)
+        let exactId = results.find(r => r.lotteryId === trackIdentifier && r.date === date);
+        if (exactId) return exactId;
+
+        // 2. Try Map Lookup (Name -> ID)
+        const mappedId = TRACK_MAP[trackIdentifier];
+        if (mappedId) {
+            let mappedRes = results.find(r => r.lotteryId === mappedId && r.date === date);
+            if (mappedRes) return mappedRes;
+        }
+
+        // 3. Try Name Match (Legacy)
+        return results.find(r => r.lotteryName === trackIdentifier && r.date === date);
+    };
+
     // ... (FlattenedPlays logic unchanged) ...
     const flattenedPlays = useMemo(() => {
         return filteredTickets.flatMap(t => {
             return t.plays.map((play, index) => {
                 let totalWon = 0; let isWinner = false; let isPending = false; const winningTracks: string[] = [];
-                const effectiveTracks = t.tracks.filter(tr => !['Pulito', 'Venezuela'].includes(tr));
+                // CRITICAL FIX: Removed exclusion of Pulito/Venezuela. Now identifying ALL tracks.
+                const effectiveTracks = t.tracks;
+
                 effectiveTracks.forEach(track => {
                     let trackWin = 0; let trackPending = false;
                     t.betDates.forEach(date => {
-                        const resultId = TRACK_MAP[track];
-                        const result = results.find(r => (r.lotteryId === resultId || r.lotteryName === track) && r.date === date);
+                        // USE ROBUST RESOLVER
+                        const result = resolveResult(track, date);
+
                         if (result) {
                             const wins = calculateWinnings(play, result, prizeTable);
                             const winAmount = wins.reduce((sum, w) => sum + w.prizeAmount, 0);
@@ -641,8 +671,76 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const totalClaimsAmount = flattenedPlays.filter(p => selectedClaimKeys.has(p.uniqueKey)).reduce((sum, p) => sum + p.amount, 0);
     const displayedResults = results.filter(r => { if (resultsDateRange.start && resultsDateRange.end) { if (r.date < resultsDateRange.start || r.date > resultsDateRange.end) return false; } else if (resultsDateRange.start) { if (r.date !== resultsDateRange.start) return false; } if (resultsSearch && !r.lotteryName.toLowerCase().includes(resultsSearch.toLowerCase())) return false; return true; });
 
+
+
     // ... (Audit Stats & User Handlers unchanged) ...
-    const auditStats = useMemo(() => { let totalPayout = 0; const winningTicketsMap = new Map<string, boolean>(); const winnersList: any[] = []; const integrityBreaches: any[] = []; tickets.forEach(ticket => { const ticketTime = new Date(ticket.transactionDateTime).getTime(); ticket.plays.forEach(play => { ticket.betDates.forEach(date => { let dateTotalWin = 0; const winningTracks: string[] = []; const matchTypes: Set<string> = new Set(); let resultNumbersStr = ''; let minIntegrityOk = true; let maxTimeGap = 0; ticket.tracks.forEach(trackName => { const resultId = TRACK_MAP[trackName]; const result = results.find(r => (r.lotteryId === resultId || r.lotteryName === trackName) && r.date === date); if (result) { const resultTime = new Date(result.createdAt).getTime(); const integrityOk = ticketTime < (resultTime + 60000); const wins = calculateWinnings(play, result, prizeTable); if (wins.length > 0) { const winAmt = wins.reduce((sum, w) => sum + w.prizeAmount, 0); if (winAmt > 0) { dateTotalWin += winAmt; winningTracks.push(trackName); wins.forEach(w => matchTypes.add(w.matchType)); resultNumbersStr = formatWinningResult(result); if (!integrityOk) minIntegrityOk = false; maxTimeGap = Math.max(maxTimeGap, Math.round((resultTime - ticketTime) / 1000)); } } } }); if (dateTotalWin > 0) { const winnerEntry = { id: `${ticket.ticketNumber}-${play.jugadaNumber}-${date}`, ticketNumber: ticket.ticketNumber, date: date, track: winningTracks.join(', '), betNumber: play.betNumber, gameMode: play.gameMode, prize: dateTotalWin, integrityOk: minIntegrityOk, matchType: Array.from(matchTypes).join(', '), resultNumbers: resultNumbersStr, timeGapSeconds: maxTimeGap, soldAt: ticket.transactionDateTime }; winnersList.push(winnerEntry); if (minIntegrityOk) { totalPayout += dateTotalWin; winningTicketsMap.set(ticket.ticketNumber, true); } else { integrityBreaches.push(winnerEntry); } } }); }); }); winnersList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); return { totalPayout, winningTicketsCount: winningTicketsMap.size, winnersList, integrityBreaches }; }, [tickets, results, prizeTable]);
+    const auditStats = useMemo(() => {
+        let totalPayout = 0;
+        const winningTicketsMap = new Map<string, boolean>();
+        const winnersList: any[] = [];
+        const integrityBreaches: any[] = [];
+
+        tickets.forEach(ticket => {
+            // FILTER: Check if ticket date falls within Winners Range
+            const ticketDate = new Date(ticket.transactionDateTime).toISOString().split('T')[0];
+            const inRange = (!winnersDateRange.start || ticketDate >= winnersDateRange.start) &&
+                (!winnersDateRange.end || ticketDate <= winnersDateRange.end);
+
+            // Note: We process ALL tickets for Integrity checks, but for the "Winners Feed" we might want to filter?
+            // Actually, usually Audit Stats should reflect the GLOBAL liability. 
+            // BUT the specific "Winners List" table should probably obey the filter.
+            // Let's filter the LIST but keep the totals global? Or filter totals too?
+            // User asked for "date ranges in which there were winners". Implicitly filters everything.
+            if (!inRange) return;
+
+            const ticketTime = new Date(ticket.transactionDateTime).getTime();
+
+            ticket.plays.forEach(play => {
+                ticket.betDates.forEach(date => {
+                    let dateTotalWin = 0;
+                    const winningTracks: string[] = [];
+                    const matchTypes: Set<string> = new Set();
+                    let resultNumbersStr = '';
+                    let minIntegrityOk = true;
+                    let maxTimeGap = 0;
+
+                    ticket.tracks.forEach(trackName => {
+                        // USE ROBUST RESOLVER
+                        const result = resolveResult(trackName, date);
+
+                        if (result) {
+                            const resultTime = new Date(result.createdAt).getTime();
+                            const integrityOk = ticketTime < (resultTime + 60000);
+                            const wins = calculateWinnings(play, result, prizeTable);
+                            if (wins.length > 0) {
+                                const winAmt = wins.reduce((sum, w) => sum + w.prizeAmount, 0);
+                                if (winAmt > 0) {
+                                    dateTotalWin += winAmt;
+                                    winningTracks.push(trackName);
+                                    wins.forEach(w => matchTypes.add(w.matchType));
+                                    resultNumbersStr = formatWinningResult(result);
+                                    if (!integrityOk) minIntegrityOk = false;
+                                    maxTimeGap = Math.max(maxTimeGap, Math.round((resultTime - ticketTime) / 1000));
+                                }
+                            }
+                        }
+                    });
+                    if (dateTotalWin > 0) {
+                        const winnerEntry = { id: `${ticket.ticketNumber}-${play.jugadaNumber}-${date}`, ticketNumber: ticket.ticketNumber, date: date, track: winningTracks.join(', '), betNumber: play.betNumber, gameMode: play.gameMode, prize: dateTotalWin, integrityOk: minIntegrityOk, matchType: Array.from(matchTypes).join(', '), resultNumbers: resultNumbersStr, timeGapSeconds: maxTimeGap, soldAt: ticket.transactionDateTime };
+                        winnersList.push(winnerEntry);
+                        if (minIntegrityOk) {
+                            totalPayout += dateTotalWin;
+                            winningTicketsMap.set(ticket.ticketNumber, true);
+                        } else {
+                            integrityBreaches.push(winnerEntry);
+                        }
+                    }
+                });
+            });
+        });
+        winnersList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return { totalPayout, winningTicketsCount: winningTicketsMap.size, winnersList, integrityBreaches };
+    }, [tickets, results, prizeTable, winnersDateRange]);
     const handleOpenUserModal = (user?: User) => { if (user) { setEditingUser(user); setNewUserForm(user); } else { setEditingUser(null); setNewUserForm({ role: 'user', status: 'active', balance: 0, pendingBalance: 0 }); } setIsUserModalOpen(true); };
     const handleSaveUser = (e: React.FormEvent) => {
         e.preventDefault();
@@ -1269,7 +1367,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         )}
                     </div>
                 )}
-                {activeTab === 'winners' && (<div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Total Payout Liability</p><p className="text-3xl font-bold text-red-400">${(auditStats.totalPayout || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Net Profit</p><p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-500'}`}>${(netProfit || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Winning Tickets</p><p className="text-3xl font-bold text-white">{auditStats.winningTicketsCount}</p></div></div>{auditStats.integrityBreaches.length > 0 && (<div className="bg-red-900/20 border border-red-500 rounded-xl p-4 flex items-center gap-4 animate-pulse"><div className="p-3 bg-red-500 rounded-full text-white font-bold">!</div><div><h4 className="text-red-500 font-bold text-lg">Integrity Breach Detected</h4><p className="text-red-300 text-sm">Found {auditStats.integrityBreaches.length} tickets sold AFTER results were posted.</p></div></div>)}<div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg"><div className="p-4 border-b border-slate-700 bg-slate-900/50"><h3 className="font-bold text-white">Winners Feed</h3></div><div className="overflow-x-auto max-h-[600px]"><table className="w-full text-sm text-left text-slate-400"><thead className="bg-slate-900/50 text-xs uppercase font-bold border-b border-slate-700 sticky top-0 z-10 backdrop-blur-md"><tr><th className="p-4">Ticket</th><th className="p-4">Date</th><th className="p-4">Tracks</th><th className="p-4">Play</th><th className="p-4">Match Type</th><th className="p-4 text-right">Prize</th><th className="p-4 text-center">Status</th></tr></thead><tbody className="divide-y divide-slate-700">{auditStats.winnersList.map((win, idx) => (<tr key={idx} className="hover:bg-slate-700/50 transition-colors"><td className="p-4 font-mono text-neon-cyan">{win.ticketNumber}</td><td className="p-4">{win.date}</td><td className="p-4 text-white text-xs font-bold">{win.track}</td><td className="p-4 font-bold text-white">{win.betNumber} <span className="text-xs text-slate-500 font-normal">({win.gameMode})</span></td><td className="p-4 text-xs">{win.matchType} <span className="text-slate-500">vs {win.resultNumbers}</span></td><td className="p-4 text-right font-bold text-green-400">${(win.prize || 0).toFixed(2)}</td><td className="p-4 text-center">{win.integrityOk ? (<span className="px-2 py-1 rounded bg-green-500/20 text-green-400 text-[10px] font-bold">VALID</span>) : (<span className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] font-bold">LATE ({win.timeGapSeconds}s)</span>)}</td></tr>))}{auditStats.winnersList.length === 0 && (<tr><td colSpan={7} className="p-8 text-center text-slate-500">No winners found yet.</td></tr>)}</tbody></table></div></div></div>)}
+                {activeTab === 'winners' && (<div className="space-y-6">
+                    {/* Date Logic Bar */}
+                    <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <h3 className="text-white font-bold">Winners Analysis</h3>
+                        <div className="flex items-center gap-2 bg-slate-900 border border-slate-600 rounded-lg px-2">
+                            <span className="text-xs font-bold text-slate-500">FROM</span>
+                            <input type="date" className="bg-transparent py-2 text-sm focus:outline-none text-white w-32" value={winnersDateRange.start} onChange={e => setWinnersDateRange({ ...winnersDateRange, start: e.target.value })} />
+                            <span className="text-slate-600">|</span>
+                            <span className="text-xs font-bold text-slate-500">TO</span>
+                            <input type="date" className="bg-transparent py-2 text-sm focus:outline-none text-white w-32" value={winnersDateRange.end} onChange={e => setWinnersDateRange({ ...winnersDateRange, end: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Total Payout Liability</p><p className="text-3xl font-bold text-red-400">${(auditStats.totalPayout || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Net Profit</p><p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-500'}`}>${(netProfit || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Winning Tickets</p><p className="text-3xl font-bold text-white">{auditStats.winningTicketsCount}</p></div></div>{auditStats.integrityBreaches.length > 0 && (<div className="bg-red-900/20 border border-red-500 rounded-xl p-4 flex items-center gap-4 animate-pulse"><div className="p-3 bg-red-500 rounded-full text-white font-bold">!</div><div><h4 className="text-red-500 font-bold text-lg">Integrity Breach Detected</h4><p className="text-red-300 text-sm">Found {auditStats.integrityBreaches.length} tickets sold AFTER results were posted.</p></div></div>)}<div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg"><div className="p-4 border-b border-slate-700 bg-slate-900/50"><h3 className="font-bold text-white">Winners Feed</h3></div><div className="overflow-x-auto max-h-[600px]"><table className="w-full text-sm text-left text-slate-400"><thead className="bg-slate-900/50 text-xs uppercase font-bold border-b border-slate-700 sticky top-0 z-10 backdrop-blur-md"><tr><th className="p-4">Ticket</th><th className="p-4">Date</th><th className="p-4">Tracks</th><th className="p-4">Play</th><th className="p-4">Match Type</th><th className="p-4 text-right">Prize</th><th className="p-4 text-center">Status</th></tr></thead><tbody className="divide-y divide-slate-700">{auditStats.winnersList.map((win, idx) => (<tr key={idx} className="hover:bg-slate-700/50 transition-colors"><td className="p-4 font-mono text-neon-cyan">{win.ticketNumber}</td><td className="p-4">{win.date}</td><td className="p-4 text-white text-xs font-bold">{win.track}</td><td className="p-4 font-bold text-white">{win.betNumber} <span className="text-xs text-slate-500 font-normal">({win.gameMode})</span></td><td className="p-4 text-xs">{win.matchType} <span className="text-slate-500">vs {win.resultNumbers}</span></td><td className="p-4 text-right font-bold text-green-400">${(win.prize || 0).toFixed(2)}</td><td className="p-4 text-center">{win.integrityOk ? (<span className="px-2 py-1 rounded bg-green-500/20 text-green-400 text-[10px] font-bold">VALID</span>) : (<span className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] font-bold">LATE ({win.timeGapSeconds}s)</span>)}</td></tr>))}{auditStats.winnersList.length === 0 && (<tr><td colSpan={7} className="p-8 text-center text-slate-500">No winners found yet.</td></tr>)}</tbody></table></div></div></div>)}
                 {activeTab === 'audit' && (<div className="space-y-6"><div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg p-4"><div className="flex gap-4 border-b border-slate-700 pb-4 mb-4 items-center justify-between">
                     <div className="flex gap-4">
                         <button onClick={() => setAuditFilter('ALL')} className={`text-sm font-bold pb-2 border-b-2 transition-colors ${auditFilter === 'ALL' ? 'border-neon-cyan text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>All Activity</button>

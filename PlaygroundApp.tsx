@@ -477,7 +477,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                     setLastSaveStatus('error');
                 } else {
                     setLastSaveStatus('error');
-                    console.error("Server Error:", data);
+                    console.error("Server Error:", JSON.stringify(data, null, 2));
                 }
             }
         } catch (error: any) {

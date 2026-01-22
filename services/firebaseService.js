@@ -1,45 +1,37 @@
 const admin = require('firebase-admin');
+
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
+    let serviceAccount;
     try {
-        let serviceAccount;
-
         // 1. Try Environment Variable (Production/Vercel)
         if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-            try {
-                serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-                console.log('[Firebase] Loading credentials from Environment Variable');
-            } catch (e) {
-                console.error('[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT env var');
-            }
+            console.log('[Firebase] Loading credentials from Environment Variable');
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
         }
-
-        // 2. Fallback to Local File (Dev)
-        if (!serviceAccount) {
-            try {
-                serviceAccount = require('../config/serviceAccountKey.json');
-                console.log('[Firebase] Loading credentials from local file');
-            } catch (e) {
-                console.warn('[Firebase] No local serviceAccountKey.json found.');
-            }
+        // 2. Try Local File (Dev Support)
+        else {
+            console.log("[Firebase] Loading credentials from local file");
+            serviceAccount = require('../config/serviceAccountKey.json');
         }
 
         if (serviceAccount) {
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount)
             });
-            console.log('[Firebase] Admin SDK Initialized successfully');
+            console.log("[Firebase] Admin SDK Initialized successfully");
         } else {
-            console.error('[Firebase] CRITICAL: No credentials found. Auth will fail.');
+            console.warn("[Firebase] Warning: No credentials found. Auth will fail.");
         }
 
     } catch (error) {
-        console.error('[Firebase] Error initializing Admin SDK:', error);
+        console.warn("[Firebase] Initialization Error:", error.message);
     }
 }
 
-const db = admin.firestore();
-const auth = admin.auth();
+// REMOVED CONSTANTS to prevent crash on load
+// const db = admin.firestore(); 
+// const auth = admin.auth();
 
 /**
  * Synced Dual-Store Strategy:
@@ -51,6 +43,9 @@ const auth = admin.auth();
  */
 const syncToFirestore = async (collectionName, docId, data) => {
     try {
+        // Safety Check
+        if (!admin.apps.length) return;
+
         if (!docId) {
             console.warn('[Dual-Write] Skipped: No docId provided');
             return;
@@ -67,7 +62,7 @@ const syncToFirestore = async (collectionName, docId, data) => {
         payload.lastSyncedAt = admin.firestore.FieldValue.serverTimestamp();
 
         // Use set with merge: true to update or create
-        await db.collection(collectionName).doc(docId.toString()).set(payload, { merge: true });
+        await getDb().collection(collectionName).doc(docId.toString()).set(payload, { merge: true });
 
         // Optional: Log success (debug level)
         // console.log(`[Dual-Write] Synced ${collectionName}/${docId}`);
@@ -85,16 +80,28 @@ const syncToFirestore = async (collectionName, docId, data) => {
  */
 const verifyToken = async (idToken) => {
     try {
-        return await auth.verifyIdToken(idToken);
+        if (!admin.apps.length) throw new Error('Firebase Service Not Configured');
+        return await getAuth().verifyIdToken(idToken);
     } catch (error) {
-        throw new Error('Invalid Firebase Token');
+        console.error("Token Verification Failed:", error.message);
+        throw new Error('Invalid Firebase Token or Server Misconfiguration');
     }
+};
+
+const getDb = () => {
+    if (!admin.apps.length) throw new Error("[Firebase] Not Initialized (Missing Credentials)");
+    return admin.firestore();
+};
+
+const getAuth = () => {
+    if (!admin.apps.length) throw new Error("[Firebase] Not Initialized (Missing Credentials)");
+    return admin.auth();
 };
 
 module.exports = {
     admin,
-    db,
-    auth,
+    getDb,
+    getAuth,
     syncToFirestore,
     verifyToken
 };
