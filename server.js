@@ -13,7 +13,7 @@ const mongoose = require('mongoose');
 
 // Database & Services
 const connectDB = require('./database');
-const scraperService = require('./services/scraperService');
+// const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
@@ -57,6 +57,7 @@ try {
     if (process.env.NODE_ENV !== 'production') {
         // Only run scraper scheduler in long-running processes, not serverless functions usually
         // OR assume this server.js is also used for a worker
+        const scraperService = require('./services/scraperService');
         scraperService.startResultScheduler();
         console.log("✅ Scraper service initialized");
     }
