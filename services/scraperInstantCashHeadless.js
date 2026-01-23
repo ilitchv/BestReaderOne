@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+// const puppeteer = require('puppeteer'); // LAZY LOADED
 const mongoose = require('mongoose');
 require('dotenv').config();
 const LotteryResult = require('../models/LotteryResult');
@@ -22,6 +22,8 @@ async function scrapeInstantCashHeadless(targetDateArg) {
         let browser = null;
         try {
             if (attempts > 1) console.log(`[InstantCash] Retry attempt ${attempts}/${MAX_RETRIES}...`);
+
+            const puppeteer = require('puppeteer'); // Lazy Load for Vercel Safety
 
             browser = await puppeteer.launch({
                 headless: "new",

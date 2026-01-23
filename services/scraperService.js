@@ -5,9 +5,7 @@ const Track = require('../models/Track');
 const { scrapeState } = require('./scraperEngine');
 const scraperRD = require('./scraperRD'); // Import RD Scraper
 const scraperTopPick = require('./scraperTopPick');
-const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
-const { validateResult } = require('./validationService');
-const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
+// const scraperInstantCashHeadless = require('./scraperInstantCashHeadless'); // LAZY LOADED TO PREVENT PUPPETEER CRASH
 const { validateResult } = require('./validationService');
 const SystemAlert = require('../models/SystemAlert');
 const firebaseService = require('./firebaseService'); // NEW: Dual-Store
@@ -442,9 +440,11 @@ const runHeavyQueue = async () => {
         // 2. Instant Cash (Headless - Slow)
         try {
             console.log('   Running Instant Cash (Headless)...');
+            // LAZY LOAD to avoid Puppeteer cold start crash on Vercel
+            const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
             await scraperInstantCashHeadless();
         } catch (e) {
-            console.error("   ❌ InstantCash Scraper Failed:", e.message);
+            console.error("   ❌ InstantCash Scraper Failed (or Puppeteer missing):", e.message);
         }
 
     } catch (err) {
