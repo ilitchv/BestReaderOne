@@ -2,7 +2,9 @@ const puppeteer = require('puppeteer');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const LotteryResult = require('../models/LotteryResult');
+const LotteryResult = require('../models/LotteryResult');
 const { triggerAlert } = require('./utils/alertHelper');
+const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
 // Configuration
 const TARGET_URL = 'https://instantcash.bet';
@@ -250,6 +252,9 @@ async function saveResults(draws, targetDateStr) {
         payload,
         { upsert: true, new: true }
     );
+
+    // NEW: Sync to Secondary DB
+    firebaseService.syncToFirestore('results', payload.resultId, payload);
 }
 
 // --- VALIDATION LOGIC ---

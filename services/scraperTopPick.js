@@ -4,7 +4,9 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const LotteryResult = require('../models/LotteryResult');
+const LotteryResult = require('../models/LotteryResult');
 const { triggerAlert } = require('./utils/alertHelper');
+const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
 // Configuration
 const TARGET_URL = 'https://tplotto.com/procedure_load_numbers_public';
@@ -328,6 +330,9 @@ async function saveResultsToDB(results, dateStr) {
             payload,
             { upsert: true, new: true, runValidators: true }
         );
+
+        // NEW: Sync to Secondary DB
+        firebaseService.syncToFirestore('results', payload.resultId, payload);
 
         console.log(`[TopPick] Saved to DB. ID: ${doc._id}`);
     } catch (err) {

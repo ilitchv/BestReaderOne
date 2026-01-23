@@ -7,7 +7,10 @@ const scraperRD = require('./scraperRD'); // Import RD Scraper
 const scraperTopPick = require('./scraperTopPick');
 const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
 const { validateResult } = require('./validationService');
+const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
+const { validateResult } = require('./validationService');
 const SystemAlert = require('../models/SystemAlert');
+const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
 // --- CONFIGURATION ---
 // Maps our internal IDs to Sniper Config Keys and external IDs
@@ -272,8 +275,19 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
                     scrapedAt: new Date(),
                 }
             },
-            { upsert: true }
+            { upsert: true, new: true }
         );
+
+        // NEW: Sync to Secondary DB
+        firebaseService.syncToFirestore('results', resultId, {
+            resultId,
+            country: 'USA',
+            lotteryName: stateName,
+            drawName: timeLabel,
+            numbers: numbers,
+            drawDate: result.date,
+            scrapedAt: new Date()
+        });
 
         // --- DERIVED RESULTS LOGIC (NEW YORK ONLY) ---
         // Brooklyn = Last 3 digits of Win 4

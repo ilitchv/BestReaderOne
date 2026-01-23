@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const BeastLedger = require('../models/BeastLedger');
+const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
 // Helper to generate SHA-256 Hash
 const generateHash = (data) => {
@@ -95,6 +96,11 @@ const ledgerService = {
 
             await session.commitTransaction();
             console.log(`✅ Block #${newIndex} Mined. Action: ${action}. Hash: ${newHash.substring(0, 10)}...`);
+
+            // NEW: Sync to Secondary DB (Fire-and-forget)
+            // We do this AFTER commit to ensure MongoDB is the source of truth
+            firebaseService.syncToFirestore('ledger', newHash, newBlock.toObject());
+
             return newBlock;
 
         } catch (error) {

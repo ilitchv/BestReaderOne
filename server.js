@@ -577,6 +577,9 @@ app.post('/api/results/manual', async (req, res) => {
         );
 
         res.json({ success: true, result: updated });
+
+        // NEW: Sync to Secondary DB
+        firebaseService.syncToFirestore('results', resultId, updated.toObject());
     } catch (e) {
         console.error("Manual Entry Error:", e);
         res.status(500).json({ error: e.message });
@@ -1167,6 +1170,10 @@ app.post('/api/tickets', async (req, res) => {
         }
 
         console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
+
+        // NEW: Sync to Secondary DB
+        firebaseService.syncToFirestore('tickets', ticketData.ticketNumber, newTicket.toObject());
+
         res.status(201).json({ message: 'Ticket saved.', ticketId: ticketData.ticketNumber, ledgerSuccess });
 
     } catch (error) {

@@ -5,7 +5,9 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
 
 const LotteryResult = require('../models/LotteryResult');
+const LotteryResult = require('../models/LotteryResult');
 const Track = require('../models/Track');
+const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
 // --- CONFIGURATION ---
 const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
@@ -217,8 +219,19 @@ async function saveResult({ config, numbers, date }, sourceName) {
                     scrapedAt: new Date()
                 }
             },
-            { upsert: true }
+            { upsert: true, new: true }
         );
+
+        // NEW: Sync to Secondary DB
+        firebaseService.syncToFirestore('results', config.id, {
+            resultId: config.id,
+            country: 'RD',
+            lotteryName: config.name,
+            drawName: config.draw,
+            numbers: dashNumbers,
+            drawDate: date,
+            scrapedAt: new Date()
+        });
         // console.log(`      Saved ${config.name} (${config.draw})`);
     } catch (e) {
         console.error(`      Error saving Dashboard: ${e.message}`);
