@@ -1199,6 +1199,33 @@ app.post('/api/tickets', async (req, res) => {
     }
 });
 
+// NEW: Upload Final Ticket Image (Post-Confirmation)
+app.put('/api/tickets/:ticketNumber/image', async (req, res) => {
+    try {
+        await connectDB();
+        const { ticketNumber } = req.params;
+        const { ticketImage } = req.body;
+
+        if (!ticketImage) return res.status(400).json({ error: 'Missing image data' });
+
+        const updatedTicket = await Ticket.findOneAndUpdate(
+            { ticketNumber: ticketNumber },
+            { $set: { ticketImage: ticketImage } },
+            { new: true }
+        );
+
+        if (!updatedTicket) return res.status(404).json({ error: 'Ticket not found' });
+
+        // Sync Update to Firestore
+        firebaseService.syncToFirestore('tickets', ticketNumber, updatedTicket.toObject());
+
+        res.json({ success: true, message: 'Image uploaded' });
+    } catch (e) {
+        console.error("Image Upload Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // D. PAYMENT ROUTES (BTCPay)
 app.post('/api/payment/invoice', async (req, res) => {
     try {

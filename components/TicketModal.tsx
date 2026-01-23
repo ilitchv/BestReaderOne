@@ -299,6 +299,24 @@ const TicketModal: React.FC<TicketModalProps> = ({
                         if (variant === 'default') {
                             pdf.save(`ticket-${ticketNumber}.pdf`);
                         }
+
+                        // NEW: Upload Final Image to Backend (Firebase)
+                        try {
+                            // Use the same optimized base64 as the PDF or a slightly lower quality for DB storage
+                            // The canvas is already captured.
+                            const dbImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+
+                            await fetch(`/api/tickets/${ticketNumber}/image`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ ticketImage: dbImageBase64 })
+                            });
+                            console.log("📸 Final Ticket Image synced to backend.");
+
+                        } catch (uploadErr) {
+                            console.error("Failed to upload ticket image:", uploadErr);
+                        }
+
                     } catch (error) {
                         console.error("Error generating ticket image/pdf:", error);
                     }
