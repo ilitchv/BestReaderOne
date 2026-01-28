@@ -10,6 +10,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 // Database & Services
 const connectDB = require('./database');
@@ -733,6 +734,37 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// GENERATE HANDOVER TOKEN (For Lumina Integration)
+app.post('/api/auth/handover-token', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId } = req.body; // Provided by client who is logged in
+        if (!userId) return res.status(400).json({ error: "Missing User ID" });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Sign a short-lived token (5 mins) that Lumina can verify
+        const payload = {
+            beastId: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            source: 'best-reader'
+        };
+
+        const secret = process.env.HANDOVER_SECRET || 'temp-handover-secret';
+        const token = jwt.sign(payload, secret, { expiresIn: '5m' });
+
+        // TODO: Replace with actual deployed Lumina URL
+        const redirectBase = 'https://lumina-marketplace-fry.vercel.app';
+        res.json({ token, redirectUrl: `${redirectBase}/auth/sync?token=${token}` });
+
+    } catch (e) {
+        console.error("Handover Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/auth/me', async (req, res) => {
     try {
         await connectDB();
@@ -776,6 +808,13 @@ app.post('/api/admin/credit', async (req, res) => {
         // Verify Admin (Simple check)
         // const admin = await User.findById(adminId);
         // if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+
+        // 1. SECURITY CHECK: Verify Lumina Secret
+        const secret = req.headers['x-lumina-secret'];
+        if (secret !== process.env.LUMINA_SECRET) {
+            console.warn(`⛔ Unauthorized Credit Attempt. Secret: ${secret}`);
+            return res.status(401).json({ error: "Unauthorized Source" });
+        }
 
         const block = await ledgerService.addToLedger({
             action: 'DEPOSIT',
