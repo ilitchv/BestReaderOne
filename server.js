@@ -1824,6 +1824,18 @@ app.get('/api/cron/trigger-scrape', async (req, res) => {
     }
 });
 
+// MANUAL TRIGGER (Bypass Vercel Cron Protection)
+app.get('/api/cron/manual-trigger', async (req, res) => {
+    try {
+        console.log("🛠️ Manual Trigger: Starting Scrape...");
+        await scraperService.scrapeAll();
+        res.json({ success: true, message: 'Manual scrape initiated' });
+    } catch (e) {
+        console.error("Manual Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ==========================================
 // 5. STATIC FILES (REACT APP)
 // ==========================================

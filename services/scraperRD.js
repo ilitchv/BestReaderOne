@@ -5,7 +5,7 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
 
 const LotteryResult = require('../models/LotteryResult');
-const LotteryResult = require('../models/LotteryResult');
+
 const Track = require('../models/Track');
 const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
