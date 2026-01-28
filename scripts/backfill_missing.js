@@ -49,7 +49,9 @@ async function fetchAndParse(url) {
 
         // Loop through each row in the table
         $('table tr').each((i, row) => {
-            const txt = $(row).text().trim();
+            const rawTxt = $(row).text();
+            const txt = rawTxt.replace(/\s+/g, ' ').trim(); // Normalize whitespace!
+
             // Debug first few rows
             if (rowCount < 3) console.log(`[DEBUG Row]: ${txt.substring(0, 100)}...`);
             rowCount++;
@@ -64,19 +66,41 @@ async function fetchAndParse(url) {
                 const dayRegex = new RegExp(`${mName}\\s+0?${dDay},?\\s+${dateParts[0]}`, 'i');
 
                 if (dayRegex.test(txt)) {
-                    // Strategy: Look for specific columns if possible, or parse generically
-                    const $cols = $(row).find('td');
-                    if ($cols.length >= 2) {
-                        const dateCol = $($cols[0]).text().trim();
-                        // Double check if the date column matches our date
-                        if (dayRegex.test(dateCol)) {
-                            // Helper to extract numbers: get column 1 (results)
-                            const numCol = $($cols[1]).text().trim();
-                            const cleanNums = numCol.replace(/[^0-9]/g, '');
+                    // Match found in row!
+                    console.log(`[MATCH] Found date ${tDate} in row.`);
 
-                            // Basic validation
-                            if (cleanNums.length >= 3) {
-                                results.push({ date: tDate, numbers: cleanNums });
+                    // Robust Text Parsing: Get text AFTER the date match
+                    const match = txt.match(dayRegex);
+                    if (match) {
+                        const dateEndIndex = match.index + match[0].length;
+                        const remainder = txt.substring(dateEndIndex).trim();
+
+                        // Look for the first 3 or 4 digits appearing in the remainder
+                        // They might be spaced "9 4 8 0" or "9480"
+                        // Regex: look for digits, possibly separated by spaces, stopping before letters/$
+
+                        // Easy way: Clean non-digits from the *start* of remainder relative to "Prize"?
+                        // Usually results are immediate. "9 4 8 0 Top prize..."
+
+                        // Extract first chunk of things that look like numbers
+                        const resultMatch = remainder.match(/^[\d\s]+/);
+                        if (resultMatch) {
+                            const candidate = resultMatch[0].replace(/[^0-9]/g, '');
+                            if (candidate.length === 3 || candidate.length === 4) {
+                                results.push({ date: tDate, numbers: candidate });
+                                console.log(`[DEBUG] Extracted numbers from text: ${candidate}`);
+                            } else {
+                                // Maybe valid 500? No, usually 3 or 4.
+                                // If 5000, might be prize if result was missing?
+                                // LotteryUSA unlikely to have result missing.
+
+                                // Try splitting by space?
+                                // If remainder is "9 4 8 0 Top prize..."
+                                // resultMatch[0] might be "9 4 8 0 "
+
+                                // If remainder is "Top prize...", resultMatch is null.
+
+                                console.log(`[WARNING] Candidate '${candidate}' invalid length.`);
                             }
                         }
                     }
