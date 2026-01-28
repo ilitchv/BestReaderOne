@@ -479,6 +479,7 @@ const startResultScheduler = () => {
 
 module.exports = {
     startResultScheduler,
-    fetchAndParse: runFastQueue, // Legacy export if referenced elsewhere
+    scrapeAll: runFastQueue,
+    scrapeHeavy: runHeavyQueue,
     SNIPER_CONFIG
 };

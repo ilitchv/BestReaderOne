@@ -14,7 +14,7 @@ const jwt = require('jsonwebtoken');
 
 // Database & Services
 const connectDB = require('./database');
-// const scraperService = require('./services/scraperService');
+const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
@@ -58,7 +58,7 @@ try {
     if (process.env.NODE_ENV !== 'production') {
         // Only run scraper scheduler in long-running processes, not serverless functions usually
         // OR assume this server.js is also used for a worker
-        const scraperService = require('./services/scraperService');
+        // scraperService is already imported at the top
         scraperService.startResultScheduler();
         console.log("✅ Scraper service initialized");
     }
@@ -1802,6 +1802,26 @@ app.get('/ver-db', async (req, res) => {
 // FIX: Analytics Endpoint
 app.post('/api/track/init', (req, res) => {
     res.json({ success: true });
+});
+
+// CRON: Vercel Trigger for Scraping
+app.get('/api/cron/trigger-scrape', async (req, res) => {
+    try {
+        console.log("⏰ Vercel Cron Triggered: Starting Scrape...");
+        // Triggers the "Fast Queue" (USA + RD)
+        await scraperService.scrapeAll();
+
+        // Triggers "Heavy" (Top Pick) - Instant Cash is skipped on Vercel (Headless)
+        // We can try calling scrapeHeavy but we know Instant Cash might fail. 
+        // TopPick is inside scrapeHeavy.
+        // Let's try to run scrapeHeavy too, but catch errors?
+        // For now, satisfy user request (stale dates -> Fast Queue).
+
+        res.json({ success: true, message: 'Scrape cycle initiated' });
+    } catch (e) {
+        console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ==========================================
