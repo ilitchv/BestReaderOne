@@ -61,47 +61,6 @@ function eastCoastDateISO(d = new Date()) {
     return fmt.format(d);
 }
 
-function parseDateFromText(text) {
-    const t = (text || '').replace(/\s+/g, ' ');
-
-    // 1. React/Symfony Props Detection (PRIORITY)
-    // Matches: "drawDate":"22-12-2025" or HTML encoded variant
-    // We prioritize this because "Today" might appear in "Next Draw: Today" text, which is wrong for previous results.
-    const reactDate = t.match(/drawDate(?:&quot;|"|\\")?:(?:&quot;|"|\\")?(\d{2}-\d{2}-\d{4})/);
-    if (reactDate) {
-        // Format is DD-MM-YYYY
-        const [d, m, y] = reactDate[1].split('-');
-        return dayjs(`${y}-${m}-${d}`);
-    }
-
-    // 2. Explicit "Today" check
-    if (/\b(today)\b/i.test(t)) {
-        return dayjs(eastCoastDateISO());
-    }
-
-    const y = dayjs().year();
-
-    // Month-name format
-    const m1 = t.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:,\s*(\d{4}))?/i);
-    if (m1) {
-        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-        const M = monthNames.findIndex(x => m1[1].toLowerCase().startsWith(x)) + 1;
-        const D = parseInt(m1[2], 10);
-        const Y = m1[3] ? parseInt(m1[3], 10) : y;
-        return dayjs(`${Y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`);
-    }
-
-    // Numeric format
-    const m2 = t.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
-    if (m2) {
-        const M = parseInt(m2[1], 10), D = parseInt(m2[2], 10);
-        let Y = m2[3] ? parseInt(m2[3], 10) : y;
-        if (Y < 100) Y = 2000 + Y;
-        return dayjs(`${Y}-${String(M).padStart(2, '0')}-${String(D).padStart(2, '0')}`);
-    }
-    return null;
-}
-
 // Date Capping (Ref Repo Logic)
 function eastCoastISOFromDayjs(dj) {
     if (!dj) return null;
@@ -112,6 +71,12 @@ function eastCoastISOFromDayjs(dj) {
 
 function parseDateFromText(text) {
     const t = (text || '').replace(/\s+/g, ' ');
+
+    // 0. EXCLUSION: Ignore "Next Draw" or Future prompts
+    // This prevents associating "Next Draw: Jan 23" with yesterday's results
+    if (/next\s*draw|est\.\s*jackpot|draws\s*at|next\s*jackpot/i.test(t)) {
+        return null;
+    }
 
     // 1. React/Symfony Props Detection (PRIORITY)
     // Matches: "drawDate":"22-12-2025"

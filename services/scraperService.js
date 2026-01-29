@@ -477,8 +477,17 @@ const startResultScheduler = () => {
     setTimeout(() => runHeavyQueue(), 15000);
 };
 
+const scrapeAll = async () => {
+    console.log('🚀 Triggering manual scrape (Fast + Heavy)...');
+    await runFastQueue();
+    // Attempt Heavy Queue (TopPick might work on Vercel, InstantCash will fail gracefully)
+    await runHeavyQueue();
+    console.log('✅ Manual scrape complete.');
+};
+
 module.exports = {
     startResultScheduler,
-    fetchAndParse: runFastQueue, // Legacy export if referenced elsewhere
+    scrapeAll,
+    scrapeHeavy: runHeavyQueue,
     SNIPER_CONFIG
 };

@@ -10,10 +10,11 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 // Database & Services
 const connectDB = require('./database');
-// const scraperService = require('./services/scraperService');
+const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
@@ -57,7 +58,7 @@ try {
     if (process.env.NODE_ENV !== 'production') {
         // Only run scraper scheduler in long-running processes, not serverless functions usually
         // OR assume this server.js is also used for a worker
-        const scraperService = require('./services/scraperService');
+        // scraperService is already imported at the top
         scraperService.startResultScheduler();
         console.log("✅ Scraper service initialized");
     }
@@ -733,6 +734,37 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// GENERATE HANDOVER TOKEN (For Lumina Integration)
+app.post('/api/auth/handover-token', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId } = req.body; // Provided by client who is logged in
+        if (!userId) return res.status(400).json({ error: "Missing User ID" });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Sign a short-lived token (5 mins) that Lumina can verify
+        const payload = {
+            beastId: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            source: 'best-reader'
+        };
+
+        const secret = process.env.HANDOVER_SECRET || 'temp-handover-secret';
+        const token = jwt.sign(payload, secret, { expiresIn: '5m' });
+
+        // TODO: Replace with actual deployed Lumina URL
+        const redirectBase = 'https://lumina-marketplace-fry.vercel.app';
+        res.json({ token, redirectUrl: `${redirectBase}/auth/sync?token=${token}` });
+
+    } catch (e) {
+        console.error("Handover Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/auth/me', async (req, res) => {
     try {
         await connectDB();
@@ -776,6 +808,13 @@ app.post('/api/admin/credit', async (req, res) => {
         // Verify Admin (Simple check)
         // const admin = await User.findById(adminId);
         // if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+
+        // 1. SECURITY CHECK: Verify Lumina Secret
+        const secret = req.headers['x-lumina-secret'];
+        if (secret !== process.env.LUMINA_SECRET) {
+            console.warn(`⛔ Unauthorized Credit Attempt. Secret: ${secret}`);
+            return res.status(401).json({ error: "Unauthorized Source" });
+        }
 
         const block = await ledgerService.addToLedger({
             action: 'DEPOSIT',
@@ -1763,6 +1802,38 @@ app.get('/ver-db', async (req, res) => {
 // FIX: Analytics Endpoint
 app.post('/api/track/init', (req, res) => {
     res.json({ success: true });
+});
+
+// CRON: Vercel Trigger for Scraping
+app.get('/api/cron/trigger-scrape', async (req, res) => {
+    try {
+        console.log("⏰ Vercel Cron Triggered: Starting Scrape...");
+        // Triggers the "Fast Queue" (USA + RD)
+        await scraperService.scrapeAll();
+
+        // Triggers "Heavy" (Top Pick) - Instant Cash is skipped on Vercel (Headless)
+        // We can try calling scrapeHeavy but we know Instant Cash might fail. 
+        // TopPick is inside scrapeHeavy.
+        // Let's try to run scrapeHeavy too, but catch errors?
+        // For now, satisfy user request (stale dates -> Fast Queue).
+
+        res.json({ success: true, message: 'Scrape cycle initiated' });
+    } catch (e) {
+        console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// MANUAL TRIGGER (Bypass Vercel Cron Protection)
+app.get('/api/cron/manual-trigger', async (req, res) => {
+    try {
+        console.log("🛠️ Manual Trigger: Starting Scrape...");
+        await scraperService.scrapeAll();
+        res.json({ success: true, message: 'Manual scrape initiated' });
+    } catch (e) {
+        console.error("Manual Error:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ==========================================

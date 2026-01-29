@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const LotteryResult = require('../models/LotteryResult');
-const LotteryResult = require('../models/LotteryResult');
+
 const { triggerAlert } = require('./utils/alertHelper');
 const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
