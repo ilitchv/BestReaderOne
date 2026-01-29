@@ -125,6 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
             console.error("Login failed", error);
+            throw error;
         }
     };
 
