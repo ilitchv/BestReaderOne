@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 const LotteryResult = require('../models/LotteryResult');
-const LotteryResult = require('../models/LotteryResult');
+
 const { triggerAlert } = require('./utils/alertHelper');
 const firebaseService = require('./firebaseService'); // NEW: Dual-Store
 
@@ -14,6 +14,12 @@ const MAX_RETRIES = 3;
  * Scrapes Instant Cash results using a headless browser.
  */
 async function scrapeInstantCashHeadless(targetDateArg) {
+    // SECURITY GUARD: Vercel does not support standard Puppeteer.
+    if (process.env.VERCEL) {
+        console.warn("⚠️ [InstantCash] Puppeteer execution skipped (Vercel Environment detected).");
+        return;
+    }
+
     console.log('[InstantCash] Starting Headless Scraper...');
 
     let attempts = 0;
@@ -23,7 +29,13 @@ async function scrapeInstantCashHeadless(targetDateArg) {
         try {
             if (attempts > 1) console.log(`[InstantCash] Retry attempt ${attempts}/${MAX_RETRIES}...`);
 
-            const puppeteer = require('puppeteer'); // Lazy Load for Vercel Safety
+            let puppeteer;
+            try {
+                puppeteer = require('puppeteer');
+            } catch (e) {
+                console.error("❌ Puppeteer module not found. Skipping Instant Cash.");
+                return;
+            }
 
             browser = await puppeteer.launch({
                 headless: "new",

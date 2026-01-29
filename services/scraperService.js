@@ -177,23 +177,23 @@ const SNIPER_CONFIG = {
     va: {
         name: "Virginia",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-3/year'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-3/year'], label: 'Night' }
+            mid: { urls: ['https://www.lottery.net/virginia/pick-3', 'https://www.lotteryusa.com/virginia/pick-3/year'], label: 'Day' },
+            eve: { urls: ['https://www.lottery.net/virginia/pick-3', 'https://www.lotteryusa.com/virginia/pick-3/year'], label: 'Night' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/virginia/pick-4/year'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/virginia/pick-4/year'], label: 'Night' }
+            mid: { urls: ['https://www.lottery.net/virginia/pick-4', 'https://www.lotteryusa.com/virginia/pick-4/year'], label: 'Day' },
+            eve: { urls: ['https://www.lottery.net/virginia/pick-4', 'https://www.lotteryusa.com/virginia/pick-4/year'], label: 'Night' }
         }
     },
     nc: {
         name: "North Carolina",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/year'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/year'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/midday-3/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-3/'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/year'], label: 'Day' },
-            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/year'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/north-carolina/midday-pick-4/'], label: 'Day' },
+            eve: { urls: ['https://www.lotteryusa.com/north-carolina/pick-4/'], label: 'Evening' }
         }
     }
 };
@@ -209,7 +209,8 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
     // --- VALIDATION GATEKEEPER ---
     const check = validateResult(resultId, result.date, numbers);
     if (!check.valid) {
-        console.warn(`[VALIDATION BLOCKED] ${resultId}: ${check.reason} (Data: ${numbers} Date: ${result.date})`);
+        console.warn(`[VALIDATION BLOCKED] ${resultId}: ${check.reason}`);
+        console.warn(`   > Data: ${numbers} | Date: ${result.date} | Expected Format: ${check.expected || 'N/A'}`);
         return;
     }
     // -----------------------------
@@ -477,8 +478,30 @@ const startResultScheduler = () => {
     setTimeout(() => runHeavyQueue(), 15000);
 };
 
+const scrapeAll = async () => {
+    console.log('🚀 Triggering manual scrape (Fast + Heavy)...');
+    // We execute sequentially to avoid resource contention,
+    // BUT we catch errors so one failure doesn't stop the other.
+    try {
+        await runFastQueue();
+    } catch (e) {
+        console.error("Fast Queue in scrapeAll failed:", e);
+    }
+
+    try {
+        // Attempt Heavy Queue (TopPick might work on Vercel, InstantCash will fail gracefully)
+        await runHeavyQueue();
+    } catch (e) {
+        console.error("Heavy Queue in scrapeAll failed:", e);
+    }
+    console.log('✅ Manual scrape complete.');
+};
+
 module.exports = {
     startResultScheduler,
-    fetchAndParse: runFastQueue, // Legacy export if referenced elsewhere
+    scrapeAll,
+    runFastQueue,   // EXPORTED
+    runHeavyQueue,  // EXPORTED
+    scrapeHeavy: runHeavyQueue,
     SNIPER_CONFIG
 };

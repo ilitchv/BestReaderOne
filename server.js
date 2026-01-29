@@ -10,10 +10,11 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 // Database & Services
 const connectDB = require('./database');
-// const scraperService = require('./services/scraperService');
+const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
@@ -57,7 +58,7 @@ try {
     if (process.env.NODE_ENV !== 'production') {
         // Only run scraper scheduler in long-running processes, not serverless functions usually
         // OR assume this server.js is also used for a worker
-        const scraperService = require('./services/scraperService');
+        // scraperService is already imported at the top
         scraperService.startResultScheduler();
         console.log("✅ Scraper service initialized");
     }
@@ -494,32 +495,56 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 // ==========================================
 
 // NEW VERCEL CRON TRIGGER (Secured)
+// NEW VERCEL CRON TRIGGER (Secured & Split)
+// 1. LEGACY/MANUAL (All in one - Risky for Vercel)
 app.get('/api/cron/trigger-scrape', async (req, res) => {
     try {
-        console.log("⏰ Cron Triggered via API");
-
-        // 1. Security Check
+        console.log("⏰ Cron Triggered via API (Legacy Single endpoint)");
         const authHeader = req.headers['authorization'];
         const cronSecret = process.env.CRON_SECRET;
 
         if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-            console.warn("⛔ Unauthorized Cron Attempt");
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        // 2. Trigger Scraper (Fast Queue by default)
-        // Note: Vercel limits execution time. We return success immediately 
-        // after forcing the promise to start, OR we await it if it's fast enough.
-        // For reliability, we await the Fast Queue (RD + USA) which takes ~2-5s.
-
-        await scraperService.fetchAndParse();
-
-        // Optionally trigger heavy queue in background without await if environment allows
-        // but Vercel freezes background tasks. So we only run fast queue here.
-
-        res.json({ success: true, message: 'Scrape executed successfully' });
+        await scraperService.scrapeAll();
+        res.json({ success: true, message: 'Scrape All executed' });
     } catch (e) {
         console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 2. FAST QUEUE (RD + USA) - Safe for Vercel (2-5s)
+app.get('/api/cron/trigger-fast', async (req, res) => {
+    try {
+        console.log("⏰ Cron Triggered: FAST QUEUE");
+        const authHeader = req.headers['authorization'];
+        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        await scraperService.runFastQueue();
+        res.json({ success: true, message: 'Fast Queue executed' });
+    } catch (e) {
+        console.error("Fast Queue Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 3. HEAVY QUEUE (TopPick + InstantCash) - Risky for 10s timeout
+app.get('/api/cron/trigger-heavy', async (req, res) => {
+    try {
+        console.log("⏰ Cron Triggered: HEAVY QUEUE");
+        const authHeader = req.headers['authorization'];
+        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        await scraperService.runHeavyQueue();
+        res.json({ success: true, message: 'Heavy Queue executed' });
+    } catch (e) {
+        console.error("Heavy Queue Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -733,6 +758,37 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// GENERATE HANDOVER TOKEN (For Lumina Integration)
+app.post('/api/auth/handover-token', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId } = req.body; // Provided by client who is logged in
+        if (!userId) return res.status(400).json({ error: "Missing User ID" });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Sign a short-lived token (5 mins) that Lumina can verify
+        const payload = {
+            beastId: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            source: 'best-reader'
+        };
+
+        const secret = process.env.HANDOVER_SECRET || 'temp-handover-secret';
+        const token = jwt.sign(payload, secret, { expiresIn: '5m' });
+
+        // TODO: Replace with actual deployed Lumina URL
+        const redirectBase = 'https://lumina-marketplace-fry.vercel.app';
+        res.json({ token, redirectUrl: `${redirectBase}/auth/sync?token=${token}` });
+
+    } catch (e) {
+        console.error("Handover Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/auth/me', async (req, res) => {
     try {
         await connectDB();
@@ -776,6 +832,13 @@ app.post('/api/admin/credit', async (req, res) => {
         // Verify Admin (Simple check)
         // const admin = await User.findById(adminId);
         // if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+
+        // 1. SECURITY CHECK: Verify Lumina Secret
+        const secret = req.headers['x-lumina-secret'];
+        if (secret !== process.env.LUMINA_SECRET) {
+            console.warn(`⛔ Unauthorized Credit Attempt. Secret: ${secret}`);
+            return res.status(401).json({ error: "Unauthorized Source" });
+        }
 
         const block = await ledgerService.addToLedger({
             action: 'DEPOSIT',
@@ -1763,6 +1826,38 @@ app.get('/ver-db', async (req, res) => {
 // FIX: Analytics Endpoint
 app.post('/api/track/init', (req, res) => {
     res.json({ success: true });
+});
+
+// CRON: Vercel Trigger for Scraping
+app.get('/api/cron/trigger-scrape', async (req, res) => {
+    try {
+        console.log("⏰ Vercel Cron Triggered: Starting Scrape...");
+        // Triggers the "Fast Queue" (USA + RD)
+        await scraperService.scrapeAll();
+
+        // Triggers "Heavy" (Top Pick) - Instant Cash is skipped on Vercel (Headless)
+        // We can try calling scrapeHeavy but we know Instant Cash might fail. 
+        // TopPick is inside scrapeHeavy.
+        // Let's try to run scrapeHeavy too, but catch errors?
+        // For now, satisfy user request (stale dates -> Fast Queue).
+
+        res.json({ success: true, message: 'Scrape cycle initiated' });
+    } catch (e) {
+        console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// MANUAL TRIGGER (Bypass Vercel Cron Protection)
+app.get('/api/cron/manual-trigger', async (req, res) => {
+    try {
+        console.log("🛠️ Manual Trigger: Starting Scrape...");
+        await scraperService.scrapeAll();
+        res.json({ success: true, message: 'Manual scrape initiated' });
+    } catch (e) {
+        console.error("Manual Error:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ==========================================

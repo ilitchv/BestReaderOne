@@ -84,7 +84,7 @@ const verifyToken = async (idToken) => {
         return await getAuth().verifyIdToken(idToken);
     } catch (error) {
         console.error("Token Verification Failed:", error.message);
-        throw new Error('Invalid Firebase Token or Server Misconfiguration');
+        throw new Error(`Auth Failed: ${error.message}`);
     }
 };
 
