@@ -384,8 +384,8 @@ async function tryUrls(urls, label, n, tag) {
                 }
             }
 
-            if (digits) {
-
+            if (digits && date) {
+                // Ensure date is valid (Dayjs object or string)
                 return { digits, date };
             }
         } catch (e) {
