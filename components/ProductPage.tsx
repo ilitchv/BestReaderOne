@@ -27,6 +27,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ onOpenPlayground, onBack, lan
         }
     }, []);
 
+    // FIX: Auto-transition when authenticated
+    useEffect(() => {
+        if (isAuthenticated && isLoading) {
+            setIsLoading(false);
+            onOpenPlayground();
+        }
+    }, [isAuthenticated, isLoading, onOpenPlayground]);
+
     const scrollTo = (id: string) => {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }
