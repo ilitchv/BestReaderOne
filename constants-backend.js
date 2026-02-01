@@ -102,7 +102,7 @@ const CUTOFF_TIMES = {
 
 const WAGER_LIMITS = {
     "Pick 3": { "STRAIGHT": 35, "BOX": 105, "COMBO": 35 },
-    "Win 4": { "STRAIGHT": 10, "BOX": 30, "COMBO": 10 },
+    "Win 4": { "STRAIGHT": 50, "BOX": 150, "COMBO": 50 },
     "Pick 2": { "STRAIGHT": 100, "BOX": 100, "COMBO": 100 },
     "Palé": { "STRAIGHT": 35, "BOX": 105, "COMBO": 35 },
     "Palé-RD": { "STRAIGHT": 20, "BOX": 105, "COMBO": 20 },
