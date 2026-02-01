@@ -495,32 +495,56 @@ app.post('/api/admin/withdrawals/:id/process', async (req, res) => {
 // ==========================================
 
 // NEW VERCEL CRON TRIGGER (Secured)
+// NEW VERCEL CRON TRIGGER (Secured & Split)
+// 1. LEGACY/MANUAL (All in one - Risky for Vercel)
 app.get('/api/cron/trigger-scrape', async (req, res) => {
     try {
-        console.log("⏰ Cron Triggered via API");
-
-        // 1. Security Check
+        console.log("⏰ Cron Triggered via API (Legacy Single endpoint)");
         const authHeader = req.headers['authorization'];
         const cronSecret = process.env.CRON_SECRET;
 
         if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-            console.warn("⛔ Unauthorized Cron Attempt");
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        // 2. Trigger Scraper (Fast Queue by default)
-        // Note: Vercel limits execution time. We return success immediately 
-        // after forcing the promise to start, OR we await it if it's fast enough.
-        // For reliability, we await the Fast Queue (RD + USA) which takes ~2-5s.
-
-        await scraperService.fetchAndParse();
-
-        // Optionally trigger heavy queue in background without await if environment allows
-        // but Vercel freezes background tasks. So we only run fast queue here.
-
-        res.json({ success: true, message: 'Scrape executed successfully' });
+        await scraperService.scrapeAll();
+        res.json({ success: true, message: 'Scrape All executed' });
     } catch (e) {
         console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 2. FAST QUEUE (RD + USA) - Safe for Vercel (2-5s)
+app.get('/api/cron/trigger-fast', async (req, res) => {
+    try {
+        console.log("⏰ Cron Triggered: FAST QUEUE");
+        const authHeader = req.headers['authorization'];
+        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        await scraperService.runFastQueue();
+        res.json({ success: true, message: 'Fast Queue executed' });
+    } catch (e) {
+        console.error("Fast Queue Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 3. HEAVY QUEUE (TopPick + InstantCash) - Risky for 10s timeout
+app.get('/api/cron/trigger-heavy', async (req, res) => {
+    try {
+        console.log("⏰ Cron Triggered: HEAVY QUEUE");
+        const authHeader = req.headers['authorization'];
+        if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        await scraperService.runHeavyQueue();
+        res.json({ success: true, message: 'Heavy Queue executed' });
+    } catch (e) {
+        console.error("Heavy Queue Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
