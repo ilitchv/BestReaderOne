@@ -248,7 +248,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToProduct, onNaviga
                         {/* Replaced inline dashboard with CTA to full dashboard */}
                         <div className="text-center py-8">
                             <h3 className="text-xl font-bold mb-4 text-[var(--text)]">Latest Live Results</h3>
-                            <ResultsDashboard zoomScale={zoomScale} theme={theme} />
+                            <ResultsDashboard zoomScale={zoomScale} theme={theme} onNavigateToResults={onNavigateToResults} />
                             <div className="mt-6">
                                 <button onClick={onNavigateToResults} className="btn btn-ghost border-2 border-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)] hover:text-black">
                                     View Full Ultimate Dashboard →

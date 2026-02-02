@@ -25,12 +25,12 @@ const SNIPER_CONFIG = {
     ny: {
         name: "New York",
         p3: {
-            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-numbers/', 'https://www.lottery.net/new-york/numbers-midday/numbers'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/new-york/numbers/', 'https://www.lottery.net/new-york/numbers-evening/numbers'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-numbers/year', 'https://www.lotteryusa.com/new-york/midday-numbers/', 'https://www.lottery.net/new-york/numbers-midday/numbers'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/new-york/numbers/year', 'https://www.lotteryusa.com/new-york/numbers/', 'https://www.lottery.net/new-york/numbers-evening/numbers'], label: 'Evening' }
         },
         p4: {
-            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-win-4/', 'https://www.lottery.net/new-york/win-4-midday/numbers'], label: 'Midday' },
-            eve: { urls: ['https://www.lotteryusa.com/new-york/win-4/', 'https://www.lottery.net/new-york/win-4-evening/numbers'], label: 'Evening' }
+            mid: { urls: ['https://www.lotteryusa.com/new-york/midday-win-4/year', 'https://www.lotteryusa.com/new-york/midday-win-4/', 'https://www.lottery.net/new-york/win-4-midday/numbers'], label: 'Midday' },
+            eve: { urls: ['https://www.lotteryusa.com/new-york/win-4/year', 'https://www.lotteryusa.com/new-york/win-4/', 'https://www.lottery.net/new-york/win-4-evening/numbers'], label: 'Evening' }
         }
     },
     nj: {
@@ -217,37 +217,40 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
 
     // 1. Save to Sniper Track Model
     try {
-        const dateObj = new Date(result.date + 'T12:00:00Z');
-        const exists = await Track.findOne({
-            userId: GLOBAL_ADMIN_ID,
-            lottery: stateName,
-            date: dateObj,
-            time: timeLabel
-        });
+        if (result.p3.includes('---') || result.w4.includes('---')) {
+            console.log(`      ⚠️ Skipping Track Save: ${stateName} ${timeLabel} (Contains Dashed/Empty Data)`);
+        } else {
+            const trackQuery = {
+                userId: GLOBAL_ADMIN_ID,
+                lottery: stateName,
+                date: result.date,
+                time: timeLabel
+            };
 
-        if (!exists) {
-            if (result.p3.includes('---') || result.w4.includes('---')) {
-                console.log(`      ⚠️ Skipping Track Save: ${stateName} ${timeLabel} (Contains Dashed/Empty Data)`);
-            } else {
-                await Track.create({
-                    userId: GLOBAL_ADMIN_ID,
-                    lottery: stateName,
-                    date: result.date,
-                    time: timeLabel,
-                    p3: result.p3,
-                    pick3: result.p3,
-                    pick4: result.w4,
-                    first: result.p3,
-                    second: "---",
-                    third: "---",
-                    source: 'AutoScraper',
-                    createdAt: new Date()
-                });
-                console.log(`   ✅ Saved Track: ${stateName} ${timeLabel} [${result.date}]`);
-            }
+            await Track.updateOne(
+                trackQuery,
+                {
+                    $set: {
+                        ...trackQuery,
+                        p3: result.p3,
+                        pick3: result.p3,
+                        pick4: result.w4,
+                        first: result.p3,
+                        second: "---",
+                        third: "---",
+                        source: 'AutoScraper'
+                    },
+                    $setOnInsert: {
+                        createdAt: new Date(),
+                        meta: {}
+                    }
+                },
+                { upsert: true }
+            );
+            console.log(`   ✅ Saved/Updated Track: ${stateName} ${timeLabel} [${result.date}]`);
         }
     } catch (e) {
-        if (e.code !== 11000) console.error(`      Error saving Track: ${e.message}`);
+        console.error(`      Error saving Track: ${e.message}`);
     }
 
     // 2. Save to LotteryResult (Main Dashboard)
@@ -439,13 +442,17 @@ const runHeavyQueue = async () => {
         }
 
         // 2. Instant Cash (Headless - Slow)
-        try {
-            console.log('   Running Instant Cash (Headless)...');
-            // LAZY LOAD to avoid Puppeteer cold start crash on Vercel
-            const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
-            await scraperInstantCashHeadless();
-        } catch (e) {
-            console.error("   ❌ InstantCash Scraper Failed (or Puppeteer missing):", e.message);
+        if (process.env.VERCEL) {
+            console.log('   ⚠️ Skipping Instant Cash on Vercel (Puppeteer unsupported)');
+        } else {
+            try {
+                console.log('   Running Instant Cash (Headless)...');
+                // LAZY LOAD to avoid Puppeteer cold start crash on Vercel
+                const scraperInstantCashHeadless = require('./scraperInstantCashHeadless');
+                await scraperInstantCashHeadless();
+            } catch (e) {
+                console.error("   ❌ InstantCash Scraper Failed (or Puppeteer missing):", e.message);
+            }
         }
 
     } catch (err) {

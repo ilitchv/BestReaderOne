@@ -5,7 +5,7 @@ import { localDbService } from '../services/localDbService';
 import { getLotteryLogo } from './LotteryLogos';
 import { TRACK_CATEGORIES, RESULTS_CATALOG } from '../constants';
 
-const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zoomScale = 1, theme = 'dark' }) => {
+const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string; onNavigateToResults?: () => void }> = ({ zoomScale = 1, theme = 'dark', onNavigateToResults }) => {
     const [results, setResults] = useState<LotteryResult[]>([]);
     const [loading, setLoading] = useState(true);
     // Default to first category
@@ -312,19 +312,33 @@ const ResultsDashboard: React.FC<{ zoomScale?: number; theme?: string }> = ({ zo
         <div className="mt-8 max-w-[95vw] mx-auto px-4">
             {/* Dynamic Tabs */}
             <div className="flex flex-wrap justify-center gap-4 mb-8">
-                {TRACK_CATEGORIES.map(category => (
-                    <button
-                        key={category.name}
-                        onClick={() => setActiveTab(category.name)}
-                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 border ${activeTab === category.name
-                            ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.4)]'
-                            : (theme === 'dark' ? 'bg-slate-900 text-gray-400 border-slate-700 hover:border-slate-500' : 'bg-[#cbbda8] text-slate-800 border-[#b0a08a] hover:bg-[#c0b09a]')
-                            }`}
-                    >
-                        {category.name.includes('Santo') ? <span className="text-lg">🇩🇴</span> : <span className="text-lg">🇺🇸</span>}
-                        {category.name}
-                    </button>
-                ))}
+                {TRACK_CATEGORIES.map(category => {
+                    // SPECIAL HANDLER for High Frequency Games (Link behavior)
+                    const isHF = category.name === 'High Frequency Games';
+
+                    return (
+                        <button
+                            key={category.name}
+                            onClick={() => {
+                                if (isHF && onNavigateToResults) {
+                                    // Set flag for auto-expansion on destination
+                                    localStorage.setItem('br_auto_expand_hf', 'true');
+                                    onNavigateToResults();
+                                } else {
+                                    setActiveTab(category.name);
+                                }
+                            }}
+                            className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 border ${activeTab === category.name
+                                ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+                                : (theme === 'dark' ? 'bg-slate-900 text-gray-400 border-slate-700 hover:border-slate-500' : 'bg-[#cbbda8] text-slate-800 border-[#b0a08a] hover:bg-[#c0b09a]')
+                                } ${(isHF && onNavigateToResults) ? 'cursor-pointer hover:bg-neon-cyan/10 hover:text-neon-cyan hover:border-neon-cyan' : ''}`}
+                        >
+                            {category.name.includes('Santo') ? <span className="text-lg">🇩🇴</span> : <span className="text-lg">🇺🇸</span>}
+                            {category.name}
+                            {isHF && onNavigateToResults && <span className="text-xs opacity-70 ml-1">↗</span>}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Grid - Fully Responsive with Auto-Fill & Square Aspect */}

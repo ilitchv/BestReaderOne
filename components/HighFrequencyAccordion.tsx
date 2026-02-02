@@ -4,10 +4,22 @@ import { WinningResult } from '../types';
 interface HighFrequencyAccordionProps {
     results: WinningResult[];
     theme: 'light' | 'dark';
+    externalOpen?: boolean; // New Prop
+    onToggle?: (val: boolean) => void; // Optional Callback
 }
 
-const HighFrequencyAccordion: React.FC<HighFrequencyAccordionProps> = ({ results, theme }) => {
-    const [isOpen, setIsOpen] = useState(false);
+const HighFrequencyAccordion: React.FC<HighFrequencyAccordionProps> = ({ results, theme, externalOpen, onToggle }) => {
+    // Internal state for fallback, but verify external prop
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    // Derived state: Use external if provided (not undefined), else internal
+    const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+
+    const handleToggle = () => {
+        const newState = !isOpen;
+        if (onToggle) onToggle(newState);
+        setInternalOpen(newState);
+    };
     const [activeTab, setActiveTab] = useState<'Top Pick' | 'Instant Cash'>('Top Pick');
 
     // Filter for our special lotteries
@@ -34,7 +46,7 @@ const HighFrequencyAccordion: React.FC<HighFrequencyAccordionProps> = ({ results
     return (
         <div className={`mt-6 border rounded-xl overflow-hidden transition-all duration-300 ${theme === 'dark' ? 'bg-[#1e293b] border-slate-700' : 'bg-white border-slate-200'}`}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={handleToggle}
                 className={`w-full p-4 flex items-center justify-between font-bold text-lg uppercase tracking-wider hover:bg-black/5 transition-colors ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}
             >
                 <span className="flex items-center gap-2">
