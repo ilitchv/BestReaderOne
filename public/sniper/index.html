@@ -1,555 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+<!-- Engine: v7.0 Modular (Lotto + Horses) -->
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Beast Strategy Sniper v6.9 (Dynamic Engine)</title>
+    <title>Beast Strategy Sniper v7.0 (Modular)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap"
         rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #0b1120;
-            --bg-card: #151e32;
-            --text-main: #e2e8f0;
-            --text-muted: #64748b;
-            --accent: #06b6d4;
-            --sniper-red: #ef4444;
-            --sniper-green: #22c55e;
-            --sniper-amber: #f59e0b;
-        }
 
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Roboto', sans-serif;
-            min-height: 100vh;
-            height: auto;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            touch-action: pan-y;
-        }
-
-        .font-tech {
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* LAYOUT */
-        .main-layout {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-
-        .top-section {
-            margin-bottom: 20px;
-        }
-
-        .glass-card {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid #334155;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-        }
-
-        /* TABLE */
-        .admin-only {
-            transition: opacity 0.3s;
-        }
-
-        body.user-mode .admin-only {
-            display: none !important;
-        }
-
-        .table-section {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            overflow: visible;
-            position: relative;
-        }
-
-        .custom-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .custom-table th {
-            position: sticky;
-            top: 0;
-            background-color: #1e293b;
-            z-index: 40;
-            padding: 10px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #94a3b8;
-            border-bottom: 2px solid #334155;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            text-align: center;
-        }
-
-        .custom-table td {
-            padding: 8px 10px;
-            border-bottom: 1px solid #1e293b;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.85rem;
-            white-space: nowrap;
-        }
-
-        .custom-table tr:hover td {
-            background-color: rgba(6, 182, 212, 0.05);
-        }
-
-        .custom-table tr.selected td {
-            background-color: rgba(220, 38, 38, 0.1);
-        }
-
-        /* CHECKBOXES & ROW NUMBERS */
-        .row-checkbox {
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border: 1px solid #475569;
-            border-radius: 4px;
-            background: #0f172a;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .row-checkbox:checked {
-            background: var(--sniper-red);
-            border-color: var(--sniper-red);
-        }
-
-        .row-checkbox:checked::after {
-            content: '✔';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 10px;
-            color: white;
-        }
-
-        .row-number {
-            font-size: 0.7rem;
-            color: #475569;
-            font-weight: bold;
-        }
-
-        /* BUTTONS */
-        .btn-download {
-            background: linear-gradient(90deg, #22d3ee, #d946ef);
-            color: white;
-            font-weight: bold;
-            border-radius: 9999px;
-            transition: all 0.3s;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-
-        .btn-download:hover:not(:disabled) {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
-
-        .btn-download:disabled {
-            background: #334155;
-            color: #94a3b8;
-            cursor: not-allowed;
-        }
-
-        .btn-sniper {
-            background: linear-gradient(135deg, #dc2626, #991b1b);
-            color: white;
-            transition: all 0.2s;
-            border: 1px solid #f87171;
-        }
-
-        .btn-sniper:hover:not(:disabled) {
-            transform: scale(1.02);
-            box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
-        }
-
-        .btn-sniper:disabled {
-            background: #1e293b;
-            border-color: #334155;
-            color: #475569;
-        }
-
-        .btn-danger {
-            background: #7f1d1d;
-            color: #fca5a5;
-            border: 1px solid #991b1b;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-danger:hover {
-            background: #991b1b;
-            color: white;
-        }
-
-        .btn-reset {
-            background: #334155;
-            color: #cbd5e1;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-reset:hover {
-            background: #475569;
-            color: white;
-        }
-
-        .btn-add {
-            background: #064e3b;
-            color: #6ee7b7;
-            border: 1px solid #059669;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-add:hover {
-            background: #059669;
-            color: white;
-        }
-
-        .btn-edit {
-            background: #78350f;
-            color: #fdba74;
-            border: 1px solid #b45309;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-edit:hover {
-            background: #b45309;
-            color: white;
-        }
-
-        .btn-tool {
-            background: #1e293b;
-            color: var(--accent);
-            border: 1px solid #334155;
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-tool:hover {
-            border-color: var(--accent);
-            background: #0f172a;
-        }
-
-        .lottery-badge {
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.65rem;
-            font-weight: bold;
-        }
-
-        .filter-pill {
-            padding: 6px 16px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            border: 1px solid #334155;
-            color: #94a3b8;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #0f172a;
-            margin-right: 8px;
-            white-space: nowrap;
-            user-select: none;
-        }
-
-        .filter-pill:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .filter-pill.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: white;
-        }
-
-        /* REEL 3D VIEWPORT */
-        .reel-3d-viewport {
-            perspective: 800px;
-            height: 100%;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-            user-select: none;
-            touch-action: none;
-        }
-
-        .reel-spinner {
-            transform-style: preserve-3d;
-            width: 100%;
-            height: 60px;
-            position: relative;
-            transition: transform 0.0s;
-        }
-
-        .reel-face {
-            position: absolute;
-            width: 100%;
-            height: 60px;
-            left: 0;
-            top: 0;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(51, 65, 85, 0.5);
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .reel-face.active-face {
-            background: rgba(6, 182, 212, 0.15);
-            border-color: rgba(6, 182, 212, 0.6);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
-        }
-
-        /* SONAR */
-        .sonar-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-
-        .sonar-wave {
-            position: absolute;
-            border: 2px solid rgba(6, 182, 212, 0.5);
-            border-radius: 50%;
-            opacity: 0;
-            animation: sonarRipple 2s linear infinite;
-        }
-
-        .sonar-wave:nth-child(2) {
-            animation-delay: 0.6s;
-        }
-
-        .sonar-wave:nth-child(3) {
-            animation-delay: 1.2s;
-        }
-
-        @keyframes sonarRipple {
-            0% {
-                width: 10px;
-                height: 10px;
-                opacity: 0.8;
-                border-width: 3px;
-            }
-
-            100% {
-                width: 150px;
-                height: 150px;
-                opacity: 0;
-                border-width: 0px;
-            }
-        }
-
-        /* CONTROLS */
-        .control-zone {
-            position: absolute;
-            width: 100%;
-            height: 30px;
-            left: 0;
-            z-index: 50;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .control-top {
-            top: 0;
-            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
-        }
-
-        .control-bottom {
-            bottom: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent);
-        }
-
-        .control-arrow {
-            color: rgba(148, 163, 184, 0.3);
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .control-zone:hover .control-arrow {
-            color: var(--accent);
-            transform: scale(1.5);
-            text-shadow: 0 0 10px var(--accent);
-        }
-
-        .balance-gradient {
-            background: -webkit-linear-gradient(right, #22d3ee, #e2e8f0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .settings-gear {
-            font-size: 28px;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .settings-gear:hover {
-            color: var(--accent);
-            transform: rotate(90deg);
-        }
-
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.7rem top 50%;
-            background-size: 0.65rem auto;
-        }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-out;
-            opacity: 0;
-        }
-
-        .accordion-content.open {
-            opacity: 1;
-            overflow: visible;
-        }
-
-        /* FORCE CALENDAR ICON WHITE */
-        ::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
-        }
-
-        .tooltip {
-            visibility: hidden;
-            width: 200px;
-            background-color: rgba(15, 23, 42, 0.95);
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 8px;
-            position: absolute;
-            z-index: 100;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -100px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.7rem;
-            border: 1px solid #334155;
-            pointer-events: none;
-        }
-
-        .stat-row:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .stat-group-title {
-            background: #1e293b;
-            padding: 6px 10px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #06b6d4;
-            text-transform: uppercase;
-            border-bottom: 1px solid #334155;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 10px;
-            border-bottom: 1px solid #1e293b;
-            position: relative;
-            cursor: help;
-        }
-
-        .stat-row:hover {
-            background: #1e293b;
-        }
-
-        .double-highlight {
-            color: #facc15;
-            font-weight: bold;
-            text-shadow: 0 0 5px rgba(250, 204, 21, 0.4);
-        }
-
-        .staging-box {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .staging-box:hover {
-            background: #334155;
-            border-color: var(--accent);
-        }
-    </style>
+    <!-- MODULAR CSS -->
+    <link rel="stylesheet" href="css/sniper-ui.css">
 </head>
 
 <body>
@@ -563,11 +26,19 @@
                     <div class="settings-gear" onclick="openSettings()" title="Configuración">⚙️</div>
                     <div>
                         <h1 class="text-xl font-bold font-tech tracking-wider text-white flex items-center gap-2">
-                            <span class="text-cyan-500">SNIPER</span> DASHBOARD v6.9
+                            <span class="text-cyan-500">SNIPER</span> DASHBOARD v7.0
                         </h1>
-                        <p class="text-[10px] text-slate-500 font-mono mt-1" id="configSummary">CONF: GAP 5 | SL 12 |
-                            STAKE $0.17 | MULTI-TRACK</p>
+                        <p class="text-[10px] text-slate-500 font-mono mt-1" id="configSummary">CONF: LOADING...</p>
                     </div>
+                </div>
+                <div class="flex items-center gap-4 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+                    <span class="text-xs font-bold text-slate-400">GAME:</span>
+                    <select id="engineSelect"
+                        class="bg-slate-800 text-cyan-400 text-xs font-bold border-none focus:outline-none uppercase"
+                        onchange="window.switchEngine(this.value)">
+                        <option value="LOTTO">Lotto (Pick3/Win4)</option>
+                        <option value="HORSE">NY Horses (Racing)</option>
+                    </select>
                 </div>
                 <div class="text-right">
                     <div class="flex items-center justify-end gap-2 mb-1">
@@ -586,14 +57,6 @@
                 </div>
             </div>
 
-            <!-- LATEST RESULTS TICKER (RD/USA) -->
-            <div id="latestResultsTicker"
-                class="mb-4 p-2 bg-slate-900/50 border border-slate-700 rounded-lg flex gap-4 overflow-x-auto items-center min-h-[50px] custom-scrollbar">
-                <div class="flex items-center gap-2 text-xs text-slate-500 animate-pulse px-2">
-                    <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span> Cargando Resultados en Vivo...
-                </div>
-            </div>
-
             <!-- CONTROL PANEL -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
@@ -607,21 +70,12 @@
                     <div class="flex gap-2 mb-2">
                         <select id="lotterySelect"
                             class="bg-slate-900 border border-slate-700 text-white text-xs rounded px-2 py-1 w-full focus:outline-none focus:border-cyan-500">
-                            <!-- Todas las loterías de la lista -->
+                            <!-- Todas las loterías -->
                             <option value="Texas">Texas (All)</option>
                             <option value="Georgia">Georgia (All)</option>
                             <option value="Florida">Florida (All)</option>
                             <option value="New York">New York (All)</option>
-                            <option value="NY-BK">NY Brooklyn (All)</option>
-                            <option value="Maryland">Maryland (All)</option>
-                            <option value="South Carolina">South Carolina (All)</option>
-                            <option value="New Jersey">New Jersey (All)</option>
-                            <option value="Pennsylvania">Pennsylvania (All)</option>
-                            <option value="Connecticut">Connecticut (All)</option>
-                            <option value="Delaware">Delaware (All)</option>
-                            <option value="Virginia">Virginia (All)</option>
-                            <option value="North Carolina">North Carolina (All)</option>
-                            <option value="Custom">Archivo Personalizado</option>
+                            <option value="New York Horse">New York Horses (NEW)</option>
                         </select>
                     </div>
 
@@ -667,10 +121,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="control-zone control-top" onclick="triggerSpin(-1)"><span class="control-arrow">▲</span>
-                    </div>
-                    <div class="control-zone control-bottom" onclick="triggerSpin(1)"><span
-                            class="control-arrow">▼</span></div>
                 </div>
 
                 <!-- 3. ACTION -->
@@ -697,37 +147,21 @@
             <!-- DATA TOOLS & SUMMARY -->
             <div class="mb-4 flex flex-col gap-2">
                 <div class="flex gap-2 justify-end items-center mb-2 admin-only" id="dataTools">
-                    <button id="btnAdd" class="btn-add" onclick="openManualEntry()">
-                        ➕ ADD
-                    </button>
-                    <button id="btnEdit" class="btn-edit hidden" onclick="editSelected()">
-                        ✏️ Editar
-                    </button>
-                    <button id="btnDelete" class="btn-danger hidden" onclick="deleteSelected()">
-                        🗑️ Eliminar
-                    </button>
+                    <button id="btnAdd" class="btn-add" onclick="openManualEntry()">➕ ADD</button>
+                    <button id="btnEdit" class="btn-edit hidden" onclick="editSelected()">✏️ Editar</button>
+                    <button id="btnDelete" class="btn-danger hidden" onclick="deleteSelected()">🗑️ Eliminar</button>
                     <button id="btnCloudSave"
                         class="px-3 py-1 bg-indigo-700 hover:bg-indigo-600 text-white rounded text-[10px] font-bold uppercase shadow-lg shadow-indigo-900/50 transition-all border border-indigo-500"
-                        onclick="manualCloudSync()">
-                        ☁️ Save Cloud
-                    </button>
+                        onclick="manualCloudSync()">☁️ Save Cloud</button>
                     <button
                         class="px-3 py-1 bg-teal-700 hover:bg-teal-600 text-white rounded text-[10px] font-bold uppercase shadow-lg shadow-teal-900/50 transition-all border border-teal-500 admin-only"
-                        onclick="openAdminDataModal()">
-                        🛡️ DATA
-                    </button>
-                    <button class="btn-reset" onclick="resetAllData()">
-                        ⚠️ Reset
-                    </button>
+                        onclick="openAdminDataModal()">🛡️ DATA</button>
+                    <button class="btn-reset" onclick="resetAllData()">⚠️ Reset</button>
                 </div>
 
-                <button
-                    class="w-full py-2 px-4 rounded-lg border border-cyan-900 text-cyan-500 font-tech text-xs font-bold uppercase tracking-wider flex justify-between items-center hover:bg-slate-900 transition mb-2"
-                    onclick="toggleAccordion()">
-                    <span>📊 Executive Summary (Dynamic)</span>
-                    <span id="accIcon">▼</span>
-                </button>
-                <div class="accordion-content bg-slate-900 rounded-lg border border-slate-800" id="accContent">
+                <div class="accordion-content bg-slate-900 rounded-lg border border-slate-800 open" id="accContent"
+                    style="max-height: 500px">
+                    <!-- STATS GRID -->
                     <div
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-slate-800 border border-slate-800">
                         <div class="bg-[#151e32] flex flex-col">
@@ -782,24 +216,19 @@
             <div class="flex flex-col gap-2 mb-2">
                 <div class="flex gap-2 items-center flex-wrap">
                     <span class="text-[10px] text-slate-500 font-bold uppercase">Tracks:</span>
-                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar" id="filterContainer">
-                        <!-- Filters generated via JS -->
-                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar" id="filterContainer"></div>
                 </div>
-                <!-- DATE RANGE FILTER -->
                 <div class="flex gap-2 items-center border-t border-slate-800 pt-2">
                     <span class="text-[10px] text-slate-500 font-bold uppercase">Rango:</span>
                     <input type="date" id="simStartDate"
                         class="bg-slate-900 border border-slate-700 rounded text-[10px] px-1 text-cyan-500 h-6"
                         onchange="runSimulation()">
-                    <span class="text-[10px] text-slate-600">➜</span>
                     <input type="date" id="simEndDate"
                         class="bg-slate-900 border border-slate-700 rounded text-[10px] px-1 text-cyan-500 h-6"
                         onchange="runSimulation()">
                     <button class="text-[10px] text-slate-500 hover:text-white underline ml-2"
                         onclick="clearDateFilter()">Limpiar</button>
-                    <span class="text-[10px] text-slate-600 italic ml-auto">(Filtra visualización, mantiene cálculos de
-                        Gaps)</span>
+                    <span class="text-[10px] text-slate-600 italic ml-auto">(Filtra visualización)</span>
                 </div>
             </div>
 
@@ -810,10 +239,9 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th class="w-8 text-center px-2">
-                            <input type="checkbox" id="selectAll" class="row-checkbox" onclick="toggleSelectAll()">
-                        </th>
-                        <th class="w-8 text-center px-2 text-slate-500">#</th> <!-- Nueva columna contador -->
+                        <th class="w-8 text-center px-2"><input type="checkbox" id="selectAll" class="row-checkbox"
+                                onclick="toggleSelectAll()"></th>
+                        <th class="w-8 text-center px-2 text-slate-500">#</th>
                         <th class="w-20 text-left pl-2">Track</th>
                         <th class="w-24 text-left">Fecha</th>
                         <th class="w-20 text-left">Hora</th>
@@ -829,8 +257,7 @@
                 </thead>
                 <tbody id="historyBody">
                     <tr>
-                        <td colspan="13" class="text-center py-20 text-slate-600 text-sm italic">Sube archivos CSV o usa
-                            el Convertidor para empezar.</td>
+                        <td colspan="13" class="text-center py-20 text-slate-600 text-sm italic">Cargando...</td>
                     </tr>
                 </tbody>
             </table>
@@ -838,6 +265,7 @@
 
     </div>
 
+    <!-- MODALS PLACEHOLDERS (To be filled by core or retained if simple structure preferred) -->
     <!-- SETTINGS MODAL -->
     <div id="settingsModal"
         class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -884,16 +312,12 @@
         class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
         <div
             class="bg-slate-900 border border-red-500/50 w-full max-w-sm rounded-2xl p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 pointer-events-none"
-                style="background-image: linear-gradient(#ef4444 1px, transparent 1px), linear-gradient(90deg, #ef4444 1px, transparent 1px); background-size: 20px 20px;">
-            </div>
             <div class="relative z-10">
                 <div
                     class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-red-500 animate-pulse">
                     🎯</div>
                 <h2 class="text-2xl font-bold font-tech text-white mb-1">DISPARAR</h2>
                 <p class="text-slate-400 text-xs mb-4" id="tTrackName"></p>
-
                 <div class="bg-black/40 rounded-lg p-4 mb-6 border border-slate-800 text-left space-y-2 mt-4">
                     <div class="flex justify-between text-sm"><span class="text-slate-400">Paso</span><span
                             class="font-bold text-amber-500 font-mono" id="tStep">#</span></div>
@@ -912,13 +336,10 @@
         </div>
     </div>
 
-    <!-- NEW CONFIRM MODAL (FIXED Z-INDEX) -->
+    <!-- MODAL CONFIRM -->
     <div id="confirmModal"
         class="modal-overlay fixed inset-0 hidden z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm">
         <div class="bg-slate-900 border border-red-500/50 w-full max-w-sm rounded-xl p-6 shadow-2xl text-center">
-            <div
-                class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-red-500">
-                ⚠️</div>
             <h3 class="text-white font-bold text-lg mb-2">Confirmación</h3>
             <p id="confirmMessage" class="text-slate-400 text-sm mb-6">¿Estás seguro?</p>
             <div class="flex gap-3">
@@ -930,25 +351,10 @@
         </div>
     </div>
 
-    <!-- DATA PREVIEW MODAL (NEW v6.5) -->
-    <div id="previewModal"
-        class="modal-overlay fixed inset-0 hidden z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div
-            class="bg-slate-900 border border-cyan-700 w-full max-w-sm rounded-xl p-6 shadow-2xl max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-2">
-                <h2 id="previewTitle" class="text-sm font-bold font-tech text-white uppercase tracking-wider">DATA
-                    PREVIEW</h2>
-                <button onclick="closePreview()" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <div id="previewContent" class="flex-1 overflow-y-auto text-xs font-mono text-slate-300 space-y-1 pr-2">
-                <!-- Content injected via JS -->
-            </div>
-            <button onclick="closePreview()"
-                class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-bold">Cerrar</button>
-        </div>
-    </div>
+    <!-- INJECT REST OF MODALS DYNAMICALLY OR INCLUDE THEM -->
+    <!-- For simplicity, I will include placeholder for Converter and Admin Data Modal, but they are driven by sniper-core.js -->
 
-    <!-- CONVERTER MODAL -->
+    <!-- CONVERTER MODAL (REQUIRED FOR CORE) -->
     <div id="converterModal"
         class="modal-overlay fixed inset-0 hidden z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md">
         <div
@@ -958,1756 +364,126 @@
                         class="text-cyan-400">🛠️</span> DATA CONVERTER</h2>
                 <button onclick="closeConverter()" class="text-slate-400 hover:text-white">✕</button>
             </div>
-
-            <!-- SECTION 1: RAW CONVERTER -->
-            <div class="mb-6 border-b border-slate-800 pb-6">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">1. Conversor & Fusión (Web
-                    Raw Data)</h3>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Lotería</label>
-                        <select id="convLottery"
-                            class="bg-slate-800 border border-slate-600 text-white text-xs rounded px-2 py-2 w-full">
-                            <option value="New York">New York</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Florida">Florida</option>
-                            <option value="Texas">Texas</option>
-                            <option value="New Jersey">New Jersey</option>
-                            <option value="Pennsylvania">Pennsylvania</option>
-                            <option value="South Carolina">South Carolina</option>
-                            <option value="North Carolina">North Carolina</option>
-                            <option value="Connecticut">Connecticut</option>
-                            <option value="Virginia">Virginia</option>
-                            <option value="Maryland">Maryland</option>
-                            <option value="Delaware">Delaware</option>
-                            <option value="NY-BK">NY Brooklyn</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Parte del Lote</label>
-                        <select id="convType"
-                            class="bg-slate-800 border border-slate-600 text-white text-xs rounded px-2 py-2 w-full">
-                            <option value="p3m">Pick 3 - Midday</option>
-                            <option value="p3e">Pick 3 - Evening</option>
-                            <option value="p3mo">Pick 3 - Morning</option>
-                            <option value="p3n">Pick 3 - Night</option>
-                            <option value="w4m">Win 4 - Midday</option>
-                            <option value="w4e">Win 4 - Evening</option>
-                            <option value="w4mo">Win 4 - Morning</option>
-                            <option value="w4n">Win 4 - Night</option>
-                        </select>
-                    </div>
-                </div>
+            <!-- Keeping simple skeleton, Core/Engine fills if needed -->
+            <div class="p-4">
+                <p class="text-slate-400">Standard Converter</p>
                 <textarea id="convInput"
-                    class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-xs font-mono text-cyan-100 h-20 focus:outline-none focus:border-cyan-500 mb-2"
-                    placeholder="Pegar aquí: January 7, 20178 7 2 8..."></textarea>
-                <div class="flex gap-2 mb-3">
-                    <button onclick="processBatchCheck()"
-                        class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded text-xs uppercase">Procesar
-                        Parte</button>
-                    <button onclick="clearStaging()"
-                        class="px-3 bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-900/50 rounded text-xs">Limpiar</button>
-                </div>
-                <!-- Staging Status Mini (Interactive) -->
-            </div>
-            <!-- Extended Staging Status -->
-            <div class="grid grid-cols-4 gap-2 text-center text-[10px] mb-3">
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('p3m')">P3 Mid: <span id="statP3M" class="text-white font-bold">0</span></div>
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('p3e')">P3 Eve: <span id="statP3E" class="text-white font-bold">0</span></div>
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('p3mo')">P3 Morn: <span id="statP3Mo" class="text-white font-bold">0</span>
-                </div>
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('p3n')">P3 Night: <span id="statP3N" class="text-white font-bold">0</span>
-                </div>
-
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('w4m')">W4 Mid: <span id="statW4M" class="text-white font-bold">0</span></div>
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('w4e')">W4 Eve: <span id="statW4E" class="text-white font-bold">0</span></div>
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('w4mo')">W4 Morn: <span id="statW4Mo" class="text-white font-bold">0</span>
-                </div>
-                <div class="bg-slate-900 p-1 rounded border border-slate-800 text-slate-500 staging-box"
-                    onclick="openPreview('w4n')">W4 Night: <span id="statW4N" class="text-white font-bold">0</span>
-                </div>
-            </div>
-            <button onclick="loadToApp()"
-                class="w-full bg-cyan-700 hover:bg-cyan-600 text-white rounded py-2 font-bold text-xs uppercase">Inyectar
-                Fusión a Simulador</button>
-        </div>
-
-        <!-- SECTION 2: QUICK INJECT EXCEL -->
-        <div class="bg-slate-950/50 rounded-lg border border-slate-700 p-4">
-            <h3 class="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                <span>⚡</span> 2. Inyección Rápida (Excel Copia/Pega)
-            </h3>
-            <p class="text-[10px] text-slate-500 mb-2">Formato esperado: Fecha | Hora | Pick3 | Win4 (Tab Separated)
-            </p>
-            <textarea id="excelInput"
-                class="w-full bg-slate-950 border border-emerald-900/50 rounded p-2 text-xs font-mono text-emerald-100 h-24 focus:outline-none focus:border-emerald-500 mb-2"
-                placeholder="1/1/2016	Midday	650	1937&#10;1/1/2016	Evening	239	7073..."></textarea>
-            <div class="flex gap-2">
-                <select id="excelLottery"
-                    class="bg-slate-800 border border-slate-600 text-white text-xs rounded px-2 w-1/3">
-                    <option value="New York">New York</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Florida">Florida</option>
-                    <option value="Texas">Texas</option>
-                    <option value="New Jersey">New Jersey</option>
-                    <option value="Pennsylvania">Pennsylvania</option>
-                    <option value="South Carolina">South Carolina</option>
-                    <option value="North Carolina">North Carolina</option>
-                    <option value="Connecticut">Connecticut</option>
-                    <option value="Virginia">Virginia</option>
-                    <option value="Maryland">Maryland</option>
-                    <option value="Delaware">Delaware</option>
-                    <option value="NY-BK">NY Brooklyn</option>
-                    <option value="Custom">Custom</option>
-                </select>
-                <button onclick="processQuickInject()"
-                    class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold text-xs uppercase shadow-lg shadow-emerald-900/50">🚀
-                    Inyectar Lote Excel</button>
-            </div>
-        </div>
-    </div>
-    </div>
-
-    <!-- MANUAL ENTRY / EDIT MODAL -->
-    <div id="manualEntryModal"
-        class="modal-overlay fixed inset-0 hidden z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="bg-slate-900 border border-green-600 w-full max-w-sm rounded-xl p-6 shadow-2xl">
-            <h2 id="manualModalTitle" class="text-lg font-bold font-tech text-white mb-4 flex items-center gap-2">
-                <span class="text-green-500">✚</span> AGREGAR SORTEO
-            </h2>
-            <div class="space-y-4 text-xs">
-                <div>
-                    <label class="text-slate-400 block mb-1">Lotería / Track</label>
-                    <select id="manLottery" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                        <option value="Texas">Texas</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Florida">Florida</option>
-                        <option value="New York">New York</option>
-                        <option value="NY-BK">NY Brooklyn</option>
-                        <option value="Maryland">Maryland</option>
-                        <option value="South Carolina">South Carolina</option>
-                        <option value="New Jersey">New Jersey</option>
-                        <option value="Pennsylvania">Pennsylvania</option>
-                        <option value="Connecticut">Connecticut</option>
-                        <option value="Delaware">Delaware</option>
-                        <option value="Virginia">Virginia</option>
-                        <option value="North Carolina">North Carolina</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-slate-400 block mb-1">Fecha</label>
-                        <input type="date" id="manDate"
-                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                    </div>
-                    <div>
-                        <label class="text-slate-400 block mb-1">Hora / Sorteo</label>
-                        <select id="manTime" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                            <option value="Morning">Morning</option>
-                            <option value="Midday">Midday</option>
-                            <option value="Evening">Evening</option>
-                            <option value="Night">Night</option>
-                            <option value="AM">AM</option>
-                            <option value="PM">PM</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="text-slate-400 block mb-1">Resultados (P3 | W4)</label>
-                    <div
-                        class="flex gap-4 justify-center items-center bg-slate-950/50 p-2 rounded border border-slate-800">
-                        <input type="text" id="manP3" maxlength="3"
-                            class="w-20 bg-slate-900 border border-slate-600 rounded p-2 text-center text-white font-mono text-lg tracking-widest focus:border-green-500 outline-none"
-                            placeholder="000">
-                        <span class="text-slate-500 font-bold">|</span>
-                        <input type="text" id="manW4" maxlength="4"
-                            class="w-24 bg-slate-900 border border-slate-600 rounded p-2 text-center text-white font-mono text-lg tracking-widest focus:border-green-500 outline-none"
-                            placeholder="0000">
-                    </div>
-                </div>
-                <div class="flex gap-3 mt-4">
-                    <button onclick="closeManualEntry()"
-                        class="flex-1 py-2 border border-slate-700 text-slate-400 rounded hover:bg-slate-800">Cancelar</button>
-                    <button id="btnManualSave" onclick="saveManualEntry()"
-                        class="flex-1 bg-green-700 hover:bg-green-600 text-white rounded font-bold uppercase shadow-lg shadow-green-900/50">Guardar</button>
-                </div>
+                    class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-xs font-mono"></textarea>
+                <select id="convType" class="hidden">
+                    <option value="p3m">P3M</option>
+                </select> <!-- Hidden helper -->
             </div>
         </div>
     </div>
 
-    <!-- ADMIN EDIT MODAL (Cloud Data) -->
-    <div id="adminEditModal"
-        class="modal-overlay fixed inset-0 hidden z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="bg-slate-900 border border-indigo-600 w-full max-w-sm rounded-xl p-6 shadow-2xl">
-            <h2 class="text-lg font-bold font-tech text-white mb-4 flex items-center gap-2">
-                <span class="text-indigo-500">✏️</span> EDITAR REGISTRO
-            </h2>
-            <div class="space-y-4 text-xs">
-                <input type="hidden" id="admEditId">
-                <div>
-                    <label class="text-slate-400 block mb-1">Lotería / Track</label>
-                    <select id="admEditLottery"
-                        class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                        <option value="Texas">Texas</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Florida">Florida</option>
-                        <option value="New York">New York</option>
-                        <option value="NY-BK">NY Brooklyn</option>
-                        <option value="Maryland">Maryland</option>
-                        <option value="South Carolina">South Carolina</option>
-                        <option value="New Jersey">New Jersey</option>
-                        <option value="Pennsylvania">Pennsylvania</option>
-                        <option value="Connecticut">Connecticut</option>
-                        <option value="Delaware">Delaware</option>
-                        <option value="Virginia">Virginia</option>
-                        <option value="North Carolina">North Carolina</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-slate-400 block mb-1">Fecha</label>
-                        <input type="date" id="admEditDate"
-                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                    </div>
-                    <div>
-                        <label class="text-slate-400 block mb-1">Hora / Sorteo</label>
-                        <select id="admEditTime"
-                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                            <option value="Morning">Morning</option>
-                            <option value="Midday">Midday</option>
-                            <option value="Evening">Evening</option>
-                            <option value="Night">Night</option>
-                            <option value="AM">AM</option>
-                            <option value="PM">PM</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="text-slate-400 block mb-1">Resultados (P3 | W4)</label>
-                    <div
-                        class="flex gap-4 justify-center items-center bg-slate-950/50 p-2 rounded border border-slate-800">
-                        <input type="text" id="admEditP3" maxlength="3"
-                            class="w-20 bg-slate-900 border border-slate-600 rounded p-2 text-center text-white font-mono text-lg tracking-widest focus:border-indigo-500 outline-none"
-                            placeholder="000">
-                        <span class="text-slate-500 font-bold">|</span>
-                        <input type="text" id="admEditW4" maxlength="4"
-                            class="w-24 bg-slate-900 border border-slate-600 rounded p-2 text-center text-white font-mono text-lg tracking-widest focus:border-indigo-500 outline-none"
-                            placeholder="0000">
-                    </div>
-                </div>
-                <div class="flex gap-3 mt-4">
-                    <button onclick="closeAdminEditModal()"
-                        class="flex-1 py-2 border border-slate-700 text-slate-400 rounded hover:bg-slate-800">Cancelar</button>
-                    <button onclick="saveAdminEdit()"
-                        class="flex-1 bg-indigo-700 hover:bg-indigo-600 text-white rounded font-bold uppercase shadow-lg shadow-indigo-900/50">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // CONFIG GLOBAL
-        let CONFIG = {
-            baseStake: 0.17, strategyType: 'MARTINGALE', strategyParam: 1.7,
-            gapTrigger: 5, stopLoss: 12, numbersPlayed: 10,
-            payouts: { p1: 55, p2: 15, p3: 10 }
-        };
-        const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
-
-        // --- USER MODE & SETTINGS ---
-        const IS_USER_MODE = new URLSearchParams(window.location.search).get('mode') === 'user';
-
-        if (IS_USER_MODE) {
-            document.body.classList.add('user-mode');
-            // Override Config from LocalStorage
-            const saved = localStorage.getItem('sniper_user_config');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    CONFIG = { ...CONFIG, ...parsed }; // Merge defaults with saved
-                    // Update UI Label
-                    const el = (id) => document.getElementById(id); // Helper re-defined or use global if available (global el is defined later, risky. Use document.getElementById)
-                    const sum = document.getElementById('configSummary');
-                    if (sum) sum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
-                } catch (e) { console.error("Error loading user settings", e); }
-            }
-        }
-
-        // Trigger External Event
-        function dispatchTicketEvent(track, step, totalAmount) {
-            // Numbers 00-99
-            const numbers = Array.from({ length: 100 }, (_, i) => i.toString().padStart(2, '0'));
-
-            const eventData = {
-                event: 'sniperTrigger',
-                timestamp: new Date().toISOString(),
-                data: {
-                    track: track,
-                    step: step,
-                    total_amount: parseFloat(totalAmount),
-                    numbers: numbers,
-                    stake_per_number: parseFloat(totalAmount) / 100 // Example distribution
-                }
-            };
-
-            // Dispatch Custom Event for internal listeners
-            window.dispatchEvent(new CustomEvent('sniperTrigger', { detail: eventData }));
-
-            // Post Message for iframe/parent communication
-            window.parent.postMessage(eventData, '*');
-
-            console.log("Creating Ticket Event:", eventData);
-        }
-
-        const FIBONACCI_SEQ = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610];
-
-        // --- MATH (MOVED TO TOP FOR SAFETY) ---
-        function getNextStake(step, bankroll) {
-            if (step <= 0) return 0;
-            if (CONFIG.strategyType === 'MARTINGALE') return step === 1 ? CONFIG.baseStake : CONFIG.baseStake * Math.pow(CONFIG.strategyParam, step - 1);
-            if (CONFIG.strategyType === 'FIBONACCI') return CONFIG.baseStake * FIBONACCI_SEQ[Math.min(step - 1, FIBONACCI_SEQ.length - 1)];
-            return CONFIG.baseStake;
-        }
-
-        let globalRawRows = [];
-        let activeFilters = new Set(); // Dynamic Filter Set
-        let tracksState = {};
-        let currentReelIndex = 0;
-        let activeOpportunities = [];
-        let selectedRowIds = new Set();
-        let editingId = null; // ID of row being edited
-
-        // --- REAL-TIME MODE STATE ---
-        let EXECUTION_MODE = 'SIMULATION'; // 'SIMULATION' | 'LIVE'
-        let livePendingEntries = new Set(); // Tracks waiting for confirmed entry
-        let liveActiveTrades = new Set(); // Tracks currently ensuring step counting (Manual Triggered)
-
-        // --- MASTER SCHEDULE ---
-        const MASTER_PRIORITY = [
-            { name: "Texas Morning", priority: 1, state: "Texas", cutoff: 690 },
-            { name: "Georgia Midday", priority: 2, state: "Georgia", cutoff: 735 },
-            { name: "Maryland AM", priority: 3, state: "Maryland", cutoff: 750 },
-            { name: "South Carolina Midday", priority: 4, state: "South Carolina", cutoff: 775 },
-            { name: "New Jersey AM", priority: 5, state: "New Jersey", cutoff: 780 },
-            { name: "Pennsylvania AM", priority: 6, state: "Pennsylvania", cutoff: 800 },
-            { name: "Texas Day", priority: 7, state: "Texas", cutoff: 820 },
-            { name: "Florida AM", priority: 8, state: "Florida", cutoff: 830 },
-            { name: "Connecticut AM", priority: 9, state: "Connecticut", cutoff: 840 },
-            { name: "Delaware AM", priority: 10, state: "Delaware", cutoff: 845 },
-            { name: "Virginia Day", priority: 11, state: "Virginia", cutoff: 860 },
-            { name: "NY-BK AM", priority: 12, state: "NY-BK", cutoff: 868 },
-            { name: "New York AM", priority: 13, state: "New York", cutoff: 868 },
-            { name: "New York Race", priority: 14, state: "New York", cutoff: 875 },
-            { name: "North Carolina AM", priority: 15, state: "North Carolina", cutoff: 900 },
-            { name: "Georgia Evening", priority: 16, state: "Georgia", cutoff: 1120 },
-            { name: "South Carolina Evening", priority: 17, state: "South Carolina", cutoff: 1135 },
-            { name: "Texas Evening", priority: 18, state: "Texas", cutoff: 1140 },
-            { name: "Pennsylvania PM", priority: 19, state: "Pennsylvania", cutoff: 1140 },
-            { name: "Delaware PM", priority: 20, state: "Delaware", cutoff: 1180 },
-            { name: "Maryland PM", priority: 21, state: "Maryland", cutoff: 1200 },
-            { name: "Florida PM", priority: 22, state: "Florida", cutoff: 1305 },
-            { name: "Connecticut PM", priority: 23, state: "Connecticut", cutoff: 1335 },
-            { name: "New York PM", priority: 24, state: "New York", cutoff: 1350 },
-            { name: "NY-BK PM", priority: 25, state: "NY-BK", cutoff: 1350 },
-            { name: "Virginia Night", priority: 26, state: "Virginia", cutoff: 1375 },
-            { name: "New Jersey PM", priority: 27, state: "New Jersey", cutoff: 1380 },
-            { name: "Texas Night", priority: 28, state: "Texas", cutoff: 1390 },
-            { name: "Georgia Night", priority: 29, state: "Georgia", cutoff: 1400 },
-            { name: "North Carolina PM", priority: 30, state: "North Carolina", cutoff: 1439 }
-        ];
-
-        const el = (id) => document.getElementById(id);
-        const ui = {
-            table: el('historyBody'), balance: el('totalBalance'),
-            reelViewport: el('reelViewport'), reelSpinner: el('reelSpinner'), sonar: el('sonarEffect'),
-            activeCount: el('activeCount'), btn: el('btnGenerate'),
-            btnDl: el('btnDownload'), btnDel: el('btnDelete'), btnEdit: el('btnEdit'),
-            statusText: el('actionText'), statusSub: el('actionSubtext'), statusCard: el('actionCard'),
-            lotterySel: el('lotterySelect'), filters: el('filterContainer'),
-            sGap: el('statAvgGap'), sMax: el('statMaxGap'), sCyc: el('statTotalCycles'), sStep: el('statAvgSteps'),
-            sWin: el('statWins'), sLoss: el('statLosses'), sRate: el('statWinRate'),
-            sH1: el('statHitsP1'), sH2: el('statHitsP2'), sH3: el('statHitsP3'), sFreq: el('statFreqP1'),
-            sPnL: el('statPnL'), sGross: el('statGrossWin'), sMDD: el('statMDD'), sInv: el('statInvTotal'), sROI: el('statROI'),
-            iStake: el('confStake'), iStrat: el('confStrategy'), iParam: el('confParam'), iGap: el('confGap'), iSL: el('confSL'), lParam: el('paramLabel'), cParam: el('paramContainer'),
-            mStep: el('tStep'), mTotal: el('tTotal'), mTrack: el('tTrackName'),
-            confSum: el('configSummary'), selectAll: el('selectAll'),
-            // Converter UI
-            convLottery: el('convLottery'), convType: el('convType'), convInput: el('convInput'),
-            statP3M: el('statP3M'), statP3E: el('statP3E'), statW4M: el('statW4M'), statW4E: el('statW4E'),
-            statP3Mo: el('statP3Mo'), statP3N: el('statP3N'), statW4Mo: el('statW4Mo'), statW4N: el('statW4N'),
-            // Excel Quick Inject
-            excelInput: el('excelInput'), excelLottery: el('excelLottery'),
-            // Manual UI
-            manLottery: el('manLottery'), manDate: el('manDate'), manTime: el('manTime'), manP3: el('manP3'), manW4: el('manW4'),
-            manualModalTitle: el('manualModalTitle'), btnManualSave: el('btnManualSave'),
-            // Preview
-            previewModal: el('previewModal'), previewContent: el('previewContent'), previewTitle: el('previewTitle')
-        };
-
-        // --- STAGING MEMORY (CONVERTER) ---
-        let stagingData = { p3m: {}, p3e: {}, w4m: {}, w4e: {}, p3mo: {}, p3n: {}, w4mo: {}, w4n: {} };
-
-        window.openConverter = () => el('converterModal').classList.remove('hidden');
-        window.closeConverter = () => el('converterModal').classList.add('hidden');
-        window.clearStaging = () => {
-            if (confirm('¿Borrar memoria temporal?')) {
-                stagingData = { p3m: {}, p3e: {}, w4m: {}, w4e: {}, p3mo: {}, p3n: {}, w4mo: {}, w4n: {} };
-                updateConverterStatus();
-            }
-        };
-
-        // --- NEW PREVIEW MODAL ---
-        window.openPreview = (type) => {
-            const data = stagingData[type];
-            const keys = Object.keys(data).sort();
-            if (keys.length === 0) return;
-
-            ui.previewTitle.innerText = `PREVIEW: ${type.toUpperCase()} (${keys.length} Registros)`;
-            ui.previewContent.innerHTML = keys.map(k => `<div class="flex justify-between border-b border-slate-800 pb-1 mb-1"><span>${k}</span><span class="text-cyan-400 font-bold">${data[k]}</span></div>`).join('');
-            ui.previewModal.classList.remove('hidden');
-        };
-        window.closePreview = () => ui.previewModal.classList.add('hidden');
-
-        // --- SAFE PROCESS BATCH (v6.4 + Fix) ---
-        window.processBatchCheck = () => {
-            const raw = ui.convInput.value;
-            const type = ui.convType.value; // p3m, p3e, w4m, w4e
-            const isPick3 = type.startsWith('p3');
-            const targetLen = isPick3 ? 3 : 4;
-            const regex = /([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})([\d\s]+)/g;
-            let match;
-            let detectedFireball = false;
-
-            // Pre-scan
-            while ((match = regex.exec(raw)) !== null) {
-                let numRaw = match[4].replace(/\s/g, '');
-                if (numRaw.length === targetLen + 1) {
-                    detectedFireball = true;
-                    break;
-                }
-            }
-
-            if (detectedFireball) {
-                const msg = isPick3
-                    ? "⚠️ Detectados números de 4 dígitos para Pick 3 (Probable Fireball).\n¿Deseas eliminar el último dígito y cargar como Pick 3?"
-                    : "⚠️ Detectados números de 5 dígitos para Win 4 (Probable Fireball).\n¿Deseas eliminar el último dígito y cargar como Win 4?";
-
-                showConfirm(msg, () => executeProcessBatch(true));
-            } else {
-                executeProcessBatch(false);
-            }
-        };
-
-        function executeProcessBatch(trimFireball) {
-            const raw = ui.convInput.value;
-            const type = ui.convType.value;
-            const isPick3 = type.startsWith('p3');
-            const requiredLen = isPick3 ? 3 : 4;
-            const regex = /([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})([\d\s]+)/g;
-            let match; let count = 0; let trimCount = 0;
-
-            while ((match = regex.exec(raw)) !== null) {
-                const dateStr = `${match[1]} ${match[2]}, ${match[3]}`;
-                const dateObj = new Date(dateStr);
-                const dateKey = dateObj.toISOString().split('T')[0];
-                let numRaw = match[4].replace(/\s/g, '');
-
-                if (trimFireball && numRaw.length === requiredLen + 1) {
-                    numRaw = numRaw.substring(0, requiredLen);
-                    trimCount++;
-                }
-
-                if (numRaw.length !== requiredLen) {
-                    alert(`⚠️ ERROR DE FORMATO DETECTADO:\nFecha: ${dateStr}\nData: "${numRaw}"\nSe esperaban ${requiredLen} dígitos.`);
-                    return;
-                }
-                stagingData[type][dateKey] = numRaw;
-                count++;
-            }
-            ui.convInput.value = ''; updateConverterStatus();
-            alert(`✅ ${count} registros procesados.\n✂️ ${trimCount} Fireballs recortados.`);
-        }
-
-        function updateConverterStatus() {
-            ui.statP3M.innerText = Object.keys(stagingData.p3m).length;
-            ui.statP3E.innerText = Object.keys(stagingData.p3e).length;
-            ui.statW4M.innerText = Object.keys(stagingData.w4m).length;
-            ui.statW4E.innerText = Object.keys(stagingData.w4e).length;
-
-            ui.statP3Mo.innerText = Object.keys(stagingData.p3mo).length;
-            ui.statP3N.innerText = Object.keys(stagingData.p3n).length;
-            ui.statW4Mo.innerText = Object.keys(stagingData.w4mo).length;
-            ui.statW4N.innerText = Object.keys(stagingData.w4n).length;
-        }
-
-        window.loadToApp = () => {
-            const lottery = ui.convLottery.value;
-            let addedCount = 0;
-            const allDates = new Set([...Object.keys(stagingData.p3m), ...Object.keys(stagingData.p3e), ...Object.keys(stagingData.w4m), ...Object.keys(stagingData.w4e)]);
-
-            allDates.forEach(dateKey => {
-                if (stagingData.p3m[dateKey] && stagingData.w4m[dateKey]) {
-                    const trackInfo = getTrackInfo(lottery, "12:00 PM");
-                    globalRawRows.push({ id: Date.now() + Math.random(), track: trackInfo.name, priority: trackInfo.priority, lottery: lottery, date: dateKey, time: "Midday", p3: stagingData.p3m[dateKey], w4: stagingData.w4m[dateKey] });
-                    addedCount++;
-                }
-                if (stagingData.p3e[dateKey] && stagingData.w4e[dateKey]) {
-                    const trackInfo = getTrackInfo(lottery, "08:00 PM");
-                    globalRawRows.push({ id: Date.now() + Math.random(), track: trackInfo.name, priority: trackInfo.priority, lottery: lottery, date: dateKey, time: "Evening", p3: stagingData.p3e[dateKey], w4: stagingData.w4e[dateKey] });
-                    addedCount++;
-                }
-
-                // Morning (10:00 AM standard)
-                if (stagingData.p3mo[dateKey] && stagingData.w4mo[dateKey]) {
-                    const trackInfo = getTrackInfo(lottery, "10:00 AM");
-                    globalRawRows.push({ id: Date.now() + Math.random(), track: trackInfo.name, priority: trackInfo.priority, lottery: lottery, date: dateKey, time: "Morning", p3: stagingData.p3mo[dateKey], w4: stagingData.w4mo[dateKey] });
-                    addedCount++;
-                }
-
-                // Night (11:00 PM standard)
-                if (stagingData.p3n[dateKey] && stagingData.w4n[dateKey]) {
-                    const trackInfo = getTrackInfo(lottery, "11:00 PM");
-                    globalRawRows.push({ id: Date.now() + Math.random(), track: trackInfo.name, priority: trackInfo.priority, lottery: lottery, date: dateKey, time: "Night", p3: stagingData.p3n[dateKey], w4: stagingData.w4n[dateKey] });
-                    addedCount++;
-                }
-            });
-            sortAndSave(); closeConverter(); alert(`🎉 ${addedCount} registros inyectados.`);
-        };
-
-        // --- NEW: QUICK INJECT EXCEL ---
-        window.processQuickInject = () => {
-            const raw = ui.excelInput.value.trim();
-            if (!raw) return;
-            const lottery = ui.excelLottery.value;
-            const lines = raw.split('\n');
-            let added = 0;
-
-            lines.forEach(line => {
-                // Try Tab separated first, then comma
-                let cols = line.split('\t');
-                if (cols.length < 4) cols = line.split(',');
-
-                if (cols.length >= 4) {
-                    const dateStr = cols[0].trim();
-                    const timeStr = cols[1].trim();
-                    const p3 = cols[2].trim();
-                    const w4 = cols[3].trim();
-
-                    if (dateStr && p3 && w4) {
-                        const trackInfo = getTrackInfo(lottery, timeStr);
-                        // Parse date to standard if needed (assuming input usually MM/DD/YYYY)
-                        globalRawRows.push({
-                            id: Date.now() + Math.random(),
-                            track: trackInfo.name,
-                            priority: trackInfo.priority,
-                            lottery: lottery,
-                            date: dateStr,
-                            time: timeStr,
-                            p3: p3,
-                            w4: w4
-                        });
-                        added++;
-                    }
-                }
-            });
-
-            if (added > 0) {
-                ui.excelInput.value = '';
-                sortAndSave();
-                closeConverter();
-                alert(`🚀 ${added} registros de Excel inyectados exitosamente.`);
-            } else {
-                alert("⚠️ No se detectaron filas válidas. Revisa el formato.");
-            }
-        };
-
-        // --- NEW: MANUAL ENTRY & EDIT ---
-        window.openManualEntry = () => {
-            editingId = null; // Reset edit mode
-            ui.manualModalTitle.innerHTML = '<span class="text-green-500">✚</span> AGREGAR SORTEO';
-            ui.btnManualSave.innerText = 'GUARDAR';
-            ui.btnManualSave.className = 'flex-1 bg-green-700 hover:bg-green-600 text-white rounded font-bold uppercase shadow-lg shadow-green-900/50';
-            // Clear fields
-            ui.manDate.value = ''; ui.manP3.value = ''; ui.manW4.value = '';
-            el('manualEntryModal').classList.remove('hidden');
-        };
-
-        window.closeManualEntry = () => {
-            el('manualEntryModal').classList.add('hidden');
-            editingId = null;
-        };
-
-        window.editSelected = () => {
-            if (selectedRowIds.size !== 1) return;
-            const id = Array.from(selectedRowIds)[0];
-            const row = globalRawRows.find(r => r.id === id);
-            if (!row) return;
-
-            editingId = id;
-            ui.manualModalTitle.innerHTML = '<span class="text-amber-500">✏️</span> EDITAR REGISTRO';
-            ui.btnManualSave.innerText = 'ACTUALIZAR';
-            ui.btnManualSave.className = 'flex-1 bg-amber-700 hover:bg-amber-600 text-white rounded font-bold uppercase shadow-lg shadow-amber-900/50';
-
-            // Populate fields
-            ui.manLottery.value = row.lottery;
-            ui.manTime.value = row.time.split(' ')[0] || row.time; // Simple extraction attempt
-            ui.manP3.value = row.p3;
-            ui.manW4.value = row.w4;
-
-            // Handle Date format for input (needs YYYY-MM-DD)
-            try {
-                const d = new Date(row.date);
-                if (!isNaN(d.getTime())) {
-                    ui.manDate.value = d.toISOString().split('T')[0];
-                }
-            } catch (e) { console.log('Date parse error', e); }
-
-            el('manualEntryModal').classList.remove('hidden');
-        };
-
-        window.saveManualEntry = () => {
-            const lot = ui.manLottery.value;
-            const date = ui.manDate.value; // YYYY-MM-DD
-            const time = ui.manTime.value;
-            const p3 = ui.manP3.value.trim();
-            const w4 = ui.manW4.value.trim();
-
-            if (!date || !p3 || !w4) { alert("Completa todos los campos"); return; }
-            if (p3.length !== 3 || w4.length !== 4) { alert("Longitud de números incorrecta (P3=3, W4=4)"); return; }
-
-            // Reformat Date for display
-            const dateObj = new Date(date + 'T12:00:00');
-            const displayDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}/${dateObj.getFullYear()}`;
-
-            const trackInfo = getTrackInfo(lot, time === "Midday" ? "12:00 PM" : (time === "Evening" ? "08:00 PM" : "10:00 AM"));
-
-            if (editingId) {
-                // Update existing
-                const index = globalRawRows.findIndex(r => r.id === editingId);
-                if (index !== -1) {
-                    globalRawRows[index] = {
-                        ...globalRawRows[index],
-                        track: `${lot} ${time}`,
-                        priority: trackInfo.priority,
-                        lottery: lot,
-                        date: displayDate,
-                        time: time,
-                        p3: p3,
-                        w4: w4
-                    };
-                }
-            } else {
-                // Create new
-                globalRawRows.push({
-                    id: Date.now() + Math.random(),
-                    track: `${lot} ${time}`,
-                    priority: trackInfo.priority,
-                    lottery: lot,
-                    date: displayDate,
-                    time: time,
-                    p3: p3,
-                    w4: w4
-                });
-            }
-
-            sortAndSave();
-            closeManualEntry();
-            // Clear fields not needed, modal closes
-        };
-
-        function sortAndSave() {
-            globalRawRows.sort((a, b) => {
-                const da = new Date(a.date); const db = new Date(b.date);
-                if (da < db) return -1; if (da > db) return 1;
-                return a.priority - b.priority;
-            });
-            saveLocalData(); runSimulation();
-        }
-
-        window.downloadStagedCSV = () => { alert("Por favor carga a la app primero."); };
-
-        // --- CLOUD SYNC CONFIG ---
-        // --- CLOUD SYNC CONFIG ---
-        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
-        const API_URL = isLocal ? 'http://localhost:8080/api' : '/api';
-
-        async function syncToCloud(rows, isManual = false) {
-            try {
-                // Use fixed Global ID
-                const userId = GLOBAL_ADMIN_ID;
-
-                // Payload
-                const payload = {
-                    userId: userId,
-                    rows: rows.map(r => ({
-                        lottery: r.lottery,
-                        date: r.date,
-                        time: r.time,
-                        track: r.track,
-                        p3: r.p3,
-                        w4: r.w4
-                    }))
-                }; const res = await fetch(`${API_URL}/data/sync`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const json = await res.json();
-                console.log('☁️ Cloud Sync:', json);
-                if (isManual) alert(`✅ ÉXITO: ${json.message || 'Sincronización completada'}`);
-            } catch (e) {
-                console.warn('⚠️ Cloud Sync failed (Offline?):', e);
-                if (isManual) alert(`❌ ERROR: No se pudo conectar con el servidor.\n${e.message}`);
-            }
-        }
-
-        window.manualCloudSync = () => {
-            if (confirm('¿Subir toda la data actual a la Base de Datos (Cloud)?\nEsto sobrescribirá o actualizará los registros en tu cuenta.')) {
-                syncToCloud(globalRawRows, true);
-            }
-        };
-
-        // --- SHARED ADMIN ID ---
-        // Defines a single shared database for all admins (Local/Web/Employees)
-
-
-        async function loadFromCloud() {
-            try {
-                // Use the fixed Global ID so all admins see the same data
-                const userId = GLOBAL_ADMIN_ID;
-
-                const res = await fetch(`${API_URL}/data?userId=${userId}`);
-                if (!res.ok) throw new Error('Network response was not ok');
-                const rows = await res.json();
-                console.log('☁️ Loaded from Cloud:', rows.length);
-                return rows;
-            } catch (e) {
-                console.warn('⚠️ Could not load from cloud:', e);
-                return null;
-            }
-        }
-
-        // --- LOCAL STORAGE & CORE ---
-        function saveLocalData() {
-            try {
-                // 1. Local Persistence (Fast/Backup)
-                localStorage.setItem('sniper_data_v5', JSON.stringify(globalRawRows));
-
-                // 2. Cloud Persistence (Async)
-                syncToCloud(globalRawRows);
-            } catch (e) {
-                console.warn("Local Storage Full/Error:", e);
-                if (e.name === 'QuotaExceededError') {
-                    console.error("Storage Quota Exceeded. Data will work in-memory.");
-                }
-            }
-        }
-        async function loadLocalData() {
-            // Priority: Cloud -> Local -> Empty
-            let loadedRows = null;
-
-            // Try Cloud First
-            const cloudRows = await loadFromCloud();
-            if (cloudRows && cloudRows.length > 0) {
-                loadedRows = cloudRows;
-                console.log("Using Cloud Data");
-            } else {
-                // Fallback to Local
-                const saved = localStorage.getItem('sniper_data_v5');
-                if (saved) {
-                    try { loadedRows = JSON.parse(saved); console.log("Using Local Data"); } catch (e) { }
-                }
-            }
-
-            if (loadedRows) {
-                try {
-                    globalRawRows = loadedRows;
-                    globalRawRows.forEach(r => {
-                        if (!r.id) r.id = Date.now() + Math.random();
-                        if (!r.priority) { const i = getTrackInfo(r.lottery, r.time); r.priority = i.priority; r.track = i.name; }
-                    });
-                    runSimulation();
-                    el('fileName').textContent = `${globalRawRows.length} Registros Recuperados`;
-
-                    // Update UI Config Label if User Mode
-                    updateConfigUI();
-                } catch (e) { console.error("Error processing data", e); }
-            }
-        }
-
-        function updateConfigUI() {
-            const sum = document.getElementById('configSummary');
-            if (sum) sum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
-        }
-
-        // --- 3D REEL (Visuals) ---
-        let currentAngle = 0, cellAngle = 0, radius = 110, isDragging = false, startY = 0, startAngle = 0, currentVelocity = 0, animationFrameId;
-        const vp = ui.reelViewport;
-        vp.addEventListener('mousedown', startDrag); vp.addEventListener('touchstart', startDrag, { passive: false });
-        window.addEventListener('mousemove', moveDrag); window.addEventListener('touchmove', moveDrag, { passive: false });
-        window.addEventListener('mouseup', endDrag); window.addEventListener('touchend', endDrag);
-
-        function startDrag(e) { if (activeOpportunities.length < 2) return; isDragging = true; cancelAnimationFrame(animationFrameId); startY = e.touches ? e.touches[0].clientY : e.clientY; startAngle = currentAngle; currentVelocity = 0; ui.reelSpinner.style.transition = 'none'; }
-        function moveDrag(e) { if (!isDragging) return; e.preventDefault(); const y = e.touches ? e.touches[0].clientY : e.clientY; currentAngle = startAngle + ((y - startY) * 0.8); updateSpinnerTransform(); currentVelocity = (y - startY) * 0.1; }
-        function endDrag(e) { if (!isDragging) return; isDragging = false; applyInertia(); }
-        function applyInertia() { currentVelocity *= 0.95; currentAngle += currentVelocity; updateSpinnerTransform(); if (Math.abs(currentVelocity) > 0.1) animationFrameId = requestAnimationFrame(applyInertia); else snapToGrid(); }
-        function snapToGrid() { const index = Math.round(currentAngle / cellAngle); const targetAngle = index * cellAngle; ui.reelSpinner.style.transition = 'transform 0.4s cubic-bezier(0.17, 0.67, 0.14, 1.2)'; currentAngle = targetAngle; updateSpinnerTransform(); let normIndex = (-index) % activeOpportunities.length; if (normIndex < 0) normIndex += activeOpportunities.length; currentReelIndex = normIndex; updateActiveFaceStyle(); updateActionCard(activeOpportunities[currentReelIndex]); }
-        function updateSpinnerTransform() { ui.reelSpinner.style.transform = `rotateX(${currentAngle}deg)`; }
-        window.triggerSpin = (d) => { if (!activeOpportunities.length) return; const tIdx = Math.round(currentAngle / cellAngle) + (d * -1); ui.reelSpinner.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'; currentAngle = tIdx * cellAngle; updateSpinnerTransform(); setTimeout(() => { let nIdx = (-tIdx) % activeOpportunities.length; if (nIdx < 0) nIdx += activeOpportunities.length; currentReelIndex = nIdx; updateActiveFaceStyle(); updateActionCard(activeOpportunities[currentReelIndex]); }, 300); };
-        function updateActiveFaceStyle() { document.querySelectorAll('.reel-face').forEach(f => f.classList.remove('active-face')); if (document.querySelectorAll('.reel-face')[currentReelIndex]) document.querySelectorAll('.reel-face')[currentReelIndex].classList.add('active-face'); }
-
-        // --- DATA INPUT & CHRONO LOGIC ---
-        el('csvInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => { processNewFile(ev.target.result); el('fileName').textContent = `+ ${file.name} (Cargado)`; };
-            reader.readAsText(file);
-        });
-
-        // --- NEW CHRONO LOGIC FIX (v6.2) ---
-        function parseTimeMinutes(timeStr) {
-            // 1. Normalización
-            const lower = timeStr.toLowerCase();
-
-            // 2. Mapeo Semántico (Palabras Clave)
-            if (lower.includes('morn')) return 600;  // 10:00 AM
-            if (lower.includes('mid') || lower.includes('day')) return 750; // 12:30 PM (Midday)
-            if (lower.includes('race')) return 870;  // 02:30 PM
-            if (lower.includes('eve') || lower.includes('night') || lower.includes('late')) return 1200; // 08:00 PM (Evening)
-
-            // 3. Fallback: Intento de parseo numérico
-            const clean = lower.replace(/[^0-9:amp]/g, '');
-            let [time, modifier] = clean.split(/(?=[ap]m)/);
-            if (!time) return 9999; // Si falla todo, al final
-
-            let [h, m] = time.split(':').map(Number);
-            if (isNaN(h)) return 9999;
-
-            if (modifier === 'pm' && h < 12) h += 12;
-            if (modifier === 'am' && h === 12) h = 0;
-            return (h * 60) + (m || 0);
-        }
-
-        function getTrackInfo(state, rawTime) {
-            const minutes = parseTimeMinutes(rawTime);
-            const stateTracks = MASTER_PRIORITY.filter(t => t.state === state);
-            if (stateTracks.length === 0) return { name: `${state} ${rawTime}`, priority: 999 };
-
-            // Buscar el primer track cuyo cutoff sea MAYOR o IGUAL a la hora virtual
-            // (La lista está ordenada cronológicamente)
-            const match = stateTracks.find(t => minutes <= t.cutoff);
-
-            if (!match) { const last = stateTracks[stateTracks.length - 1]; return { name: last.name, priority: last.priority }; }
-            return { name: match.name, priority: match.priority };
-        }
-
-        function processNewFile(csvText) {
-            const rows = csvText.trim().split('\n');
-            const selectedLottery = ui.lotterySel.value;
-            const startIndex = rows[0].toLowerCase().includes('date') ? 1 : 0;
-
-            for (let i = startIndex; i < rows.length; i++) {
-                const rowStr = rows[i].trim();
-                if (!rowStr) continue;
-                const cols = rowStr.split(',');
-                if (cols.length < 4) continue;
-
-                const p3Val = cols[2] ? cols[2].trim() : '';
-                const w4Val = cols[3] ? cols[3].trim() : '';
-                if (p3Val === '' || w4Val === '') continue;
-
-                const rawTime = cols[1].trim();
-                const trackInfo = getTrackInfo(selectedLottery, rawTime);
-
-                globalRawRows.push({
-                    id: Date.now() + Math.random(),
-                    track: trackInfo.name, priority: trackInfo.priority,
-                    lottery: selectedLottery, date: cols[0].trim(), time: rawTime, p3: p3Val, w4: w4Val
-                });
-            }
-            sortAndSave();
-        }
-
-        // --- ACTIONS ---
-        let pendingAction = null;
-        function showConfirm(msg, action) { el('confirmMessage').innerText = msg; pendingAction = action; el('confirmModal').classList.remove('hidden'); }
-        window.closeConfirm = (c) => { el('confirmModal').classList.add('hidden'); if (c && pendingAction) pendingAction(); pendingAction = null; };
-
-        // --- DYNAMIC FILTER ENGINE (v6.6) ---
-        window.toggleFilter = (lottery) => {
-            if (lottery === 'ALL') {
-                activeFilters.clear();
-            } else {
-                if (activeFilters.has(lottery)) activeFilters.delete(lottery);
-                else activeFilters.add(lottery);
-            }
-            // If user unselects everything, revert to ALL implicitly in logic, but UI shows nothing active?
-            // Better UX: If set is empty, it means ALL.
-            runSimulation();
-        };
-
-        function updateFiltersUI(lotteries) {
-            // Sort lotteries alphabetically for better UX
-            lotteries.sort();
-
-            let html = `<div class="filter-pill ${activeFilters.size === 0 ? 'active' : ''}" onclick="toggleFilter('ALL')">ALL TRACKS</div>`;
-
-            lotteries.forEach(l => {
-                const isActive = activeFilters.has(l);
-                html += `<div class="filter-pill ${isActive ? 'active' : ''}" onclick="toggleFilter('${l}')">${l}</div>`;
-            });
-            ui.filters.innerHTML = html;
-        }
-
-        window.toggleSelectAll = () => {
-            const isChecked = ui.selectAll.checked;
-            document.querySelectorAll('#historyBody tr:not(.hidden)').forEach(tr => {
-                const id = parseFloat(tr.getAttribute('data-id'));
-                const checkbox = tr.querySelector('.row-checkbox');
-                if (checkbox && id) { checkbox.checked = isChecked; if (isChecked) selectedRowIds.add(id); else selectedRowIds.delete(id); tr.classList.toggle('selected', isChecked); }
-            });
-            updateToolbar();
-        };
-
-        window.toggleRowSelection = (id, checkbox) => {
-            if (checkbox.checked) selectedRowIds.add(id); else selectedRowIds.delete(id);
-            checkbox.closest('tr').classList.toggle('selected', checkbox.checked);
-            updateToolbar();
-        };
-
-        function updateToolbar() {
-            // Debug:
-            // console.log(`Selection: ${selectedRowIds.size}`);
-
-            // Show Delete if selection > 0
-            if (selectedRowIds.size > 0) {
-                ui.btnDel.classList.remove('hidden');
-                ui.btnDel.style.display = 'block'; // Force visibility
-                ui.btnDel.textContent = `🗑️ Eliminar (${selectedRowIds.size})`;
-            } else {
-                ui.btnDel.classList.add('hidden');
-                ui.btnDel.style.display = 'none';
-            }
-
-            // Show Edit ONLY if exactly 1 selection
-            if (selectedRowIds.size === 1) {
-                ui.btnEdit.classList.remove('hidden');
-                ui.btnEdit.style.display = 'block'; // Force visibility
-            } else {
-                ui.btnEdit.classList.add('hidden');
-                ui.btnEdit.style.display = 'none';
-            }
-        }
-
-        window.deleteSelected = () => {
-            if (selectedRowIds.size === 0) return;
-            showConfirm(`¿Eliminar ${selectedRowIds.size} registros seleccionados?`, () => {
-                globalRawRows = globalRawRows.filter(row => !selectedRowIds.has(row.id));
-                selectedRowIds.clear(); ui.selectAll.checked = false;
-                updateToolbar();
-                sortAndSave();
-            });
-        };
-
-        window.resetAllData = () => {
-            showConfirm("⚠️ ESTO BORRARÁ TODA LA DATA. ¿CONTINUAR?", () => {
-                globalRawRows = []; selectedRowIds.clear(); localStorage.removeItem('sniper_data_v5'); runSimulation(); el('fileName').textContent = '+ Añadir CSV';
-            });
-        };
-
-        function runSimulation() {
-            ui.table.innerHTML = ''; tracksState = {}; let globalBal = 0;
-            let stats = { gaps: [], maxGap: 0, cycles: 0, wins: 0, losses: 0, stepsForWin: [], h1: 0, h2: 0, h3: 0, totalDraws: 0, totalInvest: 0, totalGrossWin: 0, mdd: 0, peakBalance: 0 };
-
-            // Get unique lotteries from data to build filter UI
-            const uniqueLotteries = [...new Set(globalRawRows.map(r => r.lottery))];
-            updateFiltersUI(uniqueLotteries);
-
-            // Filter Logic: If activeFilters is empty, use all. Else filter by set.
-            const rowsToProcess = (activeFilters.size === 0)
-                ? globalRawRows
-                : globalRawRows.filter(r => activeFilters.has(r.lottery));
-
-            if (rowsToProcess.length === 0) {
-                ui.table.innerHTML = `<tr><td colspan="13" class="text-center py-20 text-slate-600 text-sm italic">Sin datos para mostrar con los filtros actuales.</td></tr>`;
-                updateStats(stats, 0); updateReel(); return;
-            }
-
-            rowsToProcess.forEach((row, index) => {
-                // Initialize track state if new
-                if (!tracksState[row.lottery]) tracksState[row.lottery] = { gap: 0, step: 0, balance: 0 };
-                let t = tracksState[row.lottery];
-
-                // DATE FILTER CHECK
-                const sDate = el('simStartDate').value;
-                const eDate = el('simEndDate').value;
-                let inRange = true;
-                if (sDate || eDate) {
-                    const rDate = new Date(row.date);
-                    if (sDate && rDate < new Date(sDate)) inRange = false;
-                    if (eDate && rDate > new Date(eDate)) inRange = false;
-                }
-
-                const p3 = (row.p3 || "").toString().padStart(3, '0');
-                const w4 = (row.w4 || "").toString().padStart(4, '0');
-                const isP1 = p3[1] === p3[2];
-                const isP2 = w4[0] === w4[1];
-                const isP3 = w4[2] === w4[3];
-                const isManualTrigger = row.isManualTrigger === true; // Flag set by explicit user action
-
-                // Only count stats if in range
-                if (inRange) {
-                    stats.totalDraws++;
-                    if (isP1) stats.h1++; if (isP2) stats.h2++; if (isP3) stats.h3++;
-                }
-
-                let unit = 0, cost = 0, win = 0, net = 0; let dStep = t.step;
-
-                // --- CORE LOGIC SPLIT ---
-                let shouldPlay = false;
-
-                if (EXECUTION_MODE === 'SIMULATION') {
-                    // Auto-trigger if step > 0 OR gap reached trigger
-                    if (t.step > 0 || t.gap >= CONFIG.gapTrigger) shouldPlay = true;
-                } else {
-                    // LIVE MODE: Only play if step > 0 (cycle active) OR if this specific row was manually triggered
-                    // If we are already in a cycle (t.step > 0), we continue automatically until win or loss.
-                    // If we are NOT in a cycle, we ONLY start if the user signaled this specific row (isManualTrigger).
-                    if (t.step > 0 || isManualTrigger) shouldPlay = true;
-                }
-
-                if (shouldPlay) {
-                    // If starting new cycle (step 0), set to 1
-                    if (t.step === 0) { t.step = 1; dStep = 1; }
-
-                    unit = getNextStake(t.step, globalBal + 1000);
-                    cost = unit * CONFIG.numbersPlayed;
-
-                    if (inRange) stats.totalInvest += cost; // STAT
-
-                    if (isP1) win += unit * CONFIG.payouts.p1;
-                    if (isP2) win += unit * CONFIG.payouts.p2;
-                    if (isP3) win += unit * CONFIG.payouts.p3;
-
-                    if (inRange) stats.totalGrossWin += win; // STAT
-
-                    net = win - cost; t.balance += net;
-
-                    if (inRange) globalBal += net; // STAT & Balance Flow
-
-                    if (inRange) {
-                        if (globalBal > stats.peakBalance) stats.peakBalance = globalBal;
-                        let dd = globalBal - stats.peakBalance; if (dd < stats.mdd) stats.mdd = dd;
-                    }
-
-                    if (isP1) {
-                        if (inRange) { stats.gaps.push(t.gap); stats.cycles++; stats.wins++; stats.stepsForWin.push(t.step); }
-                        t.gap = 0; t.step = 0;
-                    }
-                    else if (t.step >= CONFIG.stopLoss) {
-                        if (inRange) { stats.cycles++; stats.losses++; stats.gaps.push(t.gap); }
-                        t.gap = 0; t.step = 0;
-                    }
-                    else {
-                        t.step++; t.gap++;
-                        if (inRange && t.gap > stats.maxGap) stats.maxGap = t.gap;
-                    }
-                } else {
-                    // Just monitoring gaps
-                    if (isP1) {
-                        if (inRange) stats.gaps.push(t.gap);
-                        t.gap = 0;
-                    }
-                    else {
-                        t.gap++;
-                        if (inRange && t.gap > stats.maxGap) stats.maxGap = t.gap;
-                    }
-                }
-
-                if (inRange) {
-                    renderRow(row, index, t.gap, dStep, unit, cost, win, net, globalBal, isP1, isP2, isP3);
-                }
-            });
-
-            updateStats(stats, globalBal); updateReel(); ui.btnDl.disabled = false;
-        }
-
-        window.clearDateFilter = () => { el('simStartDate').value = ''; el('simEndDate').value = ''; runSimulation(); };
-
-        function updateReel() {
-            activeOpportunities = [];
-            for (const [name, state] of Object.entries(tracksState)) {
-                // In SIMULATION, we show anything with step > 0 (active cycle)
-                // In LIVE, we show step > 0 (active cycle) OR Gap > Trigger (Potential Signal)
-                const showCondition = (EXECUTION_MODE === 'LIVE')
-                    ? (state.step > 0 || state.gap >= CONFIG.gapTrigger)
-                    : (state.step > 0);
-
-                if (showCondition) {
-                    // Check if this track is filtered out? No, trackState only contains processed tracks.
-                    let u = getNextStake(state.step, parseFloat(ui.balance.innerText.replace('$', '')) + 1000);
-                    activeOpportunities.push({ name: name, step: state.step, gap: state.gap, cost: u * CONFIG.numbersPlayed });
-                }
-            }
-            activeOpportunities.sort((a, b) => b.step - a.step);
-            ui.activeCount.textContent = `${activeOpportunities.length} Activas`;
-
-            if (activeOpportunities.length === 0) { ui.reelSpinner.innerHTML = ''; ui.sonar.style.display = 'flex'; updateActionCard(null); return; }
-            else { ui.sonar.style.display = 'none'; }
-
-            ui.reelSpinner.innerHTML = '';
-            let displayItems = [...activeOpportunities];
-            if (displayItems.length === 1) displayItems = Array(6).fill(displayItems[0]);
-            else if (displayItems.length === 2) displayItems = [...displayItems, ...displayItems, ...displayItems];
-            else if (displayItems.length === 3) displayItems = [...displayItems, ...displayItems];
-
-            const count = displayItems.length; cellAngle = 360 / count;
-            radius = Math.round((60 / 2) / Math.tan(Math.PI / count));
-            currentAngle = 0; currentReelIndex = 0;
-            ui.reelSpinner.style.transform = `translateZ(-${radius}px) rotateX(0deg)`;
-
-            displayItems.forEach((op, index) => {
-                const face = document.createElement('div'); face.className = 'reel-face';
-                const angle = cellAngle * index;
-                face.style.transform = `rotateX(${angle}deg) translateZ(${radius}px)`;
-                face.innerHTML = `
-                    <div class="text-cyan-400 font-bold text-[10px] mb-0.5 uppercase tracking-wider">${op.name}</div>
-                    <div class="text-2xl font-bold font-tech text-white leading-none">PASO ${op.step}</div>
-                    <div class="text-[9px] text-slate-500 mt-0.5">GAP: <span class="text-amber-500">${op.gap}</span></div>
-                `;
-                ui.reelSpinner.appendChild(face);
-            });
-            updateActiveFaceStyle(); updateActionCard(activeOpportunities[0]);
-        }
-
-        function updateActionCard(op) {
-            // Remove old listeners to prevent duplication (simple clone method)
-            const newBtn = ui.btn.cloneNode(true);
-            ui.btn.parentNode.replaceChild(newBtn, ui.btn);
-            ui.btn = newBtn;
-
-            if (op) {
-                // VISUAL STATE
-                const isLive = EXECUTION_MODE === 'LIVE';
-                const isSignal = op.step === 0 && op.gap >= CONFIG.gapTrigger; // Just a signal, not a cycle yet
-
-                if (isLive && isSignal) {
-                    // LIVE MODE: Signal Detected, waiting for user trigger
-                    ui.statusText.innerHTML = `<span class="text-amber-500 animate-pulse">⚠️ SEÑAL DETECTADA</span>`;
-                    ui.statusSub.innerHTML = `<span class="text-white font-bold">${op.name}</span><br>GAP ${op.gap} • ESPERANDO GATILLO`;
-                    ui.btn.innerHTML = `<span>🔫</span> DISPARAR AHORA`;
-                    ui.btn.onclick = () => confirmTicket(op.name, 1); // Trigger Cycle Start
-                } else {
-                    // STANDARD (Simulation or already in cycle)
-                    ui.statusText.innerHTML = `<span class="text-emerald-400 animate-pulse">● LISTO PARA DISPARO</span>`;
-                    ui.statusSub.innerHTML = `<span class="text-white font-bold">${op.name}</span><br>Paso ${op.step} • $${op.cost.toFixed(2)}`;
-                    ui.btn.innerHTML = `<span>🎯</span> GENERAR TICKET`;
-                    ui.btn.onclick = () => openTicketModal(); // Just visual ticket
-                }
-
-                ui.btn.disabled = false; ui.btn.classList.remove('opacity-50');
-                ui.statusCard.style.borderColor = 'var(--sniper-red)';
-                ui.mTrack.textContent = op.name; ui.mStep.textContent = op.step > 0 ? op.step : "INICIO"; ui.mTotal.textContent = `$${op.cost.toFixed(2)}`;
-            } else {
-                ui.statusText.innerHTML = "ESCANEO ACTIVO..."; ui.statusSub.innerHTML = "";
-                ui.btn.disabled = true; ui.btn.classList.add('opacity-50');
-                ui.statusCard.style.borderColor = '#334155';
-            }
-        }
-
-        function renderRow(row, index, gap, step, unit, cost, win, net, bal, isP1, isP2, isP3) {
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-lottery', row.lottery);
-            tr.setAttribute('data-id', row.id);
-            if (selectedRowIds.has(row.id)) tr.classList.add('selected');
-
-            let badgeClass = "bg-slate-700 text-slate-300";
-            const lot = row.lottery;
-            if (lot.includes("New York") || lot.includes("NY")) badgeClass = "bg-blue-900/30 text-blue-400 border border-blue-800";
-            else if (lot.includes("Georgia")) badgeClass = "bg-green-900/30 text-green-400 border border-green-800";
-            else if (lot.includes("Florida")) badgeClass = "bg-orange-900/30 text-orange-400 border border-orange-800";
-            else if (lot.includes("Texas")) badgeClass = "bg-red-900/30 text-red-400 border border-red-800";
-            else if (lot.includes("Jersey")) badgeClass = "bg-purple-900/30 text-purple-400 border border-purple-800";
-            else if (lot.includes("Carolina")) badgeClass = "bg-teal-900/30 text-teal-400 border border-teal-800";
-
-            const cNet = net > 0 ? 'text-emerald-400 font-bold' : (net < 0 ? 'text-red-500 font-bold' : 'text-slate-600');
-            const cWin = win > 0 ? 'text-emerald-400' : 'text-slate-600';
-            const cBal = bal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-500 font-bold';
-
-            const sP3 = (row.p3 || "").toString().padStart(3, '0');
-            const sW4 = (row.w4 || "").toString().padStart(4, '0');
-            const dP3 = sP3;
-            const p3Html = isP1 ? `<span class="text-slate-500">${dP3[0]}</span><span class="double-highlight">${dP3.substring(1)}</span>` : `<span class="text-slate-500">${dP3}</span>`;
-            const w4Part1 = isP2 ? `<span class="double-highlight">${sW4.substring(0, 2)}</span>` : `<span class="text-slate-500">${sW4.substring(0, 2)}</span>`;
-            const w4Part2 = isP3 ? `<span class="double-highlight">${sW4.substring(2)}</span>` : `<span class="text-slate-500">${sW4.substring(2)}</span>`;
-
-            tr.innerHTML = `
-                <td class="text-center px-2"><input type="checkbox" class="row-checkbox" ${selectedRowIds.has(row.id) ? 'checked' : ''} onclick="toggleRowSelection(${row.id}, this)"></td>
-                <td class="text-center px-2"><span class="row-number">${index + 1}</span></td>
-                <td class="pl-2"><span class="lottery-badge ${badgeClass}">${row.track}</span></td>
-                <td class="text-slate-400 text-xs">${row.date}</td>
-                <td class="text-slate-500 text-[10px] uppercase">${row.time}</td>
-                <td class="font-mono text-sm text-slate-300">${p3Html} | ${w4Part1}${w4Part2}</td>
-                <td class="text-center font-bold text-slate-500">${gap}</td>
-                <td class="text-center font-bold ${step > 0 ? 'text-amber-500' : 'text-slate-700'}">${step > 0 ? step : '-'}</td>
-                <td class="text-right text-slate-400 text-xs font-mono">${unit > 0 ? unit.toFixed(2) : '-'}</td>
-                <td class="text-right text-xs font-bold text-slate-400 font-mono">${cost > 0 ? cost.toFixed(2) : '-'}</td>
-                <td class="text-right text-xs font-mono ${cWin}">${win > 0 ? win.toFixed(2) : '-'}</td>
-                <td class="text-right text-xs font-mono ${cNet}">${net !== 0 ? (net > 0 ? '+' : '') + net.toFixed(2) : '-'}</td>
-                <td class="text-right text-xs font-bold font-mono pr-4 ${cBal}">${bal.toFixed(2)}</td>
-            `;
-            ui.table.appendChild(tr);
-        }
-
-
-
-        function updateStats(s, bal) {
-            const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : 0;
-            const pct = (part, total) => total ? ((part / total) * 100).toFixed(2) + '%' : '0%';
-            ui.sGap.innerText = avg(s.gaps); ui.sMax.innerText = s.maxGap; ui.sCyc.innerText = s.cycles; ui.sStep.innerText = avg(s.stepsForWin);
-            ui.sWin.innerText = s.wins; ui.sLoss.innerText = s.losses; ui.sRate.innerText = pct(s.wins, s.cycles);
-            ui.sH1.innerText = s.h1; ui.sH2.innerText = s.h2; ui.sH3.innerText = s.h3; ui.sFreq.innerText = pct(s.h1, s.totalDraws);
-            ui.sPnL.innerText = (bal >= 0 ? '+' : '-') + '$' + Math.abs(bal).toFixed(2);
-            ui.sPnL.className = 'stat-value ' + (bal >= 0 ? 'text-emerald-400' : 'text-red-500');
-            ui.sGross.innerText = '$' + s.totalGrossWin.toFixed(2); ui.sMDD.innerText = '-$' + Math.abs(s.mdd).toFixed(2); ui.sInv.innerText = '$' + s.totalInvest.toFixed(2);
-            ui.balance.innerText = ui.sPnL.innerText; ui.balance.className = 'text-2xl font-bold font-tech ' + (bal >= 0 ? 'text-emerald-400' : 'text-red-500');
-            let roi = s.totalInvest ? ((bal / s.totalInvest) * 100).toFixed(2) : 0;
-            ui.sROI.innerText = (roi >= 0 ? '+' : '') + roi + '%'; ui.sROI.className = 'stat-value ' + (roi >= 0 ? 'text-emerald-400' : 'text-red-500');
-        }
-
-        window.openSettings = () => { el('confStake').value = CONFIG.baseStake; el('confGap').value = CONFIG.gapTrigger; el('confSL').value = CONFIG.stopLoss; el('settingsModal').classList.remove('hidden'); }
-        window.closeSettings = () => el('settingsModal').classList.add('hidden');
-        window.saveSettings = () => {
-            CONFIG.baseStake = parseFloat(el('confStake').value); CONFIG.gapTrigger = parseInt(el('confGap').value);
-            CONFIG.stopLoss = parseInt(el('confSL').value); CONFIG.strategyType = el('confStrategy').value;
-            CONFIG.strategyParam = parseFloat(el('confParam').value);
-
-            if (IS_USER_MODE) {
-                localStorage.setItem('sniper_user_config', JSON.stringify(CONFIG));
-            }
-
-            ui.confSum.textContent = `CONF: GAP ${CONFIG.gapTrigger} | SL ${CONFIG.stopLoss} | ${CONFIG.strategyType}`;
-            closeSettings(); if (globalRawRows.length) runSimulation();
-        }
-        function toggleStrategyParams() { const val = el('confStrategy').value; if (val === 'MARTINGALE') { ui.cParam.style.display = 'block'; ui.lParam.textContent = 'Multiplicador'; ui.iParam.value = 1.7; } else { ui.cParam.style.display = 'none'; } }
-        function downloadCSV() { /* Export */ }
-        function toggleAccordion() {
-            const c = el('accContent'); const icon = el('accIcon');
-            if (c.classList.contains('open')) { c.style.maxHeight = null; c.classList.remove('open'); icon.innerText = '▼'; }
-            else { c.classList.add('open'); c.style.maxHeight = c.scrollHeight + 'px'; icon.innerText = '▲'; }
-        }
-        window.toggleExecutionMode = () => {
-            const isChecked = el('modeToggle').checked;
-            EXECUTION_MODE = isChecked ? 'LIVE' : 'SIMULATION';
-            el('modeLabel').textContent = EXECUTION_MODE;
-            el('modeLabel').className = isChecked ? "text-[10px] font-bold text-red-500 uppercase tracking-wider animate-pulse" : "text-[10px] font-bold text-slate-500 uppercase tracking-wider";
-
-            // Clean state when switching
-            activeOpportunities = [];
-            runSimulation();
-        };
-
-        // Trigger Dispatch Wrapper
-        window.activeTriggerDispatch = () => {
-            const track = el('tTrackName').textContent;
-            const step = el('tStep').textContent;
-            const total = el('tTotal').textContent.replace('$', '');
-
-            dispatchTicketEvent(track, step, total);
-            closeTicketModal();
-
-            // Visual feedback
-            const btn = el('btnGenerate');
-            if (btn) {
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<span>✅</span> ENVIADO';
-                btn.classList.add('bg-green-600');
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.classList.remove('bg-green-600');
-                }, 2000);
-            }
-        };
-
-        window.confirmTicket = (trackName, step) => {
-            if (EXECUTION_MODE === 'LIVE') {
-                // If the user confirms a shot in Live Mode, we expect the NEXT entry for this track to be the trigger.
-                // However, the user flow usually implies they just saw the result and are entering it, OR they are about to buy the ticket.
-                // For this "Real-time" logic, "Shooting" means "I am taking this trade, count it as valid".
-                // Since this app processes PAST data (CSVs), the "Live" interaction is about marking the NEXT row entered as a Trade.
-
-                showConfirm(`¿ACTIVAR SEGUIMIENTO PARA ${trackName}?`, () => {
-                    livePendingEntries.add(trackName);
-                    alert(`✅ GATILLO ACTIVADO PARA ${trackName}.\nEl próximo registro ingresado para este track iniciará el conteo.`);
-                });
-            } else {
-                openTicketModal();
-            }
-        };
-
-        // Hook into Save functions to apply manual trigger
-        // This amends saveManualEntry to set the flag if pending
-        const originalSave = window.saveManualEntry;
-        window.saveManualEntry = () => {
-            // Hijack to detecting track
-            const lot = ui.manLottery.value;
-            const time = ui.manTime.value;
-            // Need to construct track name to check pending. 
-            // The original function handles construction inside.
-            // Let's modify the push/update directly in logic or wrap it?
-            // Easier: Modify saveManualEntry logic directly (see updated section below).
-
-            // For now, let's just let the user use the tool which updated saveManualEntry block entirely?
-            // Wait, I didn't replace saveManualEntry in the chunks above. I should do it now.
-            runOriginalSaveLogic();
-        };
-
-        function runOriginalSaveLogic() {
-            const lot = ui.manLottery.value;
-            const date = ui.manDate.value;
-            const time = ui.manTime.value;
-            const p3 = ui.manP3.value.trim();
-            const w4 = ui.manW4.value.trim();
-
-            if (!date || !p3 || !w4) { alert("Completa todos los campos"); return; }
-            if (p3.length !== 3 || w4.length !== 4) { alert("Longitud de números incorrecta (P3=3, W4=4)"); return; }
-
-            const dateObj = new Date(date + 'T12:00:00');
-            const displayDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}/${dateObj.getFullYear()}`;
-            // Re-calc track info
-            const trackInfo = getTrackInfo(lot, time === "Midday" ? "12:00 PM" : (time === "Evening" ? "08:00 PM" : "10:00 AM"));
-            const trackName = trackInfo.name;
-
-            // CHECK LIVE TRIGGER
-            let manualTrigger = false;
-            if (EXECUTION_MODE === 'LIVE' && livePendingEntries.has(trackName)) {
-                manualTrigger = true;
-                livePendingEntries.delete(trackName); // Consumed
-            }
-
-            if (editingId) {
-                const index = globalRawRows.findIndex(r => r.id === editingId);
-                if (index !== -1) {
-                    globalRawRows[index] = { ...globalRawRows[index], track: trackName, priority: trackInfo.priority, lottery: lot, date: displayDate, time: time, p3: p3, w4: w4, isManualTrigger: manualTrigger };
-                }
-            } else {
-                globalRawRows.push({
-                    id: Date.now() + Math.random(),
-                    track: trackName, priority: trackInfo.priority, lottery: lot, date: displayDate, time: time, p3: p3, w4: w4,
-                    isManualTrigger: manualTrigger
-                });
-            }
-            sortAndSave(); closeManualEntry();
-        }
-
-        window.openTicketModal = () => el('ticketModal').classList.remove('hidden'); window.closeTicketModal = () => el('ticketModal').classList.add('hidden');
-        window.addEventListener('load', loadLocalData);
-    </script>
-    <!-- ADMIN DATA MANAGER MODAL -->
+    <!-- ADMIN DATA MODAL -->
     <div id="adminDataModal"
         class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
         <div class="bg-slate-900 border border-slate-700 w-full max-w-4xl h-[80vh] rounded-xl flex flex-col shadow-2xl">
-            <!-- Header -->
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                <h3 class="text-amber-500 font-bold font-tech uppercase tracking-wider text-sm flex items-center gap-2">
-                    <span>📂</span> REGISTRO HISTÓRICO (MongoDB)
-                </h3>
-                <button class="text-slate-400 hover:text-white" onclick="closeAdminDataModal()">✕</button>
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-amber-500 text-sm">ADMIN</h3><button onclick="closeAdminDataModal()">✕</button>
             </div>
-
             <!-- Filters -->
-            <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-800/20">
-                <div>
-                    <label class="text-[10px] text-slate-400">Desde</label>
-                    <input type="date" id="admStart"
-                        class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-cyan-400">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400">Hasta</label>
-                    <input type="date" id="admEnd"
-                        class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-cyan-400">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400">Lotería</label>
-                    <select id="admLottery"
-                        class="w-full bg-slate-950 border border-slate-700 rounded text-xs px-2 py-1 text-white">
-                        <option value="ALL">TODAS</option>
-                        <option value="New York">New York</option>
-                        <option value="Gana Mas">Gana Más (RD)</option>
-                        <option value="Loteria Nacional">Nacional (RD)</option>
-                        <option value="Loteka">Loteka (RD)</option>
-                        <option value="Quiniela Pale">Quiniela Palé (RD)</option>
-                        <option value="La Primera">La Primera (RD)</option>
-                        <option value="Lotedom">Lotedom (RD)</option>
-                        <option value="La Suerte">La Suerte (RD)</option>
-                        <option value="Loteria Real">Real (RD)</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Florida">Florida</option>
-                        <option value="New York">New York</option>
-                        <option value="NY-BK">NY Brooklyn</option>
-                        <option value="Maryland">Maryland</option>
-                        <option value="South Carolina">South Carolina</option>
-                        <option value="New Jersey">New Jersey</option>
-                        <option value="Pennsylvania">Pennsylvania</option>
-                        <option value="Connecticut">Connecticut</option>
-                        <option value="Delaware">Delaware</option>
-                        <option value="Virginia">Virginia</option>
-                        <option value="North Carolina">North Carolina</option>
-                    </select>
-                </div>
-                <div class="flex items-end gap-2 text-white">
-                    <label
-                        class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded px-2 py-1 cursor-pointer w-full justify-center">
-                        <span class="text-[9px] font-bold text-slate-400">DATA:</span>
-                        <input type="checkbox" id="admSourceToggle" class="accent-cyan-500 w-3 h-3">
-                        <span class="text-[9px] font-bold text-cyan-400">OFFICIAL</span>
-                    </label>
-                </div>
-                <div class="flex items-end">
-                    <button onclick="admSearch()"
-                        class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-1 rounded text-xs font-bold uppercase shadow-lg shadow-cyan-900/50 transition-all">
-                        🔍 Buscar
-                    </button>
-                </div>
+            <div class="p-4 grid grid-cols-4 gap-2">
+                <input type="date" id="admStart"> <input type="date" id="admEnd">
+                <select id="admLottery">
+                    <option value="ALL">ALL</option>
+                </select>
+                <button onclick="admSearch()">Search</button>
             </div>
-
-            <!-- Table -->
-            <div class="flex-1 overflow-auto px-4 pb-4 pt-0">
-                <table class="w-full text-left border-collapse relative">
-                    <thead class="bg-slate-950 text-slate-500 text-[10px] uppercase sticky top-0 z-20 shadow-md">
-                        <tr>
-                            <th class="p-2 border-b border-slate-800 bg-slate-950">Date/Time</th>
-                            <th class="p-2 border-b border-slate-800 bg-slate-950">Lottery</th>
-                            <th class="p-2 border-b border-slate-800 bg-slate-950">P3 / W4</th>
-                            <th class="p-2 border-b border-slate-800 bg-slate-950 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admTableBody" class="text-xs text-slate-300 font-mono">
-                        <tr>
-                            <td colspan="4" class="p-4 text-center text-slate-600">Busca para ver datos...</td>
-                        </tr>
-                    </tbody>
+            <div class="flex-1 overflow-auto p-4">
+                <table class="w-full">
+                    <tbody id="admTableBody"></tbody>
                 </table>
             </div>
-
-            <!-- Footer Action -->
-            <div class="p-4 border-t border-slate-800 flex justify-end gap-2 bg-slate-900/50">
-                <span id="admStatus" class="text-xs text-slate-500 self-center mr-auto"></span>
-                <button onclick="admLoadToSim()"
-                    class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold uppercase shadow-lg shadow-indigo-900/50">
-                    📥 Cargar a Simulación
-                </button>
-            </div>
+            <div class="p-2"><span id="admStatus"></span></div>
         </div>
     </div>
 
+    <!-- MANUAL ENTRY MODAL (Stub) -->
+    <div id="manualEntryModal" class="hidden"></div>
+    <div id="adminEditModal" class="hidden"></div>
+
+    <!-- MODULAR SCRIPTS -->
+    <script src="js/sniper-core.js"></script>
+    <script src="js/lotto-engine.js"></script>
+    <script src="js/horse-engine.js"></script>
+
     <script>
-        // --- NEW RESULT INTEGRATION (RD/USA) ---
-        async function loadLatestResults() {
-            const ticker = document.getElementById('latestResultsTicker');
-            if (!ticker) return;
+        // MAIN INIT
+        window.addEventListener('load', () => {
+            // Init UI Refs
+            window.initUI();
 
-            try {
-                // Fetch RD Results (Default view)
-                const res = await fetch(`${API_URL}/results?country=RD`);
-                if (!res.ok) throw new Error("API Error");
-                const data = await res.json(); // Array of LotteryResult
+            // Init Reel Events
+            window.initReelEvents();
 
-                if (data.length === 0) {
-                    ticker.innerHTML = '<div class="text-[10px] text-slate-500 px-2">No hay resultados recientes.</div>';
-                    return;
-                }
+            // Execution Mode Toggle
+            window.EXECUTION_MODE = 'SIMULATION';
+            window.toggleExecutionMode = () => {
+                const isChecked = document.getElementById('modeToggle').checked;
+                window.EXECUTION_MODE = isChecked ? 'LIVE' : 'SIMULATION';
+                document.getElementById('modeLabel').textContent = window.EXECUTION_MODE;
+                if (window.runSimulation) window.runSimulation();
+            };
 
-                ticker.innerHTML = '';
+            // Engine Dispatcher
+            window.switchEngine = (mode) => {
+                console.log("Switching Engine:", mode);
+                const tableHead = document.querySelector('.custom-table thead tr');
 
-                // Group by Lottery Name to show latest only per lottery
-                const uniqueLatest = [];
-                const seen = new Set();
-                data.forEach(r => {
-                    const key = r.lotteryName;
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        uniqueLatest.push(r);
+                if (mode === 'HORSE') {
+                    if (window.HorseEngine) {
+                        window.HorseEngine.run(); // This sets the header
+                        if (window.HorseEngine.data.length === 0) {
+                            document.getElementById('historyBody').innerHTML = '<tr><td colspan="13" class="text-center py-20 text-slate-500">Motor de Caballos Activo. Carga un CSV.</td></tr>';
+                        }
                     }
-                });
-
-                uniqueLatest.forEach(r => {
-                    // Badge Color Logic
-                    let badgeColor = "bg-slate-700 text-slate-300";
-                    if (r.country === 'RD') badgeColor = "bg-blue-900/40 text-blue-300 border-blue-800";
-                    if (r.country === 'USA') badgeColor = "bg-red-900/40 text-red-300 border-red-800";
-
-                    // Format Numbers
-                    const p3 = r.pick3 || r.first || '—';
-                    const p4 = r.pick4 || (r.second && r.third ? r.second + r.third : '—');
-
-                    const el = document.createElement('div');
-                    el.className = `flex flex-col min-w-[100px] p-2 rounded border border-slate-700/50 bg-slate-800/50 flex-shrink-0`;
-                    el.innerHTML = `
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-[9px] font-bold px-1 rounded border border-transparent ${badgeColor}">${r.lotteryName}</span>
-                            <span class="text-[8px] text-slate-500">${new Date(r.drawDate).toLocaleDateString()}</span>
-                        </div>
-                        <div class="flex justify-between items-end">
-                             <div class="text-center">
-                                <div class="text-[8px] text-slate-500 uppercase">Major</div>
-                                <div class="text-sm font-bold font-mono text-white">${r.first || '--'}</div>
-                             </div>
-                             <div class="text-center">
-                                <div class="text-[8px] text-slate-500 uppercase">Pick3</div>
-                                <div class="text-sm font-bold font-mono text-purple-400">${r.pick3 || '--'}</div>
-                             </div>
-                             <div class="text-center">
-                                <div class="text-sm font-bold font-mono text-orange-400">${r.pick4 || '--'}</div>
-                                <div class="text-[8px] text-slate-500 uppercase">Win4</div>
-                             </div>
-                        </div>
-                    `;
-                    ticker.appendChild(el);
-                });
-
-            } catch (e) {
-                console.warn("Could not load latest results", e);
-                ticker.innerHTML = '<div class="text-[10px] text-red-500 px-2">Offline / Error de Carga</div>';
-            }
-        }
-
-        // Initial Load
-        window.addEventListener('load', loadLatestResults);
-
-        // --- ADMIN MANAGER LOGIC ---
-        function openAdminDataModal() {
-            el('adminDataModal').classList.remove('hidden');
-            // Set default dates (Last Month -> Today)
-            const today = new Date();
-            el('admEnd').value = today.toISOString().split('T')[0];
-
-            const past = new Date();
-            past.setMonth(today.getMonth() - 1);
-            el('admStart').value = past.toISOString().split('T')[0];
-
-            // Auto Search
-            admSearch();
-        }
-        function closeAdminDataModal() { el('adminDataModal').classList.add('hidden'); }
-
-        let admCachedRows = [];
-
-        async function admSearch() {
-            const start = el('admStart').value;
-            const end = el('admEnd').value;
-            const lot = el('admLottery').value;
-            const userId = GLOBAL_ADMIN_ID;
-            const toggle = document.getElementById('admSourceToggle');
-            const isOfficial = toggle ? toggle.checked : false;
-
-            console.log("🔍 AdmSearch Triggered:", { start, end, lot, userId, isOfficial });
-            el('admStatus').textContent = isOfficial ? "Buscando Resultados Oficiales..." : "Buscando Tracks Sniper...";
-            el('admTableBody').innerHTML = '<tr><td colspan="4" class="p-4 text-center text-cyan-500 animate-pulse">Consultando MongoDB...</td></tr>';
-
-            try {
-                let url;
-                if (isOfficial) {
-                    // Search Official Results Collection
-                    // Pass params to leverage backend filtering
-                    const searchParams = new URLSearchParams({
-                        limit: '500', // Fetch more to be safe
-                        startDate: start,
-                        endDate: end
-                    });
-
-                    // If specific lottery selected, client-side filter or backend? 
-                    // Backend supports 'country' but not fuzzy name search yet.
-                    // We'll filter name client-side.
-
-                    url = `${API_URL}/results?${searchParams.toString()}`;
                 } else {
-                    // Search Tracks (Existing)
-                    const params = new URLSearchParams({ userId, startDate: start, endDate: end, lottery: lot || 'ALL' });
-                    url = `${API_URL}/data/search?${params}`;
-                }
-
-                console.log("🔍 Fetching URL:", url);
-
-                const res = await fetch(url);
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-
-                let data = await res.json();
-
-                // Client-side filtering
-                if (isOfficial) {
-                    // Filter by Lottery Name if selected
-                    if (lot && lot !== 'ALL') {
-                        data = data.filter(r => r.lotteryName.toLowerCase().includes(lot.toLowerCase()));
+                    // Restore Lotto Header
+                    if (tableHead) {
+                        tableHead.innerHTML = `
+                            <th class="w-8 text-center px-2"><input type="checkbox" id="selectAll" class="row-checkbox" onclick="toggleSelectAll()"></th>
+                            <th class="w-8 text-center px-2 text-slate-500">#</th>
+                            <th class="w-20 text-left pl-2">Track</th>
+                            <th class="w-24 text-left">Fecha</th>
+                            <th class="w-20 text-left">Hora</th>
+                            <th>Resultados</th>
+                            <th class="w-12 text-center">Gap</th>
+                            <th class="w-12 text-center">Paso</th>
+                            <th class="w-24 text-right">Unit</th>
+                            <th class="w-24 text-right">Total</th>
+                            <th class="w-24 text-right">Premio</th>
+                            <th class="w-24 text-right">Neto</th>
+                            <th class="w-28 text-right pr-4">Balance</th>
+                        `;
                     }
+                    if (window.runSimulation) window.runSimulation();
                 }
+            };
 
-                console.log("✅ Search Result:", data);
-
-                admCachedRows = data;
-                renderAdmTable(data, isOfficial);
-                el('admStatus').textContent = `${data.length} registros encontrados.`;
-            } catch (e) {
-                console.error("❌ AdmSearch Error:", e);
-                el('admStatus').textContent = "Error: " + e.message;
-                el('admTableBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error: ${e.message}</td></tr>`;
-            }
-        }
-
-        function renderAdmTable(rows, isOfficial) {
-            const tbody = el('admTableBody');
-            tbody.innerHTML = '';
-            if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-600">No se encontraron resultados.</td></tr>';
-                return;
-            }
-            rows.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-800 hover:bg-slate-800/50";
-
-                if (isOfficial) {
-                    tr.innerHTML = `
-                        <td class="p-2 text-slate-400 font-mono text-[10px]">${new Date(r.drawDate).toLocaleDateString()}</td>
-                        <td class="p-2 text-cyan-300 font-bold text-xs">${r.lotteryName}</td>
-                        <td class="p-2 font-mono text-xs">
-                            <span class="text-white font-bold">${r.first || '--'}</span> | 
-                            <span class="text-purple-400">${r.pick3 || '--'}</span> | 
-                            <span class="text-orange-400">${r.pick4 || '--'}</span>
-                        </td>
-                        <td class="p-2 text-right gap-1 flex justify-end">
-                            <button class="text-slate-500 cursor-not-allowed text-[10px] border border-slate-700 px-1 rounded">LOCKED</button>
-                        </td>
-                    `;
-                } else {
-                    tr.innerHTML = `
-                        <td class="p-2 text-slate-400">${new Date(r.date).toLocaleDateString()} ${r.time}</td>
-                        <td class="p-2 text-cyan-300 font-bold">${r.lottery}</td>
-                        <td class="p-2"><span class="text-amber-400">${r.p3}</span> / <span class="text-purple-400">${r.w4}</span></td>
-                        <td class="p-2 text-right gap-1 flex justify-end">
-                            <button onclick="admEdit('${r._id || r.id}')" class="text-cyan-500 hover:text-cyan-400 text-[10px] border border-cyan-900 px-1 rounded mr-1">EDIT</button>
-                            <button onclick="admDelete('${r._id || r.id}')" class="text-red-500 hover:text-red-400 text-[10px] border border-red-900 px-1 rounded">DEL</button>
-                        </td>
-                    `;
-                }
-                tbody.appendChild(tr);
-            });
-        }
-
-        async function admEdit(id) {
-            const row = admCachedRows.find(r => (r._id === id || r.id === id));
-            if (!row) return;
-
-            // Open Full Modal
-            el('admEditId').value = id;
-            el('admEditLottery').value = row.lottery;
-
-            // Fix Date format for Input (YYYY-MM-DD)
-            const d = new Date(row.date);
-            // Handle TZ potential offset issues by using UTC or local string logic carefully
-            // Simple approach: Use ISO split if it's correct date object
-            const dateStr = d.toISOString().split('T')[0];
-            el('admEditDate').value = dateStr;
-
-            el('admEditTime').value = row.time;
-            el('admEditP3').value = row.p3;
-            el('admEditW4').value = row.w4;
-
-            el('adminEditModal').classList.remove('hidden');
-        }
-
-        window.closeAdminEditModal = () => el('adminEditModal').classList.add('hidden');
-
-        async function saveAdminEdit() {
-            const id = el('admEditId').value;
-            const newLot = el('admEditLottery').value;
-            const newDate = el('admEditDate').value;
-            const newTime = el('admEditTime').value;
-            const newP3 = el('admEditP3').value;
-            const newW4 = el('admEditW4').value;
-
-            if (!newDate || !newP3 || !newW4) return alert("Completa todos los campos");
-
-            try {
-                const res = await fetch(`${API_URL}/data/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        lottery: newLot,
-                        date: newDate,
-                        time: newTime,
-                        p3: newP3,
-                        w4: newW4
-                    })
-                });
-
-                if (res.ok) {
-                    alert("✅ Registro actualizado.");
-                    // Update Cache Locally
-                    const row = admCachedRows.find(r => (r._id === id || r.id === id));
-                    if (row) {
-                        row.lottery = newLot;
-                        row.date = newDate;
-                        row.time = newTime;
-                        row.p3 = newP3;
-                        row.w4 = newW4;
+            if (document.getElementById('csvInput')) document.getElementById('csvInput').addEventListener('change', (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const text = ev.target.result;
+                    const mode = document.getElementById('engineSelect').value;
+                    if (mode === 'HORSE') {
+                        window.HorseEngine.parseCSV(text);
+                    } else {
+                        window.processNewFile(text); // Lotto
                     }
-                    renderAdmTable(admCachedRows);
-                    closeAdminEditModal();
-                } else {
-                    const err = await res.json();
-                    alert("❌ Error al actualizar: " + err.error);
-                }
-            } catch (e) {
-                alert("❌ Error de conexión");
-            }
-        }
-
-        async function admDelete(id) {
-            if (!confirm("¿Eliminar este registro permanentemente de la Base de Datos?")) return;
-            try {
-                await fetch(`${API_URL}/data/${id}`, { method: 'DELETE' });
-                // Remove from UI immediately
-                admCachedRows = admCachedRows.filter(r => (r._id !== id && r.id !== id));
-                renderAdmTable(admCachedRows);
-            } catch (e) { alert("Error eliminando: " + e.message); }
-        }
-
-        function admLoadToSim() {
-            if (admCachedRows.length === 0) return alert("No hay datos para cargar.");
-
-            // Map MongoDB format back to App format
-            const mapped = admCachedRows.map(r => ({
-                id: r._id || r.id,
-                lottery: r.lottery,
-                date: r.date,
-                time: r.time,
-                track: r.trackName || r.track || r.lottery, // Fallbacks
-                p3: r.p3,
-                w4: r.w4,
-                // App logic will recalc sort/priority/gaps
-            }));
-
-            // Load into Global App State
-            globalRawRows = mapped;
-
-            // Re-Init App Logic
-            mapped.forEach(r => {
-                if (!r.priority) { const i = getTrackInfo(r.lottery, r.time); r.priority = i.priority; r.track = i.name; }
+                    document.getElementById('fileName').textContent = `+ ${file.name} (Loaded)`;
+                };
+                reader.readAsText(file);
             });
 
-            runSimulation();
-            closeAdminDataModal();
-            el('fileName').textContent = `${mapped.length} Registros Cargados (Admin)`;
-            alert(`✅ ${mapped.length} registros cargados a la simulación.`);
-        }
+            // Load Data
+            if (window.loadLocalData) window.loadLocalData();
+
+            // Init Horse Engine (Auto-Load)
+            if (window.HorseEngine && window.HorseEngine.init) window.HorseEngine.init();
+        });
     </script>
 </body>
 

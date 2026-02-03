@@ -1828,32 +1828,51 @@ app.post('/api/track/init', (req, res) => {
     res.json({ success: true });
 });
 
-// CRON: Vercel Trigger for Scraping
-app.get('/api/cron/trigger-scrape', async (req, res) => {
+// CRON: Vercel Trigger for Scraping (Fast Queue Only)
+app.get('/api/cron/trigger-fast', async (req, res) => {
     try {
-        console.log("⏰ Vercel Cron Triggered: Starting Scrape...");
-        // Triggers the "Fast Queue" (USA + RD)
-        await scraperService.scrapeAll();
-
-        // Triggers "Heavy" (Top Pick) - Instant Cash is skipped on Vercel (Headless)
-        // We can try calling scrapeHeavy but we know Instant Cash might fail. 
-        // TopPick is inside scrapeHeavy.
-        // Let's try to run scrapeHeavy too, but catch errors?
-        // For now, satisfy user request (stale dates -> Fast Queue).
-
-        res.json({ success: true, message: 'Scrape cycle initiated' });
+        console.log("⏰ Vercel Cron (Fast): Starting Scrape...");
+        // Run Fast Queue (USA + RD)
+        await scraperService.runFastQueue();
+        res.json({ success: true, message: 'Fast scrape complete' });
     } catch (e) {
-        console.error("Cron Error:", e);
+        console.error("Cron Fast Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// MANUAL TRIGGER (Bypass Vercel Cron Protection)
+// CRON: Heavy Trigger (TopPick)
+app.get('/api/cron/trigger-heavy', async (req, res) => {
+    try {
+        console.log("⏰ Vercel Cron (Heavy): Starting Scrape...");
+        await scraperService.runHeavyQueue();
+        res.json({ success: true, message: 'Heavy scrape complete' });
+    } catch (e) {
+        console.error("Cron Heavy Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// LEGACY/MANUAL BACKWARD COMPATIBILITY
+app.get('/api/cron/trigger-scrape', async (req, res) => {
+    console.log("🔄 Legacy Trigger: Routing to Fast Queue...");
+    // We redirect to Fast Queue logic for default Vercel cron
+    try {
+        await scraperService.runFastQueue();
+        res.json({ success: true, message: 'Scrape (Fast) complete' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// MANUAL TRIGGER (Full Power - for Local/Admin)
 app.get('/api/cron/manual-trigger', async (req, res) => {
     try {
-        console.log("🛠️ Manual Trigger: Starting Scrape...");
-        await scraperService.scrapeAll();
-        res.json({ success: true, message: 'Manual scrape initiated' });
+        console.log("🛠️ Manual Trigger: Starting FULL Scrape...");
+        // Run both sequentially
+        await scraperService.runFastQueue();
+        await scraperService.runHeavyQueue();
+        res.json({ success: true, message: 'Manual scrape (All) complete' });
     } catch (e) {
         console.error("Manual Error:", e);
         res.status(500).json({ error: e.message });

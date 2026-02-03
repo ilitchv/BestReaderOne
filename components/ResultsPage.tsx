@@ -63,6 +63,22 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
     const [isAutoScrolling, setIsAutoScrolling] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    // Auto-Expand High Frequency (Link Logic)
+    const [isHFOpen, setIsHFOpen] = useState(false);
+
+    useEffect(() => {
+        const shouldExpand = localStorage.getItem('br_auto_expand_hf');
+        if (shouldExpand === 'true') {
+            setIsHFOpen(true);
+            localStorage.removeItem('br_auto_expand_hf');
+            // Slight delay to ensure render, then scroll
+            setTimeout(() => {
+                const el = document.getElementById('hf-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
+        }
+    }, []);
+
     // Initial Load
     useEffect(() => {
         const storedVis = readJSON(LS.VIS, {});
@@ -545,8 +561,13 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ onBack, theme, toggleTheme })
                 </div>
 
                 {/* Independent High Frequency Games */}
-                <div className="max-w-[1920px] mx-auto pb-10">
-                    <HighFrequencyAccordion results={dbResults} theme={theme} />
+                <div className="max-w-[1920px] mx-auto pb-10" id="hf-section">
+                    <HighFrequencyAccordion
+                        results={dbResults}
+                        theme={theme}
+                        externalOpen={isHFOpen}
+                        onToggle={setIsHFOpen}
+                    />
 
                     {/* Version Tag */}
                     <div className={`text-center mt-8 text-xs font-mono opacity-40 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
