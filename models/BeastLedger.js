@@ -6,7 +6,7 @@ const beastLedgerSchema = new mongoose.Schema({
     action: {
         type: String,
         required: true,
-        enum: ['GENESIS', 'DEPOSIT', 'WITHDRAW', 'WAGER', 'PAYOUT']
+        enum: ['GENESIS', 'DEPOSIT', 'WITHDRAW', 'WAGER', 'PAYOUT', 'CASINO_BET', 'CASINO_WIN']
     },
     userId: { type: String, required: true, index: true },
     amount: { type: Number, required: true }, // Signed Amount (+/-)

@@ -5,6 +5,8 @@ import { calculateWinnings } from '../utils/prizeCalculator';
 import { DEFAULT_PRIZE_TABLE, RESULTS_CATALOG } from '../constants'; // Using default prize table for visualization
 import { useSound } from '../hooks/useSound';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { RouletteModal } from './marketing/RouletteModal'; // [NEW]
+import { SpinResult } from './marketing/types'; // [NEW]
 
 declare var QRCode: any;
 declare var html2canvas: any;
@@ -55,6 +57,35 @@ const TicketModal: React.FC<TicketModalProps> = ({
     const [isCheckoutMode, setIsCheckoutMode] = React.useState(false);
     const [shopifyOrderId, setShopifyOrderId] = React.useState<string | null>(null);
     const [isPollingShopify, setIsPollingShopify] = React.useState(false);
+
+    // --- ROULETTE STATE ---
+    const [isRouletteOpen, setIsRouletteOpen] = React.useState(false);
+    const [rouletteResult, setRouletteResult] = React.useState<SpinResult | null>(null);
+    const [userBalance, setUserBalance] = React.useState<number>(0);
+
+    // Fetch User Balance when Modal Opens
+    useEffect(() => {
+        if (isOpen && userId) {
+            fetch(`/api/auth/me?userId=${userId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.balance !== undefined) {
+                        setUserBalance(data.balance);
+                    }
+                })
+                .catch(err => console.error("Balance fetch error:", err));
+        }
+    }, [isOpen, userId]);
+
+    // Calculate Dynamic Totals
+    const rouletteSurcharge = rouletteResult ? rouletteResult.surchargeAmount : 0;
+    const rouletteDiscount = rouletteResult ? rouletteResult.finalPayout : 0;
+
+    // The final amount the user actually pays
+    // Ensure we account for the surcharge before any discount
+    // The final amount the user actually pays
+    // Roulette surcharge/discount is now handled via direct Wallet transactions
+    const finalGrandTotal = grandTotal;
 
     // Determine layout flags
     // The original `showResultsOnly` was derived from `variant`.
@@ -230,7 +261,15 @@ const TicketModal: React.FC<TicketModalProps> = ({
             transactionDateTime: new Date(),
             betDates: selectedDates,
             tracks: selectedTracks,
-            grandTotal: grandTotal,
+            grandTotal: finalGrandTotal, // [UPDATED] Use Final Total
+            originalTotal: grandTotal,   // [NEW] Track Original
+            surcharge: rouletteSurcharge,// [NEW]
+            discount: rouletteDiscount,  // [NEW]
+            marketingData: rouletteResult ? {
+                outcome: rouletteResult.outcome,
+                prizeLabel: rouletteResult.prizeLabel,
+                isLoyaltyRescue: rouletteResult.isLoyaltyRescue
+            } : null,
             plays: plays.map((p, i) => ({
                 ...p,
                 straightAmount: p.straightAmount || 0,
@@ -348,7 +387,10 @@ const TicketModal: React.FC<TicketModalProps> = ({
                     transactionDateTime: new Date(),
                     betDates: selectedDates,
                     tracks: selectedTracks,
-                    grandTotal: grandTotal,
+                    grandTotal: finalGrandTotal, // [UPDATED]
+                    originalTotal: grandTotal,
+                    surcharge: rouletteSurcharge,
+                    discount: rouletteDiscount,
                     plays: plays.map((p, i) => ({
                         ...p,
                         straightAmount: p.straightAmount || 0,
@@ -529,8 +571,29 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                         </table>
                                     </div>
 
-                                    <div className="text-center mt-4 space-y-2">
-                                        <p className="font-bold text-base">GRAND TOTAL: ${(grandTotal || 0).toFixed(2)}</p>
+                                    <div className="text-center mt-4 space-y-1">
+                                        {rouletteResult ? (
+                                            <>
+                                                <div className="flex justify-between text-[10px] text-gray-500 px-4">
+                                                    <span>Subtotal:</span>
+                                                    <span>${grandTotal.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px] text-gray-500 px-4">
+                                                    <span>Service Fee:</span>
+                                                    <span>+${rouletteSurcharge.toFixed(2)}</span>
+                                                </div>
+                                                {rouletteDiscount > 0 && (
+                                                    <div className="flex justify-between text-[10px] text-green-600 font-bold px-4">
+                                                        <span>Discount:</span>
+                                                        <span>-${rouletteDiscount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="border-t border-gray-300 mx-4 my-1"></div>
+                                                <p className="font-bold text-base">TOTAL: ${finalGrandTotal.toFixed(2)}</p>
+                                            </>
+                                        ) : (
+                                            <p className="font-bold text-base">GRAND TOTAL: ${(grandTotal || 0).toFixed(2)}</p>
+                                        )}
 
                                         {/* STRICT GUARD: QR CODE ONLY RENDERS IF CONFIRMED */}
                                         {isConfirmed ? (
@@ -582,7 +645,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                     </div>
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Grand Total</p>
-                                        <p className="text-green-400 font-bold text-lg">${(grandTotal || 0).toFixed(2)}</p>
+                                        <p className="text-green-400 font-bold text-lg">${(finalGrandTotal || 0).toFixed(2)}</p>
                                     </div>
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Total Plays</p>
@@ -716,6 +779,59 @@ const TicketModal: React.FC<TicketModalProps> = ({
                             {/* CHECKOUT MODE or PAYMENT REQUIRED */}
                             {!isSaving && (isCheckoutMode || isPaymentRequired) && !showResultsOnly && (
                                 <div className="w-full bg-light-surface dark:bg-dark-surface border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
+
+                                    {/* ROULETTE BANNER - ONLY IF BALANCE SUFFICIENT */}
+                                    {!rouletteResult && !isConfirmed && userBalance > (grandTotal * 0.10) && (
+                                        <button
+                                            onClick={() => setIsRouletteOpen(true)}
+                                            className="w-full relative group overflow-hidden rounded-lg p-3 bg-gradient-to-r from-purple-900 to-slate-900 border border-purple-500/30 hover:border-purple-500/60 transition-all shadow-lg"
+                                        >
+
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+                                            <div className="flex items-center justify-between relative z-10">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-purple-500/20 rounded-full text-purple-400">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m4.93 4.93 4.24 4.24" /><path d="m14.83 9.17 4.24-4.24" /><path d="m14.83 14.83 4.24 4.24" /><path d="m9.17 14.83-4.24 4.24" /><circle cx="12" cy="12" r="2" /></svg>
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="text-sm font-bold text-white uppercase italic tracking-wider">Play For Free?</p>
+                                                        <p className="text-[10px] text-gray-400">
+                                                            Spin to win up to 100% discount
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-purple-400 text-xs font-bold">
+                                                    SPIN
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
+                                    {/* ROULETTE APPLIED BANNER - MOVED BELOW */}
+
+                                    {/* ROULETTE APPLIED BANNER */}
+                                    {rouletteResult && !isConfirmed && (
+                                        <div className={`w-full p-2 rounded-lg border flex items-center justify-between ${rouletteResult.outcome === 'WIN' ? 'bg-green-900/20 border-green-500/30' : 'bg-orange-900/20 border-orange-500/30'}`}>
+                                            <div className="flex items-center gap-2">
+                                                {rouletteResult.outcome === 'WIN' ? (
+                                                    <svg className="text-green-500" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>
+                                                ) : (
+                                                    <svg className="text-orange-500" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+                                                )}
+                                                <div>
+                                                    <p className={`text-xs font-bold ${rouletteResult.outcome === 'WIN' ? 'text-green-400' : 'text-orange-400'}`}>
+                                                        {rouletteResult.outcome === 'WIN' ? 'Discount Applied!' : 'Surcharge Added'}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-500">
+                                                        {rouletteResult.outcome === 'WIN' ? `You saved $${rouletteDiscount.toFixed(2)}` : 'Better luck next time'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {/* Undo / Reset? No, prototype says rigid. */}
+                                        </div>
+                                    )}
+
                                     <h3 className={`text-sm font-bold text-center mb-2 ${isPaymentRequired ? 'text-yellow-500' : 'text-gray-900 dark:text-white'}`}>
                                         {isPaymentRequired ? (
                                             <span className="flex items-center justify-center gap-2"><svg data-lucide="alert-circle" className="w-4 h-4" /> Insufficient Funds</span>
@@ -764,7 +880,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
                                                     body: JSON.stringify({
-                                                        amount: Number((grandTotal || 0).toFixed(2)),
+                                                        amount: Number((finalGrandTotal || 0).toFixed(2)), // [UPDATED]
                                                         currency: 'USD',
                                                         orderId: `TICKET-${Date.now()}`,
                                                         buyerEmail: 'guest@example.com'
@@ -1000,8 +1116,19 @@ const TicketModal: React.FC<TicketModalProps> = ({
                         </>
                     )}
                 </div>      {/* FOOTER BUTTONS (DONE / SHARE) - MOVED OUTSIDE OF CONDITIONS TO BE ALWAYS VISIBLE IF CONFIRMED */}
-            </div>
-        </div>
+            </div >
+            {/* ROULETTE MODAL */}
+            < RouletteModal
+                isOpen={isRouletteOpen}
+                onClose={() => setIsRouletteOpen(false)}
+                billAmount={grandTotal}
+                userId={userId}
+                onSpinComplete={(result) => {
+                    setRouletteResult(result);
+                    // Force re-render of layout
+                }}
+            />
+        </div >
     );
 };
 

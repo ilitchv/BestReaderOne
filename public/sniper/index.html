@@ -135,6 +135,7 @@
                         <div id="actionText" class="text-xs font-bold text-slate-600 tracking-wide text-center">
                             ESPERANDO SEÑAL...</div>
                         <div id="actionSubtext" class="text-[10px] text-slate-500 mt-1 font-mono text-center"></div>
+                        <div id="raceTimer" class="text-xl font-bold font-mono text-cyan-400 mt-1 hidden">--:--:--</div>
                     </div>
                     <button id="btnGenerate"
                         class="btn-sniper w-full py-2.5 rounded text-xs font-bold font-tech uppercase tracking-widest flex items-center justify-center gap-2"
@@ -297,6 +298,10 @@
                             class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"></div>
                     <div><label class="text-slate-400 block mb-1">Stop Loss</label><input type="number" id="confSL"
                             class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"></div>
+                    <div><label class="text-slate-400 block mb-1">Prox. Carrera (HH:MM)</label><input type="time"
+                            id="confNextRace"
+                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"
+                            onchange="window.HorseEngine.setNextRaceTime(this.value)"></div>
                 </div>
                 <button onclick="saveSettings()"
                     class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded mt-2">Guardar

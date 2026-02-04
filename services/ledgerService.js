@@ -48,7 +48,7 @@ const ledgerService = {
             const absAmount = Math.abs(amount);
             let finalAmount = absAmount;
 
-            if (action === 'WITHDRAW' || action === 'WAGER') {
+            if (action === 'WITHDRAW' || action === 'WAGER' || action === 'CASINO_BET') {
                 finalAmount = -absAmount;
             }
 
@@ -58,7 +58,7 @@ const ledgerService = {
             const newBalance = user.balance + finalAmount;
 
             // D. Balance Check (No credit for wagers)
-            if (newBalance < 0 && (action === 'WAGER' || action === 'WITHDRAW')) {
+            if (newBalance < 0 && (action === 'WAGER' || action === 'WITHDRAW' || action === 'CASINO_BET')) {
                 throw new Error('Insufficient funds');
             }
 

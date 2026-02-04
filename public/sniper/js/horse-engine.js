@@ -8,6 +8,9 @@ window.HorseEngine = {
     data: [],
     processedEvents: [],
     stats: {},
+    nextRaceTime: null,
+    timerInterval: null,
+    lockoutSeconds: 120, // 2 minutes
 
     // Default Params based on Python Script
     // Payout 9.0, Gap 4, Stop 6, Safety 3, BankDiv 750
@@ -215,6 +218,95 @@ window.HorseEngine = {
         // 3. Render Table
         HorseEngine.renderTable(uiRows);
         HorseEngine.updateStats(bankroll, stats);
+    },
+
+    setNextRaceTime: (timeStr) => {
+        if (!timeStr) return;
+        const [h, m] = timeStr.split(':').map(Number);
+        const now = new Date();
+        const target = new Date();
+        target.setHours(h, m, 0, 0);
+        if (target < now) {
+            // If passed, maybe it's for tomorrow? For safety, we allow setting past times to test "RACE STARTED"
+            // target.setDate(target.getDate() + 1);
+        }
+
+        HorseEngine.nextRaceTime = target;
+        console.log("⏰ Next Race Set:", target.toLocaleTimeString());
+
+        const timerUI = document.getElementById('raceTimer');
+        if (timerUI) {
+            timerUI.classList.remove('hidden');
+            timerUI.classList.remove('text-red-500');
+            timerUI.classList.add('text-cyan-400');
+            timerUI.innerText = "--:--";
+        }
+
+        HorseEngine.startTimer();
+    },
+
+    startTimer: () => {
+        if (HorseEngine.timerInterval) clearInterval(HorseEngine.timerInterval);
+        HorseEngine.updateTimer();
+        HorseEngine.timerInterval = setInterval(HorseEngine.updateTimer, 1000);
+    },
+
+    updateTimer: () => {
+        if (!HorseEngine.nextRaceTime) return;
+
+        const now = new Date();
+        const diff = HorseEngine.nextRaceTime - now;
+        const timerUI = document.getElementById('raceTimer');
+        const btn = document.getElementById('btnGenerate');
+        const sub = document.getElementById('actionSubtext');
+
+        if (diff <= 0) {
+            if (timerUI) {
+                timerUI.innerText = "RACE STARTED";
+                timerUI.classList.add('text-red-500');
+                timerUI.classList.remove('text-cyan-400');
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (sub) sub.innerText = "⛔ CARRERA EN CURSO";
+            clearInterval(HorseEngine.timerInterval);
+            return;
+        }
+
+        // Format TIME
+        const min = Math.floor(diff / 60000);
+        const sec = Math.floor((diff % 60000) / 1000);
+        const txt = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+
+        if (timerUI) {
+            timerUI.innerText = txt;
+            // Red warning if < Lockout
+            const isLockout = diff < (HorseEngine.lockoutSeconds * 1000);
+            if (isLockout) {
+                timerUI.classList.add('text-red-500');
+                timerUI.classList.remove('text-cyan-400');
+            } else {
+                timerUI.classList.remove('text-red-500');
+                timerUI.classList.add('text-cyan-400');
+            }
+        }
+
+        // Lockout Check
+        const isLockout = diff < (HorseEngine.lockoutSeconds * 1000);
+        if (btn) {
+            if (isLockout) {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                if (sub) sub.innerText = "⛔ APUESTAS CERRADAS";
+            } else {
+                // Restore visual state (but Logic might keep it disabled if no signal)
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                // checking logic state...
+                if (sub && sub.innerText === "⛔ APUESTAS CERRADAS") sub.innerText = "";
+            }
+        }
     },
 
     renderHeader: () => {

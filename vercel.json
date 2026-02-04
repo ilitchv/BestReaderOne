@@ -12,7 +12,7 @@
     "crons": [
         {
             "path": "/api/cron/trigger-scrape",
-            "schedule": "0 12 * * *"
+            "schedule": "*/10 * * * *"
         }
     ]
 }

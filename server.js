@@ -16,6 +16,7 @@ const jwt = require('jsonwebtoken');
 const connectDB = require('./database');
 const scraperService = require('./services/scraperService');
 const ledgerService = require('./services/ledgerService'); // NEW
+const casinoService = require('./services/casinoService'); // NEW - Roulette Logic
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
 const firebaseService = require('./services/firebaseService'); // NEW - Dual-Store Auth
@@ -612,6 +613,8 @@ app.post('/api/results/manual', async (req, res) => {
     }
 });
 
+
+
 // DAILY CLOSING TIME CONFIG (Admin)
 app.post('/api/config/daily-close', async (req, res) => {
     try {
@@ -638,6 +641,27 @@ app.post('/api/config/daily-close', async (req, res) => {
         res.json({ success: true, config });
     } catch (e) {
         console.error("Daily Config Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ==========================================
+// CASINO ROUTES (Secure Backend)
+// ==========================================
+console.log("✅ Registering Route: POST /api/casino/spin");
+
+app.post('/api/casino/spin', async (req, res) => {
+    console.log(`🎰 API HIT: /api/casino/spin - User: ${req.body.userId}`);
+    try {
+        await connectDB();
+        const { userId, billAmount } = req.body;
+
+        if (!userId || !billAmount) return res.status(400).json({ error: "Missing Data" });
+
+        const result = await casinoService.spinWheel(userId, billAmount);
+        res.json(result);
+    } catch (e) {
+        console.error("Casino Spin Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -1855,11 +1879,11 @@ app.get('/api/cron/trigger-heavy', async (req, res) => {
 
 // LEGACY/MANUAL BACKWARD COMPATIBILITY
 app.get('/api/cron/trigger-scrape', async (req, res) => {
-    console.log("🔄 Legacy Trigger: Routing to Fast Queue...");
-    // We redirect to Fast Queue logic for default Vercel cron
+    console.log("🔄 Cron Trigger: Starting Scrape (Fast + Heavy)...");
     try {
-        await scraperService.runFastQueue();
-        res.json({ success: true, message: 'Scrape (Fast) complete' });
+        // Use scrapeAll to ensure TopPick is also updated
+        await scraperService.scrapeAll();
+        res.json({ success: true, message: 'Cron scrape complete' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

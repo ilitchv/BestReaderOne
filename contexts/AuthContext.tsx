@@ -115,7 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // Session invalid (e.g. user deleted)
                 // Don't auto-logout here immediately to avoid blips, but logic suggests we should.
             }
-        }, 5000);
+        }, 60000); // Optimized: 60s interval (was 5s) to prevent Vercel limits
 
         return () => clearInterval(syncInterval);
     }, [user?.id, user?.balance]);
