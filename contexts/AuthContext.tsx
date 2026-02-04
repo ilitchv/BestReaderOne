@@ -98,11 +98,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return null;
     };
 
-    // --- REAL-TIME SYNC (THE HEARTBEAT) ---
+    // --- REAL-TIME SYNC (SMART FOCUS) ---
     useEffect(() => {
         if (!user) return;
 
-        const syncInterval = setInterval(async () => {
+        const syncUser = async () => {
             // Verify if Firebase session is still valid? 
             // onAuthStateChanged handles that generally, but we want fresh DB balance.
             const freshUser = await fetchUser(user.id);
@@ -111,13 +111,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // console.log(`♻️ Syncing User Data`); // Reduce noise
                     setUser(prev => prev ? { ...prev, balance: freshUser.balance, networkEnabled: freshUser.networkEnabled } : freshUser);
                 }
-            } else {
-                // Session invalid (e.g. user deleted)
-                // Don't auto-logout here immediately to avoid blips, but logic suggests we should.
             }
-        }, 60000); // Optimized: 60s interval (was 5s) to prevent Vercel limits
+        };
 
-        return () => clearInterval(syncInterval);
+        // 1. Polling Interval (Only if Visible)
+        const syncInterval = setInterval(async () => {
+            if (document.hidden) return; // SKIP if background tab
+            await syncUser();
+        }, 5000); // 5s interval (High Frequency/Real-Time) - SAFE due to Smart Focus
+
+        // 2. Immediate Refresh on Focus
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                // console.log("👀 Tab Active: Refreshing Data...");
+                syncUser();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(syncInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [user?.id, user?.balance]);
 
     const loginWithGoogle = async () => {
