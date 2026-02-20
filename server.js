@@ -72,6 +72,7 @@ const corsOptions = {
     origin: [
         'http://localhost:3000',
         'http://localhost:8080',
+        'http://localhost:8081',
         'https://sniperstrategy-auth.firebaseapp.com',
         'https://sniper-strategy-project.vercel.app'
     ],
@@ -95,6 +96,10 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+// FORCE STATIC SNIPER LIVE - Priority High
+const publicPath = path.join(__dirname, 'public');
+app.use('/sniper-live', express.static(path.join(publicPath, 'sniper')));
 
 
 // ==========================================
@@ -566,11 +571,25 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/results', async (req, res) => {
     try {
         await connectDB();
-        const { date, resultId } = req.query;
+        const { date, resultId, startDate, endDate, limit } = req.query;
         const query = {};
-        if (date) query.drawDate = date;
+
         if (resultId) query.resultId = resultId;
-        const results = await LotteryResult.find(query).sort({ drawDate: -1, country: 1, lotteryName: 1 });
+
+        if (date) {
+            query.drawDate = date;
+        } else if (startDate || endDate) {
+            query.drawDate = {};
+            if (startDate) query.drawDate.$gte = startDate;
+            if (endDate) query.drawDate.$lte = endDate;
+        }
+
+        const limitVal = parseInt(limit) || 1000; // Default to 1000 for bulk fetch
+
+        const results = await LotteryResult.find(query)
+            .sort({ drawDate: -1, country: 1, lotteryName: 1 })
+            .limit(limitVal);
+
         res.json(results);
     } catch (error) {
         console.error("Error fetching results:", error);
@@ -1904,8 +1923,12 @@ app.get('/api/cron/manual-trigger', async (req, res) => {
 });
 
 // ==========================================
-// 5. STATIC FILES (REACT APP)
+// 5. STATIC FILES (REACT APP & SNIPER DASHBOARD)
 // ==========================================
+
+// EXPLICIT: Serve Sniper Dashboard from PUBLIC folder (for Dev/Live updates)
+// (Moved to top of file for priority)
+
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
     console.log(`✅ Serving static files from: ${distPath}`);

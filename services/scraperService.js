@@ -200,6 +200,66 @@ const SNIPER_CONFIG = {
 
 const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
 
+// Helper to Create Alert (Deduped)
+const triggerAlert = async (type, message, metadata = {}, severity = 'MEDIUM') => {
+    try {
+        // Prevent spamming the same alert if one is already active
+        const existing = await SystemAlert.findOne({ type, message, active: true });
+        if (!existing) {
+            await SystemAlert.create({ type, message, metadata, severity });
+            console.log(`🚨 ALERT GENERATED: ${message}`);
+        }
+    } catch (e) {
+        console.error("Failed to generate alert:", e);
+    }
+};
+
+// --- SNIPER ANALYSIS ---
+const analyzeSniperGap = async (stateName, lotteryName) => {
+    try {
+        // Fetch last 50 results for this lottery
+        const results = await LotteryResult.find({
+            lotteryName: stateName,
+            numbers: { $regex: /^\d{3}-/ } // Ensure it has Pick 3 part
+        })
+            .sort({ drawDate: -1, drawTime: -1 }) // Newest first
+            .limit(60);
+
+        if (results.length < 10) return;
+
+        let currentGap = 0;
+        let foundDouble = false;
+
+        for (const res of results) {
+            const p3 = res.numbers.split('-')[0].trim();
+            if (p3.length === 3) {
+                // Back Pair Check: Index 1 == Index 2 (e.g., 122, 599)
+                const isBackPairDouble = p3[1] === p3[2];
+
+                if (isBackPairDouble) {
+                    foundDouble = true;
+                    break;
+                } else {
+                    currentGap++;
+                }
+            }
+        }
+
+        // Trigger Alert if Gap > 30
+        if (currentGap > 30) {
+            const msg = `Oportunidad única en ${stateName}: Gap de Dobles (Back Pair) en ${currentGap} sorteos.`;
+            await triggerAlert('SNIPER_OPPORTUNITY', msg, {
+                state: stateName,
+                gap: currentGap,
+                strategy: 'Sniper Back Pair'
+            }, 'HIGH');
+        }
+
+    } catch (e) {
+        console.error(`Analyze Sniper Gap Error (${stateName}):`, e.message);
+    }
+};
+
 async function processDraw(stateKey, stateName, timeLabel, result) {
     if (!result || !result.p3 || !result.w4 || !result.date) return;
 
@@ -281,7 +341,8 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
         );
 
         // NEW: Sync to Secondary DB
-        firebaseService.syncToFirestore('results', resultId, {
+        const firestoreId = resultId.replace(/\//g, '_');
+        firebaseService.syncToFirestore('results', firestoreId, {
             resultId,
             country: 'USA',
             lotteryName: stateName,
@@ -290,6 +351,11 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
             drawDate: result.date,
             scrapedAt: new Date()
         });
+
+        // --- TRIGGER SNIPER ANALYSIS ---
+        // Run analysis after successful save
+        await analyzeSniperGap(stateName, timeLabel);
+        // -------------------------------
 
         // --- DERIVED RESULTS LOGIC (NEW YORK ONLY) ---
         // Brooklyn = Last 3 digits of Win 4
@@ -345,19 +411,6 @@ async function processDraw(stateKey, stateName, timeLabel, result) {
     }
 }
 
-// Helper to Create Alert (Deduped)
-const triggerAlert = async (type, message, metadata = {}, severity = 'MEDIUM') => {
-    try {
-        // Prevent spamming the same alert if one is already active
-        const existing = await SystemAlert.findOne({ type, message, active: true });
-        if (!existing) {
-            await SystemAlert.create({ type, message, metadata, severity });
-            console.log(`🚨 ALERT GENERATED: ${message}`);
-        }
-    } catch (e) {
-        console.error("Failed to generate alert:", e);
-    }
-};
 
 // --- SCHEDULER LOGIC ---
 
@@ -468,21 +521,30 @@ const runHeavyQueue = async () => {
 const startResultScheduler = () => {
     console.log('⏳ Scheduler Initializing...');
 
-    // Schedule Queue A: Every 2 minutes (*/2 * * * *)
-    cron.schedule('*/2 * * * *', () => {
+    // SNIPER SCHEDULE OPTIMIZATION: 4 Times a Day
+    // 11:30 AM, 2:45 PM, 8:00 PM, 11:00 PM
+    const TIMES = [
+        '30 11 * * *', // 11:30 AM
+        '45 14 * * *', // 2:45 PM
+        '0 20 * * *',  // 8:00 PM
+        '0 23 * * *'   // 11:00 PM
+    ];
+
+    TIMES.forEach(timeExpr => {
+        cron.schedule(timeExpr, () => {
+            console.log(`⏰ Scheduled Run Triggered [${timeExpr}]`);
+            runFastQueue(); // Run USA + RD
+            runHeavyQueue(); // Run TopPick/InstantCash as well? Assuming yes for daily sync.
+        });
+    });
+
+    console.log('✅ Cron Jobs Scheduled: 11:30, 14:45, 20:00, 23:00');
+
+    // Run immediately on start to catch up
+    setTimeout(() => {
+        console.log('🚀 Initial Startup Scrape...');
         runFastQueue();
-    });
-
-    // Schedule Queue B: Every 5 minutes (*/5 * * * *) (Optimized)
-    cron.schedule('*/5 * * * *', () => {
-        runHeavyQueue();
-    });
-
-    console.log('✅ Cron Jobs Scheduled: Fast (2m), Heavy (10m)');
-
-    // Run immediately on start (optional, staggered)
-    setTimeout(() => runFastQueue(), 5000);
-    setTimeout(() => runHeavyQueue(), 15000);
+    }, 5000);
 };
 
 const scrapeAll = async () => {

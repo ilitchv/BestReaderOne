@@ -13,32 +13,40 @@ const getModel = () => {
 const TICKET_PROMPT = `
 Analyze this lottery ticket image and return a JSON object.
 
-CRITICAL READING INSTRUCTIONS:
-1. **COLUMNAR ORDER**: Most tickets are written in vertical columns. You MUST read the numbers **DOWN** the first column, then **DOWN** the second column, etc. Do **NOT** read across rows horizontally.
-   - Correct: 1st item Col 1, 2nd item Col 1 ... 1st item Col 2, 2nd item Col 2.
-   - Incorrect: 1st item Col 1, 1st item Col 2 ...
+CRITICAL READING INSTRUCTIONS (CONTEXT & ORDERING):
 
-2. **FORMAT RECOGNITION**:
-   - **Win 4**: 4 digits (e.g., "1234").
-   - **Pick 3**: 3 digits (e.g., "123").
-   - **Pales / Pairs**: Two numbers separated by a dash, 'x', '+', or space.
-     - **YOU MUST PRESERVE THE SEPARATOR**.
-     - Example: If you see "12-34", return "12-34".
-     - Example: If you see "12x34", return "12-34" or "12x34".
-     - **DO NOT** combine them into "1234". "12-34" is a PALE, "1234" is a WIN 4.
+1. **ROW READING FOR CONTEXT (STEP 1)**:
+   - Read each horizontal line completely to identify associated wagers.
+   - **Example**: If you see "127-507  St 5.00", it means:
+     - "127" (Col 1) has wager $5.00.
+     - "507" (Col 2) has wager $5.00.
+   - **DO NOT** split the image visually if it breaks this link.
+
+2. **JSON OUTPUT ORDERING (STEP 2 - MANDATORY)**:
+   - Although you read row-by-row, your **JSON OUTPUT MUST BE SORTED BY COLUMN**.
+   - **ORDER**:
+     1. List ALL "Column 1" (Left) plays from Top to Bottom.
+     2. List ALL "Column 2" (Right) plays from Top to Bottom.
+     3. List ALL Vertical/Margin plays.
+   - **PROHIBITED**: Do NOT output "127", then "507", then "Next Row...". 
+   - **REQUIRED**: Output "127", "Next Col 1...", THEN "507", "Next Col 2...".
+
+3. **VERTICAL / MARGIN TEXT**:
+   - Vertical/Sideways numbers are **INDIVIDUAL PLAYS**.
+   - **NEVER** combine them (e.g. "112" stacked on "199" = 2 plays, NOT "112-199").
+
+4. **FORMATS**:
+   - **Win 4**: 4 digits.
+   - **Pick 3**: 3 digits.
+   - **Pairs**: 2 digits (keep separator "12-34").
 
 JSON STRUCTURE:
 {
   "detectedDate": "YYYY-MM-DD",
   "detectedTracks": ["TrackName1", "TrackName2"],
   "plays": [
-    {
-      "betNumber": "12-34", 
-      "straightAmount": 0.50,
-      "boxAmount": 0,
-      "comboAmount": 0,
-      "totalAmount": 0.50
-    }
+    { "betNumber": "123", "straightAmount": 0.50, "boxAmount": 0, "comboAmount": 0, "totalAmount": 0.50 },
+    { "betNumber": "456", "straightAmount": 0.50, "boxAmount": 0, "comboAmount": 0, "totalAmount": 0.50 }
   ]
 }
 If amounts are not clear, default to 0. Ignore non-lottery text.

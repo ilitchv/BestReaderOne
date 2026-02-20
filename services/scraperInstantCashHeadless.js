@@ -68,13 +68,122 @@ async function scrapeInstantCashHeadless(targetDateArg) {
 
             await new Promise(r => setTimeout(r, 2000));
 
+
+            // NAVIGATE TO TARGET DATE
+            if (targetDateArg) {
+                console.log(`[InstantCash] Attempting to navigate to ${targetDateArg}...`);
+                const targetDateObj = new Date(targetDateArg + 'T12:00:00');
+
+                // Helper function to get the date from the page
+                const getPageDate = async (page) => {
+                    return await page.evaluate(() => {
+                        const nodes = Array.from(document.querySelectorAll('flt-semantics'));
+                        const dateRegex = /([a-zA-Z]{3}\s+\d{1,2},?\s+\d{4})/i;
+                        for (let n of nodes) {
+                            const lbl = n.getAttribute('aria-label');
+                            if (lbl && dateRegex.test(lbl)) {
+                                const match = lbl.match(dateRegex);
+                                return match[1];
+                            }
+                        }
+                        return null;
+                    });
+                };
+
+                // DISCOVERY PHASE: Find the "Previous" button
+                let prevButtonIndex = -1;
+                let prevButtonSelector = '';
+
+                // Try buttons, images, and the date label itself
+                const candidateSelectors = [
+                    'flt-semantics[role="button"]',
+                    'flt-semantics[role="img"]',
+                    'flt-semantics[aria-label*="Feb"]', // The date node itself
+                    'flt-semantics[aria-label*="Jan"]'  // Just in case
+                ];
+
+                console.log(`[InstantCash] Starting EXTENDED discovery...`);
+
+                outerLoop:
+                for (const selector of candidateSelectors) {
+                    const count = await page.evaluate((sel) => document.querySelectorAll(sel).length, selector);
+                    console.log(`[InstantCash] Testing selector: ${selector} (Count: ${count})`);
+
+                    for (let i = 0; i < count; i++) {
+                        // Get current date before click
+                        const dateBefore = await getPageDate(page);
+                        if (!dateBefore) continue;
+                        const dateBeforeObj = new Date(dateBefore);
+
+                        console.log(`[InstantCash] Clicking ${selector} [${i}]...`);
+
+                        // Click
+                        await page.evaluate((sel, idx) => {
+                            const els = document.querySelectorAll(sel);
+                            if (els[idx]) {
+                                els[idx].click();
+                                // Try dispatching events too?
+                            }
+                        }, selector, i);
+
+                        await new Promise(r => setTimeout(r, 3000)); // Wait for update
+
+                        const dateAfter = await getPageDate(page);
+                        if (dateAfter && dateAfter !== dateBefore) {
+                            const dateAfterObj = new Date(dateAfter);
+                            console.log(`[InstantCash] ${selector} [${i}] changed date to ${dateAfter}`);
+
+                            if (dateAfterObj < dateBeforeObj) {
+                                console.log(`[InstantCash] FOUND PREVIOUS BUTTON!`);
+                                prevButtonIndex = i;
+                                prevButtonSelector = selector;
+                                break outerLoop;
+                            } else {
+                                console.log(`[InstantCash] Went forward or random. Ignoring.`);
+                            }
+                        } else {
+                            // console.log(`[InstantCash] No change.`);
+                        }
+                    }
+                }
+
+                if (prevButtonIndex !== -1) {
+                    // Navigate using the known button
+                    let attempts = 0;
+                    while (attempts < 20) {
+                        const currentDate = await getPageDate(page);
+                        if (!currentDate) break;
+                        const currentObj = new Date(currentDate);
+
+                        if (currentObj.toDateString() === targetDateObj.toDateString()) {
+                            console.log('[InstantCash] Reached target date!');
+                            break;
+                        }
+                        if (currentObj < targetDateObj) {
+                            console.warn('[InstantCash] Overshot target date!');
+                            break;
+                        }
+
+                        console.log(`[InstantCash] Clicking PREV (${prevButtonSelector} [${prevButtonIndex}])...`);
+                        await page.evaluate((sel, idx) => {
+                            const els = document.querySelectorAll(sel);
+                            if (els[idx]) els[idx].click();
+                        }, prevButtonSelector, prevButtonIndex);
+                        await new Promise(r => setTimeout(r, 3000));
+                        attempts++;
+                    }
+                } else {
+                    console.warn('[InstantCash] Could not identify Previous Day button.');
+                }
+            }
+
             // 4. Incremental Scroll (ELEMENT BASED)
             console.log('[InstantCash] starting incremental scrape (Element Scroll Mode)...');
             const allExtractedTexts = [];
             const collectedHashes = new Set(); // To avoid adding duplicates if view doesn't change
 
             // Increased scroll limit to capture previous day if needed
-            const scrollLimit = targetDateArg ? 150 : 80;
+            const scrollLimit = targetDateArg ? 250 : 200;
             console.log(`[InstantCash] Scrolling ${scrollLimit} times...`);
 
             for (let i = 0; i < scrollLimit; i++) {
@@ -268,7 +377,9 @@ async function saveResults(draws, targetDateStr) {
     );
 
     // NEW: Sync to Secondary DB
-    firebaseService.syncToFirestore('results', payload.resultId, payload);
+    // Sanitize ID for Firestore (cannot contain '/')
+    const firestoreId = payload.resultId.replace(/\//g, '_');
+    firebaseService.syncToFirestore('results', firestoreId, payload);
 }
 
 // --- VALIDATION LOGIC ---
@@ -349,6 +460,22 @@ if (require.main === module) {
     const args = process.argv.slice(2);
     const dateArg = args[0];
     scrapeInstantCashHeadless(dateArg);
+}
+
+
+async function getPageDate(page) {
+    return await page.evaluate(() => {
+        const nodes = Array.from(document.querySelectorAll('flt-semantics'));
+        const dateRegex = /([a-zA-Z]{3}\s+\d{1,2},?\s+\d{4})/i;
+        for (let n of nodes) {
+            const lbl = n.getAttribute('aria-label');
+            if (lbl && dateRegex.test(lbl)) {
+                const match = lbl.match(dateRegex);
+                return match[1];
+            }
+        }
+        return null;
+    });
 }
 
 module.exports = scrapeInstantCashHeadless;

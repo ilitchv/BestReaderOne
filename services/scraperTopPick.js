@@ -332,7 +332,9 @@ async function saveResultsToDB(results, dateStr) {
         );
 
         // NEW: Sync to Secondary DB
-        firebaseService.syncToFirestore('results', payload.resultId, payload);
+        // Sanitize ID for Firestore
+        const firestoreId = payload.resultId.replace(/\//g, '_');
+        firebaseService.syncToFirestore('results', firestoreId, payload);
 
         console.log(`[TopPick] Saved to DB. ID: ${doc._id}`);
     } catch (err) {
