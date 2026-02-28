@@ -113,7 +113,16 @@ window.runSimulation = () => {
     const uniqueLotteries = [...new Set(window.globalRawRows.map(r => r.lottery))];
     updateFiltersUI(uniqueLotteries);
 
-    const rowsToProcess = (window.activeFilters.size === 0) ? window.globalRawRows : window.globalRawRows.filter(r => window.activeFilters.has(r.lottery));
+    const rowsToProcess = (window.activeFilters.size === 0)
+        ? window.globalRawRows
+        : window.globalRawRows.filter(r => {
+            // Robust check: case-insensitive match
+            const rowLot = (r.lottery || '').toLowerCase().trim();
+            for (let filter of window.activeFilters) {
+                if (filter.toLowerCase().trim() === rowLot) return true;
+            }
+            return false;
+        });
 
     if (rowsToProcess.length === 0) {
         if (ui.table) ui.table.innerHTML = `<tr><td colspan="13" class="text-center py-20 text-slate-600 text-sm italic">Sin datos para mostrar con los filtros actuales.</td></tr>`;
@@ -121,7 +130,7 @@ window.runSimulation = () => {
     }
 
     rowsToProcess.forEach((row, index) => {
-        if (!window.tracksState[row.lottery]) window.tracksState[row.lottery] = { gap: 0, step: 0, balance: 0 };
+        if (!window.tracksState[row.lottery]) window.tracksState[row.lottery] = { gap: 0, naturalGap: 0, step: 0, balance: 0 };
         let t = window.tracksState[row.lottery];
 
         // Date Filter
@@ -142,6 +151,14 @@ window.runSimulation = () => {
         const isManualTrigger = row.isManualTrigger === true;
 
         if (inRange) { stats.totalDraws++; if (isP1) stats.h1++; if (isP2) stats.h2++; if (isP3) stats.h3++; }
+
+        // --- NATURAL GAP LOGIC (Independent of Strategy) ---
+        if (isP1) {
+            t.naturalGap = 0;
+        } else {
+            t.naturalGap++;
+            if (inRange && t.naturalGap > stats.maxGap) stats.maxGap = t.naturalGap;
+        }
 
         let unit = 0, cost = 0, win = 0, net = 0; let dStep = t.step;
         let shouldPlay = false;
@@ -182,11 +199,11 @@ window.runSimulation = () => {
             }
             else {
                 t.step++; t.gap++;
-                if (inRange && t.gap > stats.maxGap) stats.maxGap = t.gap;
+                // Old maxGap logic removed to prioritize naturalGap
             }
         } else {
             if (isP1) { if (inRange) stats.gaps.push(t.gap); t.gap = 0; }
-            else { t.gap++; if (inRange && t.gap > stats.maxGap) stats.maxGap = t.gap; }
+            else { t.gap++; }
         }
 
         if (inRange) { renderRow(row, index, t.gap, dStep, unit, cost, win, net, globalBal, isP1, isP2, isP3); }

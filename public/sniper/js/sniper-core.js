@@ -13,13 +13,14 @@ const GLOBAL_ADMIN_ID = "sniper_global_master_v1";
 
 // --- ENV CHECK ---
 const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
-const API_URL = isLocal ? 'http://localhost:8080/api' : '/api';
+// Use relative API path to support any port (8080 or 8081)
+const API_URL = '/api';
 
 const IS_USER_MODE = new URLSearchParams(window.location.search).get('mode') === 'user';
 
 // --- UI HELPERS ---
 const el = (id) => document.getElementById(id);
-const ui = {};
+window.ui = {};
 
 window.initUI = () => {
     // Cache DOM Elements
@@ -239,8 +240,124 @@ window.openAdminDataModal = () => {
     el('admEnd').value = today.toISOString().split('T')[0];
     const past = new Date(); past.setMonth(today.getMonth() - 1);
     el('admStart').value = past.toISOString().split('T')[0];
+
+    // Inject Import Button if not exists (checked against hardcoded ID too)
+    const btnContainer = document.getElementById('admBtnContainer');
+    // Set Official DB Checked by Default for better UX
+    if (el('admSourceToggle')) el('admSourceToggle').checked = true;
+
+    if (btnContainer && !document.getElementById('btnImportEngine')) {
+        const btn = document.createElement('button');
+        btn.id = 'btnImportEngine';
+        btn.className = "bg-purple-600 hover:bg-purple-500 text-white font-bold py-1 px-3 rounded text-xs ml-2";
+        btn.innerHTML = "📥 IMPORTAR A MOTOR";
+        btn.onclick = window.importScrapedToEngine;
+        btnContainer.appendChild(btn);
+    }
+
     window.admSearch();
 };
+
+window.importScrapedToEngine = async () => {
+    if (!confirm("¿Importar datos SCRAREADOS al Motor Sniper? esto reemplazará la data actual.")) return;
+
+    const start = el('admStart').value;
+    const end = el('admEnd').value;
+    const lot = el('admLottery').value; // Optional filter
+
+    try {
+        const searchParams = new URLSearchParams({ limit: '2000', startDate: start, endDate: end });
+        const res = await fetch(`${API_URL}/results?${searchParams.toString()}`);
+        if (!res.ok) throw new Error("Error fetching data");
+        const data = await res.json();
+
+        console.log(`[Import] Fetched ${data.length} records.`);
+
+        // Convert to Engine Format
+        const newRows = [];
+
+        data.forEach(r => {
+            // --- STRICT DATA FILTERING (Lotto Engine Only) ---
+            // 1. Exclude Horses/Races explicitly
+            const nameLower = r.lotteryName.toLowerCase();
+            if (nameLower.includes('horse') || nameLower.includes('race')) return;
+
+            // 2. Inclusion Criteria:
+            // - USA States (usually have country="USA" or state names)
+            // - Santo Domingo (country="SD" or known names like Nacional, Leidsa, Loteka, Real, Gana Mas, etc.)
+            // - Top Pick / Instant Cash
+
+            const isTopPick = nameLower.includes('top pick') || nameLower.includes('instant cash');
+            const isSD = r.country === 'SD' || ['nacional', 'leidsa', 'loteka', 'real', 'gana mas', 'la primera', 'la suerte', 'lotedom', 'anguilla', 'king lottery'].some(k => nameLower.includes(k));
+            const isUSA = r.country === 'USA' || ['new york', 'florida', 'georgia', 'texas', 'jersey', 'pennsylvania', 'connecticut', 'michigan', 'maryland', 'carolina', 'virginia', 'delaware', 'ohio', 'california'].some(k => nameLower.includes(k));
+
+            if (!isTopPick && !isSD && !isUSA) return;
+
+            // Filter by selected specific lottery from UI dropdown
+            if (lot && lot !== 'ALL' && !nameLower.includes(lot.toLowerCase().trim())) return;
+
+            // Map Fields
+            // Engine expects: { id, track, priority, lottery, date, time, p3, w4 }
+
+            // Normalizing Track Name
+            // e.g. "New York" + "Midday" -> "New York Midday"
+            let trackName = `${r.lotteryName} ${r.timeLabel || r.drawName || ''}`.trim();
+
+            // Priority Mapping (Basic)
+            let priority = 999;
+
+            // Try to match with MASTER_PRIORITY in lotto-engine.js if possible, 
+            // or just rely on sortAndSave to fix priority if track name matches.
+            if (window.getTrackInfo) {
+                const info = window.getTrackInfo(r.lotteryName, r.timeLabel || 'Day');
+                priority = info.priority;
+                if (info.priority < 999) trackName = info.name;
+            }
+
+            // --- DATA PARSING ---
+            let p3 = r.pick3 || '';
+            let w4 = r.pick4 || '';
+
+            // If new format (numbers: "123-4567") matches, override p3/w4
+            if (r.numbers) {
+                if (r.numbers.includes('-')) {
+                    const parts = r.numbers.split('-');
+                    if (parts[0]) p3 = parts[0].trim();
+                    if (parts[1]) w4 = parts[1].trim();
+                } else {
+                    const clean = r.numbers.replace(/[^0-9]/g, '');
+                    if (clean.length >= 3) p3 = clean.substring(0, 3);
+                    if (clean.length >= 7) w4 = clean.substring(3, 7);
+                }
+            }
+
+            // Only push if we have valid data pairs
+            if (p3 && w4) {
+                newRows.push({
+                    id: Date.now() + Math.random(),
+                    track: trackName,
+                    priority: priority,
+                    lottery: r.lotteryName,
+                    date: r.drawDate, // YYYY-MM-DD
+                    time: r.timeLabel || r.drawName || 'Scraped',
+                    p3: p3,
+                    w4: w4
+                });
+            }
+        });
+
+        if (newRows.length === 0) return alert("No hay datos válidos (P3+P4) para importar en este rango.");
+
+        window.globalRawRows = newRows;
+        window.sortAndSave();
+        alert(`✅ Importados ${newRows.length} registros al Motor.`);
+        window.closeAdminDataModal();
+
+    } catch (e) {
+        alert("Error Importando: " + e.message);
+    }
+};
+
 window.closeAdminDataModal = () => el('adminDataModal').classList.add('hidden');
 
 let admCachedRows = [];
@@ -288,7 +405,21 @@ window.renderAdmTable = (rows, isOfficial) => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-800 hover:bg-slate-800/50";
         if (isOfficial) {
-            tr.innerHTML = `<td class="p-2 text-slate-400 font-mono text-[10px]">${new Date(r.drawDate).toLocaleDateString()}</td><td class="p-2 text-cyan-300 font-bold text-xs">${r.lotteryName}</td><td class="p-2 font-mono text-xs"><span class="text-white font-bold">${r.first || '--'}</span> | <span class="text-purple-400">${r.pick3 || '--'}</span> | <span class="text-orange-400">${r.pick4 || '--'}</span></td><td class="p-2 text-right gap-1 flex justify-end"><button class="text-slate-500 cursor-not-allowed text-[10px] border border-slate-700 px-1 rounded">LOCKED</button></td>`;
+            let p3 = '--', p4 = '--';
+            // Simple Parsing for Display
+            if (r.numbers) {
+                if (r.numbers.includes('-')) {
+                    const parts = r.numbers.split('-');
+                    p3 = parts[0]; p4 = parts[1] || '--';
+                } else {
+                    p3 = r.numbers.substring(0, 3);
+                    p4 = r.numbers.length > 3 ? r.numbers.substring(3) : '--';
+                }
+            } else if (r.pick3) {
+                p3 = r.pick3; p4 = r.pick4 || '--';
+            }
+
+            tr.innerHTML = `<td class="p-2 text-slate-400 font-mono text-[10px]">${new Date(r.drawDate).toLocaleDateString()}</td><td class="p-2 text-cyan-300 font-bold text-xs">${r.lotteryName} (${r.drawName || ''})</td><td class="p-2 font-mono text-xs"><span class="text-white font-bold">${p3}</span> | <span class="text-orange-400">${p4}</span></td><td class="p-2 text-right gap-1 flex justify-end"><button class="text-slate-500 cursor-not-allowed text-[10px] border border-slate-700 px-1 rounded">LOCKED</button></td>`;
         } else {
             tr.innerHTML = `<td class="p-2 text-slate-400">${new Date(r.date).toLocaleDateString()} ${r.time}</td><td class="p-2 text-cyan-300 font-bold">${r.lottery}</td><td class="p-2"><span class="text-amber-400">${r.p3}</span> / <span class="text-purple-400">${r.w4}</span></td><td class="p-2 text-right gap-1 flex justify-end"><button onclick="admEdit('${r._id || r.id}')" class="text-cyan-500 hover:text-cyan-400 text-[10px] border border-cyan-900 px-1 rounded mr-1">EDIT</button><button onclick="admDelete('${r._id || r.id}')" class="text-red-500 hover:text-red-400 text-[10px] border border-red-900 px-1 rounded">DEL</button></td>`;
         }

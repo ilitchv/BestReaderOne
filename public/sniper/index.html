@@ -5,14 +5,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Beast Strategy Sniper v7.0 (Modular)</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Beast Strategy Sniper v7.1 (Live)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap"
         rel="stylesheet">
 
     <!-- MODULAR CSS -->
-    <link rel="stylesheet" href="css/sniper-ui.css">
+    <link rel="stylesheet" href="css/sniper-ui.css?v=7.1">
 </head>
 
 <body>
@@ -31,13 +34,11 @@
                         <p class="text-[10px] text-slate-500 font-mono mt-1" id="configSummary">CONF: LOADING...</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-4 bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+                <div class="flex items-center gap-4 bg-slate-900/50 p-2 rounded-lg border border-slate-700 hidden">
                     <span class="text-xs font-bold text-slate-400">GAME:</span>
                     <select id="engineSelect"
-                        class="bg-slate-800 text-cyan-400 text-xs font-bold border-none focus:outline-none uppercase"
-                        onchange="window.switchEngine(this.value)">
-                        <option value="LOTTO">Lotto (Pick3/Win4)</option>
-                        <option value="HORSE">NY Horses (Racing)</option>
+                        class="bg-slate-800 text-cyan-400 text-xs font-bold border-none focus:outline-none uppercase">
+                        <option value="LOTTO" selected>Lotto (Pick3/Win4)</option>
                     </select>
                 </div>
                 <div class="text-right">
@@ -75,7 +76,7 @@
                             <option value="Georgia">Georgia (All)</option>
                             <option value="Florida">Florida (All)</option>
                             <option value="New York">New York (All)</option>
-                            <option value="New York Horse">New York Horses (NEW)</option>
+
                         </select>
                     </div>
 
@@ -298,10 +299,7 @@
                             class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"></div>
                     <div><label class="text-slate-400 block mb-1">Stop Loss</label><input type="number" id="confSL"
                             class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"></div>
-                    <div><label class="text-slate-400 block mb-1">Prox. Carrera (HH:MM)</label><input type="time"
-                            id="confNextRace"
-                            class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white font-mono"
-                            onchange="window.HorseEngine.setNextRaceTime(this.value)"></div>
+
                 </div>
                 <button onclick="saveSettings()"
                     class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded mt-2">Guardar
@@ -389,12 +387,34 @@
                 <h3 class="text-amber-500 text-sm">ADMIN</h3><button onclick="closeAdminDataModal()">✕</button>
             </div>
             <!-- Filters -->
-            <div class="p-4 grid grid-cols-4 gap-2">
-                <input type="date" id="admStart"> <input type="date" id="admEnd">
-                <select id="admLottery">
-                    <option value="ALL">ALL</option>
-                </select>
-                <button onclick="admSearch()">Search</button>
+            <div class="flex gap-2 mb-4 items-end">
+                <div><label class="text-[10px] text-slate-400 block">INICIO</label><input type="date" id="admStart"
+                        class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white"></div>
+                <div><label class="text-[10px] text-slate-400 block">FIN</label><input type="date" id="admEnd"
+                        class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white"></div>
+                <div class="flex-1"><label class="text-[10px] text-slate-400 block">LOTERIA</label>
+                    <select id="admLottery"
+                        class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white">
+                        <option value="ALL">TODAS</option>
+                        <option value="New York">New York</option>
+                        <option value="Florida">Florida</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Texas">Texas</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 pb-1 px-2 border-l border-slate-700">
+                    <label class="text-[10px] text-slate-400">OFFICIAL DB</label>
+                    <input type="checkbox" id="admSourceToggle" class="accent-cyan-500">
+                </div>
+                <!-- BUTTON CONTAINER hardcoded -->
+                <div id="admBtnContainer" class="flex items-center gap-2">
+                    <button onclick="window.admSearch()"
+                        class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-1 px-3 rounded text-xs">BUSCAR</button>
+                    <!-- Hardcoded Import Button -->
+                    <button id="btnImportEngine" onclick="window.importScrapedToEngine()"
+                        class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-1 px-3 rounded text-xs">📥
+                        IMPORTAR A MOTOR</button>
+                </div>
             </div>
             <div class="flex-1 overflow-auto p-4">
                 <table class="w-full">
@@ -412,7 +432,7 @@
     <!-- MODULAR SCRIPTS -->
     <script src="js/sniper-core.js"></script>
     <script src="js/lotto-engine.js"></script>
-    <script src="js/horse-engine.js"></script>
+
 
     <script>
         // MAIN INIT
@@ -433,38 +453,30 @@
             };
 
             // Engine Dispatcher
+            // Engine Dispatcher - Simplified (Lotto Only)
             window.switchEngine = (mode) => {
                 console.log("Switching Engine:", mode);
                 const tableHead = document.querySelector('.custom-table thead tr');
 
-                if (mode === 'HORSE') {
-                    if (window.HorseEngine) {
-                        window.HorseEngine.run(); // This sets the header
-                        if (window.HorseEngine.data.length === 0) {
-                            document.getElementById('historyBody').innerHTML = '<tr><td colspan="13" class="text-center py-20 text-slate-500">Motor de Caballos Activo. Carga un CSV.</td></tr>';
-                        }
-                    }
-                } else {
-                    // Restore Lotto Header
-                    if (tableHead) {
-                        tableHead.innerHTML = `
-                            <th class="w-8 text-center px-2"><input type="checkbox" id="selectAll" class="row-checkbox" onclick="toggleSelectAll()"></th>
-                            <th class="w-8 text-center px-2 text-slate-500">#</th>
-                            <th class="w-20 text-left pl-2">Track</th>
-                            <th class="w-24 text-left">Fecha</th>
-                            <th class="w-20 text-left">Hora</th>
-                            <th>Resultados</th>
-                            <th class="w-12 text-center">Gap</th>
-                            <th class="w-12 text-center">Paso</th>
-                            <th class="w-24 text-right">Unit</th>
-                            <th class="w-24 text-right">Total</th>
-                            <th class="w-24 text-right">Premio</th>
-                            <th class="w-24 text-right">Neto</th>
-                            <th class="w-28 text-right pr-4">Balance</th>
-                        `;
-                    }
-                    if (window.runSimulation) window.runSimulation();
+                // Always render Lotto Header if needed
+                if (tableHead && (!tableHead.innerHTML.includes('Gap') || mode === 'LOTTO')) {
+                    tableHead.innerHTML = `
+                        <th class="w-8 text-center px-2"><input type="checkbox" id="selectAll" class="row-checkbox" onclick="toggleSelectAll()"></th>
+                        <th class="w-8 text-center px-2 text-slate-500">#</th>
+                        <th class="w-20 text-left pl-2">Track</th>
+                        <th class="w-24 text-left">Fecha</th>
+                        <th class="w-20 text-left">Hora</th>
+                        <th>Resultados</th>
+                        <th class="w-12 text-center">Gap</th>
+                        <th class="w-12 text-center">Paso</th>
+                        <th class="w-24 text-right">Unit</th>
+                        <th class="w-24 text-right">Total</th>
+                        <th class="w-24 text-right">Premio</th>
+                        <th class="w-24 text-right">Neto</th>
+                        <th class="w-28 text-right pr-4">Balance</th>
+                    `;
                 }
+                if (window.runSimulation) window.runSimulation();
             };
 
             if (document.getElementById('csvInput')) document.getElementById('csvInput').addEventListener('change', (e) => {
@@ -472,12 +484,7 @@
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     const text = ev.target.result;
-                    const mode = document.getElementById('engineSelect').value;
-                    if (mode === 'HORSE') {
-                        window.HorseEngine.parseCSV(text);
-                    } else {
-                        window.processNewFile(text); // Lotto
-                    }
+                    window.processNewFile(text); // Lotto Only
                     document.getElementById('fileName').textContent = `+ ${file.name} (Loaded)`;
                 };
                 reader.readAsText(file);
@@ -487,7 +494,7 @@
             if (window.loadLocalData) window.loadLocalData();
 
             // Init Horse Engine (Auto-Load)
-            if (window.HorseEngine && window.HorseEngine.init) window.HorseEngine.init();
+
         });
     </script>
 </body>
