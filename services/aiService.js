@@ -153,8 +153,57 @@ const aiService = {
     },
 
     // Stub for Results Verification (can be expanded)
-    interpretResultsImage: async (base64Image) => {
-        return []; // Not fully implemented yet
+    /**
+     * Interpret a screenshot of lottery results (Instant Cash Pyramid)
+     * @param {string} base64Image - Base64 encoded screenshot
+     * @returns {Promise<Object>} - Parsed results
+     */
+    interpretWinningResultsImage: async (base64Image) => {
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+            const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+            const imagePart = { inlineData: { data: cleanBase64, mimeType: "image/jpeg" } };
+
+            const RESULTS_PROMPT = `
+            Analyze this Instant Cash results screenshot.
+            
+            STRUCTURE:
+            - The results are in a yellow/black box.
+            - There is a date (e.g., Feb 28, 2026) and a time (e.g., 05:30 PM).
+            - The numbers are yellow balls arranged in a PYRAMID (14 numbers total):
+              Row 1: 2 balls
+              Row 2: 3 balls
+              Row 3: 4 balls
+              Row 4: 5 balls
+
+            TASK:
+            1. Extract the Date and Time.
+            2. Extract ALL 14 numbers in order (Top to Bottom, Left to Right).
+            
+            DATES:
+            - THE YEAR IS 2026. If you see "Feb 28", it is "2026-02-28".
+            - DO NOT return 2024 or any other year.
+            
+            JSON FORMAT:
+            {
+              "drawDate": "2026-MM-DD",
+              "drawTime": "HH:MM AM/PM",
+              "numbers": ["num1", "num2", ..., "num14"]
+            }
+            
+            RETURN ONLY RAW JSON. NO MARKDOWN.
+            `;
+
+            const result = await model.generateContent([RESULTS_PROMPT, imagePart]);
+            const response = await result.response;
+            const text = response.text();
+            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            return JSON.parse(cleanText);
+        } catch (error) {
+            console.error("AI Results Image Error:", error);
+            throw error;
+        }
     },
 
     interpretResultsText: async (text) => {
