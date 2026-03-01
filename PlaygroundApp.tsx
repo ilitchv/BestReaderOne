@@ -12,7 +12,7 @@ import ChatbotModal from './components/ChatbotModal';
 import TicketModal from './components/TicketModal';
 import CalculatorModal from './components/CalculatorModal';
 import ValidationErrorModal from './components/ValidationErrorModal';
-import { getTodayDateString, calculateRowTotal, fileToBase64, determineGameMode } from './utils/helpers';
+import { getTodayDateString, calculateRowTotal, fileToBase64, determineGameMode, isTrackExpired } from './utils/helpers';
 import { interpretTicketImage, interpretNaturalLanguagePlays } from './services/geminiService';
 import type { Play, WizardPlay, ImageInterpretationResult, CopiedWagers, ServerHealth, TicketData } from './types';
 import { MAX_PLAYS, RESULTS_CATALOG } from './constants';
@@ -97,11 +97,23 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         if (initialTicket) {
             // Overwrite state with ticket data
             setPlays(initialTicket.plays);
-            setSelectedTracks(initialTicket.tracks);
+
+            // --- TRACK FILTERING LOGIC ---
+            const today = getTodayDateString();
+            const isForToday = initialTicket.betDates.includes(today);
+
+            let filteredTracks = initialTicket.tracks;
+            if (isForToday) {
+                const now = new Date();
+                filteredTracks = initialTicket.tracks.filter(t => !isTrackExpired(t, now));
+                console.log(`🔄 Playback: Filtered ${initialTicket.tracks.length - filteredTracks.length} expired tracks.`);
+            }
+
+            setSelectedTracks(filteredTracks);
             setSelectedDates(initialTicket.betDates);
             // Reset others
-            setPulitoPositions([]); // Ticket data doesn't explicitly store pulito pos array, could infer but reset is safer
-            setTicketNumber(''); // New ticket generated from playback
+            setPulitoPositions([]);
+            setTicketNumber('');
             setIsTicketConfirmed(false);
         }
     }, [initialTicket]);
@@ -667,7 +679,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 ticketImageBlob={ticketImageBlob}
                 setTicketImageBlob={setTicketImageBlob}
                 terminalId="TERM-001"
-                cashierId="ADMIN"
+                cashierId={user?.email || "ADMIN"}
                 onSaveTicket={handleSaveTicketToDb}
                 isSaving={isSaving}
                 serverHealth={serverHealth}

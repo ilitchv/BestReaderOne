@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Reel3D from './Reel3D';
 import { RESULTS_CATALOG } from '../constants';
-import { getTrackColorClasses } from '../utils/helpers';
+import { getTrackColorClasses, isTrackExpired } from '../utils/helpers';
 
 interface TrackCategoryReelProps {
     categoryTracks: { name: string; id: string }[];
@@ -44,14 +44,17 @@ const TrackCategoryReel: React.FC<TrackCategoryReelProps> = ({
         const closeTimeStr = catalogItem?.closeTime;
         if (!closeTimeStr) return { isExpired: false, remainingTime: "OPEN" };
 
+        const isExpired = isTrackExpired(trackId, now);
+        if (isExpired) return { isExpired: true, remainingTime: "CLOSED" };
+
         const [h, m, s] = closeTimeStr.split(':').map(Number);
         const closeDate = new Date(now);
         closeDate.setHours(h, m, s || 0, 0);
 
         const diff = Math.floor((closeDate.getTime() - now.getTime()) / 1000);
         return {
-            isExpired: diff <= 0,
-            remainingTime: diff <= 0 ? "CLOSED" : formatTime(diff)
+            isExpired: false,
+            remainingTime: formatTime(diff)
         };
     };
 
@@ -93,10 +96,10 @@ const TrackCategoryReel: React.FC<TrackCategoryReelProps> = ({
             };
         });
 
-        // HIDE EXPIRED TRACKS
-        return mapped.filter(item => !item.isExpired);
+        // HIDE EXPIRED TRACKS ONLY IF NOT SELECTED
+        return mapped.filter(item => !item.isExpired || selectedTracks.includes(item.value));
 
-    }, [categoryTracks, now]);
+    }, [categoryTracks, now, selectedTracks]);
 
 
     // --- INTERACTION HANDLERS ---

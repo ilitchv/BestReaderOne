@@ -63,6 +63,32 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
   };
 
   const handleInputChange = (id: number, field: keyof Play, value: string | number | null) => {
+    if (field === 'betNumber' && typeof value === 'string') {
+      // 1. Determine the limit based on selection
+      const isHighFrequency = selectedTracks.some(t => t.includes('top-pick') || t.includes('instant-cash'));
+      const digitLimit = isHighFrequency ? 5 : 4;
+
+      // 2. Strict Character Blocking
+      const cleanValue = value.replace(/[^0-9xX\-+]/g, '');
+      if (cleanValue !== value) return; // Block disallowed characters
+
+      // 3. Multi-Separator Blocking
+      const separators = (value.match(/[-xX+]/g) || []).length;
+      if (separators > 1) return; // Block second separator
+
+      // 4. Palé Formatting Rules (if a separator exists)
+      if (separators === 1) {
+        const parts = value.split(/[-xX+]/);
+        // Ensure first part is exactly 2 digits (or user is still typing it)
+        if (parts[0].length > 2) return;
+        // Ensure second part is exactly 2 digits
+        if (parts[1] && parts[1].length > 2) return;
+      } else {
+        // 5. Consecutive Digit Limit
+        if (value.length > digitLimit) return;
+      }
+    }
+
     updatePlay(id, { [field]: value });
 
     // Auto-tab from Bet Number ONLY on terminal game modes with exact length matches
@@ -259,7 +285,7 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
                         ref={el => { if (!inputsRef.current[play.id]) inputsRef.current[play.id] = {}; inputsRef.current[play.id].betNumber = el; }}
                         type="text"
                         inputMode="numeric"
-                        pattern="[0-9xX\-]*"
+                        pattern="[0-9xX\-+]*"
                         value={play.betNumber}
                         onChange={(e) => handleInputChange(play.id, 'betNumber', e.target.value)}
                         onKeyDown={(e) => handleNavigation(e, play.id, 'betNumber')}

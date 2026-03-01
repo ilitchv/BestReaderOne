@@ -496,6 +496,13 @@ const TicketModal: React.FC<TicketModalProps> = ({
         return map[trackName];
     };
 
+    const formatCashier = (id: string) => {
+        if (!id) return 'Unknown';
+        if (id === 'ADMIN' || id === 'SELF') return id;
+        if (id.includes('@')) return id.split('@')[0];
+        return id;
+    };
+
     if (!isOpen) return null;
 
     const isOnline = serverHealth === 'online';
@@ -503,7 +510,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
     return (
         <div ref={modalRef} className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[100]" onClick={onClose}>
             <div
-                className={`bg-light-card dark:bg-dark-card rounded-xl shadow-lg w-full flex flex-col overflow-hidden max-h-[85vh] transition-all duration-300 ${showAdminLayout ? 'max-w-6xl' : 'max-w-[350px]'
+                className={`bg-light-card dark:bg-dark-card rounded-xl shadow-lg w-full flex flex-col overflow-hidden max-h-[90vh] transition-all duration-300 ${showAdminLayout ? 'max-w-6xl' : 'max-w-[480px] sm:max-w-xl'
                     }`}
                 onClick={e => e.stopPropagation()}
             >
@@ -525,8 +532,8 @@ const TicketModal: React.FC<TicketModalProps> = ({
                         {/* LEFT COLUMN: VISUAL TICKET (THERMAL VIEW) */}
                         {/* Hidden entirely in 'results-only' mode */}
                         {!showResultsOnly && (
-                            <div className={`flex justify-center p-4 ${showAdminLayout ? 'border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700' : ''}`}>
-                                <div ref={ticketContentRef} className="bg-white p-3 text-black font-mono text-xs w-full max-w-[320px] mx-auto leading-normal shadow-sm">
+                            <div className={`flex justify-center p-2 sm:p-4 ${showAdminLayout ? 'border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700' : ''}`}>
+                                <div ref={ticketContentRef} className="bg-white p-3 text-black font-mono text-xs w-full max-w-none sm:max-w-[420px] mx-auto leading-normal shadow-sm">
                                     <div className="text-center space-y-1 mb-4">
                                         <p className="font-bold text-sm">BEAST READER</p>
                                         <p className="text-[10px]">Terminal ID: {terminalId}</p>
@@ -540,17 +547,22 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                         <p><span className="font-bold">TRACKS</span><br />{displayTracks.join(', ')}</p>
                                     </div>
 
+                                    <div className="flex justify-between text-[10px] mb-4">
+                                        <span>Cashier: {formatCashier(cashierId)}</span>
+                                        <span className="text-right">Terminal ID: {terminalId}</span>
+                                    </div>
+                                    <div className="border-t border-dashed border-gray-300 my-3"></div>
                                     <div className="border-t border-b border-dashed border-gray-400 py-2">
                                         <table className="w-full table-fixed">
                                             <thead>
                                                 <tr className="text-left !text-black">
-                                                    <th className="font-normal !text-black p-0 text-[10px] w-[8%]">#</th>
-                                                    <th className="font-normal !text-black p-0 text-[10px] w-[15%]">BET</th>
-                                                    <th className="font-normal !text-black p-0 text-[10px] w-[15%]">MODE</th>
-                                                    <th className="font-normal !text-black p-0 text-[10px] text-right w-[14%]">STR</th>
-                                                    <th className="font-normal !text-black p-0 text-[10px] text-right w-[14%]">BOX</th>
-                                                    <th className="font-normal !text-black p-0 text-[10px] text-right w-[14%]">COM</th>
-                                                    <th className="font-normal !text-black p-0 text-[10px] text-right w-[20%]">TOT</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] w-[5%]">#</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] w-[15%]">BET</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] w-[30%]">MODE</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[11%]">STR</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[11%]">BOX</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[11%]">COM</th>
+                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[17%]">TOT</th>
                                                 </tr>
                                             </thead>
                                             <tbody>

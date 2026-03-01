@@ -339,7 +339,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onOpenPlayground, onLogou
                     ticketImageBlob={null}
                     setTicketImageBlob={() => { }}
                     terminalId="WEB-CLIENT"
-                    cashierId="SELF"
+                    cashierId={user?.email || "SELF"}
                     onSaveTicket={() => { }}
                     isSaving={false}
                     serverHealth="online"

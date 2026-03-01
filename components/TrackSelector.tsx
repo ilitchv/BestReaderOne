@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { TRACK_CATEGORIES, CUTOFF_TIMES, RESULTS_CATALOG } from '../constants';
-import { getTodayDateString } from '../utils/helpers';
+import { getTodayDateString, isTrackExpired } from '../utils/helpers';
 import TrackButton from './TrackButton';
 import { useSound } from '../hooks/useSound';
 
@@ -99,7 +99,6 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
     const isAnySdSelected = useMemo(() => selectedTracks.some(id => sdTrackIds.has(id)), [selectedTracks]);
 
     const getTrackStatus = (trackId: string) => {
-        // Find catalog item for correct closeTime
         const catalogItem = RESULTS_CATALOG.find(t => t.id === trackId);
         const closeTimeStr = catalogItem?.closeTime;
 
@@ -107,16 +106,19 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
             return { isExpired: false, remainingTime: null };
         }
 
+        const isExpired = isTrackExpired(trackId, now);
+
+        if (isExpired) return { isExpired: true, remainingTime: null };
+
         const [hours, minutes, seconds] = closeTimeStr.split(':').map(Number);
-        const cutoffTime = new Date();
+        const cutoffTime = new Date(now);
         cutoffTime.setHours(hours, minutes, seconds || 0, 0);
 
-        const isExpired = now > cutoffTime;
         const remainingSeconds = Math.round((cutoffTime.getTime() - now.getTime()) / 1000);
 
         return {
             isExpired,
-            remainingTime: isExpired ? null : formatTime(remainingSeconds),
+            remainingTime: formatTime(remainingSeconds),
         };
     };
 
@@ -241,7 +243,9 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
                                                 if (isAnySdSelected && isUsaTrack) isDisabledByCategory = true;
 
                                                 // Hide expired tracks completely to save space
-                                                if (isExpired) return null;
+                                                // Hide expired tracks COMPLETELY ONLY if they are NOT selected
+                                                // If selected, we keep them visible so user sees why the price is what it is
+                                                if (isExpired && !selectedTracks.includes(track.id)) return null;
 
                                                 const isDisabled = (track.id === 'special/pulito' && isPulitoDisabled) ||
                                                     (track.id === 'special/venezuela' && isVenezuelaDisabled) ||

@@ -1,5 +1,5 @@
-
 import { WinningResult } from '../types';
+import { RESULTS_CATALOG } from '../constants';
 
 export const determineGameMode = (betNumber: string, selectedTracks: string[], pulitoPositions: number[]): string => {
     if (!betNumber) return "-";
@@ -8,18 +8,27 @@ export const determineGameMode = (betNumber: string, selectedTracks: string[], p
     const isSD = selectedTracks.some(t => t.toLowerCase().startsWith('rd/') || t.toLowerCase().includes('/rd/'));
     const isVenezuela = selectedTracks.includes('special/venezuela') || selectedTracks.includes('Venezuela');
 
-    // Allow 'x' and 'X' as valid separators for Palé plays
-    const cleanBetNumber = String(betNumber).replace(/[^0-9-xX]/g, '');
-    const paleRegex = /^\d{2}[-xX]\d{2}$/;
+    // STRICT PALÉ CHECK: format 12x34 or 12-34 or 12+34
+    const separators = (betNumber.match(/[-xX+]/g) || []).length;
+    const paleRegex = /^\d{2}[-xX+]\d{2}$/;
 
-    if (paleRegex.test(cleanBetNumber)) {
-        // If we are in USA context (even mixed), prioritize USA Palé
-        if (isUSA) return "Palé";
-        return isSD ? "Palé-RD" : "Palé";
+    if (separators === 1) {
+        if (paleRegex.test(betNumber)) {
+            // If we are in USA context (even mixed), prioritize USA Palé
+            if (isUSA) return "Palé";
+            return isSD ? "Palé-RD" : "Palé";
+        } else {
+            // Has 1 separator but not strictly 2+2 digits (e.g. 1-23 or 123-4)
+            return "-";
+        }
+    } else if (separators > 1) {
+        // Multiple separators are never valid for Palé or other modes
+        return "-";
     }
 
-    // Remove any separator before counting length for other game modes
-    const length = cleanBetNumber.replace(/[-xX]/g, '').length;
+    // No separators? Proceed to length-based modes
+    const cleanBetNumber = String(betNumber).replace(/[^0-9]/g, '');
+    const length = cleanBetNumber.length;
 
     if (length === 1) {
         // Single Action with Position Selection (via Pulito Track)
@@ -43,6 +52,10 @@ export const determineGameMode = (betNumber: string, selectedTracks: string[], p
     }
     if (length === 3) return "Pick 3";
     if (length === 4) return "Win 4";
+    if (length === 5) {
+        const isHighFrequency = selectedTracks.some(t => t.includes('top-pick') || t.includes('instant-cash'));
+        if (isHighFrequency) return "Pick 5";
+    }
 
     return "-";
 };
@@ -134,7 +147,7 @@ export const calculateRowTotal = (betNumber: string, gameMode: string, stVal: nu
         return st;
     }
 
-    if (gameMode === "Win 4" || gameMode === "Pick 3") {
+    if (gameMode === "Win 4" || gameMode === "Pick 3" || gameMode === "Pick 5") {
         const combosCount = calcCombos(String(betNumber).replace(/[^0-9]/g, ''));
         return st + bx + (co * combosCount);
     }
@@ -148,6 +161,20 @@ export const getTodayDateString = (): string => {
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
     const day = today.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+/**
+ * Checks if a track is expired for today based on its catalog closeTime.
+ */
+export const isTrackExpired = (trackId: string, now: Date = new Date()): boolean => {
+    const catalogItem = RESULTS_CATALOG.find(t => t.id === trackId);
+    if (!catalogItem || !catalogItem.closeTime) return false;
+
+    const [hours, minutes, seconds] = catalogItem.closeTime.split(':').map(Number);
+    const cutoffTime = new Date(now);
+    cutoffTime.setHours(hours, minutes, seconds || 0, 0);
+
+    return now > cutoffTime;
 };
 
 
