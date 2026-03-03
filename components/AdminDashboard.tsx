@@ -20,6 +20,7 @@ declare var jsQR: any;
 
 interface AdminDashboardProps {
     onClose: () => void;
+    onRelocate?: (plays: Play[]) => void;
 }
 
 interface OcrStagingRow {
@@ -113,7 +114,7 @@ const TRACK_MAP: Record<string, string> = {
     'Pulito': 'special/pulito',
 };
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) => {
     const [activeTab, setActiveTab] = useState<'sales' | 'results' | 'payouts' | 'winners' | 'users' | 'requests' | 'withdrawals' | 'audit' | 'network' | 'strategy' | 'ledger' | 'traffic'>('sales');
     const [salesViewMode, setSalesViewMode] = useState<'tickets' | 'plays' | 'risk'>('tickets');
 
@@ -448,7 +449,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     };
 
     // RELOCATION STATE
-    const [isRelocating, setIsRelocating] = useState(false);
+    const [stagingRelocationPlays, setStagingRelocationPlays] = useState<Play[] | null>(null);
 
     useEffect(() => {
         // Load Visibility
@@ -481,7 +482,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
     // Listen for Relocation Event from RiskMonitor
     useEffect(() => {
-        const handleRelocationStart = () => setIsRelocating(true);
+        const handleRelocationStart = () => {
+            const queuedData = localStorage.getItem('RISK_RELOCATION_QUEUE');
+            if (queuedData) {
+                try {
+                    const parsedData = JSON.parse(queuedData);
+                    const playsToStage: Play[] = parsedData.map((d: any, i: number) => ({
+                        id: Date.now() + i,
+                        betNumber: d.betNumber,
+                        gameMode: d.gameMode,
+                        straightAmount: d.straightAmount,
+                        boxAmount: d.boxAmount,
+                        comboAmount: d.comboAmount,
+                    }));
+                    setStagingRelocationPlays(playsToStage);
+                } catch (e) { console.error("Error parsing relocation queue", e); }
+            }
+        };
         window.addEventListener('START_RELOCATION_MODE', handleRelocationStart);
         return () => window.removeEventListener('START_RELOCATION_MODE', handleRelocationStart);
     }, []);
@@ -1062,17 +1079,140 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 </button>
             </header>
 
-            {/* RELOCATION OVERLAY */}
-            {isRelocating && (
-                <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-8">
-                    <div className="w-full max-w-7xl h-full flex flex-col relative">
-                        <button
-                            onClick={() => setIsRelocating(false)}
-                            className="absolute -top-4 -right-4 bg-red-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold hover:bg-red-600 z-50 shadow-lg"
-                        >
-                            ✕
-                        </button>
-                        <SniperFrame mode="relocate" className="flex-1 shadow-2xl border-cyan-500/30" />
+            {/* RELOCATION REVIEW MODAL */}
+            {stagingRelocationPlays && (
+                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-800 w-full max-w-4xl p-6 rounded-xl border border-neon-cyan/50 shadow-[0_0_30px_rgba(0,255,255,0.2)] flex flex-col max-h-[90vh]">
+                        <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neon-cyan"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                            Review Relocation Plays
+                        </h2>
+                        <p className="text-gray-400 mb-4 text-sm">Review, edit, or remove plays before generating a new ticket in the Playground.</p>
+
+                        <div className="flex-1 overflow-auto bg-slate-900/50 rounded-lg border border-slate-700">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-900 text-xs uppercase font-bold text-gray-400 border-b border-slate-700 sticky top-0">
+                                    <tr>
+                                        <th className="p-3">#</th>
+                                        <th className="p-3">Number</th>
+                                        <th className="p-3 w-32">Mode</th>
+                                        <th className="p-3 text-center">Str $</th>
+                                        <th className="p-3 text-center">Box $</th>
+                                        <th className="p-3 text-center">Com $</th>
+                                        <th className="p-3 text-right">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {stagingRelocationPlays.map((play, idx) => (
+                                        <tr key={play.id} className="hover:bg-slate-800/50 transition-colors">
+                                            <td className="p-3 text-gray-500 font-bold">{idx + 1}</td>
+                                            <td className="p-3">
+                                                <input
+                                                    type="text"
+                                                    value={play.betNumber}
+                                                    onChange={e => {
+                                                        const fresh = [...stagingRelocationPlays];
+                                                        fresh[idx].betNumber = e.target.value;
+                                                        setStagingRelocationPlays(fresh);
+                                                    }}
+                                                    className="w-20 bg-black border border-slate-600 rounded p-1 text-center text-white font-mono focus:border-neon-cyan outline-none"
+                                                />
+                                            </td>
+                                            <td className="p-3">
+                                                <select
+                                                    value={play.gameMode}
+                                                    onChange={e => {
+                                                        const fresh = [...stagingRelocationPlays];
+                                                        fresh[idx].gameMode = e.target.value;
+                                                        setStagingRelocationPlays(fresh);
+                                                    }}
+                                                    className="w-full bg-black border border-slate-600 rounded p-1 text-xs text-white focus:border-neon-cyan outline-none"
+                                                >
+                                                    {Object.keys(prizeTable).map(g => <option key={g} value={g}>{g}</option>)}
+                                                </select>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <input
+                                                    type="number"
+                                                    value={play.straightAmount || ''}
+                                                    onChange={e => {
+                                                        const fresh = [...stagingRelocationPlays];
+                                                        fresh[idx].straightAmount = e.target.value ? parseFloat(e.target.value) : null;
+                                                        setStagingRelocationPlays(fresh);
+                                                    }}
+                                                    className="w-16 bg-black border border-slate-600 rounded p-1 text-center text-white focus:border-neon-cyan outline-none"
+                                                    placeholder="-"
+                                                />
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <input
+                                                    type="number"
+                                                    value={play.boxAmount || ''}
+                                                    onChange={e => {
+                                                        const fresh = [...stagingRelocationPlays];
+                                                        fresh[idx].boxAmount = e.target.value ? parseFloat(e.target.value) : null;
+                                                        setStagingRelocationPlays(fresh);
+                                                    }}
+                                                    className="w-16 bg-black border border-slate-600 rounded p-1 text-center text-white focus:border-neon-cyan outline-none"
+                                                    placeholder="-"
+                                                />
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <input
+                                                    type="number"
+                                                    value={play.comboAmount || ''}
+                                                    onChange={e => {
+                                                        const fresh = [...stagingRelocationPlays];
+                                                        fresh[idx].comboAmount = e.target.value ? parseFloat(e.target.value) : null;
+                                                        setStagingRelocationPlays(fresh);
+                                                    }}
+                                                    className="w-16 bg-black border border-slate-600 rounded p-1 text-center text-white focus:border-neon-cyan outline-none"
+                                                    placeholder="-"
+                                                />
+                                            </td>
+                                            <td className="p-3 text-right">
+                                                <button
+                                                    onClick={() => setStagingRelocationPlays(stagingRelocationPlays.filter((_, i) => i !== idx))}
+                                                    className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded transition-colors"
+                                                    title="Remove"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {stagingRelocationPlays.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} className="p-12 text-center text-gray-500 italic">No plays. Please go back or add some.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-700">
+                            <span className="text-gray-400 font-bold">Total Wager: <span className="text-white text-xl">${stagingRelocationPlays.reduce((acc, p) => acc + (p.straightAmount || 0) + (p.boxAmount || 0) + (p.comboAmount || 0), 0).toFixed(2)}</span></span>
+                            <div className="flex justify-end gap-3 flex-wrap">
+                                <button
+                                    onClick={() => setStagingRelocationPlays(null)}
+                                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (onRelocate) {
+                                            onRelocate(stagingRelocationPlays);
+                                            setStagingRelocationPlays(null);
+                                        }
+                                    }}
+                                    disabled={stagingRelocationPlays.length === 0 || !onRelocate}
+                                    className="px-6 py-2 bg-neon-cyan hover:bg-cyan-400 text-black font-black rounded shadow-[0_0_15px_rgba(0,255,255,0.3)] disabled:opacity-50 transition-all flex items-center gap-2 group"
+                                >
+                                    Confirm <span className="hidden sm:inline">& Go to Playground</span> <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

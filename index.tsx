@@ -9,7 +9,7 @@ import AdminDashboard from './components/AdminDashboard';
 import UserDashboard from './components/UserDashboard';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { TicketData } from './types';
+import { TicketData, Play } from './types';
 
 type ViewState = 'HOME' | 'PRODUCT' | 'PLAYGROUND' | 'RESULTS' | 'ADMIN' | 'USER_DASHBOARD';
 type Language = 'en' | 'es' | 'ht';
@@ -140,6 +140,25 @@ const MainAppContent: React.FC = () => {
         setView('PLAYGROUND');
     };
 
+    const handleRelocate = (plays: Play[]) => {
+        const pseudoticket: TicketData = {
+            ticketNumber: 'RELOCATE-' + Math.floor(Math.random() * 100000),
+            transactionDateTime: new Date(),
+            betDates: [new Date().toISOString().split('T')[0]], // Today
+            tracks: [], // Let the admin select the target track in the Playground
+            grandTotal: plays.reduce((acc, p) => acc + (p.straightAmount || 0) + (p.boxAmount || 0) + (p.comboAmount || 0), 0),
+            plays: plays.map((p, i) => ({
+                ...p,
+                id: Date.now() + i, // Ensure fresh IDs
+                totalAmount: (p.straightAmount || 0) + (p.boxAmount || 0) + (p.comboAmount || 0),
+                jugadaNumber: i + 1,
+                timestamp: new Date().toISOString()
+            }))
+        };
+        setPlaybackTicket(pseudoticket);
+        setView('PLAYGROUND');
+    };
+
     const toggleTheme = () => {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
@@ -220,7 +239,7 @@ const MainAppContent: React.FC = () => {
 
             {view === 'ADMIN' && (
                 <div className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto">
-                    <AdminDashboard onClose={handleBackToHome} />
+                    <AdminDashboard onClose={handleBackToHome} onRelocate={handleRelocate} />
                 </div>
             )}
 
