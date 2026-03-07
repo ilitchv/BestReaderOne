@@ -35,6 +35,8 @@ interface TicketModalProps {
     resultsContext?: WinningResult[]; // Optional context for Admin/User view to calculate winnings
     isPaymentRequired?: boolean; // Payment Flow
     userId?: string; // --- ADDED USER ID ---
+    voiceShareTrigger?: number; // Counter to trigger share from voice agent
+    onVoiceShareDone?: () => void; // Callback when share is triggered
 }
 
 const TicketModal: React.FC<TicketModalProps> = ({
@@ -45,7 +47,9 @@ const TicketModal: React.FC<TicketModalProps> = ({
     variant = 'default',
     resultsContext = [],
     isPaymentRequired = false,
-    userId // --- DESTRUCTURED ---
+    userId, // --- DESTRUCTURED ---
+    voiceShareTrigger = 0,
+    onVoiceShareDone
 }) => {
     const ticketContentRef = useRef<HTMLDivElement>(null);
     const qrCodeRef = useRef<HTMLDivElement>(null);
@@ -441,6 +445,46 @@ const TicketModal: React.FC<TicketModalProps> = ({
         }
     };
 
+
+    useEffect(() => {
+        if (voiceShareTrigger > 0 && isConfirmed && ticketImageBlob) {
+            handleShare();
+            if (onVoiceShareDone) onVoiceShareDone();
+        }
+    }, [voiceShareTrigger, isConfirmed, ticketImageBlob, onVoiceShareDone]);
+
+    useEffect(() => {
+        const handleVoiceClick = (e: any) => {
+            if (!isOpen) return;
+
+            const element = e.detail.element;
+
+            if (element === 'confirm_and_pay' || element === 'pay_with_wallet') {
+                if (!isCheckoutMode) {
+                    setIsCheckoutMode(true);
+                    console.log("🎙️ Voice: Entering Checkout Mode");
+                } else if (!isSaving && !isConfirmed && !isPaymentRequired) {
+                    handleConfirmAndPrint();
+                    console.log("🎙️ Voice: Executing Payment");
+                }
+            } else if (element === 'share') {
+                if (isConfirmed) {
+                    if (ticketImageBlob) {
+                        handleShare();
+                    } else {
+                        // Feedback if still generating
+                        console.log("🎙️ Voice: Share requested but image not ready yet.");
+                        const feedbackEvent = new CustomEvent('voice-agent-feedback', {
+                            detail: { message: "La imagen se está generando, espera un segundo por favor." }
+                        });
+                        window.dispatchEvent(feedbackEvent);
+                    }
+                }
+            }
+        };
+        window.addEventListener('voice-ui-click', handleVoiceClick);
+        return () => window.removeEventListener('voice-ui-click', handleVoiceClick);
+    }, [isOpen, isSaving, isConfirmed, isPaymentRequired, isCheckoutMode, ticketImageBlob, handleConfirmAndPrint]);
 
     const formatTime = () => {
         return new Date().toLocaleString('en-US', {

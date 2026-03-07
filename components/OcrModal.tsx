@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, DragEvent } from 'react';
+import React, { useState, useCallback, useEffect, DragEvent } from 'react';
 import type { OcrResult, ImageInterpretationResult } from '../types';
 
 interface OcrModalProps {
@@ -17,6 +17,16 @@ const OcrModal: React.FC<OcrModalProps> = ({ isOpen, onClose, onSuccess, interpr
     const [error, setError] = useState<string | null>(null);
     const [ocrResult, setOcrResult] = useState<ImageInterpretationResult | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    useEffect(() => {
+        const handleVoiceClick = (e: any) => {
+            if (isOpen && e.detail.element === 'upload_image') {
+                document.getElementById('ocr-file-input')?.click();
+            }
+        };
+        window.addEventListener('voice-ui-click', handleVoiceClick);
+        return () => window.removeEventListener('voice-ui-click', handleVoiceClick);
+    }, [isOpen]);
 
     const resetState = () => {
         setFile(null);

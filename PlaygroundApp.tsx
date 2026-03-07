@@ -12,13 +12,15 @@ import ChatbotModal from './components/ChatbotModal';
 import TicketModal from './components/TicketModal';
 import CalculatorModal from './components/CalculatorModal';
 import ValidationErrorModal from './components/ValidationErrorModal';
-import { getTodayDateString, calculateRowTotal, fileToBase64, determineGameMode, isTrackExpired } from './utils/helpers';
+import SmartPaperModal from './components/SmartPaperModal';
+import { getTodayDateString, calculateRowTotal, fileToBase64, determineGameMode, isTrackExpired, isRepetitiveNumber } from './utils/helpers';
 import { interpretTicketImage, interpretNaturalLanguagePlays } from './services/geminiService';
 import type { Play, WizardPlay, ImageInterpretationResult, CopiedWagers, ServerHealth, TicketData } from './types';
 import { MAX_PLAYS, RESULTS_CATALOG } from './constants';
 import { localDbService } from './services/localDbService';
 import { useSound } from './hooks/useSound';
 import { useAuth } from './contexts/AuthContext';
+import { useLiveAudioContext } from './contexts/LiveAudioContext';
 
 interface PlaygroundAppProps {
     onClose: () => void;
@@ -129,7 +131,9 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
     const [isValidationErrorOpen, setIsValidationErrorOpen] = useState(false);
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+    const [isSmartPaperOpen, setIsSmartPaperOpen] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [voiceShareTrigger, setVoiceShareTrigger] = useState(0);
 
     // Payment Flow State
     const [isPaymentRequired, setIsPaymentRequired] = useState(false);
@@ -140,7 +144,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [ticketImageBlob, setTicketImageBlob] = useState<Blob | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaveStatus, setLastSaveStatus] = useState<'success' | 'error' | null>(null);
-    const [serverHealth, setServerHealth] = useState<ServerHealth>('checking');
+    const [serverHealth, setServerHealth] = useState<'online' | 'offline'>('online');
 
     // Theme (Passed to Header)
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -158,6 +162,471 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     useEffect(() => {
         localStorage.setItem('trackViewMode', trackViewMode);
     }, [trackViewMode]);
+
+    // --- GLOBAL VOICE AGENT INTEGRATION ---
+    const { registerFunctionCallback, unregisterFunctionCallback, toggleVoice } = useLiveAudioContext();
+
+    // Helper to map natural language track names to IDs
+    const resolveTrackName = (input: string): string | null => {
+        const query = input.toLowerCase().trim()
+            .replace(/\bny\b/g, 'new york')
+            .replace(/\bga\b/g, 'georgia')
+            .replace(/\btx\b/g, 'texas')
+            .replace(/\bfl\b/g, 'florida')
+            .replace(/\bnj\b/g, 'new jersey')
+            .replace(/\bmd\b/g, 'maryland')
+            .replace(/\bsc\b/g, 'south carolina')
+            .replace(/\bmi\b/g, 'michigan')
+            .replace(/\bpa\b/g, 'pennsylvania')
+            .replace(/\btn\b/g, 'tennessee')
+            .replace(/\bct\b/g, 'connecticut')
+            .replace(/\bde\b/g, 'delaware')
+            .replace(/\bma\b/g, 'massachusetts')
+            .replace(/\bva\b/g, 'virginia')
+            .replace(/\bnc\b/g, 'north carolina');
+
+        // Direct matches for special IDs
+        if (query === 'venezuela') return 'special/venezuela';
+        if (query === 'pulito') return 'special/pulito';
+        if (query.includes('horses') || query.includes('races') || query === 'ny horses') return 'special/ny-horses';
+
+        // Exact combined match search (Lottery + Draw)
+        let match = RESULTS_CATALOG.find(item => {
+            const full = `${item.lottery} ${item.draw}`.toLowerCase();
+            return query === full || query === item.lottery.toLowerCase();
+        });
+
+        // Fallback: Partial match checking both lottery and draw
+        if (!match) {
+            match = RESULTS_CATALOG.find(item => {
+                const lottery = item.lottery.toLowerCase();
+                const draw = item.draw.toLowerCase();
+                return query.includes(lottery) && query.includes(draw);
+            });
+        }
+
+        // Second Fallback: Just the lottery name (e.g., "New York") - Pick the first visible one
+        if (!match) {
+            match = RESULTS_CATALOG.find(item => item.lottery.toLowerCase() === query);
+        }
+
+        return match ? match.id : null;
+    };
+
+    useEffect(() => {
+        const handleAddPlaysGlobal = (args: any) => {
+            if (args && args.plays && args.plays.length > 0) {
+                const mappedPlays: Play[] = args.plays.map((p: any, i: number) => ({
+                    id: Date.now() + i + Math.random(),
+                    betNumber: p.betNumber,
+                    gameMode: p.gameMode || "Pick 3",
+                    straightAmount: p.straightAmount || null,
+                    boxAmount: p.boxAmount || null,
+                    comboAmount: p.comboAmount || null
+                }));
+                setPlays(prev => [...mappedPlays, ...prev]);
+                return `Successfully added ${mappedPlays.length} plays to the top of the slate.`;
+            }
+            return "Failed: No valid plays provided.";
+        };
+
+        const handleSetDate = (args: any) => {
+            if (args && args.dates && args.dates.length > 0) {
+                setSelectedDates(args.dates);
+                return `Successfully set dates to: ${args.dates.join(', ')}`;
+            }
+            return "Failed: No dates provided.";
+        };
+
+        const handleToggleTrack = (args: any) => {
+            if (args && args.tracks && args.tracks.length > 0) {
+                const resolvedTracks: string[] = [];
+                const failedTracks: string[] = [];
+
+                args.tracks.forEach((trackInput: string) => {
+                    const id = resolveTrackName(trackInput);
+                    if (id) {
+                        resolvedTracks.push(id);
+                    } else {
+                        failedTracks.push(trackInput);
+                    }
+                });
+
+                if (resolvedTracks.length === 0) {
+                    return `Failed to find any tracks matching: ${args.tracks.join(', ')}`;
+                }
+
+                setSelectedTracks(prev => {
+                    let newTracks = [...prev];
+                    resolvedTracks.forEach((trackId: string) => {
+                        if (newTracks.includes(trackId)) {
+                            newTracks = newTracks.filter(t => t !== trackId);
+                        } else {
+                            newTracks.push(trackId);
+                        }
+                    });
+                    return newTracks;
+                });
+
+                let msg = `Successfully toggled: ${resolvedTracks.join(', ')}.`;
+                if (failedTracks.length > 0) {
+                    msg += ` Could not recognize: ${failedTracks.join(', ')}.`;
+                }
+                return msg;
+            }
+            return "Failed: No tracks provided.";
+        };
+
+        const handleApplyGlobalWager = (args: any) => {
+            const strAmt = args.straightAmount;
+            const boxAmt = args.boxAmount;
+            const comAmt = args.comboAmount;
+
+            setPlays(prevPlays => {
+                return prevPlays.map(play => {
+                    let newPlay = { ...play };
+                    if (strAmt !== undefined) newPlay.straightAmount = strAmt;
+                    if (boxAmt !== undefined) newPlay.boxAmount = boxAmt;
+                    if (comAmt !== undefined) newPlay.comboAmount = comAmt;
+                    return newPlay;
+                });
+            });
+            return "Successfully modified global wagers for all existing plays.";
+        };
+
+        const handleGenerateTicketVoice = (args: any) => {
+            if (args.confirm) {
+                handleGenerateTicket();
+                return "Successfully opened the ticket generation view.";
+            }
+            return "Ticket generation cancelled.";
+        };
+
+        const handleDeletePlays = (args: any) => {
+            if (args.indices && Array.isArray(args.indices)) {
+                // Indices from agent are 1-based.
+                const oneBasedIndices = args.indices as number[];
+                let countDeleted = 0;
+
+                setPlays(prevPlays => {
+                    const playsToDelete = oneBasedIndices
+                        .map(i => prevPlays[i - 1]) // get the play object at that 1-based index
+                        .filter(Boolean) // remove undefined (out of bounds)
+                        .map(p => p.id); // extract IDs
+
+                    countDeleted = playsToDelete.length;
+
+                    if (playsToDelete.length > 0) {
+                        return prevPlays.filter(p => !playsToDelete.includes(p.id));
+                    }
+                    return prevPlays;
+                });
+                return `Successfully deleted ${countDeleted} plays.`;
+            }
+            return "Failed to delete: No indices provided.";
+        };
+
+        const handleClearAllPlays = () => {
+            setPlays([]);
+            return "Successfully cleared all plays from the screen.";
+        };
+
+        const handleOpenToolModal = (args: any) => {
+            if (args.toolName) {
+                // Close all existing first
+                setIsOcrOpen(false);
+                setIsWizardOpen(false);
+                setIsChatbotOpen(false);
+                setIsSmartPaperOpen(false);
+                setIsCalculatorOpen(false);
+                setIsTicketModalOpen(false);
+
+                const tool = args.toolName.toLowerCase();
+                if (tool === 'wizard') setIsWizardOpen(true);
+                else if (tool === 'calculator') setIsCalculatorOpen(true);
+                else if (tool === 'ocr') setIsOcrOpen(true);
+                else if (tool === 'chatbot') setIsSmartPaperOpen(true);
+
+                return `Successfully opened the ${tool} modal.`;
+            }
+            return "Failed: No tool name provided.";
+        };
+
+        const handleCloseCurrentModal = () => {
+            setIsOcrOpen(false);
+            setIsWizardOpen(false);
+            setIsChatbotOpen(false);
+            setIsSmartPaperOpen(false);
+            setIsCalculatorOpen(false);
+            setIsTicketModalOpen(false);
+            setIsValidationErrorOpen(false);
+            return "Successfully closed all open windows.";
+        };
+
+        const handleCheckoutTicket = () => {
+            handleGenerateTicket();
+            return "The ticket summary is open. Please choose your payment method: Wallet, Bitcoin, or Shopify.";
+        };
+
+        const handleShareTicket = () => {
+            if (!isTicketConfirmed) {
+                return "Failed to share: The ticket must be paid and confirmed first.";
+            }
+            if (!ticketImageBlob) {
+                return "Sharing is not ready yet. Please wait a moment for the ticket image to generate.";
+            }
+            // Trigger custom event for TicketModal to handle it
+            window.dispatchEvent(new CustomEvent('voice-ui-click', { detail: { element: 'share' } }));
+            return "Attempting to open share dialog...";
+        };
+
+        const handleShutdownAgent = () => {
+            // We use the toggleVoice from context to stop it
+            toggleVoice();
+            return "Understood. The voice assistant is now turning off. Goodbye!";
+        };
+
+        const handleGetTicketStatus = () => {
+            const formattedTotal = `$${grandTotal.toFixed(2)}`;
+            const playsCount = plays.length;
+            const tracksCount = effectiveTrackCount;
+
+            if (isTicketConfirmed && ticketNumber) {
+                if (ticketImageBlob) {
+                    return `Ticket #${ticketNumber} is PAID and the image is READY. You can use the Share button now.`;
+                }
+                return `Ticket #${ticketNumber} is PAID, but the image is still generating. Wait a second to share.`;
+            } else if (isTicketModalOpen) {
+                return `The ticket is open for REVIEW but NOT PAID. Total: ${formattedTotal}. Choose a payment method in the modal.`;
+            } else {
+                return `You are in the editor. You have ${playsCount} plays across ${tracksCount} lotteries. The current total is ${formattedTotal}. Use 'generate the ticket' to pay.`;
+            }
+        };
+
+        const handleSetRowWager = (args: any) => {
+            const rowNum = args.rowNumber;
+            const strAmt = args.straightAmount;
+            const boxAmt = args.boxAmount;
+            const comAmt = args.comboAmount;
+
+            if (!rowNum || rowNum < 1 || rowNum > plays.length) {
+                return `Failed: Row number ${rowNum} is out of range. You have ${plays.length} plays.`;
+            }
+
+            // In the UI, row X is plays[plays.length - X]
+            const targetIndex = plays.length - rowNum;
+            const targetPlay = plays[targetIndex];
+
+            setPlays(prevPlays => {
+                return prevPlays.map((p, idx) => {
+                    if (idx === targetIndex) {
+                        let newPlay = { ...p };
+                        if (strAmt !== undefined) newPlay.straightAmount = strAmt;
+                        if (boxAmt !== undefined) newPlay.boxAmount = boxAmt;
+                        if (comAmt !== undefined) newPlay.comboAmount = comAmt;
+                        return newPlay;
+                    }
+                    return p;
+                });
+            });
+
+            return `Successfully updated wagers for Row ${rowNum} (${targetPlay.betNumber}).`;
+        };
+
+        const handleReadSlatePlays = () => {
+            if (plays.length === 0) return "You have no plays on the slate currently.";
+
+            const playReadout = plays.slice(0, 50).map((p, i) => {
+                const total = calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount);
+                // The displayed row number is plays.length - i
+                const rowId = plays.length - i;
+                let detail = `Row ${rowId}: ${p.gameMode} with number ${p.betNumber}`;
+                if (p.straightAmount) detail += `, straight $${p.straightAmount}`;
+                if (p.boxAmount) detail += `, box $${p.boxAmount}`;
+                if (p.comboAmount) detail += `, combo $${p.comboAmount}`;
+                detail += `. Total for this row is $${total}.`;
+                return detail;
+            }).reverse().join('\n'); // Reverse so it reads in row order 1, 2, 3...
+
+            return `Here are your current plays (listing the first ${Math.min(50, plays.length)}):\n${playReadout}`;
+        };
+
+        const handleClickUiElement = (args: any) => {
+            if (!args.elementName) return "Failed: No element name provided.";
+            const element = args.elementName.toLowerCase();
+
+            // Dispatch custom event for UI components to listen to
+            window.dispatchEvent(new CustomEvent('voice-ui-click', { detail: { element } }));
+
+            if (element === 'confirm_and_pay') {
+                return "Attempting to confirm and pay for the ticket...";
+            } else if (element === 'upload_image') {
+                return "Opening file selector for image upload...";
+            }
+
+            return `Triggered click for ${element}.`;
+        };
+
+        const handleSetTheme = (args: any) => {
+            if (args.theme === 'light') {
+                setTheme('light');
+                return "Switched theme to light mode.";
+            }
+            if (args.theme === 'dark') {
+                setTheme('dark');
+                return "Switched theme to dark mode.";
+            }
+            return "Failed to switch theme: invalid theme selected.";
+        };
+
+        const handleWizardGenerateRandom = (args: any) => {
+            const { gameMode = 'Pick 3', count = 5, straightAmount, boxAmount, comboAmount } = args;
+            const newPlays: Play[] = [];
+            for (let i = 0; i < count; i++) {
+                let numStr = '';
+                switch (gameMode) {
+                    case 'Pick 3': numStr = String(Math.floor(Math.random() * 1000)).padStart(3, '0'); break;
+                    case 'Win 4': numStr = String(Math.floor(Math.random() * 10000)).padStart(4, '0'); break;
+                    case 'Pick 2': numStr = String(Math.floor(Math.random() * 100)).padStart(2, '0'); break;
+                    case 'Venezuela': numStr = String(Math.floor(Math.random() * 100)).padStart(2, '0'); break;
+                    case 'Pale-RD':
+                    case 'Palé':
+                        const n1 = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+                        const n2 = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+                        numStr = `${n1}-${n2}`;
+                        break;
+                    case 'Pulito': numStr = String(Math.floor(Math.random() * 100)).padStart(2, '0'); break;
+                    default: numStr = String(Math.floor(Math.random() * 1000)).padStart(3, '0'); break;
+                }
+
+                let detectedMode = determineGameMode(numStr, selectedTracks, pulitoPositions);
+                const isUSA = selectedTracks.some(t => ["New York", "Georgia", "New Jersey", "Florida", "Connecticut", "Pensilvania", "Brooklyn", "Front", "Pulito", "Horses"].some(s => t.includes(s)));
+                if (isUSA && (gameMode === 'Pale-RD' || detectedMode === 'Pale-RD')) detectedMode = 'Palé';
+
+                if (numStr) {
+                    const isSingleAction = detectedMode.startsWith('Single Action');
+                    const isRepetitive = isRepetitiveNumber(numStr);
+                    const finalBox = (isSingleAction || isRepetitive) ? null : boxAmount;
+                    const finalCombo = (isSingleAction || isRepetitive) ? null : comboAmount;
+
+                    newPlays.push({
+                        id: Date.now() + i + Math.random(),
+                        betNumber: numStr,
+                        gameMode: detectedMode !== '-' ? detectedMode : gameMode,
+                        straightAmount,
+                        boxAmount: finalBox,
+                        comboAmount: finalCombo
+                    });
+                }
+            }
+            setPlays(prev => [...newPlays.reverse(), ...prev]);
+            return `Successfully generated ${count} random plays for ${gameMode}.`;
+        };
+
+        const handleWizardGenerateSequence = (args: any) => {
+            const { startNumber, endNumber, straightAmount, boxAmount, comboAmount } = args;
+            if (!startNumber || !endNumber) return "Failed: Must provide start and end numbers.";
+
+            const s = parseInt(startNumber);
+            const e = parseInt(endNumber);
+            if (isNaN(s) || isNaN(e) || s > e) return "Failed: Invalid sequence range.";
+
+            let count = e - s + 1;
+            let end = e;
+            if (count > MAX_PLAYS) {
+                end = s + MAX_PLAYS - 1;
+                count = MAX_PLAYS;
+            }
+            const pad = startNumber.length;
+            const newPlays: Play[] = [];
+
+            for (let i = s; i <= end; i++) {
+                const numStr = String(i).padStart(pad, '0');
+                const mode = determineGameMode(numStr, selectedTracks, pulitoPositions);
+                const isSingleAction = mode.startsWith('Single Action');
+                const isRepetitive = isRepetitiveNumber(numStr);
+                const finalBox = (isSingleAction || isRepetitive) ? null : boxAmount;
+                const finalCombo = (isSingleAction || isRepetitive) ? null : comboAmount;
+
+                newPlays.push({
+                    id: Date.now() + i + Math.random(),
+                    betNumber: numStr,
+                    gameMode: mode !== '-' ? mode : 'Pick 3',
+                    straightAmount,
+                    boxAmount: finalBox,
+                    comboAmount: finalCombo
+                });
+            }
+            setPlays(prev => [...newPlays.reverse(), ...prev]);
+            return `Successfully generated a sequence of ${count} plays from ${startNumber} to ${String(end).padStart(pad, '0')}.`;
+        };
+
+        const handleSetViewMode = (args: any) => {
+            if (args.mode === 'grid') {
+                setTrackViewMode('grid');
+                return "Successfully changed track view mode to grid.";
+            } else if (args.mode === 'reel') {
+                setTrackViewMode('reel');
+                return "Successfully changed track view mode to reel.";
+            }
+            return "Failed to change view mode. Allowed values are 'grid' or 'reel'.";
+        };
+
+        const handleNavigateToTab = (args: any) => {
+            if (args.tabName) {
+                window.dispatchEvent(new CustomEvent('open-track-category', { detail: args.tabName }));
+                return `Opened the ${args.tabName} tab in the track selector.`;
+            }
+            return "Failed: No tab name provided.";
+        };
+
+        registerFunctionCallback("add_plays_to_slate", handleAddPlaysGlobal);
+        registerFunctionCallback("set_date", handleSetDate);
+        registerFunctionCallback("toggle_track", handleToggleTrack);
+        registerFunctionCallback("apply_global_wager", handleApplyGlobalWager);
+        registerFunctionCallback("generate_ticket", handleGenerateTicketVoice);
+
+        registerFunctionCallback("delete_plays", handleDeletePlays);
+        registerFunctionCallback("clear_all_plays", handleClearAllPlays);
+        registerFunctionCallback("open_tool_modal", handleOpenToolModal);
+        registerFunctionCallback("close_current_modal", handleCloseCurrentModal);
+        registerFunctionCallback("checkout_ticket", handleCheckoutTicket);
+        registerFunctionCallback("share_ticket", handleShareTicket);
+        registerFunctionCallback("read_slate_plays", handleReadSlatePlays);
+        registerFunctionCallback("shutdown_agent", handleShutdownAgent);
+        registerFunctionCallback("get_ticket_status", handleGetTicketStatus);
+        registerFunctionCallback("set_row_wager", handleSetRowWager);
+        registerFunctionCallback("click_ui_element", handleClickUiElement);
+        registerFunctionCallback("set_theme", handleSetTheme);
+
+        registerFunctionCallback("navigate_to_tab", handleNavigateToTab);
+        registerFunctionCallback("set_view_mode", handleSetViewMode);
+        registerFunctionCallback("wizard_generate_random", handleWizardGenerateRandom);
+        registerFunctionCallback("wizard_generate_sequence", handleWizardGenerateSequence);
+
+        return () => {
+            unregisterFunctionCallback("add_plays_to_slate");
+            unregisterFunctionCallback("set_date");
+            unregisterFunctionCallback("toggle_track");
+            unregisterFunctionCallback("apply_global_wager");
+            unregisterFunctionCallback("generate_ticket");
+
+            unregisterFunctionCallback("delete_plays");
+            unregisterFunctionCallback("clear_all_plays");
+            unregisterFunctionCallback("open_tool_modal");
+            unregisterFunctionCallback("close_current_modal");
+            unregisterFunctionCallback("checkout_ticket");
+            unregisterFunctionCallback("share_ticket");
+            unregisterFunctionCallback("read_slate_plays");
+            unregisterFunctionCallback("click_ui_element");
+            unregisterFunctionCallback("set_theme");
+
+            unregisterFunctionCallback("navigate_to_tab");
+            unregisterFunctionCallback("set_view_mode");
+            unregisterFunctionCallback("wizard_generate_random");
+            unregisterFunctionCallback("wizard_generate_sequence");
+        };
+    }, [registerFunctionCallback, unregisterFunctionCallback, setPlays, setSelectedDates, setSelectedTracks, setIsTicketModalOpen, plays, selectedTracks, selectedDates, pulitoPositions]);
 
     // Sync theme with document
     useEffect(() => {
@@ -325,6 +794,16 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     };
 
     // --- TICKET GENERATION ---
+    const handleApplySmartPaper = (newPlays: Play[], newTracks: string[]) => {
+        if (newPlays.length > 0) {
+            setPlays(prev => [...newPlays, ...prev]);
+        }
+        if (newTracks.length > 0) {
+            setSelectedTracks(prev => Array.from(new Set([...prev, ...newTracks])));
+        }
+        setIsSmartPaperOpen(false);
+    };
+
     const handleGenerateTicket = async () => {
         const errors: string[] = [];
         const warnings: string[] = [];
@@ -562,6 +1041,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                     onOpenOcr={() => setIsOcrOpen(true)}
                     onOpenWizard={() => setIsWizardOpen(true)}
                     onOpenChatbot={() => setIsChatbotOpen(true)}
+                    onOpenSmartPaper={() => setIsSmartPaperOpen(true)}
                     onGenerateTicket={handleGenerateTicket}
                     isTicketGenerationDisabled={plays.length === 0}
                     onPasteWagers={handlePasteWagers}
@@ -686,6 +1166,8 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 lastSaveStatus={lastSaveStatus}
                 isPaymentRequired={isPaymentRequired}
                 userId={user ? user.id : 'guest-session'}
+                voiceShareTrigger={voiceShareTrigger}
+                onVoiceShareDone={() => setVoiceShareTrigger(0)}
             />
 
             <ValidationErrorModal
@@ -697,6 +1179,12 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             <CalculatorModal
                 isOpen={isCalculatorOpen}
                 onClose={() => setIsCalculatorOpen(false)}
+            />
+            <SmartPaperModal
+                isOpen={isSmartPaperOpen}
+                onClose={() => setIsSmartPaperOpen(false)}
+                onApply={handleApplySmartPaper}
+                currentLanguage={language}
             />
         </div>
     );

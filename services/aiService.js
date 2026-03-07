@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Helper to get the model
 const getModel = () => {
-    return genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    return genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 };
 
 // Response schema for Ticket Interpretation
@@ -68,7 +68,32 @@ If no amount is specified, default to 0.
 RETURN ONLY RAW JSON. NO MARKDOWN.
 `;
 
+const SMART_PAPER_PROMPT = `
+You are an expert lottery assistant. The user provides raw text (voice transcript, paste, or manual typing).
+Your goal is to extract lottery plays (numbers and amounts) and interpret any global commands.
+
+CRITICAL INSTRUCTIONS:
+1. STRICT ENGLISH: YOUR OUTPUT MUST ALWAYS BE 100% IN ENGLISH. Even if the user prompt is in Spanish or another language, your responses, confirmations, and "feedback" MUST be in English. NEVER use Spanish.
+2. NO TRACK QUESTIONS: Your ONLY job is to extract numbers and wagers. YOU MUST NEVER ask the user what lottery or track these plays are for. Ignore track information completely.
+3. Normalization: Numbers provided as words (e.g. "twenty two") MUST be converted to digits ("22").
+4. Global Commands: If the user says something like "change all to $5" or "clear all", reflect this in the extracted plays or provide confirmation in "feedback".
+5. Pales/Pairs (Heuristic): If the input contains numbers separated by a hyphen (e.g., "04-26") or explicitly uses the word "Pale" (or "Pair"), you MUST categorize the gameMode as "Pale" and keep the exact string format for betNumber ("04-26"). DO NOT merge them into a "Pick 4" (e.g., do not output "0426").
+6. Conversational Feedback: 
+   - Use the "feedback" field for brief, professional English messages.
+   - If plays are clear, "feedback" should be null unless you are confirming a global shift.
+   - If everything is perfect, "feedback" should be null.
+
+JSON FORMAT:
+{
+  "plays": [
+    { "betNumber": "123", "gameMode": "Pick 3", "straightAmount": 5, "boxAmount": 0, "comboAmount": 0 }
+  ],
+  "feedback": "I've processed your request. Note: All wagers were set to $5 as requested."
+}
+`;
+
 const aiService = {
+
 
     /**
      * Interpret a Ticket Image
@@ -122,6 +147,30 @@ const aiService = {
         } catch (error) {
             console.error("AI Text Interpretation Error:", error);
             throw new Error(`AI text processing failed: ${error.message}`);
+        }
+    },
+
+    /**
+     * Parse Smart Paper Natural Language Input (Voice/Text/Paste)
+     * @param {string} text - User text/voice input
+     * @returns {Promise<Object>} - Parsed tracks, plays, and feedback
+     */
+    parseNaturalLanguagePlays: async (text) => {
+        try {
+            const model = genAI.getGenerativeModel({
+                model: "gemini-flash-latest",
+                systemInstruction: SMART_PAPER_PROMPT
+            });
+            const result = await model.generateContent(`USER INPUT: "${text}"`);
+            const response = await result.response;
+            const responseText = response.text();
+
+            const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanText);
+
+        } catch (error) {
+            console.error("AI Smart Paper Parsing Error:", error);
+            throw new Error(`AI parsing failed: ${error.message}`);
         }
     },
 

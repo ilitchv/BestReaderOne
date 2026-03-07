@@ -9,6 +9,8 @@ import AdminDashboard from './components/AdminDashboard';
 import UserDashboard from './components/UserDashboard';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LiveAudioProvider } from './contexts/LiveAudioContext';
+import { GlobalVoiceAssistant } from './components/GlobalVoiceAssistant';
 import { TicketData, Play } from './types';
 
 type ViewState = 'HOME' | 'PRODUCT' | 'PLAYGROUND' | 'RESULTS' | 'ADMIN' | 'USER_DASHBOARD';
@@ -227,14 +229,17 @@ const MainAppContent: React.FC = () => {
             )}
 
             {view === 'PLAYGROUND' && (
-                <div className="fixed inset-0 z-50 bg-light-bg dark:bg-dark-bg overflow-y-auto">
-                    <PlaygroundApp
-                        onClose={handleClosePlayground}
-                        onHome={isAuthenticated ? () => setView('USER_DASHBOARD') : handleBackToHome}
-                        language={language}
-                        initialTicket={playbackTicket}
-                    />
-                </div>
+                <LiveAudioProvider>
+                    <div className="fixed inset-0 z-50 bg-light-bg dark:bg-dark-bg overflow-y-auto">
+                        <PlaygroundApp
+                            onClose={handleClosePlayground}
+                            onHome={isAuthenticated ? () => setView('USER_DASHBOARD') : handleBackToHome}
+                            language={language}
+                            initialTicket={playbackTicket}
+                        />
+                        <GlobalVoiceAssistant />
+                    </div>
+                </LiveAudioProvider>
             )}
 
             {view === 'ADMIN' && (

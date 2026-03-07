@@ -1,0 +1,341 @@
+Tabla de Premios por Modalidad de Juego
+Peak 3 : Modalidad de juego de lotería que consiste en someter apuestas de 3 dígitos, apostando a que se va a acertar a diferentes combinaciones o modalidades de 3 dígitos que saldrán en los sorteo de las loterías de los diferentes estados de USA.
+Modalidades Pick 3
+Premio por $1 Apostado
+Ejemplo
+Straight (Exact Order) New York
+$700 
+Si seleccionas 123, y el número ganador es 123
+Box (Doble) New York
+$233.33 
+Si seleccionas 122, y el número ganador es 122, 212 o 221
+Box (6-Way) New York
+$116.67 
+Seleccionas 123, el número ganador es 123, 132, 213, 231, 312, 321
+Straight Three Identical Digits (triple) New York
+$500 
+Si seleccionas 111, y el número ganador es 111. Esta combinación siempre se juega en modalidad Straight, ya que solo tiene una combinación y por ende no necesita el recurso de las modalidades Combo o Box.
+Combo (6-Way) New York
+$700 
+Si seleccionas 123, entonces estas jugando las combinaciones : 123, 132, 213, 231, 312, 321 y ganas $700 si cualquiera de esas combinaciones sale, como si fuera jugar straight para esas 6 combinaciones, pero mas simplificado en una sola jugada.
+Straight (Otros Estados)
+$700
+Efectivo al 2-17-25 
+Si seleccionas 123, apostando en la modalidad straight, y el número ganador es 123. Para los tracks que no son New York Midday o New York Evening.
+Box (Otros Estados)
+$116.67
+Si seleccionas 123, apostando en la modalidad box, el número ganador es cualquier combinación de 123. 
+Win Four : Modalidad de juego de lotería que consiste en someter apuestas de 4 dígitos, apostando a que se va a acertar a diferentes combinaciones o modalidades de 4 dígitos que saldrán en los sorteo de las loterías de los diferentes estados de USA. 
+Modalidades Win Four:
+Premio por $1 Apostado
+Ejemplo
+Straight (New York)
+$5.000 
+En el track de New York Midday o New York Evening, si seleccionas 1234, el número ganador es 1234
+Box (New York)
+$200 
+Seleccionas 1234 y uno de los tracks de New York, el número ganador es cualquier permutación de 1234
+Box (1 Double)
+$400 
+Seleccionas 1233, el número ganador es cualquier permutación de 1233. En estos casos uno de los 4 dígitos se repite 2 veces.
+Box (Double couple)
+$800 
+Seleccionas 2233, el número ganador es cualquier permutación de 2233, en estos casos 2 de los 4 dígitos se repiten 2 veces.
+Box (Triple)
+$1,200 
+Seleccionas 1112, el número ganador es cualquier permutación de 1112, en estos casos 1 de los 4 digitos se repite 3 veces.
+Straight (Otros Estados)
+$2.500 
+Si seleccionas 1234, el número ganador es 1234. Para los tracks que no son New York Midday o New York Evening, los premios son por la mitad de lo que se paga en cada modalidad de New York.
+Box (Otros Estados)
+$100 
+Seleccionas 1234, el número ganador es cualquier permutación de 1234, Para los tracks que no son New York Midday o New York Evening, los premios son por la mitad de lo que se paga en cada modalidad de New York.
+Venezuela: Modalidad de juego de lotería que consiste consiste en someter apuestas de 2 dígitos (quinielas) o de 4 dígitos (Pale). En las quinielas se apuesta a que se va a acertar a parejas de dos dígitos en 3 posiciones considerando los sorteos de los 3 dígitos de la modalidad de juego Pick Three y los 4 dígitos de la modalidad de juego Win Four. Las posiciones Primera, Segunda y Tercera se determinan de la siguiente forma: La primera: Está compuesta por los dos últimos dígitos de los 3 números ganadores en los sorteos de Pick Three. La segunda: Esta se compone de los dos primeros dígitos de los 4 números ganadores en los sorteos de Win Four. La tercera: Se compone de los últimos dos dígitos de los 4 números ganadores en los sorteos de Win Four. En la modalidad de juego de dos dígitos, el jugador elige una pareja de dígitos y si en el sorteo de números ganadores, esos dos dígitos coinciden en alguna de las tres posiciones, el ganador obtiene un premio que dependerá de cada posición en la que se acierte. El jugador también puede de ganar múltiples veces en una sola jugada, en caso de que la pareja de dígitos a la que apuesta coincide en varias posiciones en el sorteo de números ganadores, en ese caso el premio será el total de la sumatoria de los diferentes premios a los que acertó en cada posición, pudiéndose dar el caso de acertar en 1, 2 o hasta en las 3 posiciones. En la modalidad de los 4 dígitos (que realmente son dos parejas de dos dígitos), el jugador elige dos parejas de dígitos para que una coincida en la posición primera y la otra coincida con una de las demás posiciones, ya sea la segunda o la tercera de los sorteos (sin importar el orden en el que el jugador sometió las parejas de dos dígitos), si se da esa coincidencia en ese caso el jugador gana el premio correspondiente a un "Pale full" . Otra combinación que se puede dar en la modalidad Pale, es que las dos parejas de dígitos elegidas coincidan con la segunda y la tercera posición del sorteo, en ese caso el jugador gana un premio correspondiente a un "Pale parcial". 
+Modalidad
+Premio por $1 Apostado
+Ejemplo
+Pareja de dígitos en Primera
+$55 
+Seleccionas 45, el número ganador es 45 en primera posición
+Pareja de dígitos en Segunda
+$15 
+Seleccionas 45, el número ganador es 45 en segunda posición
+Pareja de dígitos en Tercera
+$10 
+Seleccionas 45, el número ganador es 45 en tercera posición
+Pale Full
+$700 
+Seleccionas 45 y 67, el número ganador es 45 en primera posición y 67 en segunda o tercera posición
+Pale Box
+$175
+Seleccionas 45 y 67, el número ganador es 54 en primera posición y 76 en segundo o tercera, o cualquier combinación.
+Pulito/Bolita: Modalidad de juego de lotería que consiste en someter apuestas de 2 dígitos, apostando a que se va a acertar a parejas de dígitos en 3 posiciones considerando los 3 dígitos de la modalidad de juego Peak Three y los 4 dígitos de la modalidad de juego Win Four, con la particularidad de que la apuesta se centra solo en una pareja de dígitos (a diferencia de la modalidad Venezuela no acierta en varias posiciones a la vez), la cual debe especificarse con su número correspondiente de posición (1, 2 o 3) al momento de someter la jugada. Las posiciones Primera, Segunda y Tercera se determinan de la siguiente forma: La primera: Está compuesta por primeros dos dígitos de los 3 números ganadores en los sorteos de Pick Three. La segunda: Esta se compone de los dos últimos dígitos de los 3 números ganadores en los sorteos de Pick Three. La tercera: Se compone de los dos primeros dígitos de los 4 números ganadores en los sorteos de Win Four. En esta modalidad de juego, por defecto se asume que la pareja de dígitos que se elige debe salir en el mismo orden en el sorteo (straight), ahora bien, el jugador también puede elegir al momento de la jugada si desea apostar la modalidad box de pulito y en ese caso si la pareja de dígitos a la que se apuesta sale ganadora al revés (por ejemplo si sale ganador el 45, cuando jugó el 54), entonces también gana, aunque solo la mitad del premio que se gana cuando es la modalidad straight.
+Modalidad
+Premio por $1 Apostado
+Ejemplo
+Pulito en primera, Segunda o Tercera posición.
+$80 
+Seleccionas 45 (si no se especifica que es box entonces es straight por defecto), se debe especificar si se está apostando para la primera, segunda o tercera posición, el número ganador es 45 en primera posición, o en segunda o en tercera,
+Pulito modalidad Box
+$40 
+Seleccionas 45, e indicas que es box y el número ganador es 54 o 45, entonces ganas la mitad de si lo jugaras straight, o sea sin especificar que es box.
+Lotería de Santo Domingo: Modalidad de juego de lotería que consiste en someter apuestas de 2 dígitos (quinielas) o de 4 dígitos (Pale). En las quinielas se apuesta a que se va a acertar a parejas de dos dígitos en 3 posiciones considerando los sorteos de las loterías de Republica Dominicana que son varias, por lo que el jugador debe especificar a cuál de las loterías está apostando al momento de someter la jugada. Las posiciones Primera, Segunda y Tercera se determinan en ese mismo orden en los sorteos de las diferentes loterías de Santo Domingo que consisten en 3 parejas de dos dígitos y las mismas se determinan por el orden en el que son emitidos los resultados del sorteo. En la modalidad de juego de dos dígitos, el jugador apuesta a una pareja de dígitos y si en el sorteo de números ganadores, esos dos dígitos coinciden en alguna de las tres posiciones, el ganador obtiene un premio que dependerá de cada posición en la que se acierte. El jugador también puede de ganar múltiples veces en una sola jugada, en caso de que la pareja de dígitos a la que apuesta coincide en varias posiciones en el sorteo de números ganadores, en ese caso el premio será el total de la sumatoria de los diferentes premios a los que acertó en cada posición, pudiéndose dar el caso de acertar en 1, 2 o hasta en las 3 posiciones. En la modalidad de los 4 dígitos (que realmente son dos parejas de dos dígitos), el jugador elige dos parejas de dígitos para que una coincida en la posición primera y la otra coincida con una de las demás posiciones, ya sea la segunda o la tercera de los sorteos (sin importar el orden en el que el jugador sometió las parejas de dos dígitos), si se da esa coincidencia en ese caso el jugador gana el premio correspondiente a un "Pale full" . Otra combinación que se puede dar en la modalidad Pale, es que las dos parejas de dígitos a las que se apuesta, coincidan con la segunda y la tercera posición del sorteo, en ese caso el jugador gana un premio correspondiente a un "Pale parcial". 
+Modalidad
+Premio por $1 Apostado
+Ejemplo
+Quiniela en Primera
+$56 
+Seleccionas 45, el número ganador es 45 en primera posición
+Quiniela en Segunda
+$12 
+Seleccionas 45, el número ganador es 45 en segunda posición
+Quniela en Tercera
+$4 
+Seleccionas 45, el número ganador es 45 en tercera posición
+Pale Full
+$1.300 
+Seleccionas 45 y 67, el número ganador es 45 en primera posición y 67 en segunda o tercera posición. Y vice versa.
+Pale Parcial
+$200 
+Seleccionas 45 y 67, el número ganador es 45 en segunda posición y 67 en tercera posición, y viceversa,
+Pale Box
+$325 / 50
+Seleccionas 45 y 67, el número ganador es 54 en primera posición y 76 en segundo o tercera, o cualquier combinación de estas parejas (325).  Seleccionas 45 y 67, el número ganador es 45 en segunda posición y 67 en tercera posición, y viceversa, o cualquier combinación de estas parejas (50).   
+ 
+MODALIDADES DE JUEGO
+Reglas del Juego: Peak 3
+Peak 3 es un juego de lotería donde los jugadores seleccionan una combinación de tres números, del 000 al 999. Los jugadores pueden apostar en varias modalidades:
+Straight (Exact Order):
+Apuesta a que los números seleccionados saldrán en el orden exacto.
+Ejemplo: Si seleccionas 123 y el número ganador es 123, ganas.
+Box:
+Apuesta a que los números seleccionados saldrán en cualquier orden. Hay dos tipos de Box:
+Box 3-Way (Any Order):
+Dos números son iguales y uno es diferente.
+Ejemplo: Si seleccionas 122, ganas si el número ganador es 122, 212 o 221.
+Box 6-Way (Any Order):
+Tres números diferentes.
+Ejemplo: Si seleccionas 123, ganas si el número ganador es 123, 132, 213, 231, 312 o 321.
+Straight/Box:
+Combina las apuestas de Straight y Box. Si los números salen en el orden exacto, ganas ambos premios. Si salen en cualquier orden, ganas el premio Box.
+Hay dos tipos de Straight/Box:
+Straight/Box 3-Way:
+Ejemplo: Si seleccionas 122, ganas $350 si el número ganador es 122 y $58 si es 212 o 221.
+Straight/Box 6-Way:
+Ejemplo: Si seleccionas 123, ganas $350 si el número ganador es 123 y $58 si es 132, 213, 231, 312 o 321.
+Combo:
+Similar a apostar a todas las combinaciones posibles de un número específico.
+Ejemplo: Si seleccionas 123, juegas las combinaciones 123, 132, 213, 231, 312 y 321, con el mismo premio que un Straight ($700).
+Nota: Si seleccionas un número con tres dígitos iguales (como 111), no se juega la modalidad Combo ya que no hay combinaciones posibles.
+Three Identical Digits (Straight):
+Apuesta a que los tres números seleccionados son iguales y salen en el orden exacto.
+Ejemplo: Si seleccionas 111 y el número ganador es 111, ganas.
+Run Down:
+Apuesta a una combinación de tres dígitos especificando que uno de los dígitos puede variar de 0 a 9, cubriendo todas las posibles combinaciones sin tener que escribir diez jugadas.
+Ejemplo: Si seleccionas 12X y X puede ser cualquier número del 0 al 9, juegas las combinaciones 120, 121, 122, 123, 124, 125, 126, 127, 128 y 129.
+Reglas del Juego: Win Four
+Win Four es un juego de lotería donde los jugadores seleccionan una combinación de cuatro números, del 0000 al 9999. Los jugadores pueden apostar en varias modalidades:
+Straight:
+Apuesta a que los números seleccionados saldrán en el orden exacto.
+Ejemplo: Si seleccionas 1234 y el número ganador es 1234, ganas.
+Box:
+Apuesta a que los números seleccionados saldrán en cualquier orden. Hay varios tipos de Box:
+Box (Any Order):
+Cuatro números diferentes.
+Ejemplo: Si seleccionas 1234, ganas si el número ganador es cualquier permutación de 1234.
+Box (Double):
+Un número se repite dos veces.
+Ejemplo: Si seleccionas 1123, ganas si el número ganador es cualquier permutación de 1123.
+Box (Triple):
+Un número se repite tres veces.
+Ejemplo: Si seleccionas 1112, ganas si el número ganador es cualquier permutación de 1112.
+Box (Quad):
+Dos números se repiten dos veces.
+Ejemplo: Si seleccionas 1122, ganas si el número ganador es cualquier permutación de 1122.
+Round Down:
+Apuesta a una combinación de cuatro dígitos especificando que uno de los dígitos puede variar de 0 a 9, cubriendo todas las posibles combinaciones sin tener que escribir diez jugadas.
+Ejemplo: Si seleccionas 123X y X puede ser cualquier número del 0 al 9, juegas las combinaciones 1230, 1231, 1232, 1233, 1234, 1235, 1236, 1237, 1238 y 1239.
+Reglas del Juego: Lotería de Santo Domingo, República Dominicana
+Lotería de Santo Domingo ofrece varias modalidades de juego en las que los jugadores pueden seleccionar combinaciones de números de dos y cuatro dígitos.
+Patas (Dos Dígitos):
+El jugador debe acertar una pareja de dos dígitos en los números del 00 al 99.
+Los sorteos se realizan tomando en cuenta tres posiciones: primera, segunda y tercera.
+Ejemplo: Si seleccionas 45 y el número ganador es 45 en cualquiera de las tres posiciones, ganas.
+Pale (Cuatro Dígitos):
+El jugador debe acertar dos parejas de dos dígitos, normalmente las separan con un – o con una x, o con una +. Hay dos variantes de Pale en las Loterías de Santo Domingo:
+Pale Full:
+Una pareja de dos dígitos debe salir en primera posición y la segunda pareja puede salir en segunda o tercera posición.
+Ejemplo: Si seleccionas 45x67, ganas si el número ganador es 45 en primera posición y 67 en segunda o tercera posición.
+Pale Parcial:
+Las dos parejas de dos dígitos pueden salir en sorteo en segunda y tercera posición.
+Ejemplo: Si seleccionas 45+67, ganas si el número ganador es 45 en segunda posición y 67 en tercera posición y viceversa.
+Reglas del Juego: Modalidad Venezuela
+Final del formulario
+  Modalidad Venezuela es una variante del juego que utiliza los sorteos de Peak 3 y Win Four de las loterías de USA, pero sigue las reglas de la Lotería de Santo Domingo.
+Patas (Dos Dígitos):
+El jugador debe acertar una pareja de dos dígitos en los números del 00 al 99.
+Los jugadores deben especificar en qué posición debe salir la pareja de dígitos:
+Primera posición: Marcando un 1 encerrado en un círculo (⓵).
+Segunda posición: Marcando un 2 encerrado en un círculo (⓶).
+Tercera posición: Marcando un 3 encerrado en un círculo (⓷).
+Ejemplo: Si seleccionas 45 y el número ganador es 45 en la posición especificada, ganas.
+Pale (Cuatro Dígitos):
+En la modalidad Venezuela, hay una sola modalidad de pale y paga el mismo premio sin importar el orden en que las parejas coincidan en dos de las 3 posiciones.  El jugador apuesta a que una de las pareja de dos dígitos se obtendrá del resultado números ganadores de Peak 3, tomando en cuenta solo los dos últimos dígitos y desechando el primer dígito.
+Ejemplo: Si el número ganador de Peak 3 es 123, se toma en cuenta solo el 23 como la primera pareja de dígitos.
+La segunda o tercera posición se obtienen de los números ganadores de Win Four:
+La segunda posición son los dos primeros dígitos del número ganador de Win Four.
+La tercera posición son los dos últimos dígitos del número ganador de Win Four.
+Ejemplo: Si el número ganador de Win Four es 5678, la segunda pareja es 56 y la tercera pareja es 78.  Por lo que para que se de un pale ganador, las dos parejas de digitos deben coincider en dos de esas tres posiciones.
+En Win 4, regularmente, el límite a apostar por cada jugada es 10 dólares straight.
+Lotería de Santo Domingo
+Modalidad
+Premio por $1 Apostado
+Ejemplo
+Patas en Primera
+$56
+Seleccionas 45, el número ganador es 45 en primera posición
+Patas en Segunda
+$12
+Seleccionas 45, el número ganador es 45 en segunda posición
+Patas en Tercera
+$4
+Seleccionas 45, el número ganador es 45 en tercera posición
+Pale Full
+$1300
+Seleccionas 45 y 67, el número ganador es 45 en primera posición y 67 en segunda o tercera posición
+Pale Parcial
+$200
+Seleccionas 45 y 67, el número ganador es 45 en segunda posición y 67 en tercera posición, o viceversa
+En Santo Domingo el limite a  apostar para pata es 100 dolares y 10 para la modalidad pale
+Modalidad Venezuela
+Modalidad
+Premio por $1 Apostado
+Ejemplo
+Patas en Primera
+$55
+Seleccionas 45, el número ganador es 45 en primera posición
+Patas en Segunda
+$15
+Seleccionas 45, el número ganador es 45 en segunda posición
+Patas en Tercera
+$10
+Seleccionas 45, el número ganador es 45 en tercera posición
+Pale  
+$700
+Seleccionas 23X56, el número ganador es 123 en Peak 3 y 56 en la primera o segunda posición de Win Four
+ **Si el monto apostado es en Box, entonces paga solo la mitad del premio.
+Estas tablas detallan los premios para cada modalidad de juego en Peak 3, Win Four, la Lotería de Santo Domingo y la Modalidad Venezuela. Si necesitas realizar más ajustes o añadir información adicional, por favor avísame.
+Modalidad pulitos:
+De dos dígitos: En esta modalidad se juega identificando una pareja de dígitos en en peak 3 o en win four.  En peak 3, la pareja de dígitos se identifica por medio de especificar si es primrea o segunda “bolita” con un uno o un dos respectivamente.  Si se especifica el 1 se están eligiendo los primeros dos dígitos de los tres que componen el numero, por ejemplo en 123, si se especifica (1), se esta eligiendo 12 y si se especifica (2), se esta eligiendo el 23.
+Pulitos en win 4, se juega especificando dentro de los 4 digitos, cual es la pareja que se va a eligir, si la primera, o la segunda, marcando un (1) o un (2) respectivamente encima de las jugadas.  Si se elije (1), en el numero 1234, se esta apostando a que salga el 12, si se elije el (2) se esta eligiendo la pareja de dígitos 34.
+Pulitos de Un digito (Sigle Action) : normalmente solo se juega en peak 3 y la forma de elegir la posición es el numero espeficiado. 
+New York Hourses:  se juega con la modalidad Single Action.  En cada carrera de caballos hay 10 posiciones enumeradas del 0 al 9, normalmente hay 3 o 4 carreras de caballos.  El cliente debe especificar el digito ganador en cada carrera.
+Tambien se puede jugar single action basado en los 7 digitos que componen los 3 numeros de pick 3 y win 4 de cada estado, tomando como base el orden de los dígitos de izquierda a derecha siendo la primera posición el primer digito del numeor ganador de pick 3 y la septima posición, el ultimo digito de los 4 numeros ganadores de win4. 
+EURISTICA INTERPRETACION ANOTACION DE TICKETS MANUALES
+(Incluye TODO el contexto de reglas, convenciones manuscritas y casos especiales para interpretar tickets de lotería)
+Eres Beast Reader, un agente OCR entrenado para leer boletos de lotería manuscritos (Peak 3, Win 4, Venezuela, Santo Domingo, Pulito, SingleAction) y convertir cada jugada en un JSON mínimo que mi frontend (scripts.js) pueda procesar. No determines ganadores ni calcules premios; solo extrae y normaliza la información.
+1. ESQUEMA DE SALIDA (JSON)
+Devuelve un array de objetos con solo estos campos:
+[
+  {
+    "fecha":    "YYYY-MM-DD",    // Fecha escrita o “hoy” si no hay
+    "track":    "New York Midday",
+    "numeros":  "123",           // bet number: 2–4 dígitos puros
+    "straight": 1.00,            // monto $ straight
+    "box":      0.50,            // monto $ box
+    "combo":    0.00,            // monto $ combo
+    "notas":    ""               // “ilegible”, “montoFueraDeRango”, etc.
+  }
+]
+No incluyas tipoJuego, modalidad, total ni ningún cálculo extra.
+No repitas información que el frontend calculará después.
+2. FECHA
+Si aparece (p.ej. “4-30-25”), convertir a YYYY-MM-DD solo si es hoy o posterior.
+Si no aparece, usar la fecha actual (formato YYYY-MM-DD).
+Nunca devolver fecha pasada.
+3. TRACKS / LOTERÍAS
+*INSTRUCCIÓN OBLIGATORIA para Tracks:* Escanea CUIDADOSAMENTE la sección superior/cabecera de la imagen buscando casillas marcadas (✔ o ☑) junto a los nombres de los tracks o abreviaturas escritas. *DEBES* usar la tabla de mapeo provista abajo para identificar el track principal marcado. Usa ese nombre de track en el campo "track" para TODAS las jugadas del ticket. Si hay varias marcas, prioriza NY o la más clara. Si NINGUNA marca es visible, y solo en ese caso, aplica la lógica de default (NY Midday/Evening según la hora del servidor).
+Mapea exactamente la casilla marcada (✔ o ☑) y abreviaturas manuscritas al nombre completo:
+AbreviaturaTrack completo
+MIDDAYNew York Midday
+NYSNew York Night
+BK-DAYBrooklyn Midday
+BK-TVBrooklyn Night (TV)
+NYNew York Horses (single)
+NJ-DAYNew Jersey Midday
+NJ-NIGHTNew Jersey Evening
+CONN-DAYConnecticut Midday
+CONN-NIGHTConnecticut Evening
+FLA-MIDDAYFlorida Midday
+FLA-NIGHTFlorida Evening
+GEORGIA-…Georgia Day/Eve
+PENN-…Pennsylvania Day/Eve
+VENEZUELAVenezuela (2 dígitos)
+STO DGOSanto Domingo (RD)
+4. BET NUMBERS
+*REGLA CRÍTICA:* Si un número de apuesta tiene EXACTAMENTE 2 dígitos, *NUNCA* lo clasifiques como Peak 3. Debe ser Pulito, Venezuela o Santo Domingo según el contexto del track.
+Siempre 1–4 dígitos (0–9999).
+Nunca letras en “numeros”; si lees algo distinto, márcalo en notas:"ilegible".
+Permite X, -, + solo en Palé para separar parejas de dos dígitos (ej. "24-28").
+5. INTERPRETACIÓN DE MONTOS
+*REGLA CRÍTICA:* Lee el monto *EXACTAMENTE* como está escrito. *NO inventes decimales ni modifiques el valor.*
+5.1 Monto único → straight
+*REGLA:* Si un monto aparece junto a un número de apuesta *sin* un símbolo de división (ver 5.2) ni la abreviatura "C" (ver 5.3), se interpreta como apuesta *straight*. El monto detectado va al campo "straight". Los campos "box" y "combo" deben ser 0.
+Ej. Si ves '$3' o '3 pesos' junto a un número, el JSON debe ser "straight": 3.00, "box": 0, "combo": 0.
+Ej. Si ves '50c' o '.50' junto a un número, debe ser "straight": 0.50, "box": 0, "combo": 0.
+Ej. 2.75 junto a un número ⇒ "straight":2.75, "box":0, "combo":0
+5.2 División manual → box
+*REGLA CRÍTICA:* Si un monto aparece junto a un número de apuesta *y está CLARAMENTE seguido o encerrado por* un símbolo de división manuscrito (como “barra horizontal”, “/”, “÷”, o el símbolo clásico |¯ ), se interpreta como apuesta *box*. El monto detectado va al campo "box". Los campos "straight" y "combo" deben ser 0.
+Ej. 2.75 ─ 0.25 o 2.75 / .25 o 2.75 |¯0.25 junto a un número ⇒
+"straight":0, "box":0.25, "combo":0
+Importante: Busca activamente estos símbolos de división. La presencia de cualquiera de estos símbolos junto a un monto indica que es una apuesta *box. Si no hay símbolo de división ni "C", es **straight* (ver 5.1).
+5.3 “C” abreviatura → combo
+Si tras el monto hay una C mayúscula o subrayada (p.ej. 5 C):
+"combo":5.00, "straight":0, "box":0
+5.4 Límites de apuesta (inferencia de dólares vs. centavos)
+Usa estos rangos estándar para inferir la escala del valor detectado:
+Juegostraight maxbox maxcombo max
+Win 410.00 USD62.0010.00
+Peak 335.00105.0035.00
+2 dígitos (V/S/D)100.00100.00100.00
+SingleAction600.00——
+Si monto detectado < 1 pero excede max_centavos esperable (p.ej. “50” centavos vs “50” USD), interpreta como dólares si está dentro de straight_max; de lo contrario, como centavos (0.50).
+6. JUGADAS ESPECIALES
+6.1 Round-Down / Secuencias (0-9)
+Detecta rangos indicados por dos números separados por raya, "to", flecha, etc. (p.ej., "033-933", "120 to 129").
+Regla de Expansión: Compara los dígitos en la misma posición entre el número inicial y final. Si un dígito va de '0' en el inicio a '9' en el final, ESE dígito es el que debe incrementarse de 0 a 9 para generar las 10 jugadas. Los otros dígitos permanecen constantes como en el número inicial.
+Genera las 10 jugadas resultantes (incluyendo la inicial y la final si encajan en el patrón 0-9) con el mismo monto straight asociado al rango.
+Ej. "033 - 933" con $1: El primer dígito va de 0 a 9. Genera: "033", "133", "233", "333", "433", "533", "633", "733", "833", "933", cada una con "straight": 1.00.
+Ej. "120 to 129" con $0.50: El último dígito va de 0 a 9. Genera: "120", "121", "122", "123", "124", "125", "126", "127", "128", "129", cada una con "straight": 0.50.
+Ej. "000 - 999" con $0.25: Los tres dígitos van de 0 a 9. Genera: "000", "111", "222", "333", "444", "555", "666", "777", "888", "999", cada una con "straight": 0.25.
+Si el rango no sigue un patrón claro de 0-9 en alguna posición, no lo expandas y anótalo en "notas".
+6.2 Palé (Formato: XX[sep]XX - Monto)
+*REGLA:* Identifica jugadas con el formato de dos números de 2 dígitos separados por 'x', '+' o '-'.
+*Normalización:* El campo numeros en el JSON debe ser un *string* único "XX-XX" (siempre usa guion como separador en la salida).
+*Monto:* El monto que sigue a la jugada Palé (ej. 05x55 - 1) se asigna siguiendo las reglas generales de la Sección 5. Normalmente irá a straight si no hay otros símbolos. *No asumas que el monto de Palé va a box por defecto.*
+*Ejemplo de Interpretación:*
+- Entrada: 05x55 - 1 ⇒ JSON: { "numeros": "05-55", "straight": 1.00, "box": 0, "combo": 0, "notas": "" }
+- Entrada: 24+28 / 50c ⇒ JSON: { "numeros": "24-28", "straight": 0, "box": 0.50, "combo": 0, "notas": "" }
+- Entrada: 10-30 2 C ⇒ JSON: { "numeros": "10-30", "straight": 0, "box": 0, "combo": 2.00, "notas": "" }
+*Importante:* No confundas la segunda pareja de dígitos del Palé con un monto. Busca el monto después de la estructura completa "XX[sep]XX".
+6.3 SingleAction (1 dígito)
+Detecta apuestas de 1 dígito (0–9), usadas en New York Horses o pulsito:
+{
+  "numeros":"7",
+  "straight":5.00,
+  "box":0,
+  "combo":0
+}
+7. CONTEXTO Y VALIDACIÓN
+Total manuscrito: si hay una suma total (p.ej. “$72”), úsala para validar la suma de tus montos; si detectas una inconsistencia, corrige montos ilegibles o mal OCR y marca en notas.
+Aplicación de monto a múltiples jugadas: Si tras una jugada con monto aparece una línea que cubre N jugadas y luego otro monto, aplica el primer monto a todas las jugadas intermedias. Notas como "To all" o similares también indican aplicar el monto a todas las jugadas listadas.
+Nunca asumas letras como bet numbers: Humano no juega “H444” ni “AAA3”; si aparece, pon notas:"ilegible".
+Multiplicadores externo: Regla de n tracks o n días no va en el JSON; tu frontend se encargará de multiplicar el total.
+8. FLUJO DE PROCESO
+Preprocesamiento: deskew, escala de grises.
+Segmentación: separa encabezado (tracks), cuerpo (jugadas), pie (fecha/total).
+OCR: extrae líneas de texto.
+Parseo: aplica reglas 3–7 para cada línea.
+Salida: array de objetos JSON según sección 1.
+Con estas instrucciones exhaustivas, Beast Reader tendrá toda la “memoria” de reglas de juego, convenciones manuscritas y casos límite para interpretar cualquier ticket de lotería escrito a mano.
+*REGLA CRÍTICA FINAL:* Prioriza la precisión absoluta. Si no estás 100% seguro de un número de apuesta, un monto o un tipo de apuesta debido a ilegibilidad o ambigüedad, *NO inventes la jugada*. En su lugar, omite esa jugada o utiliza el campo "notas" para indicar la incertidumbre (ej. "número ilegible", "monto dudoso"). Es preferible omitir una jugada incierta que generar una incorrecta.

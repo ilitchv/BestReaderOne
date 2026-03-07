@@ -44,7 +44,15 @@ interface GlobalLimitEntry {
 
 const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users }) => {
     // --- STATE ---
-    const [riskLimit, setRiskLimit] = useState<number>(5000); // Default $5,000 limit
+    const [riskLimit, setRiskLimit] = useState<number>(() => {
+        const saved = localStorage.getItem('RiskMonitor_RiskLimit');
+        return saved ? Number(saved) : 5000;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('RiskMonitor_RiskLimit', riskLimit.toString());
+    }, [riskLimit]);
+
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [isLimitsModalOpen, setIsLimitsModalOpen] = useState(false);
 
@@ -128,9 +136,9 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
 
             // Determine Limit Value
             let limitVal: number | null = null;
-            if (meta.wagerType === 'Straight') limitVal = limits.straight;
-            else if (meta.wagerType === 'Box') limitVal = limits.box;
-            else if (meta.wagerType === 'Combo') limitVal = limits.combo;
+            if (meta.wagerType === 'Straight') limitVal = limits.STRAIGHT;
+            else if (meta.wagerType === 'Box') limitVal = limits.BOX;
+            else if (meta.wagerType === 'Combo') limitVal = limits.COMBO;
 
             if (limitVal !== null && total >= limitVal) { // ">=" to alert when reached
                 violations.push({
@@ -176,17 +184,26 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
     const handleRelocate = () => {
         if (selectedRows.size === 0) return alert("No plays selected.");
 
-        const exportData = allRiskRows.filter(r => selectedRows.has(r.uniqueKey)).map(r => ({
-            betNumber: r.betNumber,
-            gameMode: r.gameMode,
-            straightAmount: r.straightRequest > 0 ? r.straightRequest : null,
-            boxAmount: r.boxRequest > 0 ? r.boxRequest : null,
-            comboAmount: r.comboRequest > 0 ? r.comboRequest : null,
-            // Track Relocation often implies moving to "Similar" tracks or just Re-firing.
-            // But here we just load them into the Playground. The Playground defaults logic might apply. 
-            // We should ideally pass the "Original Track" but the user wants to "Relocate" (Change track probably).
-            // So loading the bet details is neutral.
-        }));
+        const exportData = allRiskRows.filter(r => selectedRows.has(r.uniqueKey)).map(r => {
+            const isHighRisk = r.riskAmount > riskLimit;
+            let ratio = 1;
+
+            if (isHighRisk && r.riskAmount > 0) {
+                ratio = (r.riskAmount - riskLimit) / r.riskAmount;
+            }
+
+            const newStraight = r.straightRequest > 0 ? Number((r.straightRequest * ratio).toFixed(2)) : null;
+            const newBox = r.boxRequest > 0 ? Number((r.boxRequest * ratio).toFixed(2)) : null;
+            const newCombo = r.comboRequest > 0 ? Number((r.comboRequest * ratio).toFixed(2)) : null;
+
+            return {
+                betNumber: r.betNumber,
+                gameMode: r.gameMode,
+                straightAmount: newStraight,
+                boxAmount: newBox,
+                comboAmount: newCombo,
+            };
+        });
 
         // Save to LocalStorage for the Relocation Page to pick up
         localStorage.setItem('RISK_RELOCATION_QUEUE', JSON.stringify(exportData));

@@ -11,14 +11,19 @@ const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const http = require('http');
+const WebSocket = require('ws');
 
 // Database & Services
 const connectDB = require('./database');
 const scraperService = require('./services/scraperService');
+// Internal Services
 const ledgerService = require('./services/ledgerService'); // NEW
 const casinoService = require('./services/casinoService'); // NEW - Roulette Logic
 const riskService = require('./services/riskService'); // NEW - Risk Management
 const aiService = require('./services/aiService'); // NEW - AI Features
+const aiContext = require('./services/aiContext');
+const GeminiLiveService = require('./services/geminiLiveService'); // NEW - Roulette Logic
 const firebaseService = require('./services/firebaseService'); // NEW - Dual-Store Auth
 
 // Models
@@ -124,6 +129,18 @@ app.post('/api/ai/interpret-text', async (req, res) => {
         if (!prompt) return res.status(400).json({ error: "Missing prompt" });
 
         const result = await aiService.interpretText(prompt);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/ai/parse-plays', async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ error: "Missing text payload" });
+
+        const result = await aiService.parseNaturalLanguagePlays(text);
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1957,7 +1974,30 @@ app.get('*', (req, res) => {
 module.exports = app;
 
 if (require.main === module) {
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = http.createServer(app);
+
+    // Create WebSocket Server attached to the HTTP server
+    const wss = new WebSocket.Server({ server, path: '/api/voice-agent' });
+
+    wss.on('connection', (ws) => {
+        console.log('[WebSocket] New client connected for Voice Agent');
+        const geminiLive = new GeminiLiveService(ws);
+
+        // Connect to Google API right away
+        geminiLive.connect();
+
+        ws.on('message', (message) => {
+            // Forward user audio/data to Google
+            geminiLive.receiveFromClient(message.toString());
+        });
+
+        ws.on('close', () => {
+            console.log('[WebSocket] Client disconnected');
+            geminiLive.disconnect();
+        });
+    });
+
+    server.listen(PORT, '0.0.0.0', () => {
         console.log(`Server listening on port ${PORT} (0.0.0.0)`);
     });
 }

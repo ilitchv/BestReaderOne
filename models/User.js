@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
     savedWalletAddress: { type: String }, // Saved BTC/USDT address for withdrawals
     status: { type: String, enum: ['active', 'suspended', 'pending'], default: 'active' },
     networkEnabled: { type: Boolean, default: false }, // Feature toggle for User Network Module
+    isVoiceAgentEnabled: { type: Boolean, default: false }, // [NEW] Admin control for Voice AI
 
     // Auth Extension
     firebaseUid: { type: String, unique: true, sparse: true },

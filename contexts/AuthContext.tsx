@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth, googleProvider } from '../config/firebaseClient';
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
+import { localDbService } from '../services/localDbService';
 
 // Define User Interface (Matches Server Model)
 export interface User {
@@ -11,6 +12,7 @@ export interface User {
     role: 'user' | 'admin';
     status?: 'active' | 'suspended';
     networkEnabled?: boolean;
+    isVoiceAgentEnabled?: boolean; // [NEW] Admin control
     avatar?: string;
 }
 
@@ -47,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const normalizedUser = { ...userData, id: userData.id || userData._id };
                 setUser(normalizedUser);
                 localStorage.setItem('beast_user_id', normalizedUser.id);
+                localDbService.saveUser(normalizedUser);
             } else {
                 const errText = await res.text();
                 console.error("Backend Handshake Failed", errText);
@@ -109,7 +112,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (freshUser) {
                 if (freshUser.balance !== user.balance || freshUser.networkEnabled !== user.networkEnabled) {
                     // console.log(`♻️ Syncing User Data`); // Reduce noise
-                    setUser(prev => prev ? { ...prev, balance: freshUser.balance, networkEnabled: freshUser.networkEnabled } : freshUser);
+                    const updatedUser = { ...user, balance: freshUser.balance, networkEnabled: freshUser.networkEnabled };
+                    setUser(updatedUser);
+                    localDbService.saveUser(updatedUser);
                 }
             }
         };

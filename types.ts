@@ -209,6 +209,7 @@ export interface User {
   kycVerified: boolean;
   walletRegistered: boolean;
   networkEnabled?: boolean; // NEW: Toggle for Network Module Access
+  isVoiceAgentEnabled?: boolean; // [NEW] Admin control for Voice AI
 
   commissionBalance: {
     tokens: number;
