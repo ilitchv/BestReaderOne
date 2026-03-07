@@ -63,13 +63,18 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
     const connectToAgent = useCallback(async () => {
         return new Promise<void>((resolve, reject) => {
             const isVercel = window.location.host.includes('vercel.app');
-            if (isVercel) {
-                console.warn("[GlobalVoice] WebSockets are NOT supported on Vercel Serverless. Direct backend IP/Domain required.");
-            }
+            let wsUrl = '';
 
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.host;
-            const wsUrl = `${protocol}//${host}/api/voice-agent`;
+            if (isVercel) {
+                // FALLBACK: Vercel doesn't support WebSockets. 
+                // Connect to the local PC backend (localhost:8081) from the user's browser.
+                wsUrl = `ws://localhost:8081/api/voice-agent`;
+                console.warn("[GlobalVoice] Vercel detected. Falling back to local backend: " + wsUrl);
+            } else {
+                // NORMAL: Use current host (works for localhost:3000 proxy or mobile IP)
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${protocol}//${window.location.host}/api/voice-agent`;
+            }
 
             console.log(`[GlobalVoice] Attempting Handshake: ${wsUrl}`);
             const ws = new WebSocket(wsUrl);
