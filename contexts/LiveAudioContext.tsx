@@ -62,12 +62,16 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const connectToAgent = useCallback(async () => {
         return new Promise<void>((resolve, reject) => {
+            const isVercel = window.location.host.includes('vercel.app');
+            if (isVercel) {
+                console.warn("[GlobalVoice] WebSockets are NOT supported on Vercel Serverless. Direct backend IP/Domain required.");
+            }
+
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Use window.location.host to dynamically point to the server (PC IP or Domain)
-            const host = window.location.hostname === 'localhost' ? 'localhost:8081' : window.location.host;
+            const host = window.location.host;
             const wsUrl = `${protocol}//${host}/api/voice-agent`;
 
-            console.log(`[GlobalVoice] Connecting to: ${wsUrl}`);
+            console.log(`[GlobalVoice] Attempting Handshake: ${wsUrl}`);
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -144,8 +148,9 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
             };
 
             ws.onerror = (err) => {
-                console.error("[GlobalVoice] WS Error Detail:", err);
-                const wsError = err instanceof ErrorEvent ? err.message : "WebSocket handshake failed (Check SSL/Tunnel)";
+                const wsUrlAttempt = ws.url;
+                console.error(`[GlobalVoice] Handshake Failed for ${wsUrlAttempt}:`, err);
+                const wsError = `WebSocket handshake failed at ${wsUrlAttempt}. Ensure backend is running and SSL is valid.`;
                 reject(new Error(wsError));
             };
         });
