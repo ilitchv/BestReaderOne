@@ -22,16 +22,8 @@ export const useLiveAudio = (onFunctionCall: (callInfo: any) => void, onMessage:
     // ==========================================
     const connectToAgent = useCallback(async () => {
         return new Promise<void>((resolve, reject) => {
-            const isVercel = window.location.host.includes('vercel.app');
-            let wsUrl = '';
-
-            if (isVercel) {
-                wsUrl = `ws://localhost:8081/api/voice-agent`;
-                console.warn("[LiveAudio] Vercel detected. Falling back to localhost backend.");
-            } else {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                wsUrl = `${protocol}//${window.location.host}/api/voice-agent`;
-            }
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/voice-agent`;
 
             console.log(`[LiveAudio] Attempting Handshake: ${wsUrl}`);
             const ws = new WebSocket(wsUrl);
