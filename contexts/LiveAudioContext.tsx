@@ -144,8 +144,9 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
             };
 
             ws.onerror = (err) => {
-                console.error("[GlobalVoice] WS Error:", err);
-                reject(err);
+                console.error("[GlobalVoice] WS Error Detail:", err);
+                const wsError = err instanceof ErrorEvent ? err.message : "WebSocket handshake failed (Check SSL/Tunnel)";
+                reject(new Error(wsError));
             };
         });
     }, []);
@@ -207,10 +208,27 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
             setIsRecording(true);
             setAiFeedback("Listening...");
         } catch (error: any) {
-            console.error("[GlobalVoice] Error starting recording:", error);
-            const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-            setAiFeedback(`Microphone Error: ${errorMsg}`);
+            console.error("[GlobalVoice] startRecording Error:", error);
+
+            let userFriendlyMsg = "Unknown Microphone Error";
+            if (error instanceof Error) {
+                if (error.name === 'NotAllowedError') userFriendlyMsg = "Permission Denied. Please allow microphone access.";
+                else if (error.name === 'NotFoundError') userFriendlyMsg = "No microphone found on this device.";
+                else if (error.name === 'NotReadableError') userFriendlyMsg = "Microphone is busy or locked by another app.";
+                else if (error.name === 'SecurityError') userFriendlyMsg = "Security Block: HTTPS is required for mobile microphones.";
+                else userFriendlyMsg = `${error.name}: ${error.message}`;
+            } else {
+                userFriendlyMsg = String(error);
+            }
+
+            setAiFeedback(`Microphone Error: ${userFriendlyMsg}`);
             setIsRecording(false);
+
+            // Cleanup on error
+            if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(t => t.stop());
+                mediaStreamRef.current = null;
+            }
         }
     }, [connectToAgent, resetInactivityTimer]);
 

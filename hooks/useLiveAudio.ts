@@ -140,10 +140,27 @@ export const useLiveAudio = (onFunctionCall: (callInfo: any) => void, onMessage:
             onMessage("Listening...");
 
         } catch (error: any) {
-            console.error("[LiveAudio] Error starting recording:", error);
-            const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-            onMessage(`Microphone Error: ${errorMsg}`);
+            console.error("[LiveAudio] startRecording Error:", error);
+
+            let userFriendlyMsg = "Unknown Microphone Error";
+            if (error instanceof Error) {
+                if (error.name === 'NotAllowedError') userFriendlyMsg = "Permission Denied. Please allow microphone access.";
+                else if (error.name === 'NotFoundError') userFriendlyMsg = "No microphone found on this device.";
+                else if (error.name === 'NotReadableError') userFriendlyMsg = "Microphone is busy or locked by another app.";
+                else if (error.name === 'SecurityError') userFriendlyMsg = "Security Block: HTTPS is required for mobile microphones.";
+                else userFriendlyMsg = `${error.name}: ${error.message}`;
+            } else {
+                userFriendlyMsg = String(error);
+            }
+
+            onMessage(`Microphone Error: ${userFriendlyMsg}`);
             setIsRecording(false);
+
+            // Cleanup
+            if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(t => t.stop());
+                mediaStreamRef.current = null;
+            }
         }
     }, [connectToAgent, onMessage]);
 
