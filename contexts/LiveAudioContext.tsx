@@ -60,12 +60,14 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const clearFeedback = useCallback(() => setAiFeedback(null), []);
 
-    // ==========================================
-    // 1. WEBSOCKET SETUP
-    // ==========================================
     const connectToAgent = useCallback(async () => {
         return new Promise<void>((resolve, reject) => {
-            const wsUrl = `ws://localhost:8081/api/voice-agent`;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Use window.location.host to dynamically point to the server (PC IP or Domain)
+            const host = window.location.hostname === 'localhost' ? 'localhost:8081' : window.location.host;
+            const wsUrl = `${protocol}//${host}/api/voice-agent`;
+
+            console.log(`[GlobalVoice] Connecting to: ${wsUrl}`);
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -159,6 +161,11 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
     // ==========================================
     const startRecording = useCallback(async () => {
         try {
+            // Mobile Security: getUserMedia requires a secure context (HTTPS or localhost)
+            if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+                throw new Error("Microphone access requires a Secure Context (HTTPS). Please use an HTTPS tunnel or domain.");
+            }
+
             if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
                 await connectToAgent();
             }
@@ -168,8 +175,15 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
             });
             mediaStreamRef.current = stream;
 
-            const audioCtx = new window.AudioContext({ sampleRate: 16000 });
+            // Use webkitAudioContext for older iOS/Safari compatibility if needed
+            const AudioCtxClass = (window.AudioContext || (window as any).webkitAudioContext);
+            const audioCtx = new AudioCtxClass({ sampleRate: 16000 });
             audioContextRef.current = audioCtx;
+
+            // Mobile: AudioContext often starts suspended
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
 
             const source = audioCtx.createMediaStreamSource(stream);
 
@@ -192,9 +206,10 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
 
             setIsRecording(true);
             setAiFeedback("Listening...");
-        } catch (error) {
+        } catch (error: any) {
             console.error("[GlobalVoice] Error starting recording:", error);
-            setAiFeedback(`Microphone Error: ${error}`);
+            const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+            setAiFeedback(`Microphone Error: ${errorMsg}`);
             setIsRecording(false);
         }
     }, [connectToAgent, resetInactivityTimer]);
