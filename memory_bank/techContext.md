@@ -32,10 +32,8 @@
 
 ## Infraestructura y Despliegue (Plan Bala de Plata)
 
--   **Containerización:** **Docker**. Se utiliza un `Dockerfile` multi-etapa (o simplificado) para construir la aplicación.
--   **Plataforma Nube:** **Google Cloud Run**.
--   **Estrategia:** La aplicación se construye dentro del contenedor. El servidor Express sirve tanto la API como los archivos estáticos del frontend compilado.
--   **Puerto:** El contenedor expone el puerto `8080` (estándar de Cloud Run).
+-   **Frontend:** Vercel (Serverless Functions y Hosting Estático).
+-   **Voice Agent Backend:** Desplegado en un VPS dedicado (Hostinger) usando `pm2` para soportar conexiones persistentes WebSocket (`wss://`). El tráfico se enruta a través de un micro-proxy TCP (`socat`) conectado a la red interna Docker de BTCPay Server, lo que permite la asignación automática de certificados SSL Let's Encrypt para `api.beastreaderone.com`.
 
 ## Entorno de Desarrollo y Build
 

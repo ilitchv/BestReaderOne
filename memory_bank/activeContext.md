@@ -18,6 +18,11 @@
     *   **Plays View:** Columna Player, Lógica de Estados (No Match).
     *   **Audit Hub:** Centro de auditoría centralizado.
 
+3.  **Voice Agent Persistence & WSS Server:**
+    *   **VPS Backend Shift:** Movido el motor de WebSockets (`server.js`) a un VPS para sortear las limitaciones severas de Vercel.
+    *   **Proxy Stealth:** Integración del tráfico del Agente dentro de la red Docker de BTCPay Server para heredar sus certificados Let's Encrypt (`api.beastreaderone.com`).
+    *   **Anti-Stuttering:** Implementación de Jitter Buffer (100ms) para un flujo de audio cristalino en redes móviles.
+
 ### 📅 Plan de Ejecución
 
 #### FASE 3.6: Auto Pay Diagnosis & Pivot (COMPLETED/IN-PROGRESS)

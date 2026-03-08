@@ -89,20 +89,6 @@ Se ha mejorado la lógica de **Idempotencia** en la función `createPayout`.
 *   **Implementación:** ✅ Código aplicado en `services/paymentService.js`.
 *   **Reinicio:** ✅ Servidores backend y frontend reiniciados.
 *   **Prueba de Usuario:** ⚠️ Pendiente. El usuario detuvo la verificación automática.
-*   **Próximo Paso Crítico:** El usuario debe ir al Dashboard, pestaña Withdrawals, y clicar "Auto Pay" en una solicitud problemática para confirmar que ahora aparece el modal de firma en lugar del error.
-
-### 7.4 Pasos para el Siguiente Chat
-1.  **Verificación Manual:** Navegar a `http://localhost:3000/admin`.
-2.  **Prueba:** Clicar "Auto Pay" en una solicitud de retiro repetida.
-3.  **Resultado Esperado:** Modal "Payout Staged!" con botón para firmar en BTCPay.
-## Lessons Learned
-
-### BTCPay Server Payout Recovery (Idempotency)
-*   **Problem:** Retrying a payout for the same destination fails with "duplicate-destination" or "already used", but recovering the existing payout failed initially because we weren't checking all possible states.
-*   **Solution:**
-    *   **Comprehensive State Check:** When a duplicate is detected, query BTCPay for **all** states (`AwaitingPayment`, `AwaitingApproval`, `New`, `Processing`, `Completed`, `Cancelled`).
-    *   **Scope & Permissions:** Ensure API configuration (`config`) is defined in a scope accessible to `catch` blocks for recovery logic.
-    *   **Robust Links:** Use the general Payouts Dashboard URL (`/stores/{id}/payouts`) for the "Signing Link" instead of a specific ID link. Specific IDs can cause 404s if the format differs (e.g., On-Chain vs. Lightning), whereas the dashboard always loads and allows the user to find the staged payout.
     *   **Debug Dumping:** Writing a JSON dump of the API response (`_debug_payout_list.json`) was crucial to diagnosing that the API was returning an empty list due to credential scope issues.
 
 ### BTCPay Deposit Polling (Localhost Fix)
@@ -262,8 +248,10 @@ When starting the new chat to execute this upgrade, use the following prompt:
          -       * * A d v a n c e d   M a n u a l   R e s u l t   E n t r y : * *   E n h a n c e d   t h e   A d d   R e s u l t   m o d a l   i n   A d m i n   D a s h b o a r d   w i t h   f i e l d s   f o r   * T i m e *   a n d   * D a i l y   C l o s i n g   T i m e   C o n f i g u r a t i o n * ,   m a t c h i n g   t h e   d e t a i l e d   c o n t r o l s   p r e v i o u s l y   o n l y   a v a i l a b l e   o n   t h e   h o m e p a g e . 
  
  3 .     * * D a t a   P e r s i s t e n c e : * * 
-         -       A d d e d   a   D a t a   A d a p t e r   i n   R e s u l t s P a g e . t s x   t o   c o r r e c t l y   m a p   A P I   r e s u l t I d   t o   f r o n t e n d   l o g i c ,   r e s o l v i n g   t h e    
- N o  
+         -       A d d e d   a   D a t a   A d a p t e r   i n   R e s u l t s P a g e . t s x   t o   c o r r e c t l y   m a p   A P I   r e s u l t I d   t o   f r o n t e n d   l o g i c ,   r e s o l v i n g   t h e   
+ 
+ N o 
+ 
  R e s u l t s   d i s p l a y   i s s u e . 
  
  # # #   1 4 . 2   K n o w n   I s s u e s   /   N e x t   S t e p s 
@@ -273,24 +261,44 @@ When starting the new chat to execute this upgrade, use the following prompt:
  # # #   1 4 . 3   I n s t r u c t i o n s   f o r   N e x t   S e s s i o n 
  * * C o n t e x t : * *   T h e   v i s u a l   o v e r h a u l   i s   c o m p l e t e .   T h e   u s e r   m a y   w a n t   t o   f u r t h e r   r e f i n e   t h e   U I   o r   m o v e   o n   t o   b a c k e n d   d a t a   c o n s o l i d a t i o n   ( e . g . ,   g l o b a l   v i s i b i l i t y ) . 
  * * P r o m p t : * *   U s e   t h e   p r o v i d e d   c o m p r e h e n s i v e   p r o m p t   t o   r e s u m e . 
-  
-  
- # #   1 5 .   I n d e p e n d e n t   L o t t e r y   A P I s   ( C o n f i d e n t i a l   &   C r i t i c a l )  
-  
- # # #   1 5 . 1   T o p   P i c k   L o t t o   ( ` t p l o t t o . c o m ` )  
- *       * * T y p e : * *   H T T P   P O S T   ( H i d d e n   A P I )  
- *       * * E n d p o i n t : * *   ` h t t p s : / / t p l o t t o . c o m / p r o c e d u r e _ l o a d _ n u m b e r s _ p u b l i c `  
- *       * * P a y l o a d : * *   ` d a t e = Y Y Y Y - M M - D D `   ( e . g . ,   ` d a t e = 2 0 2 6 - 0 1 - 0 7 ` )  
- *       * * R e s p o n s e : * *   J S O N   o b j e c t   w h e r e   ` . a n s w e r `   c o n t a i n s   a n   H T M L   s t r i n g   o f   t h e   r e s u l t s   t a b l e .  
- *       * * P a r s i n g   S t r a t e g y : * *   R e q u i r e s   ` c h e e r i o `   t o   p a r s e   t h e   H T M L   w i t h i n   t h e   J S O N   r e s p o n s e .  
- *       * * N o t e s : * *   S t a n d a r d   ` c u r l `   w o r k s .   N o   c o m p l e x   h e a d e r s   r e q u i r e d ,   b u t   a   s t a n d a r d   U s e r - A g e n t   i s   r e c o m m e n d e d .  
-  
- # # #   1 5 . 2   I n s t a n t   C a s h   ( ` i n s t a n t c a s h . b e t ` )  
- *       * * T y p e : * *   W e b S o c k e t   ( S e c u r e   W S S )  
- *       * * E n d p o i n t : * *   ` w s s : / / i n s t a n t c a s h . b e t / w s / g a m i n g L T S D r a w H a n d l e r `  
- *       * * C o n n e c t i o n   L o g i c : * *    
-         *       R e q u i r e s   a   t i m e s t a m p   p a r a m e t e r :   ` ? v = { D a t e . n o w ( ) } ` .  
-         *       D a t a   i s   p u s h e d   i m m e d i a t e l y   u p o n   c o n n e c t i o n   ( S n a p s h o t )   a n d   t h e n   u p d a t e s   a r e   p u s h e d   i n   r e a l - t i m e .  
-         *       * * K e e p - A l i v e : * *   T h e   c o n n e c t i o n   m u s t   b e   m a i n t a i n e d   o r   r e - e s t a b l i s h e d   t o   r e c e i v e   u p d a t e s .  
- *       * * D a t a   F o r m a t : * *   J S O N   s t r e a m   c o n t a i n i n g   d r a w   r e s u l t s   a n d   g a m e   s t a t e s .  
+ 
+ 
+ 
+ 
+ # #   1 5 .   I n d e p e n d e n t   L o t t e r y   A P I s   ( C o n f i d e n t i a l   &   C r i t i c a l ) 
+ 
+ 
+ 
+ # # #   1 5 . 1   T o p   P i c k   L o t t o   ( ` t p l o t t o . c o m ` ) 
+ 
+ *       * * T y p e : * *   H T T P   P O S T   ( H i d d e n   A P I ) 
+ 
+ *       * * E n d p o i n t : * *   ` h t t p s : / / t p l o t t o . c o m / p r o c e d u r e _ l o a d _ n u m b e r s _ p u b l i c ` 
+ 
+ *       * * P a y l o a d : * *   ` d a t e = Y Y Y Y - M M - D D `   ( e . g . ,   ` d a t e = 2 0 2 6 - 0 1 - 0 7 ` ) 
+ 
+ *       * * R e s p o n s e : * *   J S O N   o b j e c t   w h e r e   ` . a n s w e r `   c o n t a i n s   a n   H T M L   s t r i n g   o f   t h e   r e s u l t s   t a b l e . 
+ 
+ *       * * P a r s i n g   S t r a t e g y : * *   R e q u i r e s   ` c h e e r i o `   t o   p a r s e   t h e   H T M L   w i t h i n   t h e   J S O N   r e s p o n s e . 
+ 
+ *       * * N o t e s : * *   S t a n d a r d   ` c u r l `   w o r k s .   N o   c o m p l e x   h e a d e r s   r e q u i r e d ,   b u t   a   s t a n d a r d   U s e r - A g e n t   i s   r e c o m m e n d e d . 
+ 
+ 
+ 
+ # # #   1 5 . 2   I n s t a n t   C a s h   ( ` i n s t a n t c a s h . b e t ` ) 
+ 
+ *       * * T y p e : * *   W e b S o c k e t   ( S e c u r e   W S S ) 
+ 
+ *       * * E n d p o i n t : * *   ` w s s : / / i n s t a n t c a s h . b e t / w s / g a m i n g L T S D r a w H a n d l e r ` 
+ 
+ *       * * C o n n e c t i o n   L o g i c : * *   
+ 
+         *       R e q u i r e s   a   t i m e s t a m p   p a r a m e t e r :   ` ? v = { D a t e . n o w ( ) } ` . 
+ 
+         *       D a t a   i s   p u s h e d   i m m e d i a t e l y   u p o n   c o n n e c t i o n   ( S n a p s h o t )   a n d   t h e n   u p d a t e s   a r e   p u s h e d   i n   r e a l - t i m e . 
+ 
+         *       * * K e e p - A l i v e : * *   T h e   c o n n e c t i o n   m u s t   b e   m a i n t a i n e d   o r   r e - e s t a b l i s h e d   t o   r e c e i v e   u p d a t e s . 
+ 
+ *       * * D a t a   F o r m a t : * *   J S O N   s t r e a m   c o n t a i n i n g   d r a w   r e s u l t s   a n d   g a m e   s t a t e s . 
+ 
  
