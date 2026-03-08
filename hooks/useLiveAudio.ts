@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
@@ -23,7 +24,7 @@ export const useLiveAudio = (onFunctionCall: (callInfo: any) => void, onMessage:
     const connectToAgent = useCallback(async () => {
         return new Promise<void>((resolve, reject) => {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/api/voice-agent`;
+            const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/api/voice-agent`;
 
             console.log(`[LiveAudio] Attempting Handshake: ${wsUrl}`);
             const ws = new WebSocket(wsUrl);
@@ -189,6 +190,7 @@ export const useLiveAudio = (onFunctionCall: (callInfo: any) => void, onMessage:
     // ==========================================
     // 3. AUDIO PLAYBACK FROM AI (Base64 PCM)
     // ==========================================
+    let nextStartTime = 0; // Fix duplicate chunk playback sync
     const playAudioChunk = async (base64Audio: string) => {
         try {
             const binaryString = window.atob(base64Audio);
@@ -233,7 +235,14 @@ export const useLiveAudio = (onFunctionCall: (callInfo: any) => void, onMessage:
         const source = playbackCtx.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(playbackCtx.destination);
-        source.start();
+
+        let startTime = nextStartTime;
+        if (startTime < playbackCtx.currentTime) {
+            startTime = playbackCtx.currentTime + 0.1; // Jitter buffer fix
+        }
+
+        source.start(startTime);
+        nextStartTime = startTime + audioBuffer.duration;
 
         source.onended = () => {
             processAudioQueue(); // Play next chunk

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react';
 
 interface LiveAudioContextType {
@@ -63,9 +64,7 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
     const connectToAgent = useCallback(async () => {
         return new Promise<void>((resolve, reject) => {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Use current host. Works for local dev, tunnels, and direct IP.
-            // On Vercel, this will naturally point to Vercel (and show the handshake error which is more honest).
-            const wsUrl = `${protocol}//${window.location.host}/api/voice-agent`;
+            const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/api/voice-agent`;
 
             console.log(`[GlobalVoice] Attempting Handshake: ${wsUrl}`);
             const ws = new WebSocket(wsUrl);
@@ -318,8 +317,8 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
 
             let startTime = nextStartTimeRef.current;
             if (startTime < playbackCtx.currentTime) {
-                // We fell behind or this is the first chunk, start immediately
-                startTime = playbackCtx.currentTime;
+                // Add 100ms jitter buffer to absorb network delays causing stuttering
+                startTime = playbackCtx.currentTime + 0.1;
             }
 
             source.start(startTime);
