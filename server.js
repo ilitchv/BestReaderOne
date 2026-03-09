@@ -35,9 +35,9 @@ const User = require('./models/User'); // NEW
 const BeastLedger = require('./models/BeastLedger'); // NEW
 const WithdrawRequest = require('./models/WithdrawRequest'); // NEW
 
-const AuditLog = require('./models/AuditLog'); // NEW
-const TrackConfig = require('./models/TrackConfig'); // NEW - Daily Closing Time Config
+const trackConfig = require('./models/TrackConfig'); // NEW - Daily Closing Time Config
 const SystemAlert = require('./models/SystemAlert'); // NEW - Admin Alerts
+const SupportRequest = require('./models/SupportRequest'); // NEW - Human Handover
 
 // HELPER: CENTRALIZED AUDIT LOGGER
 const logSystemAudit = async (data) => {
@@ -298,6 +298,99 @@ app.post('/api/network/toggle-access', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
+// Update User Role (Admin Only)
+app.put('/api/admin/users/:id/role', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const { role } = req.body;
+        const authHeader = req.headers['authorization'] || req.headers['x-user-role'];
+
+        // Strict Admin Verification (For MVP, checking header. Future: check JWT/Session)
+        if (authHeader !== 'admin') {
+            return res.status(403).json({ error: 'Forbidden: Requires Admin privileges' });
+        }
+
+        if (!['user', 'admin', 'supervisor'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role provided' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(id, { role }, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Dual-Write Sync to Firebase
+        await firebaseService.syncToFirestore('users', id, updatedUser.toObject());
+
+        res.json({ success: true, user: updatedUser });
+    } catch (e) {
+        console.error("Role Update Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// General Create User (Admin Only)
+app.post('/api/admin/users', async (req, res) => {
+    try {
+        await connectDB();
+        const userData = req.body;
+        const authHeader = req.headers['authorization'] || req.headers['x-user-role'];
+
+        if (authHeader !== 'admin') {
+            return res.status(403).json({ error: 'Forbidden: Requires Admin privileges' });
+        }
+
+        // Remove any client-side generated temporary ID
+        if (userData.id && userData.id.startsWith('u-')) {
+            delete userData.id;
+        }
+
+        const newUser = new User(userData);
+        await newUser.save();
+
+        // Dual-Write Sync to Firebase
+        await firebaseService.syncToFirestore('users', newUser._id.toString(), newUser.toObject());
+
+        res.status(201).json({ success: true, user: newUser });
+    } catch (e) {
+        console.error("User Creation Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+app.put('/api/admin/users/:id', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const updateData = req.body;
+        const authHeader = req.headers['authorization'] || req.headers['x-user-role'];
+
+        if (authHeader !== 'admin') {
+            return res.status(403).json({ error: 'Forbidden: Requires Admin privileges' });
+        }
+
+        // Sanitize updateData - remove id if present
+        delete updateData.id;
+        delete updateData._id;
+
+        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Dual-Write Sync to Firebase
+        await firebaseService.syncToFirestore('users', id, updatedUser.toObject());
+
+        res.json({ success: true, user: updatedUser });
+    } catch (e) {
+        console.error("User Update Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 
 
 // ==========================================
@@ -946,7 +1039,7 @@ app.get('/api/admin/users', async (req, res) => {
     try {
         await connectDB();
         // Return all users with essential fields
-        const users = await User.find({}, 'name email role balance status createdAt lastLogin networkEnabled').sort({ createdAt: -1 });
+        const users = await User.find({}, 'name email role balance status createdAt lastLogin networkEnabled phone address notes isVoiceAgentEnabled password avatarUrl').sort({ createdAt: -1 });
 
         // FIX: Map _id to id for Frontend Compatibility
         const safeUsers = users.map(user => ({
@@ -958,10 +1051,49 @@ app.get('/api/admin/users', async (req, res) => {
             status: user.status,
             createdAt: user.createdAt,
             lastLogin: user.lastLogin,
-            networkEnabled: user.networkEnabled // NEW
+            networkEnabled: user.networkEnabled,
+            phone: user.phone,
+            address: user.address,
+            notes: user.notes,
+            isVoiceAgentEnabled: user.isVoiceAgentEnabled,
+            password: user.password, // Frontend uses this for editing
+            avatarUrl: user.avatarUrl
         }));
 
         res.json(safeUsers);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- HUMAN HANDOVER / SUPPORT REQUESTS ---
+app.post('/api/support/request', async (req, res) => {
+    try {
+        await connectDB();
+        const { userId, userName, reason } = req.body;
+        const request = await SupportRequest.create({ userId, userName, reason });
+        res.status(201).json(request);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/admin/support/requests', async (req, res) => {
+    try {
+        await connectDB();
+        const requests = await SupportRequest.find().sort({ timestamp: -1 });
+        res.json(requests);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/admin/support/requests/:id', async (req, res) => {
+    try {
+        await connectDB();
+        const { status } = req.body;
+        const request = await SupportRequest.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        res.json(request);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

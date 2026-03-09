@@ -16,6 +16,7 @@ class GeminiLiveService {
         this.clientWs = clientWs;
         this.geminiWs = null;
         this.systemInstruction = aiContext.getLiveAgentSystemInstruction();
+        this.pingInterval = null;
     }
 
     /**
@@ -28,6 +29,7 @@ class GeminiLiveService {
         this.geminiWs.on('open', () => {
             console.log("[GeminiLive] Connected to Google API.");
             this.sendInitialSetup();
+            this.startHeartbeat();
         });
 
         this.geminiWs.on('message', (data) => {
@@ -328,6 +330,39 @@ class GeminiLiveService {
                                     },
                                     required: ["startNumber", "endNumber"]
                                 }
+                            },
+                            {
+                                name: "scroll_ui",
+                                description: "Scroll the user interface to help the user see different parts of the application. Use this when you are guiding the user or when they ask to see something at the bottom/top.",
+                                parameters: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        direction: { type: "STRING", enum: ["top", "bottom", "up", "down"], description: "The direction to scroll." }
+                                    },
+                                    required: ["direction"]
+                                }
+                            },
+                            {
+                                name: "request_human_help",
+                                description: "Escalate the conversation to a human supervisor or administrator when you cannot fulfill a specialized request or when the user explicitly asks for human assistance.",
+                                parameters: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        reason: { type: "STRING", description: "A brief explanation of why human help is needed." }
+                                    },
+                                    required: ["reason"]
+                                }
+                            },
+                            {
+                                name: "write_to_smart_paper",
+                                description: "Real-time digitization: Write text or plays directly into the Smart Paper 'slate' (board) while the user is dictating. Use this ONLY if the Smart Paper tool is open.",
+                                parameters: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        text: { type: "STRING", description: "The text or play details to append to the board." }
+                                    },
+                                    required: ["text"]
+                                }
                             }
                         ]
                     }
@@ -409,8 +444,31 @@ class GeminiLiveService {
      * Cleans up the connection
      */
     disconnect() {
+        this.stopHeartbeat();
         if (this.geminiWs && this.geminiWs.readyState === WebSocket.OPEN) {
             this.geminiWs.close();
+        }
+    }
+
+    /**
+     * Heartbeat to prevent idle timeouts from Google API or intermediaries.
+     */
+    startHeartbeat() {
+        this.stopHeartbeat();
+        this.pingInterval = setInterval(() => {
+            if (this.geminiWs && this.geminiWs.readyState === WebSocket.OPEN) {
+                // Gemini Multimodal Live API doesn't specify a ping format, but standard WS ping 
+                // or an empty message usually works to keep it alive. 
+                // We'll send a small setup update or just keep the socket active.
+                this.geminiWs.ping();
+            }
+        }, 30000); // 30 seconds
+    }
+
+    stopHeartbeat() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
         }
     }
 }

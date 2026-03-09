@@ -42,6 +42,28 @@ const SmartPaperModal: React.FC<SmartPaperModalProps> = ({ isOpen, onClose, onAp
 
     const { isRecording, toggleVoice, isSpeaking, stopRecording } = useLiveAudioContext();
 
+    // -- VOICE REAL-TIME DIGITIZATION --
+    useEffect(() => {
+        const handleVoiceUpdate = (e: any) => {
+            const text = e.detail;
+            if (text && isOpen) {
+                // Append text with a newline if the current slate isn't empty
+                setSlateText(prev => {
+                    const separator = (prev === '' || prev.endsWith('\n')) ? '' : '\n';
+                    return prev + separator + text;
+                });
+
+                // Keep the textarea scrolled to bottom as new text arrives
+                if (textareaRef.current) {
+                    textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+                }
+            }
+        };
+
+        window.addEventListener('voice-smart-paper-update', handleVoiceUpdate);
+        return () => window.removeEventListener('voice-smart-paper-update', handleVoiceUpdate);
+    }, [isOpen]);
+
 
     // Handle Paste
     const handlePaste = async () => {

@@ -50,4 +50,4 @@ export interface Transaction {
   commissionEarned: number;
 }
 
-export type ViewType = 'directory' | 'tree' | 'commissions' | 'reports' | 'config';
+export type ViewType = 'directory' | 'tree' | 'commissions' | 'reports' | 'config' | 'requests' | 'support';

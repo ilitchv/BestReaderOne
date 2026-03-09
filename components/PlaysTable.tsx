@@ -232,7 +232,7 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
         <table className="w-full text-sm text-left">
           <thead className="sticky top-0 bg-light-card dark:bg-dark-card z-10">
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="p-2 w-10">
+              <th rowSpan={2} className="p-2 w-10">
                 <input
                   type="checkbox"
                   onChange={handleSelectAll}
@@ -240,23 +240,22 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
                   className="w-4 h-4 rounded text-neon-cyan bg-gray-300 border-gray-400 focus:ring-neon-cyan focus:ring-2"
                 />
               </th>
-              <th className="p-2 text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">#</th>
-              <th className="p-2 min-w-[75px] text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">
+              <th rowSpan={2} className="p-2 text-gray-500 dark:text-gray-400 uppercase text-xs font-bold whitespace-nowrap">#</th>
+              <th rowSpan={2} className="p-2 min-w-[85px] text-gray-700 dark:text-gray-200 uppercase text-xs font-bold whitespace-nowrap">
                 <span className="hidden sm:inline">Bet Number</span>
                 <span className="sm:hidden">Bet</span>
               </th>
-              <th className="p-2 text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">Mode</th>
-              <th className="p-2 min-w-[65px] text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">
-                <span className="hidden sm:inline">Straight</span>
-                <span className="sm:hidden">Str</span>
+              <th rowSpan={2} className="p-2 text-gray-500 dark:text-gray-400 uppercase text-xs font-bold whitespace-nowrap">GAME</th>
+              <th colSpan={3} className="p-2 text-center text-neon-cyan uppercase text-[10px] font-black tracking-widest bg-neon-cyan/5 border-x border-neon-cyan/20">
+                WAGERS
               </th>
-              <th className="p-2 min-w-[65px] text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">Box</th>
-              <th className="p-2 min-w-[65px] text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">
-                <span className="hidden sm:inline">Combo</span>
-                <span className="sm:hidden">Com</span>
-              </th>
-              <th className="p-2 text-right text-gray-500 dark:text-gray-400 uppercase text-xs font-semibold">Total</th>
-              <th className="p-2 w-8"></th>
+              <th rowSpan={2} className="p-2 text-right text-gray-500 dark:text-gray-400 uppercase text-xs font-bold whitespace-nowrap">Total</th>
+              <th rowSpan={2} className="p-2 w-8"></th>
+            </tr>
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="p-1 min-w-[65px] text-gray-400 dark:text-gray-500 uppercase text-[10px] font-bold text-center border-l border-neon-cyan/20">STR</th>
+              <th className="p-1 min-w-[65px] text-gray-400 dark:text-gray-500 uppercase text-[10px] font-bold text-center">BOX</th>
+              <th className="p-1 min-w-[65px] text-gray-400 dark:text-gray-500 uppercase text-[10px] font-bold text-center border-r border-neon-cyan/20">COM</th>
             </tr>
           </thead>
           <tbody>
@@ -289,8 +288,8 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
                         value={play.betNumber}
                         onChange={(e) => handleInputChange(play.id, 'betNumber', e.target.value)}
                         onKeyDown={(e) => handleNavigation(e, play.id, 'betNumber')}
-                        className="w-full bg-light-surface dark:bg-dark-surface p-1.5 rounded-md border-2 border-transparent focus:border-neon-cyan focus:outline-none text-gray-900 dark:text-gray-200"
-                        placeholder="e.g. 123"
+                        className="w-full bg-light-surface dark:bg-dark-surface p-1.5 rounded-md border-2 border-transparent focus:border-neon-cyan focus:outline-none text-gray-900 dark:text-neon-cyan font-black text-lg tracking-tighter text-center"
+                        placeholder="000"
                       />
                     </td>
                     <td className="p-2 font-mono text-xs text-gray-700 dark:text-gray-300">

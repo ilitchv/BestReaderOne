@@ -51,6 +51,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, pendingCoun
                             onClick={() => onViewChange('commissions')}
                         />
                         <NavItem
+                            icon="support_agent"
+                            label="Agente Live"
+                            active={activeView === 'support'}
+                            onClick={() => onViewChange('support')}
+                        />
+                        <NavItem
                             icon="analytics"
                             label="Reportes"
                             active={activeView === 'reports'}

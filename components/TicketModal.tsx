@@ -542,7 +542,10 @@ const TicketModal: React.FC<TicketModalProps> = ({
 
     const formatCashier = (id: string) => {
         if (!id) return 'Unknown';
-        if (id === 'ADMIN' || id === 'SELF') return id;
+        // Special case for Admin name as requested
+        if (id === 'ADMIN' || id === 'SELF' || id === 'ilitchvasquez@gmail.com') return 'admin1';
+
+        // Show only the prefix before @ for everyone else (users/supervisors)
         if (id.includes('@')) return id.split('@')[0];
         return id;
     };
@@ -554,7 +557,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
     return (
         <div ref={modalRef} className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[100]" onClick={onClose}>
             <div
-                className={`bg-light-card dark:bg-dark-card rounded-xl shadow-lg w-full flex flex-col overflow-hidden max-h-[90vh] transition-all duration-300 ${showAdminLayout ? 'max-w-6xl' : 'max-w-[480px] sm:max-w-xl'
+                className={`bg-light-card dark:bg-dark-card rounded-xl shadow-lg w-full flex flex-col overflow-hidden max-h-[90vh] transition-all duration-300 ${showAdminLayout ? 'max-w-6xl' : 'max-w-[520px] sm:max-w-2xl'
                     }`}
                 onClick={e => e.stopPropagation()}
             >
@@ -581,7 +584,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                     <div className="text-center space-y-1 mb-4">
                                         <p className="font-bold text-sm">BEAST READER</p>
                                         <p className="text-[10px]">Terminal ID: {terminalId}</p>
-                                        <p className="text-[10px]">Cashier: {cashierId}</p>
+                                        <p className="text-[10px]">Cashier: {formatCashier(cashierId)}</p>
                                         <p>{formatTime().replace(',', ', ')}</p>
                                         {isConfirmed && <p className="font-bold">TICKET# {ticketNumber}</p>}
                                     </div>
@@ -591,36 +594,35 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                         <p><span className="font-bold">TRACKS</span><br />{displayTracks.join(', ')}</p>
                                     </div>
 
-                                    <div className="flex justify-between text-[10px] mb-4">
-                                        <span>Cashier: {formatCashier(cashierId)}</span>
-                                        <span className="text-right">Terminal ID: {terminalId}</span>
-                                    </div>
+                                    {/* Redundant Cashier/Terminal section removed as per user request */}
                                     <div className="border-t border-dashed border-gray-300 my-3"></div>
                                     <div className="border-t border-b border-dashed border-gray-400 py-2">
                                         <table className="w-full table-fixed">
                                             <thead>
-                                                <tr className="text-left !text-black">
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] w-[5%]">#</th>
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] w-[15%]">BET</th>
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] w-[30%]">MODE</th>
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[11%]">STR</th>
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[11%]">BOX</th>
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[11%]">COM</th>
-                                                    <th className="font-normal !text-black p-0 pb-2 text-[10px] text-right w-[17%]">TOT</th>
+                                                <tr className="text-left !text-black border-b border-gray-400 bg-gray-50/50">
+                                                    <th className="!text-black p-0 pb-1 text-[11px] font-black w-[8%] text-center border-r border-dashed border-gray-300">#</th>
+                                                    <th className="!text-black p-1 pb-1 text-[13px] font-black w-[18%]">BET</th>
+                                                    <th className="!text-black p-1 pb-1 text-[13px] font-black w-[14%]">GAME</th>
+                                                    <th className="!text-black p-1 pb-1 text-[13px] font-black text-center w-[12%]">STR</th>
+                                                    <th className="!text-black p-1 pb-1 text-[13px] font-black text-center w-[12%]">BOX</th>
+                                                    <th className="!text-black p-1 pb-1 text-[13px] font-black text-center w-[12%]">COM</th>
+                                                    <th className="!text-black p-1 pb-1 text-[13px] font-black text-right w-[24%] pr-2">TOTAL</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {plays.map((play, index) => (
-                                                    <tr key={play.id} className="border-t border-dashed border-gray-300 !text-black">
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black">{index + 1}</td>
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black font-bold">{play.betNumber}</td>
-                                                        <td className="py-1 px-0 text-[10px] align-top !text-black break-words">
-                                                            {play.gameMode === 'Single Action' ? 'Sing. Act.' : play.gameMode}
+                                                    <tr key={play.id} className="border-t border-gray-200 !text-black">
+                                                        <td className="py-1 px-0 text-[10px] align-middle !text-black text-center border-r border-dashed border-gray-300">{index + 1}</td>
+                                                        <td className="py-1 px-1 text-[13px] align-middle !text-black font-black tracking-tighter">{play.betNumber}</td>
+                                                        <td className="py-1 px-1 text-[9px] align-middle !text-black font-bold uppercase truncate">
+                                                            {play.gameMode === 'Single Action' ? 'S.Act' : play.gameMode}
                                                         </td>
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black text-right">{play.straightAmount ? play.straightAmount.toFixed(2) : '-'}</td>
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black text-right">{play.boxAmount ? play.boxAmount.toFixed(2) : '-'}</td>
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black text-right">{play.comboAmount ? play.comboAmount.toFixed(2) : '-'}</td>
-                                                        <td className="py-1 px-0 text-[11px] align-top !text-black text-right font-bold">${(calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount) || 0).toFixed(2)}</td>
+                                                        <td className="py-1 px-1 text-[10px] align-middle !text-black text-center">{play.straightAmount ? play.straightAmount.toFixed(2) : '-'}</td>
+                                                        <td className="py-1 px-1 text-[10px] align-middle !text-black text-center">{play.boxAmount ? play.boxAmount.toFixed(2) : '-'}</td>
+                                                        <td className="py-1 px-1 text-[10px] align-middle !text-black text-center">{play.comboAmount ? play.comboAmount.toFixed(2) : '-'}</td>
+                                                        <td className="py-1 px-1 text-[12px] align-middle !text-black text-right font-black pr-2">
+                                                            ${(calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount) || 0).toFixed(2)}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -689,7 +691,10 @@ const TicketModal: React.FC<TicketModalProps> = ({
 
                         {/* RIGHT COLUMN: DIGITAL TWIN (ADMIN/USER VIEW) - ONLY SHOW IF ADMIN/RESULTS VARIANT */}
                         {showAdminLayout && (
-                            <div className="p-4 md:p-6 bg-slate-900 overflow-y-auto col-span-full">
+                            <div className="bg-white p-8 shadow-2xl relative overflow-hidden flex flex-col w-full max-w-[95vw] md:max-w-[85vw] lg:max-w-3xl mx-auto rounded-sm">
+                                {/* Zebra Pattern Header Decorator */}
+                                <div className="absolute top-0 left-0 w-full h-1.5 bg-brand-panel opacity-10"></div>
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-brand-cyan/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
                                 <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                         <p className="text-[10px] uppercase text-gray-500 font-bold">Bet Dates</p>
@@ -713,16 +718,14 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                 <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden overflow-x-auto">
                                     <table className="w-full text-left text-sm text-gray-400">
                                         <thead className="bg-slate-950 text-xs uppercase font-bold text-gray-500">
-                                            <tr>
-                                                <th className="p-3">#</th>
-                                                <th className="p-3">Bet</th>
-                                                <th className="p-3">Mode</th>
-                                                <th className="p-3 text-right">STR</th>
-                                                <th className="p-3 text-right">BOX</th>
-                                                <th className="p-3 text-right">COM</th>
-                                                <th className="p-3 text-right">TOTAL</th>
-                                                <th className="p-3 text-center text-white">STATUS</th>
-                                                <th className="p-3 text-right text-green-400">WON</th>
+                                            <tr className="border-b-2 border-brand-panel text-black font-bold text-[11px] uppercase tracking-wider bg-brand-panel/5">
+                                                <th className="py-2.5 px-2 text-center border-r border-dashed border-gray-300 w-8">#</th>
+                                                <th className="py-2.5 px-2 text-left w-16">BET</th>
+                                                <th className="py-2.5 px-2 text-left w-16">GAME</th>
+                                                <th className="py-2.5 px-2 text-center w-12">STR</th>
+                                                <th className="py-2.5 px-2 text-center w-12">BOX</th>
+                                                <th className="py-2.5 px-2 text-center w-12">COM</th>
+                                                <th className="py-2.5 px-2 text-right w-16">TOT</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-700">
@@ -769,14 +772,26 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                 }
 
                                                 return (
-                                                    <tr key={index} className="hover:bg-slate-700/50 transition-colors">
-                                                        <td className="p-3 text-slate-600">{index + 1}</td>
-                                                        <td className="p-3 font-mono font-bold text-white text-base">{play.betNumber}</td>
-                                                        <td className="p-3 text-xs">{play.gameMode}</td>
-                                                        <td className="p-3 text-right font-mono">{play.straightAmount?.toFixed(2) || '-'}</td>
-                                                        <td className="p-3 text-right font-mono">{play.boxAmount?.toFixed(2) || '-'}</td>
-                                                        <td className="p-3 text-right font-mono">{play.comboAmount?.toFixed(2) || '-'}</td>
-                                                        <td className="p-3 text-right font-bold text-white">
+                                                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
+                                                        <td className="py-2 px-2 text-center text-gray-400 font-mono text-[10px] border-r border-dashed border-gray-200">
+                                                            {index + 1}
+                                                        </td>
+                                                        <td className="py-2 px-2 font-black text-sm text-brand-dark tracking-tighter">
+                                                            {play.betNumber}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-[10px] font-bold text-gray-600 truncate uppercase">
+                                                            {play.gameMode === 'Single Action' ? 'S.Act' : play.gameMode}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-center text-gray-800 font-medium text-[10px]">
+                                                            {play.straightAmount ? `$${play.straightAmount.toFixed(2)}` : '-'}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-center text-gray-800 font-medium text-[10px]">
+                                                            {play.boxAmount ? `$${play.boxAmount.toFixed(2)}` : '-'}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-center text-gray-800 font-medium text-[10px]">
+                                                            {play.comboAmount ? `$${play.comboAmount.toFixed(2)}` : '-'}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-right font-bold text-brand-dark text-[10px]">
                                                             ${(calculateRowTotal(play.betNumber, play.gameMode, play.straightAmount, play.boxAmount, play.comboAmount) || 0).toFixed(2)}
                                                         </td>
                                                         <td className="p-3 text-center">

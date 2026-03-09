@@ -7,6 +7,7 @@ import CommissionsView from './components/CommissionsView';
 import ReportsView from './components/ReportsView';
 import ConfigurationView from './components/ConfigurationView';
 import RequestsView from './components/RequestsView';
+import SupportInboxView from './components/SupportInboxView';
 import AddReferralModal from './components/AddReferralModal';
 import CompensationChatbot from './components/CompensationChatbot';
 import { AlertBanner } from './components/AlertBanner';
@@ -148,6 +149,8 @@ const BeastModule: React.FC<BeastModuleProps> = ({ users: initialUsers, rootUser
                 return <ReportsView />;
             case 'config':
                 return <ConfigurationView user={currentRoot} onUpdateUser={handleUpdateUser} />;
+            case 'support':
+                return <SupportInboxView />;
             default:
                 return <GenealogyTree rootUser={currentRoot} />;
         }
@@ -174,6 +177,7 @@ const BeastModule: React.FC<BeastModuleProps> = ({ users: initialUsers, rootUser
                             {activeView === 'commissions' && 'Control de Comisiones'}
                             {activeView === 'reports' && 'Métricas de Rendimiento'}
                             {activeView === 'config' && 'Administración de Perfiles'}
+                            {activeView === 'support' && 'Inbox Agente Live'}
                         </h2>
                         <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand-cyan/10 border border-brand-cyan/20">
                             <span className="size-1.5 rounded-full bg-brand-cyan animate-pulse"></span>
