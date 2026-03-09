@@ -7,13 +7,16 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true }, // Will store hashed password
     name: { type: String, required: true },
     balance: { type: Number, default: 0 },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    role: { type: String, enum: ['user', 'admin', 'supervisor'], default: 'user' },
     btcpayCustomerId: { type: String }, // For BTCPay integration
     walletHash: { type: String }, // Integrity check (Hash of last transaction)
     savedWalletAddress: { type: String }, // Saved BTC/USDT address for withdrawals
     status: { type: String, enum: ['active', 'suspended', 'pending'], default: 'active' },
     networkEnabled: { type: Boolean, default: false }, // Feature toggle for User Network Module
     isVoiceAgentEnabled: { type: Boolean, default: false }, // [NEW] Admin control for Voice AI
+    phone: { type: String },
+    address: { type: String },
+    notes: { type: String },
 
     // Auth Extension
     firebaseUid: { type: String, unique: true, sparse: true },

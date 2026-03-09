@@ -165,14 +165,22 @@ export const getTodayDateString = (): string => {
 
 /**
  * Checks if a track is expired for today based on its catalog closeTime.
+ * @param trackId - The ID of the track
+ * @param now - Current Date object
+ * @param userRole - The role of the user ('user', 'supervisor', 'admin')
  */
-export const isTrackExpired = (trackId: string, now: Date = new Date()): boolean => {
+export const isTrackExpired = (trackId: string, now: Date = new Date(), userRole: string = 'user'): boolean => {
     const catalogItem = RESULTS_CATALOG.find(t => t.id === trackId);
     if (!catalogItem || !catalogItem.closeTime) return false;
 
     const [hours, minutes, seconds] = catalogItem.closeTime.split(':').map(Number);
     const cutoffTime = new Date(now);
     cutoffTime.setHours(hours, minutes, seconds || 0, 0);
+
+    // Apply 15-minute extension for Admin and Supervisor
+    if (userRole === 'admin' || userRole === 'supervisor') {
+        cutoffTime.setMinutes(cutoffTime.getMinutes() + 15);
+    }
 
     return now > cutoffTime;
 };

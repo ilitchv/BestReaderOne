@@ -580,6 +580,60 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             return "Failed: No tab name provided.";
         };
 
+        const handleScrollUi = (args: any) => {
+            const dir = args.direction;
+            if (dir === 'bottom') {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                return "Scrolling to the bottom of the page.";
+            } else if (dir === 'top') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return "Scrolling to the top of the page.";
+            } else if (dir === 'down') {
+                window.scrollBy({ top: 400, behavior: 'smooth' });
+                return "Scrolling down.";
+            } else if (dir === 'up') {
+                window.scrollBy({ top: -400, behavior: 'smooth' });
+                return "Scrolling up.";
+            }
+            return `Failed: Invalid scroll direction ${dir}.`;
+        };
+
+        const handleRequestHumanHelp = async (args: any) => {
+            const reason = args.reason || "User requested assistance.";
+            try {
+                // We'll implement the actual API call later once the backend is ready
+                // For now, we simulate success and log to console
+                console.log("🆘 HUMAN HELP REQUESTED:", reason);
+
+                // Dispatch event so UI can show a notification if needed
+                window.dispatchEvent(new CustomEvent('voice-support-request', { detail: { reason } }));
+
+                const payload = {
+                    userId: user?.id || 'guest',
+                    userName: user?.email || 'Guest',
+                    reason,
+                    timestamp: new Date().toISOString()
+                };
+
+                await fetch('/api/support/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                return "I've notified a supervisor. They will help you as soon as possible.";
+            } catch (e) {
+                return "I've logged your request for a human supervisor.";
+            }
+        };
+
+        const handleWriteToSmartPaper = (args: any) => {
+            const text = args.text;
+            if (!text) return "Failed: No text provided.";
+            window.dispatchEvent(new CustomEvent('voice-smart-paper-update', { detail: text }));
+            return `Digitizing on board: ${text}`;
+        };
+
         registerFunctionCallback("add_plays_to_slate", handleAddPlaysGlobal);
         registerFunctionCallback("set_date", handleSetDate);
         registerFunctionCallback("toggle_track", handleToggleTrack);
@@ -604,6 +658,10 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         registerFunctionCallback("wizard_generate_random", handleWizardGenerateRandom);
         registerFunctionCallback("wizard_generate_sequence", handleWizardGenerateSequence);
 
+        registerFunctionCallback("scroll_ui", handleScrollUi);
+        registerFunctionCallback("request_human_help", handleRequestHumanHelp);
+        registerFunctionCallback("write_to_smart_paper", handleWriteToSmartPaper);
+
         return () => {
             unregisterFunctionCallback("add_plays_to_slate");
             unregisterFunctionCallback("set_date");
@@ -625,6 +683,10 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             unregisterFunctionCallback("set_view_mode");
             unregisterFunctionCallback("wizard_generate_random");
             unregisterFunctionCallback("wizard_generate_sequence");
+
+            unregisterFunctionCallback("scroll_ui");
+            unregisterFunctionCallback("request_human_help");
+            unregisterFunctionCallback("write_to_smart_paper");
         };
     }, [registerFunctionCallback, unregisterFunctionCallback, setPlays, setSelectedDates, setSelectedTracks, setIsTicketModalOpen, plays, selectedTracks, selectedDates, pulitoPositions]);
 
@@ -1031,6 +1093,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                     pulitoPositions={pulitoPositions}
                     onPulitoPositionsChange={setPulitoPositions}
                     viewMode={trackViewMode}
+                    userRole={user?.role}
                 />
 
                 {/* Actions */}

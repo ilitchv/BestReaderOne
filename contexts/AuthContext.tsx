@@ -110,9 +110,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // onAuthStateChanged handles that generally, but we want fresh DB balance.
             const freshUser = await fetchUser(user.id);
             if (freshUser) {
-                if (freshUser.balance !== user.balance || freshUser.networkEnabled !== user.networkEnabled) {
+                if (freshUser.balance !== user.balance || freshUser.networkEnabled !== user.networkEnabled || freshUser.role !== user.role) {
                     // console.log(`♻️ Syncing User Data`); // Reduce noise
-                    const updatedUser = { ...user, balance: freshUser.balance, networkEnabled: freshUser.networkEnabled };
+                    const updatedUser = {
+                        ...user,
+                        balance: freshUser.balance,
+                        networkEnabled: freshUser.networkEnabled,
+                        role: freshUser.role // Sync role instantly
+                    };
                     setUser(updatedUser);
                     localDbService.saveUser(updatedUser);
                 }

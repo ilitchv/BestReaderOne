@@ -12,6 +12,7 @@ interface TrackCategoryReelProps {
     onPulitoPositionsChange: (positions: number[]) => void;
     onTrackToggle: (trackId: string) => void;
     showModeReel: boolean;
+    userRole?: string; // ADDED USER ROLE
 }
 
 const TrackCategoryReel: React.FC<TrackCategoryReelProps> = ({
@@ -21,7 +22,8 @@ const TrackCategoryReel: React.FC<TrackCategoryReelProps> = ({
     pulitoPositions,
     onPulitoPositionsChange,
     onTrackToggle,
-    showModeReel
+    showModeReel,
+    userRole = 'user'
 }) => {
 
     // --- TIMER LOGIC (Per Track) ---
@@ -44,7 +46,7 @@ const TrackCategoryReel: React.FC<TrackCategoryReelProps> = ({
         const closeTimeStr = catalogItem?.closeTime;
         if (!closeTimeStr) return { isExpired: false, remainingTime: "OPEN" };
 
-        const isExpired = isTrackExpired(trackId, now);
+        const isExpired = isTrackExpired(trackId, now, userRole);
         if (isExpired) return { isExpired: true, remainingTime: "CLOSED" };
 
         const [h, m, s] = closeTimeStr.split(':').map(Number);

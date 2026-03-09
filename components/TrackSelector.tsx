@@ -39,7 +39,7 @@ const sdTrackIds = new Set(
         ?.tracks.map(t => t.id) || []
 );
 
-const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelectionChange, selectedDates, pulitoPositions, onPulitoPositionsChange, viewMode }) => {
+const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelectionChange, selectedDates, pulitoPositions, onPulitoPositionsChange, viewMode, userRole = 'user' }) => {
     const [openCategory, setOpenCategory] = useState<string | null>(TRACK_CATEGORIES[0]?.name || null);
     const [now, setNow] = useState(new Date());
     const { playSound } = useSound();
@@ -106,7 +106,7 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
             return { isExpired: false, remainingTime: null };
         }
 
-        const isExpired = isTrackExpired(trackId, now);
+        const isExpired = isTrackExpired(trackId, now, userRole);
 
         if (isExpired) return { isExpired: true, remainingTime: null };
 
@@ -276,6 +276,7 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ selectedTracks, onSelecti
                                             onPulitoPositionsChange={onPulitoPositionsChange}
                                             onTrackToggle={handleTrackToggle}
                                             showModeReel={category.name.includes('USA')}
+                                            userRole={userRole}
                                         />
                                     )
                                 )}
