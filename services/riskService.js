@@ -4,8 +4,13 @@ const LotteryResult = require('../models/LotteryResult'); // NEW
 const TrackConfig = require('../models/TrackConfig'); // NEW
 const { WAGER_LIMITS } = require('../constants-backend.js');
 
-// Helper to get formatted date string "YYYY-MM-DD"
-const getTodayStr = () => new Date().toISOString().split('T')[0];
+// Helper to get formatted date string "YYYY-MM-DD" in LOCAL timezone
+const getTodayStr = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localDate = new Date(now.getTime() - offset);
+    return localDate.toISOString().split('T')[0];
+};
 
 const riskService = {
 
@@ -83,9 +88,9 @@ const riskService = {
         const todayStr = getTodayStr();
         const nowTimeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
+        console.log(`🕒 [DATE CHECK] Today (Local): ${todayStr}, Ticket Dates: ${dates}`);
+
         // Calculate Sunday of current week (Localized)
-        const sunday = new Date(now);
-        // Correct sunday calculation for local time too
         const offset = now.getTimezoneOffset() * 60000;
         const localNow = new Date(now.getTime() - offset);
 
@@ -101,6 +106,7 @@ const riskService = {
             for (const date of dates) {
                 // --- 1. STRICT DATE RANGE CHECK ---
                 if (date < todayStr) {
+                    console.warn(`⛔ [REJECTED] Date ${date} is before Today ${todayStr}`);
                     return { allowed: false, reason: `Cannot play a past date: ${date}` };
                 }
                 if (date > sundayStr) {
