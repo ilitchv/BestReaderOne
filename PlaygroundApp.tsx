@@ -98,25 +98,51 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     useEffect(() => {
         if (initialTicket) {
             // Overwrite state with ticket data
-            setPlays(initialTicket.plays);
+            setPlays([...initialTicket.plays].reverse()); // Reverse to maintain order as in normal input
+
+            // --- DATE SANITIZATION LOGIC ---
+            const now = new Date();
+            const todayStr = getTodayDateString();
+
+            // Calculate Sunday of current week
+            const sunday = new Date(now);
+            const dayOfWeek = sunday.getDay();
+            const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+            sunday.setDate(sunday.getDate() + daysToSunday);
+            const sundayStr = sunday.toISOString().split('T')[0];
+
+            let sanitizedDates = (initialTicket.betDates || []).map(d => {
+                // If date is in the past OR beyond this week's Sunday -> Override with Today
+                if (d < todayStr || d > sundayStr) {
+                    return todayStr;
+                }
+                return d;
+            });
+
+            // Remove duplicates and ensure at least one date
+            sanitizedDates = Array.from(new Set(sanitizedDates));
+            if (sanitizedDates.length === 0) sanitizedDates = [todayStr];
 
             // --- TRACK FILTERING LOGIC ---
-            const today = getTodayDateString();
-            const isForToday = initialTicket.betDates.includes(today);
+            // Re-check tracks to ensure none are expired if playing for today
+            const isForToday = sanitizedDates.includes(todayStr);
 
             let filteredTracks = initialTicket.tracks;
             if (isForToday) {
-                const now = new Date();
                 filteredTracks = initialTicket.tracks.filter(t => !isTrackExpired(t, now));
-                console.log(`🔄 Playback: Filtered ${initialTicket.tracks.length - filteredTracks.length} expired tracks.`);
+                if (filteredTracks.length !== initialTicket.tracks.length) {
+                    console.log(`🔄 Playback: Filtered ${initialTicket.tracks.length - filteredTracks.length} expired tracks.`);
+                }
             }
 
             setSelectedTracks(filteredTracks);
-            setSelectedDates(initialTicket.betDates);
-            // Reset others
-            setPulitoPositions([]);
-            setTicketNumber('');
+            setSelectedDates(sanitizedDates);
+
+            // Reset confirmation status
+            setTicketNumber(null);
             setIsTicketConfirmed(false);
+            setTicketImageBlob(null);
+            setPulitoPositions([]);
         }
     }, [initialTicket]);
 

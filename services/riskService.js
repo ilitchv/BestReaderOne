@@ -80,11 +80,27 @@ const riskService = {
 
         // Current Time for comparison (Server Time - assumed accurate)
         const now = new Date();
-        const nowTimeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }); // "14:30"
+        const todayStr = now.toISOString().split('T')[0];
+        const nowTimeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+        // Calculate Sunday of current week
+        const sunday = new Date(now);
+        const dayOfWeek = sunday.getDay(); // 0 (Sun) to 6 (Sat)
+        const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+        sunday.setDate(sunday.getDate() + daysToSunday);
+        const sundayStr = sunday.toISOString().split('T')[0];
 
         // Loop Tracks/Dates
         for (const track of tracks) {
             for (const date of dates) {
+                // --- 1. STRICT DATE RANGE CHECK ---
+                if (date < todayStr) {
+                    return { allowed: false, reason: `Cannot play a past date: ${date}` };
+                }
+                if (date > sundayStr) {
+                    return { allowed: false, reason: `Cannot play beyond this week (Sunday cutoff): ${date}` };
+                }
+
                 // A. HARD STOP: Result Already Exists?
                 // We check if a result was entered *before* now.
                 // Actually, if a result EXISTS at all for this track/date, we block.

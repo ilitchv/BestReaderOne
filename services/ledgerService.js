@@ -12,20 +12,24 @@ const generateHash = (data) => {
 const ledgerService = {
     // 1. ADD TO LEDGER (Mining a Block)
     addToLedger: async ({ action, userId, amount, referenceId, description }) => {
-        const session = await mongoose.startSession();
+        // FIX: Use mongoose.connection.startSession() to ensure it matches the Client of the models
+        const session = await mongoose.connection.startSession();
         session.startTransaction();
 
         try {
+            // Ensure models are using the correct connection
+            const UserModel = mongoose.connection.model('User');
+            const LedgerModel = mongoose.connection.model('BeastLedger');
+
             // A. Get User
-            // console.log(`🔍 Ledger Lookup User: ${userId}`);
-            const user = await User.findById(userId).session(session);
+            const user = await UserModel.findById(userId).session(session);
             if (!user) {
                 console.error(`❌ Ledger Error: User not found for ID '${userId}'`);
                 throw new Error(`User not found for ledger transaction (ID: ${userId})`);
             }
 
-            // B. Get Last Block (or check for Genesis)
-            const lastBlock = await BeastLedger.findOne().sort({ index: -1 }).session(session);
+            // B. Get Last Block
+            const lastBlock = await LedgerModel.findOne().sort({ index: -1 }).session(session);
 
             let newIndex = 0;
             let previousHash = '0'; // Default for Genesis
@@ -81,7 +85,7 @@ const ledgerService = {
             const newHash = generateHash(blockDataToHash);
 
             // F. Save to DB
-            const newBlock = new BeastLedger({
+            const newBlock = new LedgerModel({
                 ...blockDataToHash,
                 hash: newHash,
                 userId: userId // Explicitly ensuring userId field matches schema

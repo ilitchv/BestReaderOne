@@ -1274,7 +1274,6 @@ app.get('/api/admin/ledger', async (req, res) => {
 // Replaces the old /api/tickets logic for SECURE creation
 app.post('/api/tickets', async (req, res) => {
     await connectDB();
-    const session = await mongoose.startSession();
     try {
         const ticketData = req.body;
 
@@ -1450,8 +1449,6 @@ app.post('/api/tickets', async (req, res) => {
             console.error('Validation Errors:', JSON.stringify(error.errors, null, 2));
         }
         res.status(400).json({ message: error.message || 'Transaction failed', details: details });
-    } finally {
-        session.endSession();
     }
 });
 
