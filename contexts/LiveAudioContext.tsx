@@ -83,6 +83,7 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
 
                     if (data.type === 'audio' && data.base64) {
                         setIsSpeaking(true);
+                        resetInactivityTimer(); // Reset timer when AI speaks
                         await playAudioChunk(data.base64);
                     } else if (data.type === 'function_call' && data.call) {
                         // Execute registered callbacks
@@ -125,7 +126,7 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
                                 }));
                             }
                         }
-                        resetInactivityTimer();
+                        resetInactivityTimer(); // Reset timer when AI executes a function
                     } else if (data.type === 'server_error') {
                         setAiFeedback(`Error: ${data.message}`);
                     }
@@ -149,7 +150,7 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
                 reject(new Error(wsError));
             };
         });
-    }, []);
+    }, [resetInactivityTimer]);
 
     const disconnectFromAgent = useCallback(() => {
         if (wsRef.current) {
@@ -198,7 +199,7 @@ export const LiveAudioProvider: React.FC<{ children: ReactNode }> = ({ children 
                     wsRef.current.send(JSON.stringify({
                         realtimeInput: { mediaChunks: [{ mimeType: "audio/pcm;rate=16000", data: base64Audio }] }
                     }));
-                    resetInactivityTimer();
+                    // Removed resetInactivityTimer() here to prevent infinite loop of resets
                 }
             };
 
