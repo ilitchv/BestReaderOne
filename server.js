@@ -38,6 +38,7 @@ const WithdrawRequest = require('./models/WithdrawRequest'); // NEW
 const trackConfig = require('./models/TrackConfig'); // NEW - Daily Closing Time Config
 const SystemAlert = require('./models/SystemAlert'); // NEW - Admin Alerts
 const SupportRequest = require('./models/SupportRequest'); // NEW - Human Handover
+const AuditLog = require('./models/AuditLog'); // NEW - System Audits (FIXED MISSING IMPORT)
 
 // HELPER: CENTRALIZED AUDIT LOGGER
 const logSystemAudit = async (data) => {
