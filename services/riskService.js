@@ -78,17 +78,23 @@ const riskService = {
         const dates = Array.isArray(ticketPayload.betDates) ? ticketPayload.betDates : [ticketPayload.betDates];
         const plays = ticketPayload.plays || [];
 
-        // Current Time for comparison (Server Time - assumed accurate)
+        // Current Time for comparison (Server Time - Corrected for Local)
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = getTodayStr();
         const nowTimeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
-        // Calculate Sunday of current week
+        // Calculate Sunday of current week (Localized)
         const sunday = new Date(now);
-        const dayOfWeek = sunday.getDay(); // 0 (Sun) to 6 (Sat)
+        // Correct sunday calculation for local time too
+        const offset = now.getTimezoneOffset() * 60000;
+        const localNow = new Date(now.getTime() - offset);
+
+        const dayOfWeek = localNow.getUTCDay(); // 0 (Sun) to 6 (Sat)
         const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-        sunday.setDate(sunday.getDate() + daysToSunday);
-        const sundayStr = sunday.toISOString().split('T')[0];
+
+        const sundayDate = new Date(localNow);
+        sundayDate.setUTCDate(localNow.getUTCDate() + daysToSunday);
+        const sundayStr = sundayDate.toISOString().split('T')[0];
 
         // Loop Tracks/Dates
         for (const track of tracks) {
