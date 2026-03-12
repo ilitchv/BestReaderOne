@@ -34,6 +34,7 @@ interface TicketModalProps {
     variant?: 'default' | 'admin' | 'results-only';
     resultsContext?: WinningResult[]; // Optional context for Admin/User view to calculate winnings
     isPaymentRequired?: boolean; // Payment Flow
+    isRelocation?: boolean; // --- ADDED RELOCATION FLAG ---
     userId?: string; // --- ADDED USER ID ---
     voiceShareTrigger?: number; // Counter to trigger share from voice agent
     onVoiceShareDone?: () => void; // Callback when share is triggered
@@ -47,6 +48,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
     variant = 'default',
     resultsContext = [],
     isPaymentRequired = false,
+    isRelocation = false, // --- DESTRUCTURED ---
     userId, // --- DESTRUCTURED ---
     voiceShareTrigger = 0,
     onVoiceShareDone
@@ -564,7 +566,12 @@ const TicketModal: React.FC<TicketModalProps> = ({
                 {/* Header (Fixed) */}
                 <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0 bg-light-card dark:bg-dark-card z-10">
                     <div className="flex flex-col">
-                        <h2 className="text-lg font-bold text-neon-cyan truncate mr-2">{isConfirmed ? `Ticket #${ticketNumber}` : 'Confirmar y Pagar Ticket'}</h2>
+                        <h2 className="text-lg font-bold text-neon-cyan truncate mr-2">
+                            {isConfirmed
+                                ? (isRelocation ? `Drop #${ticketNumber}` : `Ticket #${ticketNumber}`)
+                                : (isRelocation ? 'Confirmar Drop / Reducción' : 'Confirmar y Pagar Ticket')
+                            }
+                        </h2>
                         {isConfirmed && <span className="text-[10px] text-gray-500 uppercase font-bold">{formatTime()}</span>}
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
@@ -582,7 +589,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
                             <div className={`flex justify-center p-2 sm:p-4 ${showAdminLayout ? 'border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700' : ''}`}>
                                 <div ref={ticketContentRef} className="bg-white p-3 text-black font-mono text-xs w-full max-w-none sm:max-w-[420px] mx-auto leading-normal shadow-sm">
                                     <div className="text-center space-y-1 mb-4">
-                                        <p className="font-bold text-sm">BEAST READER</p>
+                                        <p className="font-bold text-sm">BEAST READER {isRelocation && <span className="text-[10px] bg-black text-white px-1 ml-1">DROP</span>}</p>
                                         <p className="text-[10px]">Terminal ID: {terminalId}</p>
                                         <p className="text-[10px]">Cashier: {formatCashier(cashierId)}</p>
                                         <p>{formatTime().replace(',', ', ')}</p>

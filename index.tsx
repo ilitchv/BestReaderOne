@@ -142,6 +142,10 @@ const MainAppContent: React.FC = () => {
         setView('PLAYGROUND');
     };
 
+    const handleRelocateReturn = () => {
+        setView('ADMIN');
+    };
+
     const handleRelocate = (plays: Play[]) => {
         const pseudoticket: TicketData = {
             ticketNumber: 'RELOCATE-' + Math.floor(Math.random() * 100000),
@@ -233,7 +237,7 @@ const MainAppContent: React.FC = () => {
                     <div className="fixed inset-0 z-50 bg-light-bg dark:bg-dark-bg overflow-y-auto">
                         <PlaygroundApp
                             onClose={handleClosePlayground}
-                            onHome={isAuthenticated ? () => setView('USER_DASHBOARD') : handleBackToHome}
+                            onHome={(playbackTicket?.ticketNumber || '').startsWith('RELOCATE-') ? handleRelocateReturn : (isAuthenticated ? () => setView('USER_DASHBOARD') : handleBackToHome)}
                             language={language}
                             initialTicket={playbackTicket}
                         />

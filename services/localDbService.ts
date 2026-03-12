@@ -37,6 +37,19 @@ export const localDbService = {
         }
     },
 
+    deleteTicket: (ticketNumber: string) => {
+        try {
+            const existingStr = localStorage.getItem(TICKETS_KEY);
+            if (existingStr) {
+                let existing: TicketData[] = JSON.parse(existingStr);
+                const updated = existing.filter(t => t.ticketNumber !== ticketNumber);
+                localStorage.setItem(TICKETS_KEY, JSON.stringify(updated));
+            }
+        } catch (e) {
+            console.error('❌ Local DB Delete Error', e);
+        }
+    },
+
     getTickets: (): TicketData[] => {
         try {
             const existingStr = localStorage.getItem(TICKETS_KEY);
@@ -158,6 +171,11 @@ export const localDbService = {
                 }
             }
         } catch (e) { console.error(e); }
+    },
+
+    // Alias for addAuditLog to match AdminDashboard calls
+    addAuditLog: (entry: AuditLogEntry) => {
+        localDbService.logAction(entry);
     },
 
     // --- AUDIT LOG SYSTEM ---

@@ -18,7 +18,8 @@ const jugadaSchema = new mongoose.Schema({
     jugadaNumber: { type: String }, // Screenshot shows "47882603", likely a unique ID for the play
 
     // Link to User
-    userId: { type: String, index: true }
+    userId: { type: String, index: true },
+    isRelocation: { type: Boolean, default: false }
 }, {
     timestamps: true, // timestamp, __v
     collection: 'jugadas' // Explicitly set collection name

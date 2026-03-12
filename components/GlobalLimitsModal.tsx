@@ -14,13 +14,37 @@ const DEFAULT_LIMITS = {
     "Single Action": { "STRAIGHT": 600, "BOX": 0, "COMBO": 0 },
 };
 
+export interface GlobalLimits {
+    maxWagerPerPlay: number;
+    maxPayoutPerPlay: number;
+    dailyUserLossLimit: number;
+    dailyGlobalLossLimit: number;
+    maxActiveTicketsPerUser: number;
+    requireApprovalAbove: number;
+    // Commisions
+    defaultDropCommission: number;
+    pulitoDropCommission: number;
+    [key: string]: any; // Allow for game limits as well
+}
+
 interface GlobalLimitsModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
 const GlobalLimitsModal: React.FC<GlobalLimitsModalProps> = ({ isOpen, onClose }) => {
-    const [limits, setLimits] = useState<any>(DEFAULT_LIMITS);
+    const defaultGlobalSettings: GlobalLimits = {
+        maxWagerPerPlay: 500,
+        maxPayoutPerPlay: 15000,
+        dailyUserLossLimit: 2000,
+        dailyGlobalLossLimit: 25000,
+        maxActiveTicketsPerUser: 50,
+        requireApprovalAbove: 1000,
+        defaultDropCommission: 15,
+        pulitoDropCommission: 5
+    };
+
+    const [limits, setLimits] = useState<GlobalLimits>({ ...DEFAULT_LIMITS, ...defaultGlobalSettings });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [pin, setPin] = useState('');
@@ -37,11 +61,14 @@ const GlobalLimitsModal: React.FC<GlobalLimitsModalProps> = ({ isOpen, onClose }
             if (res.ok) {
                 const data = await res.json();
                 if (data && Object.keys(data).length > 0) {
-                    setLimits(data);
+                    setLimits(prev => ({ ...prev, ...data })); // Merge fetched data with current defaults
+                } else {
+                    setLimits({ ...DEFAULT_LIMITS, ...defaultGlobalSettings }); // Fallback to full defaults if API returns empty
                 }
             }
         } catch (e) {
             console.error("Failed to load limits", e);
+            setLimits({ ...DEFAULT_LIMITS, ...defaultGlobalSettings }); // Fallback to full defaults on error
         } finally {
             setLoading(false);
         }
@@ -55,6 +82,14 @@ const GlobalLimitsModal: React.FC<GlobalLimitsModalProps> = ({ isOpen, onClose }
                 ...prev[game],
                 [type]: isNaN(numVal) ? 0 : numVal
             }
+        }));
+    };
+
+    const handleGlobalSettingChange = (key: keyof GlobalLimits, val: string) => {
+        const numVal = parseFloat(val);
+        setLimits(prev => ({
+            ...prev,
+            [key]: isNaN(numVal) ? 0 : numVal
         }));
     };
 
@@ -114,7 +149,7 @@ const GlobalLimitsModal: React.FC<GlobalLimitsModalProps> = ({ isOpen, onClose }
                             </p>
 
                             <div className="grid grid-cols-1 gap-6">
-                                {Object.keys(limits).map(game => (
+                                {Object.keys(DEFAULT_LIMITS).map(game => (
                                     <div key={game} className="bg-slate-800 rounded-lg p-4 border border-slate-700">
                                         <h3 className="font-bold text-lg text-white mb-3 border-b border-slate-700 pb-2">{game}</h3>
                                         <div className="grid grid-cols-3 gap-4">
@@ -133,6 +168,45 @@ const GlobalLimitsModal: React.FC<GlobalLimitsModalProps> = ({ isOpen, onClose }
                                     </div>
                                 ))}
                             </div>
+
+                            <div className="pt-4 border-t border-slate-700">
+                                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                                    <span className="text-orange-400">✓</span> Drop / Relocation Commissions (%)
+                                </h4>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-300">Default Drop Commission</div>
+                                            <div className="text-[10px] text-slate-500">Standard rate for relocated plays</div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                className="w-24 bg-black border border-slate-600 rounded px-3 py-2 text-white outline-none focus:border-cyan-400 text-right"
+                                                value={limits.defaultDropCommission}
+                                                onChange={e => handleGlobalSettingChange('defaultDropCommission', e.target.value)}
+                                            />
+                                            <span className="text-slate-400 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-300">Pulito / Single Drops</div>
+                                            <div className="text-[10px] text-slate-500">Rate for Pulito and Single Action drops</div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                className="w-24 bg-black border border-slate-600 rounded px-3 py-2 text-white outline-none focus:border-cyan-400 text-right"
+                                                value={limits.pulitoDropCommission}
+                                                onChange={e => handleGlobalSettingChange('pulitoDropCommission', e.target.value)}
+                                            />
+                                            <span className="text-slate-400 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     )}
                 </div>

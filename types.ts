@@ -7,6 +7,10 @@ export interface Play {
   boxAmount: number | null;
   comboAmount: number | null;
   paymentStatus?: 'pending' | 'paid' | 'unpaid'; // NEW: Track payment status per play
+  isDropped?: boolean; // NEW: Indicates if this play was relocated/dropped
+  relocatedTicketId?: string; // NEW: Reference to the ticket where it was dropped
+  commissionRate?: number; // NEW: E.g., 0.15 or 0.05
+  commissionAmount?: number; // NEW: Calculated commission
 }
 
 export interface WizardPlay {
@@ -110,6 +114,7 @@ export interface TicketData {
   syncStatus?: 'local' | 'synced' | 'failed';
   savedAt?: string;
   userId?: string; // NEW: Link ticket to user
+  isRelocation?: boolean; // NEW: Indicates this is a system drop/relocation ticket
 }
 
 // --- PRIZE CALCULATOR TYPES ---
@@ -220,10 +225,12 @@ export interface User {
 }
 
 // --- BEAST LEDGER ---
+export type TransactionAction = 'DEPOSIT' | 'WITHDRAW' | 'WAGER' | 'PAYOUT' | 'GENESIS' | 'VOID' | 'BOTE';
+
 export interface LedgerEntry {
   index: number;
   timestamp: number;
-  action: 'DEPOSIT' | 'WITHDRAW' | 'WAGER' | 'PAYOUT' | 'GENESIS';
+  action: TransactionAction;
   userId: string;
   amount: number;
   balanceAfter: number;

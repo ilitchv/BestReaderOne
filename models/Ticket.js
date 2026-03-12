@@ -21,6 +21,7 @@ const ticketSchema = new mongoose.Schema({
     grandTotal: { type: Number, required: true },
     plays: [playSchema],
     ticketImage: { type: String }, // Low-res base64 for quick preview
+    isRelocation: { type: Boolean, default: false },
 }, {
     timestamps: true,
     bufferCommands: false, // Critical for Vercel

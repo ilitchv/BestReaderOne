@@ -39,6 +39,7 @@ const trackConfig = require('./models/TrackConfig'); // NEW - Daily Closing Time
 const SystemAlert = require('./models/SystemAlert'); // NEW - Admin Alerts
 const SupportRequest = require('./models/SupportRequest'); // NEW - Human Handover
 const AuditLog = require('./models/AuditLog'); // NEW - System Audits (FIXED MISSING IMPORT)
+const GlobalConfig = require('./models/GlobalConfig'); // NEW
 
 // HELPER: CENTRALIZED AUDIT LOGGER
 const logSystemAudit = async (data) => {
@@ -60,17 +61,20 @@ const PORT = parseInt(process.env.PORT) || 8080;
 // Removed top-level fire-and-forget call
 connectDB();
 
-// 2. Start Background Jobs
 try {
     if (process.env.NODE_ENV !== 'production') {
-        // Only run scraper scheduler in long-running processes, not serverless functions usually
-        // OR assume this server.js is also used for a worker
-        // scraperService is already imported at the top
         scraperService.startResultScheduler();
-        console.log("✅ Scraper service initialized");
+
+        // Autopilot Drops Cron (Every 5 minutes)
+        const cron = require('node-cron');
+        cron.schedule('*/5 * * * *', () => {
+            riskService.processAutoDrops().catch(err => console.error("Autopilot Cron Failed:", err));
+        });
+
+        console.log("✅ Scraper and Autopilot services initialized");
     }
 } catch (err) {
-    console.error("⚠️ Failed to start scraper:", err);
+    console.error("⚠️ Failed to start services:", err);
 }
 
 // 3. Middleware
@@ -1349,10 +1353,21 @@ app.post('/api/tickets', async (req, res) => {
         ticketData.ticketId = ticketData.ticketNumber;
 
         // FIX: Ensure plays have jugadaNumber (Required by Ticket Schema)
+        let isRelocation = false;
+        const ticketNumber = ticketData.ticketNumber;
+        if (ticketNumber && (ticketNumber.startsWith('RELOCATE-') || ticketNumber.startsWith('DROP-') || ticketNumber.startsWith('AUTO-DROP-'))) {
+            isRelocation = true;
+        }
+        if (req.body.isRelocation === true) {
+            isRelocation = true;
+        }
+        ticketData.isRelocation = isRelocation;
+
         if (ticketData.plays && Array.isArray(ticketData.plays)) {
             ticketData.plays = ticketData.plays.map((p, i) => ({
                 ...p,
-                jugadaNumber: p.jugadaNumber ? Number(p.jugadaNumber) : (i + 1)
+                jugadaNumber: p.jugadaNumber ? Number(p.jugadaNumber) : (i + 1),
+                isRelocation: isRelocation
             }));
         }
 
@@ -1418,11 +1433,17 @@ app.post('/api/tickets', async (req, res) => {
                 total: play.totalAmount || 0,
                 paymentMethod: ledgerSuccess ? 'Balance' : 'Pending/Guest',
                 jugadaNumber: play.jugadaNumber ? String(play.jugadaNumber) : `${ticketData.ticketNumber}-${Math.floor(Math.random() * 1000)}`,
-                userId: userId
+                userId: userId,
+                isRelocation: isRelocation
             }));
 
             await Jugada.insertMany(jugadaDocs);
-            console.log(`✅ Saved ${jugadaDocs.length} Jugadas for Ticket ${ticketData.ticketNumber}`);
+            console.log(`   ✅ DB Success: Saved ${newTicket.ticketNumber}`);
+
+            // NEW: TRIGGER REAL-TIME AUTO-DROP
+            riskService.triggerRealTimeDrop(ticketData).catch(err => console.error("Real-time Autopilot Error:", err));
+
+            res.status(200).json({ success: true, ticketNumber: newTicket.ticketNumber });
         }
 
         console.log(`✅ Ticket ${ticketData.ticketNumber} saved.`);
@@ -2125,6 +2146,32 @@ if (require.main === module) {
             console.log('[WebSocket] Client disconnected');
             geminiLive.disconnect();
         });
+    });
+
+    // --- GLOBAL CONFIG API ---
+    app.get('/api/config/autopilot', async (req, res) => {
+        try {
+            await connectDB(); // Ensure DB connection for GlobalConfig
+            const config = await GlobalConfig.findOne({ key: 'AUTOPILOT_RELOCATION_ENABLED' });
+            res.json({ enabled: config ? config.value : false });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/config/autopilot', async (req, res) => {
+        try {
+            await connectDB(); // Ensure DB connection for GlobalConfig
+            const { enabled } = req.body;
+            await GlobalConfig.findOneAndUpdate(
+                { key: 'AUTOPILOT_RELOCATION_ENABLED' },
+                { value: enabled, updatedAt: new Date(), updatedBy: 'admin' },
+                { upsert: true, new: true } // new: true returns the updated document
+            );
+            res.json({ success: true, enabled });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
     });
 
     server.listen(PORT, '0.0.0.0', () => {

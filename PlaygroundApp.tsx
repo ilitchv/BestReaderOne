@@ -143,6 +143,13 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
             setIsTicketConfirmed(false);
             setTicketImageBlob(null);
             setPulitoPositions([]);
+
+            // NEW: Detect Relocation Mode
+            if (initialTicket.ticketNumber && initialTicket.ticketNumber.startsWith('RELOCATE-')) {
+                setIsRelocationMode(true);
+            } else {
+                setIsRelocationMode(false);
+            }
         }
     }, [initialTicket]);
 
@@ -165,8 +172,9 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     const [isPaymentRequired, setIsPaymentRequired] = useState(false);
 
     // Ticket State
-    const [ticketNumber, setTicketNumber] = useState('');
+    const [ticketNumber, setTicketNumber] = useState<string>('');
     const [isTicketConfirmed, setIsTicketConfirmed] = useState(false);
+    const [isRelocationMode, setIsRelocationMode] = useState(false);
     const [ticketImageBlob, setTicketImageBlob] = useState<Blob | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaveStatus, setLastSaveStatus] = useState<'success' | 'error' | null>(null);
@@ -943,7 +951,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         if (validPlays.length === 0 && plays.length > 0) errors.push("No valid plays found (check amounts or bet numbers).");
 
         // --- 5. SERVER-SIDE RISK VALIDATION (ACTIVE ENFORCEMENT) ---
-        if (errors.length === 0 && validPlays.length > 0) {
+        if (errors.length === 0 && validPlays.length > 0 && !isRelocationMode) {
             try {
                 const riskRes = await fetch('/api/risk/validate', {
                     method: 'POST',
@@ -1004,16 +1012,35 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
         const finalTicketData = {
             ...ticketDataForDb,
             userId: user ? user.id : GUEST_ID,
-            userEmail: user ? user.email : undefined // For Backend Auto-Recovery
+            userEmail: user ? user.email : undefined, // For Backend Auto-Recovery
+            isRelocation: isRelocationMode
         };
+        const globalDefaultCom = Number(localStorage.getItem('GlobalLimit_DefaultDropCommission')) || 15;
+        const globalPulitoCom = Number(localStorage.getItem('GlobalLimit_PulitoDropCommission')) || 5;
+
+        if (isRelocationMode) {
+            finalTicketData.plays = finalTicketData.plays.map((p: any) => {
+                const isPulito = p.gameMode.includes('Pulito') || p.gameMode.includes('Single Action');
+                const ratePercentage = isPulito ? globalPulitoCom : globalDefaultCom;
+                const commissionRate = ratePercentage / 100;
+
+                const total = (p.straightAmount || 0) + (p.boxAmount || 0) + (p.comboAmount || 0);
+                return {
+                    ...p,
+                    isDropped: true,
+                    commissionRate,
+                    commissionAmount: total * commissionRate,
+                    relocatedTicketId: finalTicketData.ticketNumber,
+                };
+            });
+        }
 
         // --- MODULE 3: FRONTEND VALIDATION ---
         console.log("📤 Sending Ticket to DB...");
         console.log(`   > UserID: ${finalTicketData.userId}`);
         console.log(`   > Email: ${finalTicketData.userEmail || 'N/A'}`);
 
-        // Save locally (redundancy) - also lightweight
-        localDbService.saveTicket(finalTicketData);
+        // DO NOT SAVE LOCALLY YET. Wait for backend approval to prevent false positives.
 
         try {
             const res = await fetch('/api/tickets', {
@@ -1038,18 +1065,32 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 setLastSaveStatus('success');
                 setIsPaymentRequired(false); // <--- UNLOCK UI: Explicitly clear payment lock
 
+                // Only save locally IF the backend accepted the ticket (prevents false positives)
+                localDbService.saveTicket(finalTicketData);
+
                 // --- BEAST LEDGER TRANSACTION ---
                 // We record the WAGER in the immutable ledger immediately after server confirmation
                 await localDbService.addToLedger({
                     action: 'WAGER',
                     userId: user ? user.id : GUEST_ID,
                     amount: -finalTicketData.grandTotal, // Negative amount for wager
-                    details: `Ticket Purchase #${finalTicketData.ticketNumber}`
+                    details: isRelocationMode
+                        ? `BOTE / RELOCATION Ticket #${finalTicketData.ticketNumber}`
+                        : `Ticket Purchase #${finalTicketData.ticketNumber}`
                 });
                 console.log("🔗 Wager recorded in Beast Ledger");
 
+                // Redirect if relocation
+                if (isRelocationMode) {
+                    console.log("🔄 Relocation complete. Triggering redirect...");
+                    localStorage.setItem('BEAST_REDIRECT_TO_RISK', 'true');
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('SWITCH_TAB_TO_RISK_MONITOR'));
+                        onHome(); // Close playground AFTER firing event so Dashboard is ready
+                    }, 800);
+                }
+
             } else {
-                // REAL ERRORS (400, 500, etc.)
                 // REAL ERRORS (400, 500, etc.)
                 if ((res.status === 400 || res.status === 402) && (data.message === 'Insufficient funds' || data.message.includes('funds') || data.code === 'INSUFFICIENT_FUNDS')) {
                     setIsPaymentRequired(true);
@@ -1060,13 +1101,7 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 }
             }
         } catch (error: any) {
-            // Silence "Insufficient Funds" errors if they slipped through as 400s
-            // (Typically handled by the silent check above, but for catch-all safety)
-            if (error?.message?.includes('funds') || error?.message?.includes('Insufficient')) {
-                // Do nothing (silent)
-            } else {
-                console.error("Save failed", error);
-            }
+            console.error("Save failed", error);
             setLastSaveStatus('error');
         } finally {
             setIsSaving(false);
@@ -1105,6 +1140,12 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
     return (
         <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-gray-900 dark:text-gray-100 flex flex-col transition-colors duration-300">
             <Header theme={theme} toggleTheme={toggleTheme} onClose={onClose} onHome={onHome} />
+
+            {isRelocationMode && (
+                <div className="bg-orange-600 text-white text-center py-2 font-bold animate-pulse text-sm shadow-md z-10 relative border-b-4 border-orange-800">
+                    ⚠️ MODO RELOCALIZACIÓN / BOTES ACTIVO ⚠️ Las jugadas se registrarán como débitos del sistema.
+                </div>
+            )}
 
             <main className="flex-grow p-2 sm:p-4 overflow-y-auto space-y-4 max-w-7xl mx-auto w-full">
 
@@ -1238,9 +1279,10 @@ const PlaygroundApp: React.FC<PlaygroundAppProps> = ({ onClose, onHome, language
                 isOpen={isTicketModalOpen}
                 onClose={handleCloseTicketModal} // UPDATED HERE
                 plays={plays.filter(p => calculateRowTotal(p.betNumber, p.gameMode, p.straightAmount, p.boxAmount, p.comboAmount) > 0)}
-                selectedTracks={selectedTracks}
                 selectedDates={selectedDates}
+                selectedTracks={selectedTracks}
                 grandTotal={grandTotal}
+                isRelocation={isRelocationMode}
                 isConfirmed={isTicketConfirmed}
                 setIsConfirmed={setIsTicketConfirmed}
                 ticketNumber={ticketNumber}

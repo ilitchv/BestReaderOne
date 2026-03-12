@@ -44,7 +44,11 @@ export const calculatePotentialPayout = (
     // Actually, NY pays MORE or LESS? Usually standard is 500/5000. 
     // prizeCalculator says: if (!isNY) multiplier = multiplier / 2; -> NY pays DOUBLE (Standard) compared to others?
     // Let's assume Standard (High Risk) for safety if trackName not provided.
-    const isNY = trackName ? (trackName.toLowerCase().includes('new york') || trackName.toLowerCase().includes('horses')) : true;
+    const isNY = trackName ? (
+        trackName.toLowerCase().includes('new york') ||
+        trackName.toLowerCase().includes('/ny') ||
+        trackName.toLowerCase().includes('horses')
+    ) : true;
 
     // -------------------------
     // PICK 3
