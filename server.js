@@ -365,6 +365,30 @@ app.post('/api/admin/users', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
+// GET SINGLE USER BY ID (Admin - always returns fresh finance fields)
+app.get('/api/admin/users/:id', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const user = await User.findById(id).select('-password').lean();
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        res.json({
+            id: user._id.toString(),
+            ...user,
+            _id: undefined,
+            // Explicitly include all finance fields (in case older DB docs lack them)
+            discountEnabled: user.discountEnabled ?? false,
+            discountPercent: user.discountPercent ?? 10,
+            debtBalance: user.debtBalance ?? 0,
+        });
+    } catch (e) {
+        console.error("Get User Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.put('/api/admin/users/:id', async (req, res) => {
     try {
         await connectDB();
@@ -396,6 +420,35 @@ app.put('/api/admin/users/:id', async (req, res) => {
     }
 });
 
+// DELETE USER (Admin Only)
+app.delete('/api/admin/users/:id', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const authHeader = req.headers['authorization'] || req.headers['x-user-role'];
+
+        if (authHeader !== 'admin') {
+            return res.status(403).json({ error: 'Forbidden: Requires Admin privileges' });
+        }
+
+        const user = await User.findByIdAndDelete(id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Audit log
+        await logSystemAudit({
+            action: 'ADMIN_DELETE_USER',
+            user: id,
+            details: `Admin permanently deleted user: ${user.name} (${user.email})`,
+            performedBy: 'ADMIN',
+            targetId: id
+        });
+
+        res.json({ success: true, message: `User ${user.name} deleted.` });
+    } catch (e) {
+        console.error("Delete User Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
 
 
 // ==========================================
@@ -985,7 +1038,7 @@ app.get('/api/auth/me', async (req, res) => {
 app.post('/api/admin/credit', async (req, res) => {
     try {
         await connectDB();
-        const { adminId, targetUserId, amount, note } = req.body;
+        const { adminId, targetUserId, amount, note, action = 'DEPOSIT' } = req.body;
 
         // Verify Admin (Simple check)
         // const admin = await User.findById(adminId);
@@ -993,37 +1046,161 @@ app.post('/api/admin/credit', async (req, res) => {
 
         // 1. SECURITY CHECK: Verify Lumina Secret
         const secret = req.headers['x-lumina-secret'];
-        if (secret !== process.env.LUMINA_SECRET) {
+        const validSecret = process.env.LUMINA_SECRET || 'lumina-secret-2025';
+
+        if (secret !== validSecret) {
             console.warn(`⛔ Unauthorized Credit Attempt. Secret: ${secret}`);
             return res.status(401).json({ error: "Unauthorized Source" });
         }
 
         const block = await ledgerService.addToLedger({
-            action: 'DEPOSIT',
+            action: action, // Supports DEPOSIT or WITHDRAW
             userId: targetUserId,
             amount: parseFloat(amount), // Ensure number
             referenceId: 'ADMIN-MANUAL-' + Date.now(),
-            description: note || 'Admin Manual Credit'
+            description: note || `Admin Manual ${action === 'WITHDRAW' ? 'Debit' : 'Credit'}`
         });
 
         // AUDIT LOG
         await logSystemAudit({
             action: 'FINANCE_ADMIN_ADJUST',
-            user: targetUserId, // The user receiving the credit
+            user: targetUserId, // The user receiving the adjustment
             performedBy: 'ADMIN', // Ideally capture which admin
-            amount: parseFloat(amount),
-            details: `Admin Added Credit: $${amount}. Note: ${note || 'Manual Credit'}`,
-            referenceId: block.hash, // Link to ledger block hash
+            amount: action === 'WITHDRAW' ? -parseFloat(amount) : parseFloat(amount),
+            details: `Admin ${action === 'WITHDRAW' ? 'Debit' : 'Credit'}: $${amount}. Note: ${note || 'Manual Adjustment'}`,
             targetId: targetUserId,
-            metadata: { note, adminId }
+            metadata: { note, adminId, action }
         });
 
         res.json({ success: true, balance: block.balanceAfter });
+
     } catch (e) {
-        console.error("Credit Error:", e);
+        console.error("Admin Credit Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
+
+// C. UPDATE USER FINANCE CONFIG (Discount Settings)
+app.put('/api/admin/users/:id/finance-config', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const { discountEnabled, discountPercent } = req.body;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { discountEnabled, discountPercent },
+            { new: true }
+        );
+
+        if (!updatedUser) return res.status(404).json({ error: 'User not found' });
+
+        // AUDIT LOG
+        await logSystemAudit({
+            action: 'ADMIN_FINANCE_CONFIG',
+            user: id,
+            details: `Updated Finance Config: Discount ${discountEnabled ? 'ON' : 'OFF'} (${discountPercent}%)`,
+            performedBy: 'ADMIN',
+            targetId: id
+        });
+
+        res.json({ success: true, user: updatedUser });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// D. ADJUST USER DEBT (Credit Loading)
+app.post('/api/admin/users/:id/adjust-debt', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const { amount, note } = req.body;
+
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: "Invalid amount" });
+
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // STEP 1: Let the ledger handle the balance increment (DEPOSIT action updates user.balance inside)
+        const block = await ledgerService.addToLedger({
+            action: 'DEPOSIT',
+            userId: id,
+            amount: numAmount,
+            referenceId: 'DEBT-LOAD-' + Date.now(),
+            description: `Credit Load (Debt): $${numAmount}. ${note || ''}`
+        });
+
+        // STEP 2: Now only update debtBalance (balance was already updated by ledger)
+        await User.findByIdAndUpdate(id, { $inc: { debtBalance: numAmount } });
+
+        const updatedUser = await User.findById(id);
+
+        // AUDIT LOG
+        await logSystemAudit({
+            action: 'ADMIN_DEBT_ADJUST',
+            user: id,
+            amount: numAmount,
+            details: `Loaded $${numAmount} as Credit/Debt. New Balance: $${updatedUser.balance}. New Debt: $${updatedUser.debtBalance}`,
+            performedBy: 'ADMIN',
+            targetId: id,
+            referenceId: block.hash
+        });
+
+        res.json({ success: true, balance: updatedUser.balance, debtBalance: updatedUser.debtBalance });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// E. PAY DEBT (Transfer Balance to Debt)
+app.post('/api/admin/users/:id/pay-debt', async (req, res) => {
+    try {
+        await connectDB();
+        const { id } = req.params;
+        const { amount, note } = req.body;
+
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: "Invalid amount" });
+
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const payAmount = Math.min(numAmount, user.debtBalance); // Can't pay more than owed
+        if (payAmount <= 0) return res.status(400).json({ error: "No debt to pay" });
+        if (user.balance < payAmount) return res.status(400).json({ error: "Insufficient real balance to pay debt" });
+
+        // STEP 1: Let ledger debit the real balance
+        const block = await ledgerService.addToLedger({
+            action: 'WITHDRAW',
+            userId: id,
+            amount: payAmount,
+            referenceId: 'DEBT-PAYMENT-' + Date.now(),
+            description: `Debt Payment: $${payAmount}. ${note || ''}`
+        });
+
+        // STEP 2: Reduce debtBalance
+        await User.findByIdAndUpdate(id, { $inc: { debtBalance: -payAmount } });
+
+        const updatedUser = await User.findById(id);
+
+        await logSystemAudit({
+            action: 'ADMIN_DEBT_PAYMENT',
+            user: id,
+            amount: -payAmount,
+            details: `Paid $${payAmount} toward debt. Remaining Debt: $${updatedUser.debtBalance}`,
+            performedBy: 'ADMIN',
+            targetId: id,
+            referenceId: block.hash
+        });
+
+        res.json({ success: true, balance: updatedUser.balance, debtBalance: updatedUser.debtBalance });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 
 // C. ADMIN APIs (Dashboard Data)
 
@@ -1376,15 +1553,23 @@ app.post('/api/tickets', async (req, res) => {
 
         if (!isGuest && userId !== 'guest-session') {
             const cost = ticketData.grandTotal;
+            let actualDebit = cost;
+
+            // Apply User-Specific Discount [NEW]
+            if (userUser && userUser.discountEnabled) {
+                const discount = (userUser.discountPercent || 10) / 100;
+                actualDebit = cost * (1 - discount);
+                console.log(`🎁 Discount Applied: ${userUser.discountPercent}% - Original: ${cost}, Discounted: ${actualDebit}`);
+            }
 
             if (cost > 0) {
                 try {
                     await ledgerService.addToLedger({
                         action: 'WAGER',
                         userId: userId,
-                        amount: -Math.abs(cost),
+                        amount: -Math.abs(actualDebit), // Debit the discounted amount
                         referenceId: ticketData.ticketNumber || 'TICKET-' + Date.now(),
-                        description: `Ticket Purchase #${ticketData.ticketNumber}`
+                        description: `Ticket Purchase #${ticketData.ticketNumber}${userUser?.discountEnabled ? ` (${userUser.discountPercent}% Discount)` : ''}`
                     });
                     ledgerSuccess = true;
 
@@ -1392,10 +1577,16 @@ app.post('/api/tickets', async (req, res) => {
                     await logSystemAudit({
                         action: 'FINANCE_WAGER',
                         user: userId,
-                        amount: -Math.abs(cost),
-                        details: `Ticket Purchase #${ticketData.ticketNumber}`,
+                        amount: -Math.abs(actualDebit),
+                        details: `Ticket Purchase #${ticketData.ticketNumber}${userUser?.discountEnabled ? ` [DISC: ${userUser.discountPercent}%]` : ''}`,
                         referenceId: ticketData.ticketNumber,
-                        targetId: ticketData.ticketNumber
+                        targetId: ticketData.ticketNumber,
+                        metadata: {
+                            originalTotal: cost,
+                            discountedTotal: actualDebit,
+                            discountEnabled: userUser?.discountEnabled,
+                            discountPercent: userUser?.discountPercent
+                        }
                     });
 
                 } catch (ledgerError) {
@@ -1982,6 +2173,11 @@ app.delete('/api/data/:id', async (req, res) => {
 app.get('/api/admin/alerts', async (req, res) => {
     try {
         await connectDB();
+        // Lightweight count mode for dashboard badge polling
+        if (req.query.count === 'true') {
+            const count = await SystemAlert.countDocuments({ active: true });
+            return res.json({ count });
+        }
         const alerts = await SystemAlert.find({ active: true }).sort({ severity: -1, createdAt: -1 });
         res.json(alerts);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1992,6 +2188,42 @@ app.post('/api/admin/alerts/dismiss/:id', async (req, res) => {
         await connectDB();
         await SystemAlert.findByIdAndUpdate(req.params.id, { active: false });
         res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Bulk dismiss alerts (select-all delete)
+app.post('/api/admin/alerts/bulk-dismiss', async (req, res) => {
+    try {
+        await connectDB();
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'No IDs provided' });
+        await SystemAlert.updateMany({ _id: { $in: ids } }, { active: false });
+        res.json({ success: true, dismissed: ids.length });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET supervisor alert emails config
+app.get('/api/admin/config/alert-emails', async (req, res) => {
+    try {
+        await connectDB();
+        const config = await GlobalConfig.findOne({ key: 'alert_supervisor_emails' }).lean();
+        res.json({ emails: config?.value || [] });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT supervisor alert emails config
+app.put('/api/admin/config/alert-emails', async (req, res) => {
+    try {
+        await connectDB();
+        const { emails } = req.body; // Array of up to 3 email strings
+        if (!Array.isArray(emails)) return res.status(400).json({ error: 'emails must be an array' });
+        const cleaned = emails.map(e => e.trim()).filter(e => e && e.includes('@')).slice(0, 3);
+        await GlobalConfig.findOneAndUpdate(
+            { key: 'alert_supervisor_emails' },
+            { key: 'alert_supervisor_emails', value: cleaned },
+            { upsert: true, new: true }
+        );
+        res.json({ success: true, emails: cleaned });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2110,6 +2342,32 @@ if (fs.existsSync(distPath)) {
     console.error(`❌ CRITICAL: 'dist' directory not found.`);
 }
 
+// --- GLOBAL CONFIG API ---
+app.get('/api/config/autopilot', async (req, res) => {
+    try {
+        await connectDB(); // Ensure DB connection for GlobalConfig
+        const config = await GlobalConfig.findOne({ key: 'AUTOPILOT_RELOCATION_ENABLED' });
+        res.json({ enabled: config ? config.value : false });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/config/autopilot', async (req, res) => {
+    try {
+        await connectDB(); // Ensure DB connection for GlobalConfig
+        const { enabled } = req.body;
+        await GlobalConfig.findOneAndUpdate(
+            { key: 'AUTOPILOT_RELOCATION_ENABLED' },
+            { value: enabled, updatedAt: new Date(), updatedBy: 'admin' },
+            { upsert: true, new: true } // new: true returns the updated document
+        );
+        res.json({ success: true, enabled });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // 6. CATCH-ALL
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return res.status(404).json({ error: 'API endpoint not found' });
@@ -2146,32 +2404,6 @@ if (require.main === module) {
             console.log('[WebSocket] Client disconnected');
             geminiLive.disconnect();
         });
-    });
-
-    // --- GLOBAL CONFIG API ---
-    app.get('/api/config/autopilot', async (req, res) => {
-        try {
-            await connectDB(); // Ensure DB connection for GlobalConfig
-            const config = await GlobalConfig.findOne({ key: 'AUTOPILOT_RELOCATION_ENABLED' });
-            res.json({ enabled: config ? config.value : false });
-        } catch (e) {
-            res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.post('/api/config/autopilot', async (req, res) => {
-        try {
-            await connectDB(); // Ensure DB connection for GlobalConfig
-            const { enabled } = req.body;
-            await GlobalConfig.findOneAndUpdate(
-                { key: 'AUTOPILOT_RELOCATION_ENABLED' },
-                { value: enabled, updatedAt: new Date(), updatedBy: 'admin' },
-                { upsert: true, new: true } // new: true returns the updated document
-            );
-            res.json({ success: true, enabled });
-        } catch (e) {
-            res.status(500).json({ error: e.message });
-        }
     });
 
     server.listen(PORT, '0.0.0.0', () => {

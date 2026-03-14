@@ -1,5 +1,3 @@
-// PASTE YOUR components/Sidebar.tsx CODE HERE
-
 import React from 'react';
 import { ViewType } from '../../../types';
 
@@ -7,11 +5,14 @@ interface SidebarProps {
     activeView: ViewType;
     onViewChange: (view: ViewType) => void;
     pendingCount?: number;
+    alertCount?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, pendingCount = 0 }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, pendingCount = 0, alertCount = 0 }) => {
+    const inboxBadge = pendingCount + alertCount;
+
     return (
-        <aside className="hidden md:flex w-64 flex-col border-r border-brand-panel-lighter bg-brand-dark shrink-0">
+        <aside className="hidden md:flex w-64 flex-col border-r border-slate-700 bg-slate-900 shrink-0">
             <div className="flex h-full flex-col justify-between p-4">
                 <div className="flex flex-col gap-6">
                     <div className="flex items-center gap-3 px-2">
@@ -20,72 +21,45 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, pendingCoun
                         </div>
                         <div className="flex flex-col">
                             <h1 className="text-white text-base font-bold leading-normal tracking-wide">BEAST<span className="font-light">OFFICE</span></h1>
-                            <p className="text-brand-text-muted text-[10px] font-medium uppercase tracking-widest">v1.0 Operational</p>
+                            <p className="text-slate-400 text-[10px] font-medium uppercase tracking-widest">v1.0 Operational</p>
                         </div>
                     </div>
 
-                    <nav className="flex flex-col gap-2">
+                    <nav className="flex flex-col gap-1.5">
+                        <NavItem icon="account_tree" label="Vista de Árbol" active={activeView === 'tree'} onClick={() => onViewChange('tree')} />
+                        <NavItem icon="directory_sync" label="Directorio" active={activeView === 'directory'} onClick={() => onViewChange('directory')} />
                         <NavItem
-                            icon="account_tree"
-                            label="Vista de Árbol"
-                            active={activeView === 'tree'}
-                            onClick={() => onViewChange('tree')}
-                        />
-                        <NavItem
-                            icon="directory_sync"
-                            label="Directorio"
-                            active={activeView === 'directory'}
-                            onClick={() => onViewChange('directory')}
-                        />
-                        <NavItem
-                            icon="person_add"
+                            icon="inbox"
                             label="Solicitudes"
                             active={activeView === 'requests'}
                             onClick={() => onViewChange('requests')}
-                            badge={pendingCount > 0 ? pendingCount : undefined}
+                            badge={inboxBadge > 0 ? inboxBadge : undefined}
+                            badgeColor={alertCount > 0 ? 'bg-red-500' : 'bg-orange-500'}
                         />
-                        <NavItem
-                            icon="payments"
-                            label="Comisiones"
-                            active={activeView === 'commissions'}
-                            onClick={() => onViewChange('commissions')}
-                        />
-                        <NavItem
-                            icon="support_agent"
-                            label="Agente Live"
-                            active={activeView === 'support'}
-                            onClick={() => onViewChange('support')}
-                        />
-                        <NavItem
-                            icon="analytics"
-                            label="Reportes"
-                            active={activeView === 'reports'}
-                            onClick={() => onViewChange('reports')}
-                        />
-                        <NavItem
-                            icon="settings"
-                            label="Configuración"
-                            active={activeView === 'config'}
-                            onClick={() => onViewChange('config')}
-                        />
+                        <NavItem icon="payments" label="Comisiones" active={activeView === 'commissions'} onClick={() => onViewChange('commissions')} />
+                        <NavItem icon="support_agent" label="Agente Live" active={activeView === 'support'} onClick={() => onViewChange('support')} />
+                        <NavItem icon="analytics" label="Reportes" active={activeView === 'reports'} onClick={() => onViewChange('reports')} />
+                        <NavItem icon="settings" label="Configuración" active={activeView === 'config'} onClick={() => onViewChange('config')} />
                     </nav>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-brand-panel/50 border border-brand-panel-lighter mb-4">
-                    <p className="text-[10px] text-brand-text-muted uppercase font-bold tracking-widest mb-2">Estado Semanal</p>
-                    <div className="flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-brand-cyan animate-pulse"></div>
-                        <span className="text-xs text-white font-bold">Calificado (Agente)</span>
+                <div>
+                    <div className="p-4 rounded-2xl bg-slate-800 border border-slate-700 mb-4">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2">Estado Semanal</p>
+                        <div className="flex items-center gap-2">
+                            <div className="size-2 rounded-full bg-brand-cyan animate-pulse"></div>
+                            <span className="text-xs text-white font-bold">Calificado (Agente)</span>
+                        </div>
                     </div>
-                </div>
 
-                <button
-                    onClick={() => window.location.reload()}
-                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg h-10 px-4 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-sm font-bold"
-                >
-                    <span className="material-symbols-outlined text-lg">logout</span>
-                    <span>Cerrar Sesión</span>
-                </button>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg h-10 px-4 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-sm font-bold"
+                    >
+                        <span className="material-symbols-outlined text-lg">logout</span>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
             </div>
         </aside>
     );
@@ -97,14 +71,15 @@ interface NavItemProps {
     active: boolean;
     onClick: () => void;
     badge?: number;
+    badgeColor?: string;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick, badge }) => (
+const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick, badge, badgeColor = 'bg-orange-500' }) => (
     <button
         onClick={onClick}
         className={`group flex items-center justify-between px-3 py-2.5 rounded-xl transition-all w-full ${active
-            ? 'bg-brand-panel text-brand-cyan border border-brand-panel-lighter'
-            : 'text-brand-text-muted hover:bg-brand-panel hover:text-white'
+            ? 'bg-slate-700 text-brand-cyan border border-slate-600'
+            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
     >
         <div className="flex items-center gap-3">
@@ -114,7 +89,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick, badge }
             <span className="text-sm font-semibold tracking-wide">{label}</span>
         </div>
         {badge !== undefined && (
-            <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-lg animate-pulse">
+            <span className={`${badgeColor} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-lg animate-pulse`}>
                 {badge}
             </span>
         )}

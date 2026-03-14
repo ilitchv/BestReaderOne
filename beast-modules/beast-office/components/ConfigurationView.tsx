@@ -1,6 +1,6 @@
 // PASTE YOUR components/ConfigurationView.tsx CODE HERE
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User } from '../../../types';
 
 interface Props { user: User; onUpdateUser: (u: User) => void; }
@@ -9,11 +9,35 @@ const ConfigurationView: React.FC<Props> = ({ user, onUpdateUser }) => {
     const [formData, setFormData] = useState<User>(user);
     const [isDirty, setIsDirty] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'network'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'network' | 'notifications'>('profile');
+    const [supervisorEmails, setSupervisorEmails] = useState(['', '', '']);
+    const [emailSaved, setEmailSaved] = useState(false);
 
     const handleChange = (field: keyof User, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         setIsDirty(true);
+    };
+
+    useEffect(() => {
+        fetch('/api/admin/config/alert-emails')
+            .then(r => r.json())
+            .then(d => {
+                const emails = d.emails || [];
+                setSupervisorEmails([emails[0] || '', emails[1] || '', emails[2] || '']);
+            })
+            .catch(() => { });
+    }, []);
+
+    const handleSaveEmails = async () => {
+        try {
+            await fetch('/api/admin/config/alert-emails', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ emails: supervisorEmails })
+            });
+            setEmailSaved(true);
+            setTimeout(() => setEmailSaved(false), 3000);
+        } catch { alert('Error al guardar los correos.'); }
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,10 +143,70 @@ const ConfigurationView: React.FC<Props> = ({ user, onUpdateUser }) => {
                         />
                     </div>
                 )}
+                {activeTab === 'notifications' && (
+                    <div className="animate-in fade-in duration-300 space-y-6">
+                        <section className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl">
+                            <div className="flex items-center gap-3 mb-6">
+                                <span className="material-symbols-outlined text-brand-cyan">mail</span>
+                                <div>
+                                    <h3 className="text-white font-bold">Supervisores On-Call</h3>
+                                    <p className="text-slate-400 text-xs mt-0.5">Recibirán un email cuando un resultado de sorteo no se capture automáticamente.</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                {[0, 1, 2].map(i => (
+                                    <div key={i} className="space-y-1.5">
+                                        <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Supervisor On-Call {i + 1}</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 material-symbols-outlined text-[18px]">alternate_email</span>
+                                            <input
+                                                type="email"
+                                                value={supervisorEmails[i]}
+                                                onChange={e => {
+                                                    const next = [...supervisorEmails];
+                                                    next[i] = e.target.value;
+                                                    setSupervisorEmails(next);
+                                                }}
+                                                placeholder={`supervisor${i + 1}@dominio.com`}
+                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-brand-cyan focus:border-brand-cyan outline-none placeholder-slate-600 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-6 flex items-center gap-4">
+                                <button
+                                    onClick={handleSaveEmails}
+                                    className="px-6 py-2.5 bg-brand-cyan text-black font-bold rounded-xl hover:opacity-90 transition-all text-sm flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">save</span>
+                                    Guardar Correos
+                                </button>
+                                {emailSaved && <span className="text-green-400 text-sm font-bold animate-in fade-in">✅ Guardado correctamente</span>}
+                            </div>
+                        </section>
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-xs text-slate-400">
+                            <p className="font-bold text-slate-300 mb-2">⚙️ Requisitos para emails Gmail:</p>
+                            <ol className="list-decimal list-inside space-y-1">
+                                <li>Configura <code className="bg-slate-700 px-1 rounded">ALERT_EMAIL_FROM</code> en tu <code className="bg-slate-700 px-1 rounded">.env</code> (tu dirección Gmail)</li>
+                                <li>Crea una <strong>App Password</strong> en Google → Seguridad → Contraseñas de app</li>
+                                <li>Configura <code className="bg-slate-700 px-1 rounded">ALERT_EMAIL_PASS</code> en tu <code className="bg-slate-700 px-1 rounded">.env</code> con esa App Password</li>
+                            </ol>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
+
+const TabBtn: React.FC<{ active: boolean; onClick: () => void; label: string }> = ({ active, onClick, label }) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${active ? 'bg-slate-700 text-white border border-slate-600' : 'text-slate-400 hover:text-white'
+            }`}
+    >{label}</button>
+);
 
 const ConfigInput: React.FC<{ label: string, value: string, readOnly?: boolean, onChange?: (val: string) => void, type?: string }> = ({ label, value, readOnly, onChange, type = "text" }) => (
     <div className="space-y-1.5">

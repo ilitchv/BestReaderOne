@@ -262,6 +262,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
     const [isWalletOpen, setIsWalletOpen] = useState(false);
     const [selectedUserForWallet, setSelectedUserForWallet] = useState<User | null>(null);
 
+    // SYSTEM ALERTS BADGE
+    const [alertBadge, setAlertBadge] = useState(0);
+
     // PAYOUTS STATE
     const [prizeTable, setPrizeTable] = useState<PrizeTable>(DEFAULT_PRIZE_TABLE);
 
@@ -291,6 +294,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
     const [withdrawalProcessId, setWithdrawalProcessId] = useState<string | null>(null);
     const [autoPayConfirmId, setAutoPayConfirmId] = useState<string | null>(null);
     const [withdrawalTxHash, setWithdrawalTxHash] = useState('');
+
+    // Alert Polling for Network Tab Badge (Lightweight)
+    useEffect(() => {
+        const fetchAlertCount = async () => {
+            try {
+                const res = await fetch('/api/admin/alerts?count=true');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAlertBadge(data.count || 0);
+                }
+            } catch (e) { console.error("Alert badge poll failed", e); }
+        };
+        fetchAlertCount();
+        const interval = setInterval(fetchAlertCount, 60000); // Poll every minute
+        return () => clearInterval(interval);
+    }, []);
 
     const allTracks = RESULTS_CATALOG.map(c => ({
         id: c.id,
@@ -376,10 +395,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
             const res = await fetch('/api/admin/users');
             if (res.ok) {
                 const userData = await res.json();
-                console.log("AdminDashboard: Loaded Users from API:", userData); // DEBUG: Inspect loaded users
                 setUsers(userData);
+                // NOTE: We intentionally do NOT sync selectedUserForWallet here.
+                // The WalletManagerModal manages its own state for discount config.
+                // Balance data gets refreshed via onWalletSuccess callback instead.
             }
         } catch (e) { console.error("Failed to load users", e); }
+    };
+
+    // Targeted refresh: only update the selected wallet user's balance/debt fields  
+    // from a fresh API call. Does not touch discount config to avoid state reset.
+    const refreshSelectedWalletUser = async (userId: string) => {
+        try {
+            const res = await fetch('/api/admin/users');
+            if (res.ok) {
+                const userData = await res.json();
+                setUsers(userData);
+                const fresh = userData.find((u: User) => u.id === userId);
+                if (fresh) {
+                    setSelectedUserForWallet(prev => prev ? {
+                        ...prev,
+                        balance: fresh.balance,
+                        debtBalance: fresh.debtBalance ?? prev.debtBalance
+                    } : prev);
+                }
+            }
+        } catch (e) { console.error("Failed to refresh wallet user", e); }
     };
 
     const loadAuditLog = async () => {
@@ -524,7 +565,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                         straightAmount: d.straightAmount,
                         boxAmount: d.boxAmount,
                         comboAmount: d.comboAmount,
+                        sourceTrack: d.sourceTrack, // NEW: Preserve track
                     }));
+
                     setStagingRelocationPlays(playsToStage);
                 } catch (e) { console.error("Error parsing relocation queue", e); }
             }
@@ -858,8 +901,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
         setIsUserModalOpen(false);
         playSound('success');
     };
-    const handleDeleteUser = (userId: string) => { if (confirm("Are you sure you want to delete this user? This action cannot be undone.")) { if (localDbService.deleteUser(userId)) { loadUsersFromDb(); playSound('delete'); } } };
-    const handleOpenWallet = (user: User) => { setSelectedUserForWallet(user); setIsWalletOpen(true); };
+    const handleDeleteUser = async (userId: string) => {
+        if (!confirm("¿Eliminar este usuario permanentemente? Esta acción no se puede deshacer.")) return;
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: { 'x-user-role': 'admin' }
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(`Error al eliminar: ${err.error}`);
+                return;
+            }
+            playSound('delete');
+            await loadUsersFromDb();
+        } catch (e) {
+            alert('Error de red al intentar eliminar el usuario.');
+        }
+    };
+    const handleOpenWallet = async (user: User) => {
+        try {
+            // Always fetch fresh user data so discount/debt fields are up-to-date
+            const res = await fetch(`/api/admin/users/${user.id}`);
+            if (res.ok) {
+                const freshUser = await res.json();
+                setSelectedUserForWallet({ ...user, ...freshUser });
+            } else {
+                setSelectedUserForWallet(user);
+            }
+        } catch {
+            setSelectedUserForWallet(user);
+        }
+        setIsWalletOpen(true);
+    };
     const filteredUsers = users.filter(u => (u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase())) && u.status !== 'pending');
     const pendingUsers = users.filter(u => u.status === 'pending');
 
@@ -1194,7 +1268,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                         )}
                     </button>
 
-                    <button onClick={() => setActiveTab('network')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'network' ? 'bg-amber-500 text-black shadow' : 'text-gray-400 hover:text-white'}`}>Network</button>
+                    <button onClick={() => setActiveTab('network')} className={`relative px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'network' ? 'bg-amber-500 text-black shadow' : 'text-gray-400 hover:text-white'}`}>
+                        Network
+                        {alertBadge > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full animate-pulse border border-slate-900">
+                                {alertBadge}
+                            </span>
+                        )}
+                    </button>
 
                     <button onClick={() => setActiveTab('results')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'results' ? 'bg-neon-cyan text-black shadow' : 'text-gray-400 hover:text-white'}`}>Results</button>
                     <button onClick={() => setActiveTab('winners')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'winners' ? 'bg-neon-green text-black shadow' : 'text-gray-400 hover:text-white'}`}>Winners</button>
@@ -1234,6 +1315,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                                 <thead className="bg-slate-900 text-xs uppercase font-bold text-gray-400 border-b border-slate-700 sticky top-0">
                                     <tr>
                                         <th className="p-3">#</th>
+                                        <th className="p-3">Track</th>
                                         <th className="p-3">Number</th>
                                         <th className="p-3 w-32">Mode</th>
                                         <th className="p-3 text-center">Str $</th>
@@ -1246,6 +1328,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                                     {stagingRelocationPlays.map((play, idx) => (
                                         <tr key={play.id} className="hover:bg-slate-800/50 transition-colors">
                                             <td className="p-3 text-gray-500 font-bold">{idx + 1}</td>
+                                            <td className="p-3">
+                                                <span className="text-neon-cyan text-xs font-bold bg-cyan-500/10 px-2 py-1 rounded">
+                                                    {play.sourceTrack || 'Unknown'}
+                                                </span>
+                                            </td>
                                             <td className="p-3">
                                                 <input
                                                     type="text"
@@ -1321,6 +1408,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                                             </td>
                                         </tr>
                                     ))}
+
                                     {stagingRelocationPlays.length === 0 && (
                                         <tr>
                                             <td colSpan={7} className="p-12 text-center text-gray-500 italic">No plays. Please go back or add some.</td>
@@ -1342,9 +1430,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                                 <button
                                     onClick={() => {
                                         if (onRelocate) {
-                                            onRelocate(stagingRelocationPlays);
+                                            // We define a new protocol: if it's a relocation, we can tag the plays
+                                            const taggedPlays = stagingRelocationPlays.map(p => ({
+                                                ...p,
+                                                isRelocation: true
+                                            }));
+                                            onRelocate(taggedPlays);
                                             setStagingRelocationPlays(null);
                                         }
+
                                     }}
                                     disabled={stagingRelocationPlays.length === 0 || !onRelocate}
                                     className="px-6 py-2 bg-neon-cyan hover:bg-cyan-400 text-black font-black rounded shadow-[0_0_15px_rgba(0,255,255,0.3)] disabled:opacity-50 transition-all flex items-center gap-2 group"
@@ -1363,7 +1457,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                 {activeTab === 'sales' && ( /* ... Sales Content ... */ <div className="space-y-6"><div className="grid grid-cols-2 lg:grid-cols-5 gap-4"><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Gross Sales</p><p className="text-3xl font-bold text-green-400">${(grossSales || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)] relative overflow-hidden bg-gradient-to-br from-slate-800 to-red-900/20"><p className="text-xs text-red-400 uppercase font-bold mb-1">Dropped Amount</p><p className="text-3xl font-bold text-red-400">-${(droppedAmount || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.1)] relative overflow-hidden bg-gradient-to-br from-slate-800 to-orange-900/20"><p className="text-xs text-orange-400 uppercase font-bold mb-1">Dropped Profit</p><p className="text-3xl font-bold text-orange-400">${(droppedProfit || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.1)] relative overflow-hidden"><p className="text-xs text-blue-400 uppercase font-bold mb-1">Net Balance</p><p className="text-3xl font-bold text-blue-400">${(netBalance || 0).toFixed(2)}</p></div><div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden"><p className="text-xs text-slate-400 uppercase font-bold mb-1">Net Profit</p><p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-500'}`}>${(netProfit || 0).toFixed(2)}</p></div></div><div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-wrap gap-4 items-center justify-between"><div className="flex flex-wrap gap-4 items-center"><input type="text" placeholder="Search Ticket ID..." className="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-sm focus:border-neon-cyan outline-none w-64" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /><div className="flex items-center gap-2 bg-slate-900 border border-slate-600 rounded-lg px-2"><span className="text-xs font-bold text-slate-500">FROM</span><input type="date" className="bg-transparent py-2 text-sm focus:outline-none text-white w-32" value={dateRange.start} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} /><span className="text-slate-600">|</span><span className="text-xs font-bold text-slate-500">TO</span><input type="date" className="bg-transparent py-2 text-sm focus:outline-none text-white w-32" value={dateRange.end} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} /></div><button onClick={() => { setSearchTerm(''); setDateRange({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] }) }} className="text-xs text-slate-400 hover:text-white underline">Clear</button></div><div className="flex items-center gap-4">{isLoadingTickets && (<span className="text-xs text-neon-cyan animate-pulse flex items-center gap-2"><div className="w-2 h-2 bg-neon-cyan rounded-full"></div> Syncing...</span>)}<div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700"><button onClick={() => setSalesViewMode('tickets')} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${salesViewMode === 'tickets' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Tickets View</button><button onClick={() => setSalesViewMode('plays')} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${salesViewMode === 'plays' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>Plays View</button><button onClick={() => setSalesViewMode('risk')} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${salesViewMode === 'risk' ? 'bg-red-600 text-white shadow-lg shadow-red-500/30' : 'text-slate-400 hover:text-white'}`}>Risk Monitor</button></div><button onClick={startScan} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg flex items-center gap-2 shadow-lg transition-transform hover:-translate-y-0.5 border border-slate-600"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M7 12h10" /></svg> Scan QR</button></div></div>{salesViewMode === 'plays' && selectedClaimKeys.size > 0 && (<div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[70] bg-black/90 border border-neon-cyan/50 shadow-[0_0_30px_rgba(0,255,255,0.3)] rounded-full px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-10 fade-in duration-300"><div className="text-white font-bold"><span className="text-neon-cyan">{selectedClaimKeys.size}</span> Selected Wins</div><div className="h-6 w-px bg-gray-700"></div><div className="text-green-400 font-mono font-bold text-lg">${(totalClaimsAmount || 0).toFixed(2)}</div><button onClick={handleProcessClaims} className="ml-2 px-6 py-2 bg-neon-cyan hover:bg-cyan-400 text-black font-black rounded-full shadow-lg transition-all transform hover:scale-105">PAY OUT</button><button onClick={() => setSelectedClaimKeys(new Set())} className="text-gray-500 hover:text-white ml-2">✕</button></div>)}
                     {salesViewMode === 'risk' && (
                         <RiskMonitor
-                            tickets={filteredTickets}
+                            tickets={tickets}
                             prizeTable={prizeTable}
                             users={users}
                         />
@@ -2156,7 +2250,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onRelocate }) 
                     </div>
                 </div>
             )}
-            <WalletManagerModal isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} user={selectedUserForWallet} onSuccess={() => { loadUsersFromDb(); }} />
+            <WalletManagerModal isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} user={selectedUserForWallet} onSuccess={() => { if (selectedUserForWallet?.id) refreshSelectedWalletUser(selectedUserForWallet.id); }} />
             {/* PAYOUT SUCCESS MODAL */}
             {payoutModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">

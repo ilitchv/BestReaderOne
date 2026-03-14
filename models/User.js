@@ -36,7 +36,11 @@ const userSchema = new mongoose.Schema({
         direct: { type: Number, default: 0 },
         indirect: { type: Number, default: 0 },
         deep: { type: Number, default: 0 }
-    }
+    },
+    // Financial Module Extension [NEW]
+    discountEnabled: { type: Boolean, default: false },
+    discountPercent: { type: Number, default: 10 }, // 1-25%
+    debtBalance: { type: Number, default: 0 } // Amount owed to the house
 }, {
     timestamps: true
 });

@@ -11,7 +11,9 @@ export interface Play {
   relocatedTicketId?: string; // NEW: Reference to the ticket where it was dropped
   commissionRate?: number; // NEW: E.g., 0.15 or 0.05
   commissionAmount?: number; // NEW: Calculated commission
+  sourceTrack?: string; // NEW: Source track context during relocation
 }
+
 
 export interface WizardPlay {
   betNumber: string;
@@ -220,6 +222,11 @@ export interface User {
     tokens: number;
     btc: number;
   };
+
+  // Financial Module [NEW]
+  discountEnabled?: boolean;
+  discountPercent?: number;
+  debtBalance?: number;
 
   children?: User[]; // For Tree View
 }

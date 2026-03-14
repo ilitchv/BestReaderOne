@@ -504,42 +504,42 @@ const TicketModal: React.FC<TicketModalProps> = ({
     const getResultId = (trackName: string) => {
         const map: Record<string, string> = {
             // USA Regular
-            'New York AM': 'usa/ny/Midday', 'New York PM': 'usa/ny/Evening',
-            'Georgia Midday': 'usa/ga/Midday', 'Georgia Evening': 'usa/ga/Evening', 'Georgia Night': 'usa/ga/Night',
-            'New Jersey AM': 'usa/nj/Midday', 'New Jersey PM': 'usa/nj/Evening',
-            'Florida AM': 'usa/fl/Midday', 'Florida PM': 'usa/fl/Evening',
-            'Connect AM': 'usa/ct/Day', 'Connect PM': 'usa/ct/Night',
-            'Pennsylvania AM': 'usa/pa/Day', 'Pennsylvania PM': 'usa/pa/Evening',
-
-            // USA New
             'Texas Morning': 'usa/tx/Morning', 'Texas Day': 'usa/tx/Day', 'Texas Evening': 'usa/tx/Evening', 'Texas Night': 'usa/tx/Night',
-            'Maryland AM': 'usa/md/AM', 'Maryland PM': 'usa/md/PM',
-            'South C Midday': 'usa/sc/Midday', 'South C Evening': 'usa/sc/Evening',
+            'Georgia Midday': 'usa/ga/Midday', 'Georgia Evening': 'usa/ga/Evening', 'Georgia Night': 'usa/ga/Night',
+            'Maryland Midday': 'usa/md/Midday', 'Maryland Evening': 'usa/md/Evening',
+            'South Carolina Midday': 'usa/sc/Midday', 'South Carolina Evening': 'usa/sc/Evening',
             'Michigan Day': 'usa/mi/Day', 'Michigan Night': 'usa/mi/Night',
-            'Delaware AM': 'usa/de/Day', 'Delaware PM': 'usa/de/Night',
-            'Tennessee Midday': 'usa/tn/Midday', 'Tennessee Evening': 'usa/tn/Evening',
+            'New Jersey Midday': 'usa/nj/Midday', 'New Jersey Evening': 'usa/nj/Evening',
+            'New York Midday': 'usa/ny/Midday', 'New York Evening': 'usa/ny/Evening',
+            'Pennsylvania Midday': 'usa/pa/Midday', 'Pennsylvania Evening': 'usa/pa/Evening',
+            'Tennessee Morning': 'usa/tn/Morning', 'Tennessee Midday': 'usa/tn/Midday', 'Tennessee Evening': 'usa/tn/Evening',
+            'Florida Midday': 'usa/fl/Midday', 'Florida Evening': 'usa/fl/Evening',
+            'Connecticut Midday': 'usa/ct/Midday', 'Connecticut Night': 'usa/ct/Night',
+            'Delaware Day': 'usa/de/Day', 'Delaware Night': 'usa/de/Night',
             'Massachusetts Midday': 'usa/ma/Midday', 'Massachusetts Evening': 'usa/ma/Evening',
             'Virginia Day': 'usa/va/Day', 'Virginia Night': 'usa/va/Night',
-            'North Carolina AM': 'usa/nc/Day', 'North Carolina PM': 'usa/nc/Evening',
+            'North Carolina Day': 'usa/nc/Day', 'North Carolina Evening': 'usa/nc/Evening',
 
             // Santo Domingo
-            'La Primera': 'rd/primer/AM', 'La Primera AM': 'rd/primer/AM', 'La Primera PM': 'rd/primer/PM',
-            'Lotedom': 'rd/lotedom/Tarde',
-            'La Suerte': 'rd/suerte/AM', 'La Suerte PM': 'rd/suerte/PM',
-            'Loteria Real': 'rd/real/Mediodía',
-            'Gana Mas': 'rd/ganamas/Tarde',
+            'La Primera AM': 'rd/primer/AM', 'La Primera PM': 'rd/primer/PM', 'La Primera': 'rd/primer/AM',
+            'La Suerte AM': 'rd/suerte/AM', 'La Suerte PM': 'rd/suerte/PM', 'La Suerte': 'rd/suerte/AM',
+            'Lotería Real': 'rd/real/Mediodía',
+            'Gana Más': 'rd/ganamas/Tarde',
+            'LoteDom': 'rd/lotedom/Tarde',
             'Loteka': 'rd/loteka/Noche',
-            'Quiniela Pale': 'rd/quiniela/Diario',
-            'Nacional': 'rd/nacional/Noche',
+            'Leidsa Quiniela Palé': 'rd/leidsa/Noche',
+            'Nacional Noche': 'rd/nacional/Noche',
+            'King Lottery Dia': 'rd/king/Dia', 'King Lottery Noche': 'rd/king/Noche',
+            'Anguilla 10AM': 'rd/anguila/10', 'Anguilla 1PM': 'rd/anguila/13', 'Anguilla 6PM': 'rd/anguila/18', 'Anguilla 9PM': 'rd/anguila/21',
 
             // Special / Legacy
-            'New York Horses': 'special/ny-horses/R1',
-            'Brooklyn Midday': 'special/ny-bk/AM', 'Brooklyn Evening': 'special/ny-bk/PM',
-            'Front Midday': 'special/ny-fp/AM', 'Front Evening': 'special/ny-fp/PM',
+            'New York Horses': 'special/ny-horses',
+            'Brooklyn Midday': 'special/bk/Midday', 'Brooklyn Evening': 'special/bk/Evening',
+            'Win-4 Front AM': 'special/front/Midday', 'Win-4 Front PM': 'special/front/Evening',
             'Venezuela': 'special/venezuela',
             'Pulito': 'special/pulito',
         };
-        return map[trackName];
+        return map[trackName] || trackName;
     };
 
     const formatCashier = (id: string) => {
@@ -773,8 +773,8 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                     status = 'WINNER';
                                                     badgeClass = 'bg-green-500/20 text-green-400 border-green-500/50';
                                                 } else if (!isPending) {
-                                                    status = 'LOSER';
-                                                    // UPDATED: Gray color for losers instead of red to be less discouraging
+                                                    status = 'NO MATCH';
+                                                    // UPDATED: Gray color for no match instead of red to be less discouraging
                                                     badgeClass = 'bg-slate-700/50 text-slate-400 border-slate-600';
                                                 }
 
@@ -783,9 +783,11 @@ const TicketModal: React.FC<TicketModalProps> = ({
                                                         <td className="py-2 px-2 text-center text-gray-400 font-mono text-[10px] border-r border-dashed border-gray-200">
                                                             {index + 1}
                                                         </td>
-                                                        <td className="py-2 px-2 font-black text-sm text-brand-dark tracking-tighter">
+                                                        <td className={`py-2 px-2 font-black text-sm tracking-tighter ${(isRelocation || (play as any).isRelocation) ? 'text-[#1e3a8a]' : 'text-brand-dark'}`} style={(isRelocation || (play as any).isRelocation) ? { fontFamily: "'Pacifico', cursive", fontSize: '1.1rem' } : {}}>
                                                             {play.betNumber}
                                                         </td>
+
+
                                                         <td className="py-2 px-2 text-[10px] font-bold text-gray-600 truncate uppercase">
                                                             {play.gameMode === 'Single Action' ? 'S.Act' : play.gameMode}
                                                         </td>

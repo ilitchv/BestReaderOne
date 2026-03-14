@@ -231,6 +231,45 @@ async function processAutoDrops() {
     }
 }
 
+// 5. Validate Time (Market Open/Closed)
+const validateTime = async (ticketData) => {
+    try {
+        const now = new Date();
+        const nowStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        const todayStr = getTodayStr();
+
+        const tracks = Array.isArray(ticketData.tracks) ? ticketData.tracks : [ticketData.tracks];
+        const dates = Array.isArray(ticketData.betDates) ? ticketData.betDates : [ticketData.betDates];
+
+        for (const trackName of tracks) {
+            const catalogItem = RESULTS_CATALOG.find(c =>
+                c.lottery === trackName ||
+                `${c.lottery} ${c.draw}` === trackName ||
+                (c.lottery + " " + c.draw).trim() === trackName.trim()
+            );
+
+            if (!catalogItem) continue;
+
+            for (const dateStr of dates) {
+                if (dateStr < todayStr) {
+                    return { allowed: false, reason: `Track ${trackName} para la fecha ${dateStr} ya cerró (Fecha pasada).` };
+                }
+
+                if (dateStr === todayStr) {
+                    if (catalogItem.closeTime && nowStr >= catalogItem.closeTime) {
+                        return { allowed: false, reason: `El sorteo ${trackName} ya cerró (${catalogItem.closeTime}).` };
+                    }
+                }
+            }
+        }
+
+        return { allowed: true };
+    } catch (e) {
+        console.error("validateTime error:", e);
+        return { allowed: true };
+    }
+};
+
 /**
  * Real-time drop trigger for new tickets in the 20min window
  */
@@ -311,5 +350,6 @@ module.exports = {
     validatePlays,
     processAutoDrops,
     triggerRealTimeDrop,
-    getLimits
+    getLimits,
+    validateTime
 };

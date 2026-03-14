@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { TicketData, PrizeTable, Play, User } from '../types';
 // @ts-ignore
-import { WAGER_LIMITS } from '../constants'; // Using @ts-ignore if tsconfig path issues, else normal import
+import { WAGER_LIMITS, RESULTS_CATALOG } from '../constants'; // Using @ts-ignore if tsconfig path issues, else normal import
 import { calculatePotentialPayout } from '../utils/riskCalculator';
 
 import GlobalLimitsModal from './GlobalLimitsModal';
@@ -62,18 +62,34 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
 
     const [filterTab, setFilterTab] = useState<'active' | 'expired'>('active');
     const [trackFilter, setTrackFilter] = useState<string>('all');
-    const [autopilotEnabled, setAutopilotEnabled] = useState(false); // NEW
+    const [ticketSearch, setTicketSearch] = useState<string>('');
+    const [autopilotEnabled, setAutopilotEnabled] = useState<boolean>(() => {
+        const saved = localStorage.getItem('AUTOPILOT_ENABLED');
+        return saved === 'true';
+    });
+
+    // Helper to get clean track name from catalog ID (copied from TicketModal)
+    const getTrackName = (id: string) => {
+        if (id === 'special/pulito') return 'Pulito';
+        if (id === 'special/venezuela') return 'Venezuela';
+        const item = RESULTS_CATALOG.find(t => t.id === id);
+        if (item) return item.draw ? `${item.lottery} ${item.draw}` : item.lottery;
+        return id;
+    };
 
     // --- DERIVED DATA: INDIVIDUAL PLAY RISKS ---
     const allRiskRows = useMemo(() => {
         const rows: RiskRow[] = [];
         const droppedAvailable = new Map<string, { straight: number, box: number, combo: number }>();
 
-        // 1. Gather all relocated/dropped amounts first
+        // 1. Gather all relocated/dropped amounts first (Track-Aware)
         tickets.forEach(ticket => {
             if (ticket.isRelocation) {
                 ticket.plays.forEach(play => {
-                    const key = `${play.gameMode}|${play.betNumber}`;
+                    // Use sourceTrack if available, fallback to the first track of the ticket
+                    const trackKey = play.sourceTrack || (ticket.tracks && ticket.tracks[0]) || '';
+                    const key = `${play.gameMode}|${play.betNumber}|${trackKey}`;
+
                     const current = droppedAvailable.get(key) || { straight: 0, box: 0, combo: 0 };
                     droppedAvailable.set(key, {
                         straight: current.straight + (play.straightAmount || 0),
@@ -84,110 +100,138 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
             }
         });
 
-        // 2. Generate risk rows for normal plays
+        // 2. Generate risk rows for normal plays (One row per Track-Play combination)
         tickets.forEach(ticket => {
             if (ticket.isRelocation) return;
 
             const user = users.find(u => u.id === ticket.userId);
             const userName = user ? user.name : 'Guest';
 
-            ticket.plays.forEach((play, index) => {
-                const isNyInvolved = ticket.tracks.some(t => {
-                    const l = t.toLowerCase();
-                    return l.includes('new york') || l.includes('/ny') || l.includes('ny/');
-                });
+            ticket.tracks.forEach(track => {
+                const isNyInvolved = track.toLowerCase().includes('new york') ||
+                    track.toLowerCase().includes('/ny') ||
+                    track.toLowerCase().includes('ny/') ||
+                    track.toLowerCase().includes('horses');
 
-                // Deduct dropped amounts
-                const dropKey = `${play.gameMode}|${play.betNumber}`;
-                const drops = droppedAvailable.get(dropKey);
+                ticket.plays.forEach((play, index) => {
+                    // Deduct dropped amounts (Track-Aware)
+                    const dropKey = `${play.gameMode}|${play.betNumber}|${track}`;
+                    const drops = droppedAvailable.get(dropKey);
 
-                let netStraight = play.straightAmount || 0;
-                let netBox = play.boxAmount || 0;
-                let netCombo = play.comboAmount || 0;
+                    let netStraight = play.straightAmount || 0;
+                    let netBox = play.boxAmount || 0;
+                    let netCombo = play.comboAmount || 0;
 
-                if (drops) {
-                    if (drops.straight > 0 && netStraight > 0) {
-                        const deduction = Math.min(netStraight, drops.straight);
-                        netStraight -= deduction;
-                        drops.straight -= deduction;
+                    if (drops) {
+                        if (drops.straight > 0 && netStraight > 0) {
+                            const deduction = Math.min(netStraight, drops.straight);
+                            netStraight -= deduction;
+                            drops.straight -= deduction;
+                        }
+                        if (drops.box > 0 && netBox > 0) {
+                            const deduction = Math.min(netBox, drops.box);
+                            netBox -= deduction;
+                            drops.box -= deduction;
+                        }
+                        if (drops.combo > 0 && netCombo > 0) {
+                            const deduction = Math.min(netCombo, drops.combo);
+                            netCombo -= deduction;
+                            drops.combo -= deduction;
+                        }
                     }
-                    if (drops.box > 0 && netBox > 0) {
-                        const deduction = Math.min(netBox, drops.box);
-                        netBox -= deduction;
-                        drops.box -= deduction;
+
+                    if (!(play.straightAmount || play.boxAmount || play.comboAmount)) return;
+
+                    const simulatedNetPlay = { ...play, straightAmount: netStraight, boxAmount: netBox, comboAmount: netCombo };
+                    // Pass specific track to risk calculator
+                    const riskVal = calculatePotentialPayout(simulatedNetPlay, prizeTable, track);
+
+                    const totalOriginalWager = (play.straightAmount || 0) + (play.boxAmount || 0) + (play.comboAmount || 0);
+                    const totalRemWager = netStraight + netBox + netCombo;
+                    const totalDropped = totalOriginalWager - totalRemWager;
+
+                    // --- PRECISE EXPIRATION LOGIC ---
+                    const now = new Date();
+                    const nowStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                    const localTodayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+
+                    const catalogItem = RESULTS_CATALOG.find(c => {
+                        const catTrackName = c.draw ? `${c.lottery} ${c.draw}` : c.lottery;
+                        return c.lottery === track ||
+                            catTrackName === track ||
+                            c.id === track ||
+                            // Fuzzy matches for common variations
+                            track.includes(c.lottery) && (track.includes(c.draw || '') || (c.draw === 'Midday' && track.includes('AM')) || (c.draw === 'Evening' && track.includes('PM')))
+                    });
+
+                    const isExpired = !catalogItem || ticket.betDates.every(dateStr => {
+                        const playDate = new Date(dateStr + 'T23:59:59');
+                        if (playDate < now) return true;
+
+                        if (dateStr === localTodayStr) {
+                            return catalogItem.closeTime < nowStr;
+                        }
+                        return false;
+                    });
+
+                    // Probability Calculation
+                    let prob = 0;
+                    const mode = play.gameMode.toLowerCase();
+                    const numLen = play.betNumber.length;
+
+                    if (mode.includes('single action')) prob = 0.1;
+                    else if (mode.includes('palé-rd')) prob = 0.0002;
+                    else if (mode.includes('palé')) prob = 0.0003;
+                    else {
+                        if (numLen === 1) prob = 0.1;
+                        else if (numLen === 2) prob = 0.01;
+                        else if (numLen === 3) prob = 0.001;
+                        else if (numLen === 4) prob = 0.0001;
                     }
-                    if (drops.combo > 0 && netCombo > 0) {
-                        const deduction = Math.min(netCombo, drops.combo);
-                        netCombo -= deduction;
-                        drops.combo -= deduction;
-                    }
-                }
 
-                // If fully covered by drop, skip displaying as risky
-                // But wait, the user wants to see "Amt. Dropped", so we might still want to show it if its high risk but fully dropped? 
-                // Let's decide to show it if there was an original wager.
-                if (play.straightAmount === 0 && play.boxAmount === 0 && play.comboAmount === 0) return;
-
-                const simulatedNetPlay = { ...play, straightAmount: netStraight, boxAmount: netBox, comboAmount: netCombo };
-                const riskVal = calculatePotentialPayout(simulatedNetPlay, prizeTable, isNyInvolved ? 'New York' : 'Standard');
-                const totalOriginalWager = (play.straightAmount || 0) + (play.boxAmount || 0) + (play.comboAmount || 0);
-                const totalRemWager = netStraight + netBox + netCombo;
-                const totalDropped = totalOriginalWager - totalRemWager;
-
-                // Simple Expiration Logic: check if ticket's transactionDate is older than 24h OR if we implement track times
-                // For now, let's assume a basic timestamp comparison. If ticket is older than 24h, it's probably expired.
-                // You can refine this with real Track Time closing logic.
-                const playDate = new Date(ticket.transactionDateTime);
-                const playTime = playDate.getTime();
-                const now = Date.now();
-                const hoursOld = (now - playTime) / (1000 * 60 * 60);
-                const isExpired = hoursOld > 12;
-
-                // Probability Calculation
-                let prob = 0;
-                const mode = play.gameMode.toLowerCase();
-                const numLen = play.betNumber.length;
-                if (mode.includes('single action')) prob = 0.1; // 10%
-                else if (numLen === 1) prob = 0.1;
-                else if (numLen === 2) prob = 0.01;
-                else if (numLen === 3) prob = 0.001;
-                else if (numLen === 4) prob = 0.0001;
-
-                rows.push({
-                    uniqueKey: `${ticket.ticketNumber}_p${index}`,
-                    ticketNumber: ticket.ticketNumber,
-                    playIndex: index,
-                    userId: ticket.userId || '',
-                    userName,
-                    transactionDate: typeof ticket.transactionDateTime === 'string' ? ticket.transactionDateTime : ticket.transactionDateTime.toISOString(),
-                    track: ticket.tracks.join(', '),
-                    betNumber: play.betNumber,
-                    gameMode: play.gameMode,
-                    straightRequest: netStraight,
-                    boxRequest: netBox,
-                    comboRequest: netCombo,
-                    totalWager: totalOriginalWager,
-                    amtDropped: totalDropped,
-                    remWager: totalRemWager,
-                    riskAmount: riskVal,
-                    probability: prob,
-                    isExpired
+                    rows.push({
+                        uniqueKey: `${ticket.ticketNumber}_t${track}_p${index}`,
+                        ticketNumber: ticket.ticketNumber,
+                        playIndex: index,
+                        userId: ticket.userId || '',
+                        userName,
+                        transactionDate: typeof ticket.transactionDateTime === 'string' ? ticket.transactionDateTime : ticket.transactionDateTime.toISOString(),
+                        track,
+                        betNumber: play.betNumber,
+                        gameMode: play.gameMode,
+                        straightRequest: netStraight,
+                        boxRequest: netBox,
+                        comboRequest: netCombo,
+                        totalWager: totalOriginalWager,
+                        amtDropped: totalDropped,
+                        remWager: totalRemWager,
+                        riskAmount: riskVal,
+                        probability: prob,
+                        isExpired
+                    });
                 });
             });
         });
 
-        // Sort by Probability DESC then Risk DESC
         return rows.sort((a, b) => b.probability - a.probability || b.riskAmount - a.riskAmount);
     }, [tickets, prizeTable, users]);
 
     // View Filtering
+
     const displayedRiskRows = useMemo(() => {
         let filtered = allRiskRows.filter(r => filterTab === 'active' ? !r.isExpired : r.isExpired);
+
         if (trackFilter !== 'all') {
             filtered = filtered.filter(r => r.track.includes(trackFilter));
         }
+
+        if (ticketSearch.trim()) {
+            const query = ticketSearch.toLowerCase();
+            filtered = filtered.filter(r => r.ticketNumber.toLowerCase().includes(query));
+        }
+
         return filtered;
-    }, [allRiskRows, filterTab, trackFilter]);
+    }, [allRiskRows, filterTab, trackFilter, ticketSearch]);
 
     // Track List for Filter
     const trackList = useMemo(() => {
@@ -275,13 +319,17 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
     useEffect(() => {
         fetch('/api/config/autopilot')
             .then(res => res.json())
-            .then(data => setAutopilotEnabled(data.enabled))
+            .then(data => {
+                setAutopilotEnabled(data.enabled);
+                localStorage.setItem('AUTOPILOT_ENABLED', data.enabled ? 'true' : 'false');
+            })
             .catch(err => console.error("Error fetching autopilot config:", err));
     }, []);
 
     const toggleAutopilot = async () => {
         const newVal = !autopilotEnabled;
         setAutopilotEnabled(newVal);
+        localStorage.setItem('AUTOPILOT_ENABLED', newVal ? 'true' : 'false');
         try {
             await fetch('/api/config/autopilot', {
                 method: 'POST',
@@ -290,7 +338,8 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
             });
         } catch (err) {
             console.error("Error setting autopilot config:", err);
-            setAutopilotEnabled(!newVal); // Rollback
+            // Don't rollback immediately to improve UX, but log it
+            // localStorage.setItem('AUTOPILOT_ENABLED', (!newVal).toString()); 
         }
     };
     const handleToggleRow = (key: string) => {
@@ -344,7 +393,9 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
                 straightAmount: newStraight,
                 boxAmount: newBox,
                 comboAmount: newCombo,
+                sourceTrack: r.track, // Preserve the track context
             };
+
         });
 
         // Save to LocalStorage for the Relocation Page to pick up
@@ -439,6 +490,24 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
                         <option value="all">TODOS LOS TRACKS</option>
                         {trackList.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                     </select>
+
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="BUSCAR TICKET..."
+                            value={ticketSearch}
+                            onChange={(e) => setTicketSearch(e.target.value)}
+                            className="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-xs font-bold text-white placeholder-slate-600 focus:outline-none focus:border-neon-cyan w-32"
+                        />
+                        {ticketSearch && (
+                            <button
+                                onClick={() => setTicketSearch('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -507,7 +576,7 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ tickets, prizeTable, users })
 
             {/* 3. DETAILED RISK TABLE */}
             <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-                <div className="overflow-x-auto max-h-[600px]">
+                <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-300 whitespace-nowrap">
                         <thead className="bg-slate-900/90 text-xs uppercase font-bold text-gray-500 border-b border-slate-700 sticky top-0 z-10 backdrop-blur-sm">
                             <tr>

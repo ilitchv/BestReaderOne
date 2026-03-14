@@ -253,10 +253,11 @@ const PlaysTable: React.FC<PlaysTableProps> = ({
               <th rowSpan={2} className="p-2 w-8"></th>
             </tr>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="p-1 min-w-[65px] text-gray-400 dark:text-gray-500 uppercase text-[10px] font-bold text-center border-l border-neon-cyan/20">STR</th>
-              <th className="p-1 min-w-[65px] text-gray-400 dark:text-gray-500 uppercase text-[10px] font-bold text-center">BOX</th>
-              <th className="p-1 min-w-[65px] text-gray-400 dark:text-gray-500 uppercase text-[10px] font-bold text-center border-r border-neon-cyan/20">COM</th>
+              <th className="p-1 min-w-[65px] text-neon-cyan uppercase text-[10px] font-black text-center border-l border-neon-cyan/20 tracking-widest">STR</th>
+              <th className="p-1 min-w-[65px] text-neon-cyan uppercase text-[10px] font-black text-center tracking-widest">BOX</th>
+              <th className="p-1 min-w-[65px] text-neon-cyan uppercase text-[10px] font-black text-center border-r border-neon-cyan/20 tracking-widest">COM</th>
             </tr>
+
           </thead>
           <tbody>
             {plays.length === 0 ? (
