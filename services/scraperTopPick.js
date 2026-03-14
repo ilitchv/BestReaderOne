@@ -14,24 +14,8 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 
 // Helper to format date as YYYY-MM-DD in New York Time
 const formatDate = (date) => {
-    // If we are given a Date object that was created from "YYYY-MM-DD", it might be UTC 00:00.
-    // In NY (EST), that represents the *previous* day's 7 PM.
-    // We want to treat the input date as the target day.
-
-    // Simplest fix: Add 12 hours to ensure we are in the middle of the day before formatting to NY?
-    // Or just format assuming the input is ALREADY the correct timestamp?
-
-    // Better: Use the date string directly if possible? No, we need to support `new Date()`.
-
-    // Fix: adjusting the date object to be "Safe".
-    // If the hour is 0 (UTC midnight implications), add 12 hours.
-    const safeDate = new Date(date);
-    if (safeDate.getHours() === 0 && safeDate.getTimezoneOffset() < 0) {
-        // It's likely a UTC date being viewed in Western hemisphere.
-        safeDate.setHours(12);
-    }
-
-    const nyDate = new Date(safeDate.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    // Force date to be treated in America/New_York
+    const nyDate = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" }));
     const year = nyDate.getFullYear();
     const month = String(nyDate.getMonth() + 1).padStart(2, '0');
     const day = String(nyDate.getDate()).padStart(2, '0');
@@ -41,7 +25,7 @@ const formatDate = (date) => {
 async function scrapeTopPick(targetDate = new Date()) {
     try {
         const formattedDate = formatDate(targetDate);
-        console.log(`[TopPick] Morales Request for date: ${formattedDate}`);
+        console.log(`[TopPick] Request for date: ${formattedDate}`);
 
         // 1. Fetch "Top Pick" (Main) from AJAX
         const responseAjax = await axios.post(TARGET_URL, new URLSearchParams({
@@ -53,18 +37,6 @@ async function scrapeTopPick(targetDate = new Date()) {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-
-        // 2. Fetch "Quick Draw" from Main Page (Assumption: Main page always has "Latest" for today)
-        // If we want historical Quick Draw, we might need a different method, but for now let's grab what is on the homepage.
-        // Actually, let's verify if there is an AJAX endpoint for Quick Draw history.
-        // The main page has a "Load Results" button for Quick Draw too?
-        // Analyzing main_page_full.html: 
-        // <h3 class="title text-center">More Quick Draw Results</h3>... <button class="payment-btn" onclick="loadNumbers();">Load<span> Results</span></button>
-        // It seems 'loadNumbers()' is used for BOTH? Maybe it reads the ID of the date picker?
-        // But the ID for Top Pick date is 'date_selected__'.
-        // Wait, looking at lines 336: id="date_selected" (Top Pick?)
-        // The one for Quick Draw is at... lines not fully shown but likely similar.
-        // Let's assume for now we Scrape the Main Page for the "Latest" Quick draws which cover the hourly ones.
 
         const responseMain = await axios.get('https://tplotto.com/', {
             headers: { 'User-Agent': USER_AGENT }
@@ -79,44 +51,30 @@ async function scrapeTopPick(targetDate = new Date()) {
             parsedAjax.forEach(r => resultsMap.set(r.time, r));
         }
 
-        // --- 2. PARSE MAIN PAGE (Both "Latest Top Pick" and "Quick Draw") ---
+        // --- 2. PARSE MAIN PAGE ---
         if (responseMain.data) {
             const $ = cheerio.load(responseMain.data);
 
-            // Table 1: "Latest Top Pick" (Top Block) -> ID: #pNumbers
+            // Table 1: "Latest Top Pick"
             const parsedTopBlock = parseTable($, '#pNumbers tr');
-            console.log(`[TopPick] Source Main Page (Top Block): Found ${parsedTopBlock.length} results.`);
             parsedTopBlock.forEach(r => {
                 if (r.rowDate && r.rowDate !== formattedDate) return;
                 resultsMap.set(r.time, r);
             });
 
-            // Table 2: "Quick Draw" (Bottom Block) -> ID: #pfNumbers
+            // Table 2: "Quick Draw"
             const parsedBottomBlock = parseTable($, '#pfNumbers tr');
-            console.log(`[TopPick] Source Main Page (Bottom Block): Found ${parsedBottomBlock.length} results.`);
-
             parsedBottomBlock.forEach(r => {
-                // Strict Date Filter
-                if (r.rowDate && r.rowDate !== formattedDate) {
-                    // console.log(`   > Skipping draw from ${r.rowDate} (Target: ${formattedDate})`);
-                    return;
-                }
-
-                // Merge strategies: 
-                // If collision, Top Block is usually "Latest Top Pick" and arguably more "featured".
-                // But Bottom Block covers "history".
-                // We just want ALL unique times.
+                if (r.rowDate && r.rowDate !== formattedDate) return;
                 if (!resultsMap.has(r.time)) {
                     resultsMap.set(r.time, r);
-                } else {
-                    // console.log(`   > Duplicate time ${r.time} found in Quick Draw (ignored/already present).`);
                 }
             });
         }
 
         const results = Array.from(resultsMap.values());
 
-        // Sort explicitly by time for DB
+        // Sort descending by time
         results.sort((a, b) => {
             const timeToMin = (t) => {
                 const [time, period] = t.split(' ');
@@ -125,13 +83,13 @@ async function scrapeTopPick(targetDate = new Date()) {
                 if (period === 'AM' && h === 12) h = 0;
                 return h * 60 + m;
             };
-            return timeToMin(b.time) - timeToMin(a.time); // Descending
+            return timeToMin(b.time) - timeToMin(a.time);
         });
 
         await saveResultsToDB(results, formattedDate);
 
-        // --- VALIDATION & ALERTING ---
-        const todayStr = new Date().toLocaleDateString('en-CA');
+        // --- VALIDATION (NY Time) ---
+        const todayStr = formatDate(new Date());
         if (formattedDate === todayStr) {
             await validateCompleteness(formattedDate, results);
         }
@@ -148,58 +106,47 @@ async function scrapeTopPick(targetDate = new Date()) {
 }
 
 async function validateCompleteness(dateStr, results) {
-    // Schedule: Daily 12:00 AM to 11:00 PM (Hourly) -> 00:00 to 23:00
+    // Schedule: every 1 hour, 24/7 (00:00 to 23:00)
     const startHour = 0;
     const endHour = 23;
-    const intervalMins = 60;
 
-    const targetDate = new Date(dateStr + 'T00:00:00');
-    const now = new Date();
+    // Get "Now" in NY
+    const nowNYStr = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+    const nowNY = new Date(nowNYStr);
 
-    // Check if target date is today
-    const isToday = now.toDateString() === targetDate.toDateString();
-
-
+    // Check if target date is today in NY
+    const targetDateNY = new Date(dateStr + 'T12:00:00'); // Midday to be safe for date comparison
+    const isToday = formatDate(nowNY) === dateStr;
 
     if (!isToday) return;
 
     const expectedTimes = [];
-    let current = new Date(targetDate);
-    current.setHours(startHour, 0, 0, 0);
+    const threshold = new Date(nowNY.getTime() - 15 * 60000); // 15 mins grace
 
-    const end = new Date(targetDate);
-    end.setHours(endHour, 0, 0, 0);
+    for (let h = startHour; h <= endHour; h++) {
+        const currentCheck = new Date(nowNY);
+        currentCheck.setHours(h, 0, 0, 0);
 
-    // Buffer: 15 mins grace
-    const threshold = new Date(now.getTime() - 15 * 60000);
+        if (currentCheck > threshold) break;
 
-    while (current <= end) {
-        if (current > threshold) break;
-
-        // Format: "12:00 AM", "1:00 AM" ... "11:00 PM"
-        let hours = current.getHours();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
+        let hours = h % 12;
         hours = hours ? hours : 12;
-        const mins = String(current.getMinutes()).padStart(2, '0');
-
-        const timeLabel = `${hours}:${mins} ${ampm}`;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const timeLabel = `${hours}:00 ${ampm}`;
         expectedTimes.push(timeLabel);
-
-        current.setMinutes(current.getMinutes() + intervalMins);
     }
 
     const actualTimes = new Set(results.map(r => r.time.replace(/^0/, '').trim()));
     const missing = [];
 
     expectedTimes.forEach(exp => {
-        if (!actualTimes.has(exp.replace(/^0/, '').trim())) {
+        if (!actualTimes.has(exp)) {
             missing.push(exp);
         }
     });
 
     if (missing.length > 0) {
-        console.warn(`[TopPick] ⚠️ MISSING DRAWS DETECTED: ${missing.join(', ')}`);
+        console.warn(`[TopPick] ⚠️ MISSING DRAWS DETECTED (${dateStr}): ${missing.join(', ')}`);
         await triggerAlert(
             'MISSING_DATA',
             `Top Pick Missing ${missing.length} Draws for ${dateStr}`,
@@ -207,7 +154,7 @@ async function validateCompleteness(dateStr, results) {
             'HIGH'
         );
     } else {
-        console.log(`[TopPick] ✅ Validation Passed: All ${expectedTimes.length} expected draws found.`);
+        console.log(`[TopPick] ✅ Validation Passed for ${dateStr}: All expected draws found.`);
     }
 }
 

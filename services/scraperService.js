@@ -521,24 +521,20 @@ const runHeavyQueue = async () => {
 const startResultScheduler = () => {
     console.log('⏳ Scheduler Initializing...');
 
-    // SNIPER SCHEDULE OPTIMIZATION: 4 Times a Day
-    // 11:30 AM, 2:45 PM, 8:00 PM, 11:00 PM
-    const TIMES = [
-        '30 11 * * *', // 11:30 AM
-        '45 14 * * *', // 2:45 PM
-        '0 20 * * *',  // 8:00 PM
-        '0 23 * * *'   // 11:00 PM
-    ];
-
-    TIMES.forEach(timeExpr => {
-        cron.schedule(timeExpr, () => {
-            console.log(`⏰ Scheduled Run Triggered [${timeExpr}]`);
-            runFastQueue(); // Run USA + RD
-            runHeavyQueue(); // Run TopPick/InstantCash as well? Assuming yes for daily sync.
-        });
+    // Queue A: Fast Scrapers (RD + USA) - Every 5 minutes
+    cron.schedule('*/5 * * * *', () => {
+        console.log('⏰ [Cron] Triggering Fast Queue (5 min)');
+        runFastQueue();
     });
 
-    console.log('✅ Cron Jobs Scheduled: 11:30, 14:45, 20:00, 23:00');
+    // Queue B: Heavy Scrapers (TopPick + Instant Cash) - Every 15 minutes
+    // This catches Instant Cash (every 30m) and Top Pick (every 1h)
+    cron.schedule('*/15 * * * *', () => {
+        console.log('⏰ [Cron] Triggering Heavy Queue (15 min)');
+        runHeavyQueue();
+    });
+
+    console.log('✅ Cron Jobs Scheduled: Fast (5m), Heavy (15m)');
 
     // Run immediately on start to catch up
     setTimeout(() => {
